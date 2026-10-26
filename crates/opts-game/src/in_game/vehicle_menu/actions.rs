@@ -155,6 +155,11 @@ pub(super) fn menu_actions(
                 .iter()
                 .find(|(_, n)| has(n))
                 .map(|(id, _)| Action::PickEntry(*id)),
+            "stop" => menu
+                .shown_stops
+                .iter()
+                .find(|(_, n)| has(n))
+                .map(|(id, _)| Action::PickStop(*id)),
             _ => None,
         };
         todo.extend(action);
@@ -343,7 +348,8 @@ pub(super) fn menu_actions(
                 }
             }
             Action::PickRepaint(name) => menu.repaint = name,
-            Action::PickEntry(id) => menu.entry = Some(id),
+            Action::PickEntry(id) => (menu.entry, menu.stop) = (Some(id), None),
+            Action::PickStop(id) => (menu.entry, menu.stop) = (None, Some(id)),
             Action::OpenConfig => menu.config_open = true,
             Action::CloseConfig => menu.config_open = false,
             Action::ResetConfig => menu.setvars.clear(),
@@ -372,9 +378,13 @@ pub(super) fn menu_actions(
                     menu.status = "Choose a vehicle.".into();
                     continue;
                 };
-                let Some(entry) = menu.entry else {
-                    menu.status = "Choose an entry point.".into();
-                    continue;
+                let entry = match (menu.stop, menu.entry) {
+                    (Some(stop), _) => EntrySel::Stop(stop),
+                    (None, Some(entry)) => EntrySel::Id(entry),
+                    (None, None) => {
+                        menu.status = "Choose an entry point or a bus stop.".into();
+                        continue;
+                    }
                 };
                 let Some(bus) = job.bus_file(&veh.bus_file) else {
                     tracing::error!(at = %opts_bevy::position_tag(), bus = %veh.bus_file, "vehicle .bus not found; nothing spawned");
@@ -390,7 +400,7 @@ pub(super) fn menu_actions(
                     bus_file: bus.display().to_string(),
                     repaint: menu.repaint.clone(),
                     setvars,
-                    entry: EntrySel::Id(entry),
+                    entry,
                     formation: None,
                 });
                 menu.current = veh.full_name.clone();

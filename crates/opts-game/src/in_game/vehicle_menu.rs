@@ -74,6 +74,10 @@ pub struct VehicleMenu {
     /// Chosen repaint (empty: the vehicle's default).
     repaint: String,
     entry: Option<u32>,
+    /// The bus stop chosen instead of an entry point (station id, M-0145).
+    stop: Option<u32>,
+    /// The map's bus stops (station id and label, from the timetables), read once.
+    shown_stops: Vec<(u32, String)>,
     /// Equipment options the player changed.
     setvars: HashMap<String, i32>,
     /// Entry points shown in the last build (rebuild when the free ones change).
@@ -175,6 +179,8 @@ impl VehicleMenu {
             "vehicle": self.vehicle,
             "repaint": self.repaint,
             "entry": self.entry,
+            "stop": self.stop,
+            "stops": self.shown_stops,
             "free_entries": self.shown_entries,
             "setvars": self.setvars,
             "status": self.status,
@@ -202,6 +208,8 @@ enum Action {
     PickVehicle(usize),
     PickRepaint(String),
     PickEntry(u32),
+    /// Spawns at this bus stop (station id) when it is free.
+    PickStop(u32),
     OpenConfig,
     CloseConfig,
     ResetConfig,
