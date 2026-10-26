@@ -188,6 +188,7 @@ impl WorldLoadJob {
         self.sco_cache.clear();
         self.sli_cache.clear();
         self.tile_splines.clear();
+        self.tile_aligned.clear();
         self.tile_surfaces.clear();
         self.scenery.clear_templates();
         self.spline_materials.clear();

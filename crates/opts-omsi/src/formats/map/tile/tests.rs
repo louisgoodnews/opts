@@ -221,3 +221,21 @@ fn test_spline_connection_minus_one_means_unconnected() {
     assert_eq!(tile.splines[0].conn_id_1, 0);
     assert_eq!(tile.splines[0].conn_id_2, 0);
 }
+
+#[test]
+fn terrain_align_marks_the_spline_before_it() {
+    let spline = |id: u32| {
+        format!(
+            "[spline]\n0\nSplines\\a.sli\n{id}\n0\n0\n1.0\n-12.0\n3.0\n0.0\n10.0\n0.0\n0\n0\n\n"
+        )
+    };
+    let text = format!(
+        "[version]\n14\n\n{}[spline_terrain_align_2]\n1\n\n{}[spline_terrain_align]\n0\n\n{}",
+        spline(12663),
+        spline(12664),
+        spline(12665)
+    );
+    let tile = MapTile::from_text(&text).expect("aligned splines parse");
+    assert_eq!(tile.splines.len(), 3);
+    assert_eq!(tile.terrain_aligned, vec![12663], "value 0 is no alignment");
+}

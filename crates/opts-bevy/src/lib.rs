@@ -153,9 +153,9 @@ pub use scenery_runtime::{
     SceneryScripts, SceneryVariableOverrides,
 };
 pub use terrain::{
-    build_terrain_mesh, carve_terrain, spline_ground_triangles, terrain_height, terrain_material,
-    CarveStats, GroundTriangle, TileTerrain, CARVE_COVER_M, CARVE_EPSILON_M, TERRAIN_CELL_M,
-    TILE_SIZE_M,
+    build_cut_terrain_mesh, build_terrain_mesh, carve_terrain, spline_cut_triangles,
+    spline_ground_triangles, terrain_height, terrain_material, CarveStats, GroundTriangle,
+    TerrainCut, TileTerrain, CARVE_COVER_M, CARVE_EPSILON_M, TERRAIN_CELL_M, TILE_SIZE_M,
 };
 pub use terrain_query::GroundElevationQuery;
 pub use texture::{

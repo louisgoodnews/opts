@@ -351,9 +351,21 @@ impl WorldLoadJob {
             return Some(s.clone());
         }
         self.tile_files.get(&key)?;
-        let splines = Arc::new(self.read_tile(key)?.splines);
+        let tile = self.read_tile(key)?;
+        let splines = Arc::new(tile.splines);
         self.tile_splines.insert(key, splines.clone());
+        self.tile_aligned
+            .insert(key, Arc::new(tile.terrain_aligned));
         Some(splines)
+    }
+
+    /// The ID codes of tile `key`'s splines the terrain is aligned to (`[spline_terrain_align]`).
+    pub(in super::super::super) fn aligned_of(&mut self, key: (i32, i32)) -> Arc<Vec<u64>> {
+        if !self.tile_aligned.contains_key(&key) {
+            self.tile_splines.remove(&key);
+            self.splines_of(key);
+        }
+        self.tile_aligned.get(&key).cloned().unwrap_or_default()
     }
 
     /// Where a referenced file really is: at its path, or, failing that, under another folder name.

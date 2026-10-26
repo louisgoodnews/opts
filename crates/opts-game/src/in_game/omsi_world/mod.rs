@@ -243,6 +243,8 @@ pub struct WorldLoadJob {
     tile_ground: Option<GroundIndex>,
     /// The splines of every tile read this session, for the terrain carve of its neighbours.
     tile_splines: HashMap<(i32, i32), Arc<Vec<MapSplineInstance>>>,
+    /// The ID codes of each such tile's `[spline_terrain_align]` splines (with `tile_splines`).
+    tile_aligned: HashMap<(i32, i32), Arc<Vec<u64>>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
     /// Parsed sound configurations by file (`None`: unreadable).
     sound_cfgs: HashMap<PathBuf, Option<Arc<opts_core::formats::sound::SoundConfig>>>,
@@ -256,7 +258,7 @@ pub struct WorldLoadJob {
     /// the tile's own frame, kept for the carve of the tile and its eight neighbours: one
     /// computation per tile instead of nine (M-0089 step 2). Pruned to the resident tiles'
     /// neighbourhood after every build; cleared with the splines and objects it derives from.
-    tile_surfaces: HashMap<(i32, i32), Arc<Vec<opts_bevy::GroundTriangle>>>,
+    tile_surfaces: HashMap<(i32, i32), Arc<tile_ground::TileGround>>,
     /// The map's timetable files, read when the first vehicle needs them (`None` inside: the map
     /// has none).
     timetables: Option<Option<Arc<opts_core::formats::timetable::Timetables>>>,

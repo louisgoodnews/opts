@@ -6,9 +6,9 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{
-    build_terrain_mesh, build_water_mesh, carve_terrain, extrude_spline_segment,
-    spline_ground_triangles, terrain_material, water_material, ContentLoader, GroundTriangle,
-    TileTerrain,
+    build_cut_terrain_mesh, build_terrain_mesh, build_water_mesh, carve_terrain,
+    extrude_spline_segment, spline_cut_triangles, spline_ground_triangles, terrain_material,
+    water_material, ContentLoader, GroundTriangle, TerrainCut, TileTerrain,
 };
 use opts_core::formats::map::{MapTerrain, MapTile, MapWater};
 
@@ -28,10 +28,24 @@ const NEIGHBOURHOOD: [(i32, i32); 9] = [
     (1, 1),
 ];
 
-/// The drawn ground surfaces that can lie over tile `key`'s terrain, in its frame: the surface
-/// ribbons of the splines of the tile and its eight neighbours (splines are stored on the tile
-/// they start in but run on across the border) and the ground faces of their crossings.
-fn carve_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Vec<GroundTriangle> {
+/// What one tile lays on the terrain, in its own frame.
+#[derive(Debug, Default)]
+pub(super) struct TileGround {
+    /// The drawn ground: its splines' surface ribbons, its crossings' and surface objects' faces.
+    surfaces: Vec<GroundTriangle>,
+    /// The `[heightprofile]` strips of its terrain-aligned splines
+    /// (`docs/src/architecture/terrain-carving.md` §10).
+    strips: Vec<GroundTriangle>,
+}
+
+/// The drawn ground surfaces (`strips: false`) or the aligned strips (`true`) that can lie over
+/// tile `key`'s terrain, in its frame: those of the tile and its eight neighbours (splines are
+/// stored on the tile they start in but run on across the border).
+fn neighbourhood_ground(
+    job: &mut WorldLoadJob,
+    key: (i32, i32),
+    strips: bool,
+) -> Vec<GroundTriangle> {
     let mut out = Vec::new();
     for (dx, dy) in NEIGHBOURHOOD {
         let other = (key.0 + dx, key.1 + dy);
@@ -41,7 +55,8 @@ fn carve_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Vec<GroundTriangle
         // The triangles are kept in their own tile's frame; moving them is an addition.
         let o = job.grid.neighbour_offset(key, other);
         let shift = Vec3::new(o.x, o.y, 0.0);
-        out.extend(own.iter().map(|t| t.map(|p| p + shift)));
+        let tris = if strips { &own.strips } else { &own.surfaces };
+        out.extend(tris.iter().map(|t| t.map(|p| p + shift)));
     }
     out
 }
@@ -49,20 +64,27 @@ fn carve_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Vec<GroundTriangle
 /// The drawn ground surfaces of tile `key` in its own frame: the ribbons of its splines and the
 /// ground faces of its crossings and surface objects. Computed once per tile and kept
 /// (`WorldLoadJob::tile_surfaces`); `None` when the tile has no readable file.
-fn tile_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Option<Arc<Vec<GroundTriangle>>> {
+fn tile_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Option<Arc<TileGround>> {
     if let Some(s) = job.tile_surfaces.get(&key) {
         return Some(s.clone());
     }
     let splines = job.splines_of(key)?;
+    let aligned = job.aligned_of(key);
     let _t = opts_logging::stream_trace::span("terrain.surfaces_build");
-    let mut out = Vec::new();
+    let mut out = TileGround::default();
     for inst in splines.iter() {
         if let Some(profile) = job.sli(&inst.sli_file) {
-            out.extend(spline_ground_triangles(&profile, inst, (0.0, 0.0)));
+            out.surfaces
+                .extend(spline_ground_triangles(&profile, inst, (0.0, 0.0)));
+            if aligned.contains(&inst.id_code) {
+                out.strips
+                    .extend(spline_cut_triangles(&profile, inst, (0.0, 0.0)));
+            }
         }
     }
     // Crossings (bent by their base) and surface objects lay down ground too.
-    out.extend(job.crossing_ground_triangles(key, Vec2::ZERO));
+    out.surfaces
+        .extend(job.crossing_ground_triangles(key, Vec2::ZERO));
     let out = Arc::new(out);
     job.tile_surfaces.insert(key, out.clone());
     Some(out)
@@ -184,7 +206,8 @@ pub(super) fn spawn_terrain(
     };
     let cell = job.terrain_cell(key.1);
     let t_surf = opts_logging::stream_trace::span("terrain.surfaces");
-    let surfaces = carve_surfaces(job, key);
+    let surfaces = neighbourhood_ground(job, key, false);
+    let strips = TerrainCut::new(neighbourhood_ground(job, key, true), surfaces.clone(), cell);
     drop(t_surf);
     let t_carve = opts_logging::stream_trace::span("terrain.carve");
     let (carved, carve) = carve_terrain(&TileTerrain::new(t, cell), &surfaces);
@@ -194,10 +217,17 @@ pub(super) fn spawn_terrain(
         triangles = surfaces.len(),
         lowered = carve.lowered,
         guarded = carve.guarded,
+        aligned = strips.len(),
         "terrain carved"
     );
     let t_mesh = opts_logging::stream_trace::span("terrain.mesh");
-    let mesh = build_terrain_mesh(&carved.grid, origin, cell, tile_material.is_some());
+    let uv_per_tile = tile_material.is_some();
+    let mesh = if strips.is_empty() {
+        build_terrain_mesh(&carved.grid, origin, cell, uv_per_tile)
+    } else {
+        build_cut_terrain_mesh(&carved.grid, origin, cell, uv_per_tile, &strips)
+    };
+    let carved = carved.with_cut(strips);
     drop(t_mesh);
     stats.scene_vertices += mesh.count_vertices();
     let name = Name::new(format!("Terrain_{}_{}", key.0, key.1));

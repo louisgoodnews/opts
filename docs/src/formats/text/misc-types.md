@@ -164,6 +164,8 @@ Add-on manifest (22 files): `KEY=value` header lines (`ID=27476`, `MAJOR=1`, `MI
 
 **5,590** files named `tile_<x>_<y>.map.terrain_0.rdy` (5,581) or `…_2.rdy` (9). Each is a valid **[`.o3d`](../binary/o3d.md)** mesh: header `84 19 07 01` (5,089) or `84 19 05 01` (501), then 3,721 vertices (a 61×61 grid), 7,200 triangles (60×60×2), one empty material and 32-bit indices. All 5,590 parse to EOF with the `.o3d` layout. They are the **cached terrain mesh** of a tile built from its `.terrain` height grid; OPTS can rebuild this from [`.map.terrain`](../map/tiles.md) instead. [C] (This also confirms the 32-bit-index flag on v5 headers.)
 
+**Correction (2026-10-26, Winsenburg):** not every cache is the plain grid. The header has four more bytes before the `0x17` chunk (`84 19 05 01 00 00 00 00`), and 103 of Winsenburg's 292 caches hold more vertices (3,744 … 4,809) and other triangle counts (6,667 … 7,183): the terrain **shaped to the tile's `[spline_terrain_align]` splines**, re-meshed along their `[heightprofile]` strips (87 % of those tiles have aligned splines, the plain ones none). Vertices are `(x, height, y)` in tile metres. OPTS does the shaping itself ([terrain carving §10](../../architecture/terrain-carving.md#10-terrain-aligned-to-splines-2026-10-26)); 52 Winsenburg tiles have no cache.
+
 ### Backup copies
 
 | Extension | Files | What it is |

@@ -65,7 +65,7 @@ File created with OMSI-Editor on 13.01.2011 12:47:56
 | `[version]` | 13,938 | 13,938 | 1 (2 in 655) |
 | `[terrain]`, `[variable_terrainlightmap]`, `[variable_terrain]`, `[water]` | 12,391 / 11,574 / 11,574 / 1,425 | | 0 (flags / markers) |
 | `[selspline]`, `[selobject]` | 2,955 / 2,331 | chrono only | 1 |
-| `[spline_terrain_align_2]` / `[spline_terrain_align]` | 1,749 / 1,075 | | 1 |
+| `[spline_terrain_align_2]` / `[spline_terrain_align]` | 1,749 / 1,075 | | 1 (`1`: the terrain follows the preceding spline's `[heightprofile]`, see [terrain carving §10](../../architecture/terrain-carving.md#10-terrain-aligned-to-splines-2026-10-26)) |
 | `[relabel]`, `[kill_rule]`, `[delete]`, `[typ]` | 1,026 / 991 / 972 / 530 | | 2–7 / 4 / 0–1 / 1 |
 
 Line counts above include trailing comment/blank lines; true parameter counts are given below.

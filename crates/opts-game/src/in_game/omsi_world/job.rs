@@ -280,6 +280,7 @@ pub fn begin_world_load_at(
         vehicle_dirs: Vec::new(),
         spline_index: None,
         tile_splines: HashMap::new(),
+        tile_aligned: HashMap::new(),
         placed: HashMap::new(),
         tile_ground: None,
         sco_cache: HashMap::new(),
