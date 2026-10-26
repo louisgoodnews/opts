@@ -2,9 +2,20 @@
 
 use super::*;
 
-/// How far behind a bus stop object a vehicle starting there stands (m): about half a 12 m bus,
-/// so its front is at the stop.
+/// How far behind a bus stop object a vehicle starting there stands when its `.bus` gives no
+/// bounding box (m): about half a 12 m bus, so its front is at the stop.
 pub(in super::super::super) const STOP_SPAWN_BACK_M: f32 = 6.0;
+
+/// The distance from a vehicle's origin to its front (m): the `.bus` bounding box's centre plus
+/// half its length along the vehicle (`y`). For an articulated bus that is the front unit.
+#[must_use]
+pub(in super::super::super) fn front_of(
+    bus: &opts_core::formats::vehicles::BusManifest,
+) -> Option<f32> {
+    bus.bounding_box
+        .map(|(size, centre)| centre.y + size.y * 0.5)
+        .filter(|f| f.is_finite() && (0.5..30.0).contains(f))
+}
 
 impl WorldLoadJob {
     /// The map's timetable files (`TTData`), read on the first call and shared by every vehicle
@@ -485,8 +496,8 @@ impl WorldLoadJob {
     }
 
     /// The spawn at the bus stop object with this station id (the trip's first stop, M-0145):
-    /// the stop marks where a bus's front comes to rest, so the vehicle stands
-    /// [`STOP_SPAWN_BACK_M`] behind it along the road.
+    /// the stop marks where a bus's front comes to rest, so the vehicle stands with its front
+    /// there ([`front_of`] its `.bus`, else [`STOP_SPAWN_BACK_M`] behind the stop).
     pub(in super::super::super) fn find_stop_spawn(
         &mut self,
         station_id: u32,
@@ -494,8 +505,16 @@ impl WorldLoadJob {
     ) -> Option<((i32, i32), (Vec3, f32))> {
         let (key, position, heading, sco) = self.find_placed_object(u64::from(station_id), keys)?;
         let h = heading.to_radians();
-        let back = Vec3::new(h.sin(), h.cos(), 0.0) * STOP_SPAWN_BACK_M;
-        tracing::info!(station_id, %sco, tile = ?key, "trip start stop resolved");
+        let front = self
+            .config
+            .vehicle_path
+            .as_ref()
+            .and_then(|p| std::fs::read(p).ok())
+            .and_then(|b| opts_core::formats::vehicles::BusManifest::parse_bytes(&b).ok())
+            .and_then(|m| front_of(&m))
+            .unwrap_or(STOP_SPAWN_BACK_M);
+        let back = Vec3::new(h.sin(), h.cos(), 0.0) * front;
+        tracing::info!(station_id, %sco, tile = ?key, front_m = front, "trip start stop resolved");
         Some((key, (position - back, heading)))
     }
 

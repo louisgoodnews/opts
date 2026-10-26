@@ -59,3 +59,6 @@ stream-trace = ["opts-bevy/stream-trace", "opts-logging/stream-trace"]
 # Enables the fixtures for this crate's own integration tests.
 opts-game = { path = ".", features = ["test-support"] }
 # Add test-specific dependencies here
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

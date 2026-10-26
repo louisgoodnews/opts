@@ -5338,6 +5338,7 @@ dependencies = [
  "clap",
  "directories",
  "image",
+ "libc",
  "opts-bevy",
  "opts-catalogue",
  "opts-cli",
