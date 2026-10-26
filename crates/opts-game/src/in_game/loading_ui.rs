@@ -453,6 +453,7 @@ pub fn hide_overlay_while_loading(
 pub fn build(app: &mut App) {
     app.init_resource::<LoadReport>()
         .init_resource::<AcceptLoadProblems>()
+        .init_resource::<crate::in_game::load_report::AcceptLoadProblemsAlways>()
         .add_systems(
             Update,
             (

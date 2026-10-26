@@ -49,6 +49,7 @@ pub struct LoadEnv<'w, 's> {
     session: ResMut<'w, InGameSessionInfo>,
     report: ResMut<'w, LoadReport>,
     accept: ResMut<'w, AcceptLoadProblems>,
+    accept_always: Option<Res<'w, crate::in_game::load_report::AcceptLoadProblemsAlways>>,
     registry: ResMut<'w, SessionVehicles>,
     settings: Option<Res<'w, crate::settings::GameSettings>>,
     hardware: Option<Res<'w, crate::hardware::HardwareState>>,
@@ -402,7 +403,8 @@ fn stage_ready(
         }
         LoadOutcome::ReadyWithProblems => {
             let by_flag = env.args.as_ref().is_some_and(|a| a.0.accept_load_problems);
-            let accepted = by_flag || env.accept.0;
+            let always = env.accept_always.as_ref().is_some_and(|a| a.0);
+            let accepted = by_flag || env.accept.0 || always;
             if accepted && !env.report.continue_requested {
                 tracing::warn!(
                     problems = env.report.blocking_count(),
@@ -411,8 +413,9 @@ fn stage_ready(
                 );
             }
             if accepted {
-                // The protocol's acceptance covers one load.
+                // The protocol's one-load acceptance is used up; the load counts as continued.
                 env.accept.0 = false;
+                env.report.continue_requested = true;
             }
             env.report.continue_requested || accepted
         }

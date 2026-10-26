@@ -10,6 +10,13 @@ use bevy::prelude::*;
 #[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct AcceptLoadProblems(pub bool);
 
+/// Start every drive without waiting for *Continue* when its load ends with problems, until
+/// switched off: the protocol's form of `--accept-load-problems` for a game already running
+/// (`loading.accept_problems {always}`, `scene.load_map {accept_problems: "always"}`). Covers
+/// loads started through the plan-a-drive wizard too.
+#[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct AcceptLoadProblemsAlways(pub bool);
+
 /// How much a problem matters for the drive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {

@@ -190,6 +190,23 @@ fn the_command_line_flag_accepts_problems_for_every_load() {
 }
 
 #[test]
+fn the_protocols_always_switch_accepts_problems_and_stays_on() {
+    use opts_game::in_game::load_report::AcceptLoadProblemsAlways;
+    let root = broken_tile_root("tile-always");
+    let mut app = loading_app("Mini", "MiniBus", args_for(&root));
+    app.insert_resource(AcceptLoadProblemsAlways(true));
+    run(&mut app, 60);
+    assert_eq!(outcome(&app), LoadOutcome::ReadyWithProblems);
+    assert_eq!(screen_count(&mut app), 0, "no Continue needed");
+    assert!(app.world().resource::<SimulationLoadState>().hud_spawned);
+    assert!(
+        app.world().resource::<AcceptLoadProblemsAlways>().0,
+        "unlike the one-load acceptance it stays on for the next load"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
 fn a_vehicle_that_cannot_load_is_a_problem_and_the_text_stays() {
     let root = fresh_root("vehicle");
     write_map(&root, &MiniMap::simple("Mini"));
