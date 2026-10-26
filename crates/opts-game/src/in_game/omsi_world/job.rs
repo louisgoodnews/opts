@@ -294,6 +294,8 @@ pub fn begin_world_load_at(
         parklists: HashMap::new(),
         chrono: super::chrono::ChronoContext::default(),
         spline_materials: HashMap::new(),
+        surf_strips: HashMap::new(),
+        surf_maps: HashMap::new(),
         fonts: opts_bevy::text_texture::FontRegistry::default(),
         vehicle_text_defs: Vec::new(),
         vehicle_script_defs: Vec::new(),

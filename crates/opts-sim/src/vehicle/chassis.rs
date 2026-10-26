@@ -21,6 +21,10 @@ pub struct ChassisState {
     pub yaw_rate_rad_s: f32,
     /// Linear acceleration in the local vehicle frame in m/s^2.
     pub local_acceleration: Vec2,
+    /// Vertical acceleration of the chassis following the ground (m/s², up positive): slopes,
+    /// kerbs, the road's height changes; the springs' own is the body's (M-0146).
+    #[serde(default)]
+    pub ground_vertical_acc_m_s2: f32,
     /// Total curb weight plus passenger payload mass in kilograms.
     pub total_mass_kg: f32,
     /// Yaw mass moment of inertia around the vertical axis in kg·m^2.
@@ -36,6 +40,7 @@ impl Default for ChassisState {
             local_velocity: Vec2::ZERO,
             yaw_rate_rad_s: 0.0,
             local_acceleration: Vec2::ZERO,
+            ground_vertical_acc_m_s2: 0.0,
             total_mass_kg: 11_500.0, // Standard 12m curb weight (11.5 metric tons)
             yaw_inertia_kg_m2: 120_000.0, // Typical yaw inertia for a 12m transit bus
         }
@@ -57,6 +62,7 @@ impl ChassisState {
             local_velocity: Vec2::ZERO,
             yaw_rate_rad_s: 0.0,
             local_acceleration: Vec2::ZERO,
+            ground_vertical_acc_m_s2: 0.0,
             total_mass_kg: mass,
             yaw_inertia_kg_m2: estimated_inertia,
         }

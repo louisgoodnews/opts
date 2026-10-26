@@ -108,10 +108,13 @@ pub fn host_inputs(
     let mut inputs = HostInputs {
         velocity_km_h: sim.chassis.forward_speed_km_h(),
         velocity_ground_km_h: sim.chassis.forward_speed_km_h(),
+        // `A_Trans_Z`: following the ground plus the body on its springs (kerbs, the road's
+        // unevenness; the rattle scripts read mostly this one, M-0146).
         a_trans: [
             sim.chassis.local_acceleration.x,
             sim.chassis.local_acceleration.y,
-            0.0,
+            sim.chassis.ground_vertical_acc_m_s2
+                + sim.body.as_ref().map_or(0.0, |b| b.vertical_acc_m_s2),
         ],
         throttle: sim.inputs.throttle(),
         brake: sim.inputs.service_brake(),

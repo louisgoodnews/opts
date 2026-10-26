@@ -22,11 +22,14 @@ mod consist_plan;
 mod crossing;
 mod dev_look;
 mod ground;
+mod ground_follow;
 mod ground_height;
 mod job;
 pub(crate) mod mesh_dir;
 mod overlay;
 mod overlay_info;
+mod road_surf;
+mod road_surf_load;
 pub use overlay_info::DeveloperDetail;
 mod pedestrians;
 pub(crate) mod rail;
@@ -61,7 +64,8 @@ pub use collision::{
 };
 pub use dev_look::place_dev_camera;
 use ground::GroundArray;
-pub use ground_height::{follow_ground, sample_consist_ground, GroundIndex};
+pub use ground_follow::{follow_ground, sample_consist_ground};
+pub use ground_height::GroundIndex;
 pub use job::{begin_world_load, begin_world_load_at, resolve_session_config};
 pub use overlay::{
     log_final_position, spawn_debug_overlay, toggle_developer_detail, toggle_developer_panel,
@@ -264,6 +268,10 @@ pub struct WorldLoadJob {
     /// `parklist_p_N.txt`), read on first use (empty when absent).
     parklists: HashMap<u32, Vec<String>>,
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,
+    /// The strips with a height map of each road profile (by `.sli` name) and the decoded
+    /// `.surf` maps by file (M-0146).
+    surf_strips: HashMap<String, Arc<Vec<road_surf::TexStrip>>>,
+    surf_maps: HashMap<PathBuf, Option<Arc<road_surf::SurfMap>>>,
     /// Bitmap fonts and rendered text textures (`[texttexture]`).
     fonts: opts_bevy::text_texture::FontRegistry,
     /// `[texttexture]` declarations of the vehicle model being loaded (set by its loader; the
