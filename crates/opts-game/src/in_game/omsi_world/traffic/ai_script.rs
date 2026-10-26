@@ -107,20 +107,14 @@ pub(in crate::in_game::omsi_world) fn engine_for(
     let dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();
     let (mut engine, _) =
         opts_sim::script::load_vehicle_scripts(&manifest, |rel| job.install.find_in(&dir, rel));
-    let map_name = job
-        .manifest
-        .friendly_name
-        .as_deref()
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| {
-            job.config
-                .map_dir
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("")
-        })
-        .to_owned();
-    let hof = opts_bevy::route::find_depot(&dir, job.install.root(), &map_name);
+    let folder = job
+        .config
+        .map_dir
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+    let friendly = job.manifest.friendly_name.as_deref().unwrap_or("");
+    let hof = opts_bevy::route::find_depot(&dir, job.install.root(), &[friendly, folder]);
     let route = RouteHandle::new(hof.map(Arc::new));
     route.set_timetables(job.timetables());
     if route.select_run(&run.line_file, run.tour, run.run).is_err() {

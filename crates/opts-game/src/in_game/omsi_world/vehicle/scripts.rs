@@ -72,19 +72,14 @@ pub(super) fn attach_scripts(
         "vehicle scripts loaded"
     );
     let mut engine = engine;
-    let map_name = job
-        .manifest
-        .friendly_name
-        .as_deref()
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| {
-            job.config
-                .map_dir
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("")
-        });
-    let hof = opts_bevy::route::find_depot(bus_dir, job.install.root(), map_name);
+    let folder = job
+        .config
+        .map_dir
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+    let friendly = job.manifest.friendly_name.as_deref().unwrap_or("");
+    let hof = opts_bevy::route::find_depot(bus_dir, job.install.root(), &[friendly, folder]);
     if let Some(h) = &hof {
         tracing::info!(
             depot_name = %h.name,
