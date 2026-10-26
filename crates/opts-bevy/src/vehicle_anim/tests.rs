@@ -139,16 +139,17 @@ fn swapped_matrix_mesh_steers_about_the_vertical_nlc() {
 }
 
 /// Where a point 1 m ahead of the hub goes (bevy x: right) when the steering variable is
-/// negative, which is a right turn.
+/// positive, which is a right turn (the scripts' indicator cancel arms the right indicator on a
+/// positive `Axle_Steering_0_L`).
 fn right_turn_x(cfg: &str, pivot: Option<MeshPivot>, hub: Vec3) -> f32 {
     let anim = steering_mesh(cfg, pivot);
-    let m = animation_matrix(&anim.steps[..1], |_| -0.7);
+    let m = animation_matrix(&anim.steps[..1], |_| 0.7);
     let p = bevy(hub + Vec3::Y);
     m.transform_point3(p).x - p.x
 }
 
 #[test]
-fn a_negative_steering_variable_turns_the_wheels_right() {
+fn a_positive_steering_variable_turns_the_wheels_right() {
     let hub = Vec3::new(-1.0, 3.0, 0.5);
     let swapped = Some(MeshPivot {
         origin: hub,
@@ -173,11 +174,11 @@ fn door_leaves_turn_the_other_way_and_the_sliding_leaf_runs_along_the_bus() {
     let leaf = "[mesh]\nd.o3d\n\n[newanim]\norigin_from_mesh\norigin_rot_z\n90\nanim_rot\ndoor0\n-177\n\n[newanim]\norigin_from_mesh\norigin_rot_y\n90\nanim_trans\ndoor_0_schiebe\n0.47\n\n++++++\n";
     let anim = steering_mesh(leaf, swapped);
     let turn = anim.steps.iter().find(|s| !s.translate).expect("rotation");
-    assert!(
-        (turn.factor - 177.0).abs() < 1e-3,
-        "door rotations are negated: {}",
-        turn.factor
-    );
+    // Opening (`door0` growing) turns the leaf anticlockwise seen from above (the sense the top
+    // view of the NLC's interior-swing door showed right): a point ahead of the hinge goes left.
+    let m = animation_matrix(std::slice::from_ref(turn), |_| 0.1);
+    let ahead = m.transform_point3(bevy(Vec3::Y));
+    assert!(ahead.x < -0.2 && (ahead.y).abs() < 1e-4, "{ahead}");
     let slide = anim.steps.iter().find(|s| s.translate).expect("slide");
     let m = animation_matrix(std::slice::from_ref(slide), |_| 1.0);
     let moved = m.transform_point3(Vec3::ZERO);
@@ -279,4 +280,92 @@ fn a_translation_in_the_mesh_frame_is_scaled_like_the_mesh_matrix() {
     let anim = steering_mesh(explicit, Some(pivot));
     let moved = animation_matrix_from_values(&anim.steps, &[1.0]).transform_point3(Vec3::ZERO);
     assert!((moved.length() - 0.8).abs() < 1e-4, "{moved:?}");
+}
+
+/// Whether a positive steering variable turns a steering wheel with the rim normal `normal`
+/// clockwise as the driver sees it (looking down the column): a point on the rim moves to the
+/// right of where it was.
+fn turns_clockwise(step: &AnimStep, normal: Vec3) -> bool {
+    let n = if normal.z < 0.0 { -normal } else { normal };
+    let u = (Vec3::Y - n * Vec3::Y.dot(n)).normalize();
+    let m = animation_matrix_from_values(std::slice::from_ref(step), &[0.02]);
+    let c = bevy(Vec3::ZERO);
+    let moved = m.transform_point3(bevy(u)) - m.transform_point3(c);
+    // Back to OMSI axes.
+    let moved = Vec3::new(moved.x, -moved.z, moved.y);
+    u.cross(moved).dot(n) < 0.0
+}
+
+/// Valiant 7700 `Model_7700A_3p_main.cfg`: `origin_from_mesh`, `origin_rot_x 30.7`,
+/// `origin_rot_z 90`, factor 1575, on `7700_DASH_BASE_STEERING_WHEEL.o3d` (a y/z-swap matrix of
+/// scale 0.048; the rim normal measured from its vertices in vehicle axes).
+const VALIANT_WHEEL: &str = "[mesh]\nDASH\\7700_DASH_BASE_STEERING_WHEEL.o3d\n\n[newanim]\norigin_from_mesh\norigin_rot_x\n30.7\norigin_rot_y\n0\norigin_rot_z\n90\nanim_rot\nAxle_Steering_0_L\n1575\n\n++++++\n";
+const VALIANT_RIM_NORMAL: Vec3 = Vec3::new(-0.001_5, -0.487_5, 0.873_1);
+
+#[test]
+fn the_tilted_steering_wheel_turns_about_its_column_valiant() {
+    let pivot = MeshPivot {
+        origin: Vec3::new(-0.71, 5.19, 1.33),
+        rows: SWAP_YZ_ROWS,
+        scale: 0.048,
+    };
+    let anim = steering_mesh(VALIANT_WHEEL, Some(pivot));
+    let axis = anim.steps[0].frame.transform_vector3(Vec3::X).normalize();
+    assert!(
+        axis.dot(VALIANT_RIM_NORMAL).abs() > 0.99,
+        "axis {axis} against the rim normal {VALIANT_RIM_NORMAL}"
+    );
+    assert!(turns_clockwise(&anim.steps[0], VALIANT_RIM_NORMAL));
+}
+
+/// MAN_SD200 `model_SD77.cfg` steering wheel: explicit `origin_trans`, `origin_rot_x -10`,
+/// `origin_rot_y 90`, factor 1450; `SD77_lenkrad.o3d` (identity matrix) has the rim normal
+/// (0, -0.174, 0.985): the column leans back towards the driver.
+const SD77_WHEEL: &str = "[mesh]\nSD77\\SD77_lenkrad.o3d\n\n[newanim]\norigin_trans\n-0.72\n5.167\n1.733\norigin_rot_x\n-10\norigin_rot_y\n90\norigin_rot_z\n0\nanim_rot\nAxle_Steering_0_L\n1450\n\n++++++\n";
+
+#[test]
+fn the_column_of_the_sd77_leans_towards_the_driver() {
+    let normal = Vec3::new(0.0, -0.174_0, 0.984_7);
+    let anim = steering_mesh(SD77_WHEEL, None);
+    let axis = anim.steps[0].frame.transform_vector3(Vec3::X).normalize();
+    assert!(axis.dot(normal).abs() > 0.999, "axis {axis}");
+    assert!(turns_clockwise(&anim.steps[0], normal));
+}
+
+#[test]
+fn steering_wheels_turn_with_the_road_wheels() {
+    let pivot = MeshPivot {
+        origin: Vec3::new(-0.7, 5.2, 1.4),
+        rows: GN92_ROWS,
+        scale: 1.0,
+    };
+    let gn92 = steering_mesh(GN92_WHEEL, Some(pivot));
+    assert!(turns_clockwise(&gn92.steps[0], GN92_RIM_NORMAL));
+    // The road wheels of the same sign turn right (`a_positive_steering_variable_...`).
+    assert!(right_turn_x(SD77, None, Vec3::new(-0.95, 2.943, 0.495)) > 0.1);
+}
+
+/// Valiant 7700 speedometer needle: `origin_from_mesh`, `origin_rot_x 52`, `origin_rot_z 90`,
+/// `anim_rot cockpit_tachowinkel 1` on `7700_DASH_NEEDLE_SPEED.o3d` (a scaled y/z swap); the dial
+/// faces the driver, up and back (measured from the needle's vertices, about 4 degrees off).
+const VALIANT_NEEDLE: &str = "[mesh]\nDASH\\7700_DASH_NEEDLE_SPEED.o3d\n\n[newanim]\norigin_from_mesh\norigin_rot_x\n52\norigin_rot_y\n0\norigin_rot_z\n90\nanim_rot\ncockpit_tachowinkel\n1\n\n++++++\n";
+
+#[test]
+fn the_needles_turn_on_the_dial_valiant() {
+    let pivot = MeshPivot {
+        origin: Vec3::new(-0.64, 5.54, 1.34),
+        rows: SWAP_YZ_ROWS,
+        scale: 0.01,
+    };
+    let dial = Vec3::new(0.0, -0.738, 0.675);
+    let anim = steering_mesh(VALIANT_NEEDLE, Some(pivot));
+    let axis = anim.steps[0].frame.transform_vector3(Vec3::X).normalize();
+    assert!(
+        axis.dot(dial).abs() > 0.99,
+        "axis {axis} against the dial {dial}"
+    );
+    // A growing angle turns the needle clockwise as the driver sees the dial.
+    let mut step = anim.steps[0].clone();
+    step.factor = 1000.0;
+    assert!(turns_clockwise(&step, dial));
 }

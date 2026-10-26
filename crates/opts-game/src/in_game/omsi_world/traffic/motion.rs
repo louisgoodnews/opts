@@ -50,7 +50,7 @@ pub fn update_ai_variables(
         for axle in 0..4 {
             for side in ["l", "r"] {
                 vars.set(&format!("wheel_rotation_{axle}_{side}"), v.wheel_angle);
-                let s = if axle == 0 { -steer } else { 0.0 };
+                let s = if axle == 0 { steer } else { 0.0 };
                 vars.set(&format!("axle_steering_{axle}_{side}"), s);
             }
         }

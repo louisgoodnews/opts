@@ -108,9 +108,9 @@ pub struct WheelInput {
     pub speed_rpm: f32,
     /// Accumulated rotation (rad).
     pub rotation_rad: f32,
-    /// Steering angle (rad, positive turning left ❓).
+    /// Steering angle (rad, positive turning right).
     pub steering_rad: f32,
-    /// Suspension travel (m).
+    /// Suspension travel (m): the extension from the unloaded spring, negative at rest.
     pub suspension_m: f32,
 }
 

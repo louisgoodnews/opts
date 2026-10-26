@@ -65,3 +65,45 @@ fn a_driven_axle_in_the_second_unit_takes_the_torque() {
         c.sim.chassis.forward_speed_m_s()
     );
 }
+
+#[test]
+fn a_right_turn_reaches_the_scripts_as_a_positive_steering_angle() {
+    // The scripts' automatic indicator cancel arms the right indicator on a positive
+    // `Axle_Steering_0_L` (`lights.osc` of the VW T3 and the TA cars, read as prose).
+    let mut c = VehicleController::standard_bus(11_500.0, 5.85);
+    c.inputs_mut().set_steering(0.5);
+    c.sim.step(1.0 / 60.0);
+    let inputs = host_inputs(&c, None);
+    assert!(inputs.axles[0].left.steering_rad > 0.1);
+    assert!(inputs.axles[0].right.steering_rad > 0.1);
+}
+
+#[test]
+fn the_scripts_read_the_suspension_travel_from_the_unloaded_spring() {
+    // A standing bus: about minus its static deflection (`bremse_level_setpoint` -0.105 is the
+    // levelling's target), the trail unit's axle at the head's mean.
+    let mut c = articulated();
+    for _ in 0..120 {
+        c.sim.step(1.0 / 60.0);
+    }
+    let inputs = host_inputs(&c, None);
+    let head = inputs.axles[0].left.suspension_m;
+    assert!((-0.25..-0.02).contains(&head), "{head}");
+    let rest = c.sim.body.as_ref().unwrap().rest_travel_m();
+    let trail = inputs.axles.last().unwrap().left.suspension_m;
+    assert!((trail - rest).abs() < 1e-6, "{trail} vs {rest}");
+}
+
+#[test]
+fn a_released_wheel_brake_does_not_cancel_another_wheels_force() {
+    // The Valiant's brake script gives a released brake a negative force per wheel.
+    let src = "{frame}\n 100 (S.L.M_Wheel)\n -700 (S.L.Axle_Brakeforce_0_L)\n -700 (S.L.Axle_Brakeforce_0_R)\n 2000 (S.L.Axle_Brakeforce_1_L)\n 2000 (S.L.Axle_Brakeforce_1_R)\n{end}";
+    let (mut engine, _) = opts_sim::script::ScriptEngine::from_sources(&[("t.osc", src)]);
+    engine.run_frame(0.02, false);
+    let drive = opts_bevy::vehicle_script::script_outputs(&engine).expect("drive");
+    assert!(
+        (drive.brake_force_n - 4000.0).abs() < 1e-3,
+        "{}",
+        drive.brake_force_n
+    );
+}

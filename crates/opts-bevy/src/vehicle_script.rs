@@ -136,26 +136,24 @@ pub fn host_inputs(
             .sum::<f32>()
             / sim.axles.len() as f32
     };
-    // Wheel spin (rad, growing while driving forward), steering (rad; positive steering is
-    // assumed to turn left ❓, the simulation's positive steering turns right) and suspension
-    // travel (m, the spring's compression of the wheel under the body model, M-0073; its sign
-    // and zero point are ❓ against OMSI).
+    // Wheel spin (rad, growing while driving forward), steering (rad; positive turns right like
+    // the simulation's: the scripts' automatic indicator cancel arms the right indicator on a
+    // positive `Axle_Steering_0_L`) and suspension travel (m, OMSI's extension from the unloaded
+    // spring, negative at rest: `WheelSuspension::omsi_travel_m`).
+    let wheels = sim.body.as_ref().map_or(&[][..], |b| &b.wheels[..]);
+    let travel = |k: usize| wheels.get(k).map_or(0.0, |w| w.omsi_travel_m());
+    // The axles of the following units have no body model: they rest at the head's mean travel.
+    let rest = sim.body.as_ref().map_or(0.0, |b| b.rest_travel_m());
     inputs.axles = sim
         .axles
         .iter()
         .enumerate()
         .map(|(i, axle)| {
-            let travel = |side: usize| {
-                sim.body
-                    .as_ref()
-                    .and_then(|b| b.wheels.get(i * 2 + side))
-                    .map_or(0.0, |w| w.compression_m)
-            };
             let wheel = |w: &opts_sim::WheelState, side: usize| WheelInput {
                 speed_rpm: rpm_of_omega(w.angular_velocity_rad_s),
                 rotation_rad: w.rotation_rad,
-                steering_rad: -w.steer_angle_rad,
-                suspension_m: travel(side),
+                steering_rad: w.steer_angle_rad,
+                suspension_m: travel(i * 2 + side),
             };
             AxleInput {
                 left: wheel(&axle.left_wheel, 0),
@@ -175,7 +173,7 @@ pub fn host_inputs(
         speed_rpm: rpm_of_omega(sim.chassis.forward_speed_m_s() / r0),
         rotation_rad: sim.axles.first().map_or(0.0, |a| a.left_wheel.rotation_rad),
         steering_rad: 0.0,
-        suspension_m: 0.0,
+        suspension_m: rest,
     };
     for unit in &sim.trailer_loads {
         for _ in &unit.axles {
@@ -327,8 +325,10 @@ pub fn script_outputs(engine: &ScriptEngine) -> Option<opts_sim::vehicle::Script
             ]
         })
         .collect();
+    // A wheel's brake cannot push: the Valiant's script gives a released brake a negative force
+    // (cylinder at ambient minus the response pressure), which must not cancel another wheel's.
     let brake = if wheel_names.iter().any(|n| engine.writes(n)) {
-        wheel_names.iter().map(|n| engine.get(n)).sum()
+        wheel_names.iter().map(|n| engine.get(n).max(0.0)).sum()
     } else {
         engine.get("brakeforce")
     };

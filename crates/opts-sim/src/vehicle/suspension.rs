@@ -202,6 +202,22 @@ pub struct WheelSuspension {
     pub payload_n: f32,
 }
 
+impl WheelSuspension {
+    /// The wheel's travel as OMSI's `Axle_Suspension_<n>_<l|r>` gives it (m): the extension of
+    /// the spring from its unloaded length, so negative under load and growing when the body
+    /// rises. Read from the scripts' own use: the air-suspension levelling opens the fill valve
+    /// while the value is below the set point (`bremse_level_setpoint` -0.105 in the MAN and
+    /// Valiant brake scripts, "the body stands lower than the set point") and the drain valve
+    /// while it is above, and about -0.1 m is the static deflection of a city bus wheel on its
+    /// `achse_feder` (Valiant 7700 front: 24.7 kN on 284.6 kN/m, 0.087 m). The spring of the
+    /// body model is linear in the factor (`f · k · (rest + compression)`), so the unloaded
+    /// length is `static_load / k` above the rest position whatever the factor.
+    #[must_use]
+    pub fn omsi_travel_m(&self) -> f32 {
+        -(self.static_load_n / self.spring_n_m.max(1.0) + self.compression_m)
+    }
+}
+
 /// The body on its wheels: heave, pitch and roll under a spring and a damper per wheel, driven by
 /// the longitudinal and lateral acceleration (their moments about the centre of gravity) and the
 /// ground under each wheel (M-0073). Small angles; the rest position is the static equilibrium of
@@ -237,6 +253,18 @@ pub struct BodySuspension {
 }
 
 impl BodySuspension {
+    /// The mean [`WheelSuspension::omsi_travel_m`] of the wheels at rest (m): the travel the
+    /// scripts are given for axles without a body model of their own (the trailer of an
+    /// articulated bus), so that their levelling holds them where it holds the head's.
+    #[must_use]
+    pub fn rest_travel_m(&self) -> f32 {
+        let rest = self
+            .wheels
+            .iter()
+            .map(|w| w.omsi_travel_m() + w.compression_m);
+        rest.sum::<f32>() / self.wheels.len().max(1) as f32
+    }
+
     /// A body at rest on the wheels of `axles` (longitudinal position, track width, spring rate
     /// and damping per side), carrying the static axle loads `static_loads_n` (summing to the
     /// weight).

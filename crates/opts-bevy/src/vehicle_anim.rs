@@ -3,16 +3,18 @@
 //! Variables written by the vehicle scripts (or fed from the simulation) move and show meshes.
 //! Conventions, with their evidence (`docs/src/formats/text/vehicles/model_cfg.md`):
 //!
+//! * OMSI turns in its own left-handed axes (x right, y up, z forward), which in the right-handed
+//!   OMSI vehicle axes used here (x right, y forward, z up) means every angle with the
+//!   **opposite sign** (`docs/src/architecture/animation-axes.md`, "One handedness");
 //! * the animation frame is `origin_trans` plus the rotation `Rx·Ry·Rz` of `origin_rot_x/y/z`
-//!   (degrees, right-handed, in OMSI axes: x right, y forward, z up); the rotation order is
-//!   inferred from the SD77 steering wheel (`rot_x = -10`, `rot_y = 90`: a nearly vertical
-//!   column leaning 10°) ❓;
+//!   (degrees, each negated: `origin_rot_y 90` turns X **up**, the steering axis, `-90` down,
+//!   the suspension's travel); the rotation order follows the tilted steering wheels (SD77
+//!   `rot_x -10, rot_y 90`, Valiant `rot_x 30.7, rot_z 90`: the measured rim normals);
 //! * `anim_rot` rotates about the frame's **X axis** and `anim_trans` moves along it (the model
-//!   authors' comment: "no rotation needed, wheels turn about the X axis"; suspension uses
-//!   `origin_rot_y = -90` to make X point up, steering `+90` for the vertical steering axis);
-//! * the angle is `variable × factor` degrees applied with the **opposite sign** of a
-//!   right-handed rotation: with `Wheel_Rotation` increasing while driving forward the wheel top
-//!   must move forward. The sign for steering is unverified ❓;
+//!   authors' comment: "no rotation needed, wheels turn about the X axis");
+//! * the angle is `variable × factor` degrees, again with the opposite sign of a right-handed
+//!   rotation: with `Wheel_Rotation` increasing while driving forward the wheel top moves forward,
+//!   a positive `Axle_Steering` (a right turn) turns the wheels and the steering wheel right;
 //! * several `[newanim]` blocks apply in declaration order, the first innermost (wheel: spin,
 //!   then suspension, then steering);
 //! * `maxspeed` limits how fast the animation follows its variable, in variable units per second
@@ -118,14 +120,20 @@ fn swap_yz() -> Mat4 {
 }
 
 /// The mesh matrix rotation to compose after the origin rotation of a rotation animation, if it
-/// is needed (`docs/src/architecture/animation-axes.md`). Only `origin_from_mesh` animations
-/// without `origin_trans` with an `anim_rot` qualify, and
+/// is needed (`docs/src/architecture/animation-axes.md`): the frame of `origin_from_mesh` is the
+/// object's own. Only `origin_from_mesh` animations without `origin_trans` with an `anim_rot`
+/// qualify, a mesh with a non-identity matrix, except
 ///
-/// * on a y/z-swapping matrix (NLC wheels): only when the origin rotation gives a horizontal axis
-///   that the swap turns vertical (`origin_rot_z 90`: forward, then up);
-/// * on any other non-identity matrix (steering wheels): when the matrix changes the axis, the
-///   origin rotation has no x part (the measured counter examples all rotate about x), and the
-///   result is the mesh's own axis (checked against the vertices of 575 steering wheels).
+/// * on a y/z-swapped mesh, an axis the origin rotation already makes vertical (the 12 main
+///   steering entries `origin_rot_y 90` on a swapped wheel, the NLC's factor-4 entry);
+/// * a pure `origin_rot_x` on a proper rotation matrix (4 wheel spins on meshes with a yaw
+///   matrix: they turn about x).
+///
+/// Census of the installed vehicles (the `anim_axis_probe` of 2026-10-26, 4,600 steering and
+/// wheel-spin animations): every steering wheel turns about its measured rim normal and to the
+/// right on a right turn, the 49 tilted ones of the Valiant, HOH and C2 families included
+/// (`rot_x` 8.9 to 31.6 with `rot_z ±90`, none before); with the matrix the wheel spins of the
+/// mirrored and turned wheel meshes roll forward (479 of 550, 112 without it).
 fn matrix_rotation(a: &ModelAnim, pivot: Option<MeshPivot>) -> Option<Mat4> {
     let pivot = pivot?;
     if !a.origin_from_mesh
@@ -136,13 +144,13 @@ fn matrix_rotation(a: &ModelAnim, pivot: Option<MeshPivot>) -> Option<Mat4> {
         return None;
     }
     let axis = origin_rotation(a).transform_vector3(Vec3::X);
-    let p = pivot.vehicle_rotation();
     if pivot.is_swap_yz() {
-        let swapped = swap_yz().transform_vector3(axis);
-        return (axis.z.abs() < 0.5 && swapped.z.abs() > 0.97).then(swap_yz);
+        let tips_over = axis.z.abs() > 0.97;
+        return (!tips_over).then(swap_yz);
     }
-    let moved = p.transform_vector3(axis);
-    (a.origin_rot.x == 0.0 && axis.dot(moved).abs() < 0.95).then_some(p)
+    let p = pivot.vehicle_rotation();
+    let pure_x = a.origin_rot.x != 0.0 && a.origin_rot.y == 0.0 && a.origin_rot.z == 0.0;
+    (!(pure_x && p.determinant() > 0.0)).then_some(p)
 }
 
 /// Whether a translation of a y/z-swapping mesh (the NLC) is taken along the swapped axis: the
@@ -160,10 +168,11 @@ fn needs_matrix(a: &ModelAnim, pivot: Option<MeshPivot>) -> bool {
     matrix_rotation(a, pivot).is_some()
 }
 
+/// The origin rotation in vehicle axes: OMSI's angles turn the other way here (one handedness).
 fn origin_rotation(a: &ModelAnim) -> Mat4 {
-    Mat4::from_rotation_x(a.origin_rot.x.to_radians())
-        * Mat4::from_rotation_y(a.origin_rot.y.to_radians())
-        * Mat4::from_rotation_z(a.origin_rot.z.to_radians())
+    Mat4::from_rotation_x(-a.origin_rot.x.to_radians())
+        * Mat4::from_rotation_y(-a.origin_rot.y.to_radians())
+        * Mat4::from_rotation_z(-a.origin_rot.z.to_radians())
 }
 
 fn frame_of(a: &ModelAnim, pivot: Option<MeshPivot>, with_matrix: bool) -> Mat4 {
@@ -194,32 +203,14 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
     } else {
         frame
     };
-    // A translation along the X axis that a mesh-origin `origin_rot_y ±90` turns vertical (push
-    // buttons, the sun blind) moves the other way than the right-handed rotation says: the
-    // buttons' factors (`cockpit_gang4` 0.002 with -90, `cockpit_tuertaster1` -0.005 with +90)
-    // press them *down* into the console, and the Bremen MAN's blind (`cp_rollo_pos` -1 with
-    // factor 0.5, retracted at load) goes *up*. Rotations and explicit `origin_trans` frames keep
-    // the convention (doors swing outward, wheels turn: checked).
-    let flips_translation = anim.origin_from_mesh
-        && anim.origin_trans.is_none()
-        && anim.origin_rot.x == 0.0
-        && anim.origin_rot.z == 0.0
-        && (anim.origin_rot.y.abs() - 90.0).abs() < 1e-3;
-    // The door chains turn the other way than the right-handed convention says, on the NLC's
-    // y/z-swapped meshes and on the Bremen MAN's alike: with `door0 -177` the NLC's interior-swing
-    // leaves swung out of the bus, the Bremen MAN's `door_0 75` leaves too (the top view of all
-    // three door types shows it). The wheels of the same vehicles steer the right way, so this
-    // is limited to the `door*` variables.
-    let door = |a: &AnimAction| a.variable.to_ascii_lowercase().starts_with("door");
-    // The scissor arms of the NLC's front sun blind (`Rollo_v`, `origin_rot_y -90` on y/z-swapped
-    // meshes, arm angles 57 and 114 degrees) swung the fabric out of the bus, above the destination
-    // board, with the right-handed sense: they turn like the door chains. The side blind, whose
-    // meshes take their matrix rotation into the frame, keeps the convention.
-    let swapped_arm = pivot.is_some_and(|p| p.is_swap_yz()) && !needs_matrix(anim, pivot);
-    let blind_arm =
-        |a: &AnimAction| swapped_arm && a.variable.to_ascii_lowercase().contains("rollo");
+    // With one handedness the push buttons (`cockpit_gang4` 0.002 on `origin_rot_y -90`) press
+    // down into the console, the Bremen MAN's sun blind (`cp_rollo_pos` -1, factor 0.5) is
+    // retracted up, the door leaves of the NLC and the Bremen MAN swing into and out of the bus as
+    // their type says and the NLC's blind arms stay inside: until 2026-10-26 each of these had a
+    // sign flip of its own on top of a right-handed origin rotation.
     // The sliding leaves of the NLC's outward-swinging sliding doors: `origin_rot_y 90` (the X axis
-    // down) and `anim_trans door_0_schiebe 0.47` run along the bus on the swapped mesh.
+    // up) and `anim_trans door_0_schiebe 0.47` run along the bus on the swapped mesh.
+    let door = |a: &AnimAction| a.variable.to_ascii_lowercase().starts_with("door");
     let swapped = swaps_translation(anim, pivot);
     let slide_frame = if swapped {
         Mat4::from_translation(frame.w_axis.truncate()) * swap_yz() * origin_rotation(anim)
@@ -246,13 +237,7 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
                 rot_frame
             },
             variable: a.variable.clone(),
-            factor: if (translate && (flips_translation || slides))
-                || (!translate && (door(a) || blind_arm(a)))
-            {
-                -a_factor
-            } else {
-                a_factor
-            },
+            factor: a_factor,
             translate,
             maxspeed: anim.maxspeed.filter(|v| *v > 0.0),
         }
@@ -370,22 +355,64 @@ pub fn animation_matrix_from_values(steps: &[AnimStep], values: &[f32]) -> Mat4 
     c * m * c.inverse()
 }
 
+/// The rest value of an `Axle_Suspension_<n>_<l|r>` variable (m; 0 for any other name and for a
+/// vehicle without a body model): OMSI counts the travel from the unloaded spring, so a wheel
+/// standing still reads about -0.1 m, while the models draw the wheels where they stand at rest
+/// (the levelling's set point is the rest) ❓. The animation shows the travel from rest.
+fn suspension_rest(
+    body: Option<&opts_sim::vehicle::suspension::BodySuspension>,
+    name: &str,
+) -> f32 {
+    let Some(body) = body else {
+        return 0.0;
+    };
+    let Some(rest) = name
+        .to_ascii_lowercase()
+        .strip_prefix("axle_suspension_")
+        .map(|r| {
+            let mut parts = r.split('_');
+            let axle = parts.next().and_then(|a| a.parse::<usize>().ok());
+            let side = match parts.next() {
+                Some("r") => 1,
+                _ => 0,
+            };
+            axle.and_then(|a| body.wheels.get(a * 2 + side))
+                .map_or_else(
+                    || body.rest_travel_m(),
+                    |w| w.omsi_travel_m() + w.compression_m,
+                )
+        })
+    else {
+        return 0.0;
+    };
+    rest
+}
+
 /// Applies animation and visibility to every animated mesh.
 pub fn vehicle_animation_system(
     time: Res<Time>,
     mut meshes: Query<(&mut MeshAnimation, &mut Transform, &mut Visibility)>,
-    vehicles: Query<(Option<&VehicleScripts>, Option<&AiVariables>)>,
+    vehicles: Query<(
+        Option<&VehicleScripts>,
+        Option<&AiVariables>,
+        Option<&crate::vehicle_sim::VehicleController>,
+    )>,
 ) {
     let dt = time.delta_secs();
     for (mut anim, mut transform, mut visibility) in &mut meshes {
-        let Ok((scripts, table)) = vehicles.get(anim.owner) else {
+        let Ok((scripts, table, controller)) = vehicles.get(anim.owner) else {
             continue;
         };
         let Some(engine) = VariableSource::of(scripts, table) else {
             continue;
         };
         if !anim.steps.is_empty() {
-            let targets: Vec<f32> = anim.steps.iter().map(|s| engine.get(&s.variable)).collect();
+            let body = controller.and_then(|c| c.sim.body.as_ref());
+            let targets: Vec<f32> = anim
+                .steps
+                .iter()
+                .map(|s| engine.get(&s.variable) - suspension_rest(body, &s.variable))
+                .collect();
             anim.follow(&targets, dt);
             let m = animation_matrix_from_values(&anim.steps, &anim.shown);
             *transform = Transform::from_matrix(m);

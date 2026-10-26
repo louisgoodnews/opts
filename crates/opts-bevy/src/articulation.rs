@@ -298,6 +298,8 @@ pub fn articulation_system(
             let _ = (&mut tf, root_tf);
             alphas.push(alpha.to_degrees());
         }
+        // The trailers' axles have no body model: they rest at the head's mean travel.
+        let rest = sim.body.as_ref().map_or(0.0, |b| b.rest_travel_m());
         if let Some(scripts) = scripts {
             if let Ok(mut engine) = scripts.engine.lock() {
                 // `beta` (pitch) and `gamma` (roll) come from the simulation's fixed-step ground
@@ -317,7 +319,7 @@ pub fn articulation_system(
                         for side in ["L", "R"] {
                             engine.set(&format!("wheel_rotation_{i}_{side}"), w.rotation_rad);
                             engine.set(&format!("axle_steering_{i}_{side}"), 0.0);
-                            engine.set(&format!("axle_suspension_{i}_{side}"), 0.0);
+                            engine.set(&format!("axle_suspension_{i}_{side}"), rest);
                         }
                         engine.set(&format!("wheel_rotationspeed_{i}_l"), rpm);
                         engine.set(&format!("wheel_rotationspeed_{i}_r"), rpm);
