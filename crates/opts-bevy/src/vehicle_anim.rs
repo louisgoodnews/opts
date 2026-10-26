@@ -62,6 +62,10 @@ pub struct MeshPivot {
     /// Rows of the matrix rotation (normalised, o3d coordinates): the images of the object's local
     /// axes in the parent.
     pub rows: [[f32; 3]; 3],
+    /// The matrix's scale (the mean length of its rows): OMSI moves an `anim_trans` in the mesh's
+    /// own frame, so a mesh exported with a scale of 0.01 (the MB C2 BVG's gear buttons, rows of
+    /// about 0.0077) moves `0.8` by 7 mm, not 0.8 m.
+    pub scale: f32,
 }
 
 /// Rows of the y/z swap `[1,0,0|0,0,1|0,1,0]` (the wheel meshes of the MAN New Lion's City).
@@ -74,6 +78,7 @@ impl MeshPivot {
         Self {
             origin,
             rows: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            scale: 1.0,
         }
     }
 
@@ -221,8 +226,13 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
     } else {
         frame
     };
+    // A translation in the mesh's own frame is scaled like the mesh's matrix.
+    let scale = pivot
+        .filter(|p| anim.origin_from_mesh && anim.origin_trans.is_none() && p.scale > 0.0)
+        .map_or(1.0, |p| p.scale);
     let mk = |a: &AnimAction, translate: bool| {
         let slides = translate && swapped && door(a);
+        let a_factor = if translate { a.factor * scale } else { a.factor };
         AnimStep {
             frame: if slides {
                 slide_frame
@@ -235,9 +245,9 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
             factor: if (translate && (flips_translation || slides))
                 || (!translate && (door(a) || blind_arm(a)))
             {
-                -a.factor
+                -a_factor
             } else {
-                a.factor
+                a_factor
             },
             translate,
             maxspeed: anim.maxspeed.filter(|v| *v > 0.0),

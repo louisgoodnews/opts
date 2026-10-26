@@ -146,9 +146,14 @@ pub(super) fn mesh_pivot(
         let v = v.try_normalize().unwrap_or(Vec3::ZERO);
         [v.x, v.y, v.z]
     };
+    let scale = (0..3)
+        .map(|i| Vec3::new(m[i][0], m[i][1], m[i][2]).length())
+        .sum::<f32>()
+        / 3.0;
     Some(opts_bevy::MeshPivot {
         origin: Vec3::new(m[3][0], m[3][2], m[3][1]),
         rows: [row(0), row(1), row(2)],
+        scale: if scale.is_finite() && scale > 1e-6 { scale } else { 1.0 },
     })
 }
 

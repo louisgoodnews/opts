@@ -173,7 +173,7 @@ The most common values observed: `2`, `3`, `4`.
 | `origin_rot_x` | 1 | Rotation of the animation origin around X (degrees). |
 | `origin_rot_y` | 1 | Rotation of the animation origin around Y (degrees). |
 | `origin_rot_z` | 1 | Rotation of the animation origin around Z (degrees). |
-| `origin_from_mesh` | 0 | Flag: derive the origin from the mesh itself (no explicit `origin_*` needed). |
+| `origin_from_mesh` | 0 | Flag: derive the origin from the mesh itself (no explicit `origin_*` needed): the `.o3d` matrix chunk. Its scale counts: an `anim_trans` moves in the mesh's own frame, so on a mesh whose matrix rows are about 0.01 long a factor of 0.6 is 6 mm (checked 2026-10-26 over 7,071 such translations on scaled meshes: the O530's gear buttons 0.6, the DL05's horn -0.1, the MB C2 BVG's gear buttons 0.8, sun blinds 0.9 on scale 0.30; unscaled they would move 10 to 80 cm). |
 | `anim_rot` | 2 (var, factor) | Rotate the mesh around the origin, driven by `var`. The `factor` scales the variable's value. |
 | `anim_trans` | 2 (var, factor) | Translate the mesh along the origin's axis, driven by `var`. The `factor` scales the variable's value. |
 | `delay` | 1 | Animation smoothing parameter. |
