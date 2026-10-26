@@ -1,4 +1,5 @@
-//! Step ④ Review: one card with the three choices and a *Change* link each.
+//! Step *Review*: one card with the choices (and the trip, when runs are offered) and a *Change*
+//! link each.
 
 use bevy::prelude::*;
 use opts_gui::l10n::L10nArgs;
@@ -119,6 +120,11 @@ pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
         ))
         .id();
     let map = ctx.catalogue.map_by_name(&s.selected_map);
+    // With a trip the drive starts at its first stop, not at the start point.
+    let start = s
+        .trip
+        .as_ref()
+        .map_or_else(|| s.selected_entry_point.clone(), |t| t.stop_name.clone());
     let where_lines = vec![
         commands
             .spawn(plain(
@@ -129,7 +135,7 @@ pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
             .id(),
         commands
             .spawn(plain(
-                s.selected_entry_point.clone(),
+                start,
                 TypeScale::BodyMedium,
                 ColorRole::OnSurfaceVariant,
             ))
@@ -211,9 +217,45 @@ pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
         None,
         when_lines,
     );
-    commands
-        .entity(card)
-        .add_children(&[where_row, what_row, when_row]);
+    let mut rows = vec![where_row, what_row, when_row];
+    if ctx.trips.trips.is_empty() {
+        // No step *Trip*: nothing to show.
+    } else {
+        let trip_lines = match &s.trip {
+            Some(t) => vec![
+                commands
+                    .spawn(plain(
+                        format!("{}  {}", t.depart_text(), t.title()),
+                        TypeScale::TitleMedium,
+                        ColorRole::OnSurface,
+                    ))
+                    .id(),
+                commands
+                    .spawn(keyed_args(
+                        "wiz-review-trip-from",
+                        L10nArgs::one("stop", t.stop_name.clone()),
+                        TypeScale::BodyMedium,
+                        ColorRole::OnSurfaceVariant,
+                    ))
+                    .id(),
+            ],
+            None => vec![commands
+                .spawn(keyed(
+                    "wiz-trip-none",
+                    TypeScale::TitleMedium,
+                    ColorRole::OnSurface,
+                ))
+                .id()],
+        };
+        rows.push(review_row(
+            commands,
+            PlannerStep::Trip,
+            glyphs::SCHEDULE,
+            None,
+            trip_lines,
+        ));
+    }
+    commands.entity(card).add_children(&rows);
     let mut kids = vec![title, card];
     if let Err(reason) = validate(s, ctx.catalogue) {
         kids.push(

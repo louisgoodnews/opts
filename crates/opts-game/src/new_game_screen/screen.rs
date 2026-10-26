@@ -50,6 +50,7 @@ fn step_key(step: PlannerStep) -> &'static str {
         PlannerStep::Where => "wiz-step-where",
         PlannerStep::What => "wiz-step-what",
         PlannerStep::When => "wiz-step-when",
+        PlannerStep::Trip => "wiz-step-trip",
         PlannerStep::Review => "wiz-step-review",
     }
 }
@@ -321,6 +322,7 @@ pub fn refresh_chrome(
     steppers: Query<(Entity, &StepperButton, Has<Selected>)>,
     footers: Query<(Entity, &FooterButton, Has<Disabled>)>,
     mut nodes: Query<&mut Node>,
+    mut texts: Query<&mut Text, Without<SummaryPart>>,
     mut commands: Commands,
     added: Query<(), Added<StepperButton>>,
 ) {
@@ -342,7 +344,26 @@ pub fn refresh_chrome(
             text.0 = new;
         }
     }
+    let shown = state.shown_steps();
     for (entity, s, selected) in &steppers {
+        // *Trip* only when the plan has runs; the numbers count the steps shown.
+        let position = shown.iter().position(|x| *x == s.step);
+        if let Ok(mut n) = nodes.get_mut(entity) {
+            let display = if position.is_some() {
+                Display::Flex
+            } else {
+                Display::None
+            };
+            if n.display != display {
+                n.display = display;
+            }
+        }
+        if let (Some(p), Ok(mut t)) = (position, texts.get_mut(s.number)) {
+            let label = (p + 1).to_string();
+            if t.0 != label {
+                t.0 = label;
+            }
+        }
         let now = s.step == state.step;
         if now != selected || !added.is_empty() {
             let mut e = commands.entity(entity);

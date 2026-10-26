@@ -41,6 +41,21 @@ pub(super) fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         env.catalogue.as_deref(),
         env.service.as_deref(),
     )
+    .map(|mut cfg| {
+        // A trip given by the protocol names its run only: its stop and texts come from the map's
+        // timetables. A trip that does not resolve is dropped.
+        if setup.trip.as_ref().is_some_and(|t| t.station_id == 0)
+            && !setup
+                .trip
+                .as_mut()
+                .is_some_and(|t| crate::trip_start::complete_trip(t, &cfg.map_dir))
+        {
+            tracing::warn!(trip = ?setup.trip, "the run is not in the map's timetables; no trip");
+            setup.trip = None;
+        }
+        cfg.start_station = setup.trip.as_ref().map(|t| t.station_id);
+        cfg
+    })
     .and_then(|cfg| {
         // The map is built for the planned date (Chrono); the session environment starts there.
         let date = chrono_date(crate::new_game_screen::planner::setup_date(&setup));
@@ -63,6 +78,12 @@ pub(super) fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             (job.map_name(), job)
         })
     });
+    // A chosen trip starts at its first stop (M-0145) and is followed once the vehicle is there.
+    if let Some(t) = &setup.trip {
+        env.session.entry_point.clone_from(&t.stop_name);
+    }
+    env.commands
+        .insert_resource(crate::trip_start::PendingTrip(setup.trip.clone()));
     let overlay = env.stats.overlay_visible;
     *env.stats = WorldStats {
         overlay_visible: overlay,

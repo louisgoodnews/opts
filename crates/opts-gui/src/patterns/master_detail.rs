@@ -48,6 +48,8 @@ pub struct MasterDetail {
     pub query: String,
     /// Id of the selected entry.
     pub selected: Option<String>,
+    /// The rows have no star (a list whose entries are not kept, such as timetable runs).
+    pub no_stars: bool,
 }
 
 impl MasterDetail {

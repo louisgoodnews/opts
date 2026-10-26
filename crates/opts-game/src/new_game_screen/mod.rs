@@ -1,7 +1,7 @@
 //! *Plan a drive*: the four-step wizard that replaced "Start New Game".
 //!
-//! The steps are *Where* (map), *What* (vehicle, livery, equipment), *When* (date, time, weather)
-//! and *Review*; the first two are built on the master-detail pattern of
+//! The steps are *Where* (map), *What* (vehicle, livery, equipment), *When* (date, time, weather),
+//! *Trip* (a timetable run, only when the plan has runs to offer) and *Review*; the first two are built on the master-detail pattern of
 //! [`opts_gui::patterns`]. The specification is
 //! `docs/src/roadmap/phase-9/wizard-and-loading.md`; the choices live in [`NewGameSetup`] and are
 //! remembered through [`crate::drive_history`].
@@ -20,6 +20,7 @@ pub mod step_what;
 pub mod step_when;
 pub mod step_where;
 pub mod thumbnails;
+pub mod trips;
 pub mod types;
 pub mod weather;
 
@@ -55,6 +56,8 @@ pub struct BuildCtx<'a> {
     pub history: &'a PlannerHistory,
     /// Remarks about remembered choices that vanished.
     pub notes: &'a [Note],
+    /// The timetable runs offered.
+    pub trips: &'a trips::TripState,
 }
 
 /// Plugin of the wizard.
@@ -68,6 +71,7 @@ impl Plugin for NewGameMenuPlugin {
             .init_resource::<NewGameSetup>()
             .init_resource::<PlannerState>()
             .init_resource::<livery::LiveryState>()
+            .init_resource::<trips::TripState>()
             .init_resource::<crate::shell::esc::ScreenBackSteps>()
             .add_message::<crate::shell::esc::ScreenBack>()
             .add_message::<crate::shell::nav::NavigateBack>()
@@ -118,6 +122,7 @@ impl Plugin for NewGameMenuPlugin {
             .add_systems(
                 Update,
                 (
+                    trips::refresh_trips,
                     rebuild_body,
                     screen::refresh_chrome,
                     choice::sync_choices,
@@ -148,6 +153,7 @@ fn enter_wizard(
     mut setup: ResMut<NewGameSetup>,
     mut history: ResMut<PlannerHistory>,
     mut state: ResMut<PlannerState>,
+    trips: Res<trips::TripState>,
     mut events: MessageWriter<FocusEvent>,
 ) {
     let notes = history.apply_last(&mut setup, &catalogue);
@@ -168,6 +174,7 @@ fn enter_wizard(
         setup: &setup,
         history: &history,
         notes: &state.notes,
+        trips: &trips,
     };
     let built = build_step(&mut commands, &ctx, state.step);
     commands.entity(body).add_child(built.0);
@@ -192,6 +199,7 @@ fn build_step(
             (root, None)
         }
         PlannerStep::When => (step_when::spawn_when(commands, ctx), None),
+        PlannerStep::Trip => (trips::spawn_trip(commands, ctx), None),
         PlannerStep::Review => (step_review::spawn_review(commands, ctx), None),
     }
 }
@@ -206,6 +214,7 @@ fn rebuild_body(
     weather: Res<opts_bevy::WeatherCatalogue>,
     setup: Res<NewGameSetup>,
     history: Res<PlannerHistory>,
+    trips: Res<trips::TripState>,
     mut commands: Commands,
     mut built_with: Local<(usize, usize, usize)>,
 ) {
@@ -233,6 +242,7 @@ fn rebuild_body(
         setup: &setup,
         history: &history,
         notes: &state.notes,
+        trips: &trips,
     };
     let (root, _) = build_step(&mut commands, &ctx, state.step);
     commands.entity(body).add_child(root);

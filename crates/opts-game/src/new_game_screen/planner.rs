@@ -10,7 +10,7 @@ use opts_bevy::CalendarDate;
 use super::types::{GameCatalogue, NewGameSetup};
 use crate::shell::calendar;
 
-/// The four steps of the wizard.
+/// The steps of the wizard; *Trip* is shown only when the plan has runs to offer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PlannerStep {
     /// Choose the map and the start point.
@@ -20,13 +20,22 @@ pub enum PlannerStep {
     What,
     /// Choose date, time and weather.
     When,
+    /// Optionally choose a timetable run to drive (M-0145): its first stop replaces the start
+    /// point.
+    Trip,
     /// Look at everything and drive.
     Review,
 }
 
 impl PlannerStep {
     /// All steps in order.
-    pub const ALL: [Self; 4] = [Self::Where, Self::What, Self::When, Self::Review];
+    pub const ALL: [Self; 5] = [
+        Self::Where,
+        Self::What,
+        Self::When,
+        Self::Trip,
+        Self::Review,
+    ];
 
     /// Position in [`Self::ALL`].
     pub fn index(self) -> usize {
@@ -49,6 +58,7 @@ impl PlannerStep {
             Self::Where => "where",
             Self::What => "what",
             Self::When => "when",
+            Self::Trip => "trip",
             Self::Review => "review",
         }
     }
@@ -71,6 +81,45 @@ pub struct PlannerState {
     pub time_chosen: bool,
     /// Where the time of day shown comes from while it is still a default.
     pub time_source: Option<TimeSource>,
+    /// The plan has timetable runs to offer: the step *Trip* is shown.
+    pub trips_offered: bool,
+}
+
+impl PlannerState {
+    /// Whether `step` is part of the wizard now.
+    #[must_use]
+    pub fn shows(&self, step: PlannerStep) -> bool {
+        step != PlannerStep::Trip || self.trips_offered
+    }
+
+    /// The steps shown, in order.
+    #[must_use]
+    pub fn shown_steps(&self) -> Vec<PlannerStep> {
+        PlannerStep::ALL
+            .into_iter()
+            .filter(|s| self.shows(*s))
+            .collect()
+    }
+
+    /// The shown step after the current one.
+    #[must_use]
+    pub fn next_step(&self) -> Option<PlannerStep> {
+        let mut s = self.step.next();
+        while let Some(step) = s.filter(|s| !self.shows(*s)) {
+            s = step.next();
+        }
+        s
+    }
+
+    /// The shown step before the current one.
+    #[must_use]
+    pub fn prev_step(&self) -> Option<PlannerStep> {
+        let mut s = self.step.prev();
+        while let Some(step) = s.filter(|s| !self.shows(*s)) {
+            s = step.prev();
+        }
+        s
+    }
 }
 
 /// Where a default time of day comes from (shown next to the time in step When).
@@ -117,12 +166,8 @@ pub fn validate(setup: &NewGameSetup, catalogue: &GameCatalogue) -> Result<(), I
     if !map.entry_points.is_empty() && !map.entry_points.contains(&setup.selected_entry_point) {
         return Err(Invalid::NoStartPoint);
     }
-    if !setup.no_vehicle
-        && !catalogue
-            .vehicles
-            .iter()
-            .any(|v| v.full_name == setup.selected_vehicle)
-    {
+    // The key is the display name, or the id when two vehicles share that name.
+    if !setup.no_vehicle && catalogue.find_vehicle(&setup.selected_vehicle).is_none() {
         return Err(Invalid::NoVehicle);
     }
     Ok(())
@@ -393,7 +438,7 @@ mod tests {
         assert_eq!(PlannerStep::Where.prev(), None);
         assert_eq!(PlannerStep::Where.next(), Some(PlannerStep::What));
         assert_eq!(PlannerStep::Review.next(), None);
-        assert_eq!(PlannerStep::Review.prev(), Some(PlannerStep::When));
+        assert_eq!(PlannerStep::Review.prev(), Some(PlannerStep::Trip));
     }
 
     #[test]

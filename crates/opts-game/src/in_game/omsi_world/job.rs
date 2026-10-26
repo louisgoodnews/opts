@@ -177,6 +177,7 @@ pub fn resolve_session_config(
         map_dir,
         vehicle_path,
         entry_point: req.selected_entry_point.to_string(),
+        start_station: None,
         livery: req.selected_livery.to_string(),
         setvars: Vec::new(),
         human_path,
@@ -343,11 +344,22 @@ pub fn begin_world_load_at(
         );
     }
 
-    // Start tile and spawn: the chosen `[entrypoints]` record if it resolves to a placed
-    // `entrypoint_*.sco` object, otherwise the first road spline of the first usable tile.
+    // Start tile and spawn: a chosen trip's first bus stop, else the chosen `[entrypoints]` record
+    // if it resolves to a placed `entrypoint_*.sco` object, otherwise the first road spline of
+    // the first usable tile.
     let mut keys: Vec<(i32, i32)> = job.manifest.tiles.iter().map(|t| (t.x, t.y)).collect();
     keys.dedup();
-    let mut start = job.find_entry_spawn(&keys);
+    let at_stop = job
+        .config
+        .start_station
+        .and_then(|id| job.find_stop_spawn(id, &keys));
+    if job.config.start_station.is_some() && at_stop.is_none() {
+        tracing::warn!(
+            station = ?job.config.start_station,
+            "the trip's first stop is not on the map; starting at the entry point"
+        );
+    }
+    let mut start = at_stop.or_else(|| job.find_entry_spawn(&keys));
     job.start_entry = job.resolved_entry.take();
     if start.is_none() {
         tracing::warn!(

@@ -60,7 +60,16 @@ pub fn livery_name(catalogue: &GameCatalogue, setup: &NewGameSetup) -> String {
 
 /// Part ①: map and start point.
 pub fn where_text(setup: &NewGameSetup) -> String {
-    if setup.selected_entry_point.is_empty() {
+    if let Some(trip) = &setup.trip {
+        // The trip's first stop replaces the start point.
+        format!(
+            "{} · {} ({} {})",
+            setup.selected_map,
+            trip.stop_name,
+            trip.depart_text(),
+            trip.title()
+        )
+    } else if setup.selected_entry_point.is_empty() {
         setup.selected_map.clone()
     } else {
         format!("{} · {}", setup.selected_map, setup.selected_entry_point)

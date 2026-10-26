@@ -138,8 +138,11 @@ fn spawn_item(
     let button = spawn_row_button(
         commands, root, prefix, entry, row, section, selected, &key, max_chars,
     );
-    let star = spawn_star(commands, root, prefix, entry, section, favourite, &key);
-    commands.entity(wrap).add_children(&[button, star]);
+    commands.entity(wrap).add_child(button);
+    if !model.no_stars {
+        let star = spawn_star(commands, root, prefix, entry, section, favourite, &key);
+        commands.entity(wrap).add_child(star);
+    }
     wrap
 }
 
