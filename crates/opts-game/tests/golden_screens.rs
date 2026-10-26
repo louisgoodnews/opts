@@ -90,7 +90,16 @@ const SCENES: &[Scene] = &[
     },
 ];
 
+/// The goldens show the screens without an OMSI installation (the home screen's "OMSI 2 was not
+/// found" banner): `$OMSI_PATH`, set to run the install-gated tests, would let the screens find
+/// one and every home golden would differ. Dropped once, before the first app is built.
+fn without_installation() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| std::env::remove_var("OMSI_PATH"));
+}
+
 fn render(scene: &Scene, w: u32, h: u32, kind: ThemeKind) -> image::RgbaImage {
+    without_installation();
     let mut app = build(scene.screen, w, h, kind, AccentPreset::default());
     for step in scene.steps {
         press(&mut app, step);
