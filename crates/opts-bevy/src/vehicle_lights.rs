@@ -130,6 +130,12 @@ impl AlphaScaleBinding {
 }
 
 /// Scales the alpha of glass and similar parts by the owners' script variables.
+///
+/// An owner without variables (a parked car: a vehicle model placed as scenery, no scripts, no
+/// AI table) is static: `Envir_Brightness` comes from the session clock, as for scenery objects
+/// ([`crate::scenery_runtime::SceneryAlphaScale`]), and any other variable is 0. Its parts waited
+/// for variables that never came and stayed hidden: the TH_Wald parked cars, whose bodies are
+/// scaled by `Envir_Brightness`, showed only wheels and windows.
 pub fn vehicle_alpha_scale_system(
     mut parts: Query<(
         &mut AlphaScaleBinding,
@@ -138,18 +144,28 @@ pub fn vehicle_alpha_scale_system(
         Option<&crate::vehicle_anim::MeshAnimation>,
     )>,
     vehicles: Query<(Option<&VehicleScripts>, Option<&AiVariables>)>,
+    clock: Option<Res<crate::SceneryClock>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (mut binding, mut material, mut visibility, animation) in &mut parts {
         let Ok((scripts, table)) = vehicles.get(binding.owner) else {
             continue;
         };
-        let f = {
-            let Some(engine) = VariableSource::of(scripts, table) else {
-                continue;
-            };
-            engine.get(&binding.variable).clamp(0.0, 1.0)
-        };
+        let f = match VariableSource::of(scripts, table) {
+            Some(engine) => engine.get(&binding.variable),
+            None if binding
+                .variable
+                .trim()
+                .eq_ignore_ascii_case("envir_brightness") =>
+            {
+                let Some(clock) = clock.as_deref() else {
+                    continue;
+                };
+                clock.envir_brightness()
+            }
+            None => 0.0,
+        }
+        .clamp(0.0, 1.0);
         if f == binding.applied {
             continue;
         }

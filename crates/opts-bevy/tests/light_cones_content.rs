@@ -5,7 +5,9 @@ use std::path::PathBuf;
 
 use bevy::ecs::system::RunSystemOnce;
 use bevy::prelude::*;
-use opts_bevy::light_cones::{ConeKind, ConeLevel, LightCone, HEADLIGHT_CONE_LENGTH_M};
+use opts_bevy::light_cones::{
+    ConeKind, ConeLevel, LightCone, HEADLIGHT_CONE_LENGTH_M, HEADLIGHT_CORONA_BEAM_HALF_DEG,
+};
 use opts_bevy::scenery_runtime::{
     build_scenery_object, SceneryBuildAssets, SceneryLightAssets, SceneryObjectInput,
 };
@@ -157,11 +159,13 @@ fn real_vehicle_headlights_get_cones_and_taillights_do_not() {
         );
         for c in &cones {
             assert_eq!(c.kind, ConeKind::Headlight);
-            // Forward is Bevy -Z; `50 / 190` degrees clamps to the widest headlight cone.
+            // Forward is Bevy -Z; an outer angle of 190 degrees is the angle the corona is seen
+            // from, so the haze is the narrow low beam (2026-10-22), not the widest cone.
             assert!(c.shape.dir.z < -0.9, "{rel}: {:?}", c.shape.dir);
             assert!(
-                (c.shape.half_angle - 25f32.to_radians()).abs() < 1e-5,
-                "{rel}"
+                (c.shape.half_angle - HEADLIGHT_CORONA_BEAM_HALF_DEG.to_radians()).abs() < 1e-5,
+                "{rel}: half angle {} degrees",
+                c.shape.half_angle.to_degrees()
             );
             assert_eq!(c.shape.length, HEADLIGHT_CONE_LENGTH_M);
         }
