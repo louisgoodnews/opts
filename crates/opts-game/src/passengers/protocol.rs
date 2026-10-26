@@ -101,7 +101,13 @@ pub fn command(
         "passengers": sim.passengers().iter().map(|p| serde_json::json!({
             "id": p.id, "age": p.age, "phase": format!("{:?}", p.phase),
             "ticket": p.ticket, "stamped": p.stamped, "stops_left": p.stops_left,
+            "unit": p.unit, "omsi_position": [p.position.x, p.position.y, p.position.z],
+            // The drawn figure's root (its feet) in the unit's frame, OMSI axes.
+            "figure_root": rig.actors.get(&p.id).map(|a| [a.local.x, -a.local.z, a.local.y]),
         })).collect::<Vec<_>>(),
+        "inside_per_unit": (0..rig.units.len()).map(|u| sim.passengers().iter()
+            .filter(|p| p.unit == u && !matches!(p.phase, opts_sim::passengers::Phase::WaitingOutside { .. }))
+            .count()).collect::<Vec<_>>(),
     }))
 }
 
