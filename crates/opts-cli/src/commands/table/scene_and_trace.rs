@@ -245,11 +245,11 @@ pub(super) const PART: &[CommandSpec] = &[
         "session.spawn",
         "scene",
         "Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists",
-        "vehicle:s@0 repaint:s? setvars:j? entry:s? entry_id:i?",
+        "vehicle:s@0 repaint:s? setvars:j? entry:s? entry_id:i? stop:j?",
     )
     .since("1.2")
     .result("`{id, queued:true}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)")
-    .doc("`vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on)."),
+    .doc("Since 1.29 `stop` (a station id, or a stop name of the map's `Busstops.cfg`) places the vehicle at that bus stop object with its front at the stop instead of at an entry point; while another vehicle (traffic or a session vehicle) stands within 10 m of it the spawn fails with `the stop is occupied`. `vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on)."),
     c(
         "session.change_map",
         "scene",

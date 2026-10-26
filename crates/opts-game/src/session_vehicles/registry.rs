@@ -65,6 +65,9 @@ pub enum EntrySel {
     Id(u32),
     /// The record with this name (exact, case-insensitive, else the only one containing it).
     Name(String),
+    /// The bus stop object with this station id (`Busstops.cfg`), the vehicle's front at the
+    /// stop; refused while another vehicle stands there (M-0145).
+    Stop(u32),
 }
 
 /// A place in the world: absolute OMSI coordinates (metres) and compass heading (degrees).
