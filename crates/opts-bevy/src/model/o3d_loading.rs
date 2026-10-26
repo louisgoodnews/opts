@@ -426,6 +426,12 @@ impl ContentLoader<'_> {
                 }
                 let glass_material = glass_tex.map(|g| {
                     let mut glass = material.clone();
+                    // The self-illumination follows the picture (`material::emission_texture`).
+                    if glass.emissive_texture.is_some()
+                        && glass.emissive_texture == glass.base_color_texture
+                    {
+                        glass.emissive_texture = Some(g.clone());
+                    }
                     glass.base_color_texture = Some(g);
                     glass.alpha_mode = AlphaMode::Blend;
                     glass.cull_mode = Some(bevy::render::render_resource::Face::Back);
