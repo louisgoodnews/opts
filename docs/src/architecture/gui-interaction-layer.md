@@ -49,6 +49,7 @@ The layer colour is the content colour of the control's `BackgroundRole` (`on_co
 * Regions: `FocusRegion(Landmark)`; Tab jumps regions, arrows stay inside one; fewer than two regions makes Tab a plain next/previous.
 * Default focus: `DefaultFocus` on the safest control (main menu: *Start New Game*, never *Shutdown*). Dialogs move focus in and restore it on close.
 * Arrow ownership: tree rows (left/right), combobox headers (up/down) and text entries (caret) keep their arrows.
+* An open combobox list is a popup: `GlobalZIndex` 2000 (above modal dialogs at 1000 and toasts at 100, below tooltips at 5000) and `OverrideClip`, so a box inside a dialog's scrolling list opens over the dialog and is not cut off by the list. Opening one closes any other open list. (At 50 the list of a box in a dialog opened behind the dialog: nothing appeared on a click, 2026-10-26.)
 
 ## 5. Actions
 

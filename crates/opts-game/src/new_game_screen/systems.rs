@@ -13,7 +13,7 @@ use opts_gui::prelude::*;
 
 use super::history::PlannerHistory;
 use super::livery::LiveryState;
-use super::options::{close_options, open_options, OptionsModal};
+use super::options::{close_options, open_options, reset_options, OptionsModal};
 use super::planner::{
     default_map_date, default_start_clock, quick_time_of, set_setup_date, step_field, today,
     validate, Field, MapEra, PlannerState, PlannerStep, QUICK_TIMES,
@@ -45,16 +45,16 @@ fn wall_clock() -> (u32, u32) {
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct Env<'w, 's> {
     state: ResMut<'w, PlannerState>,
-    setup: ResMut<'w, NewGameSetup>,
-    catalogue: Res<'w, GameCatalogue>,
+    pub(super) setup: ResMut<'w, NewGameSetup>,
+    pub(super) catalogue: Res<'w, GameCatalogue>,
     history: ResMut<'w, PlannerHistory>,
-    liveries: ResMut<'w, LiveryState>,
+    pub(super) liveries: ResMut<'w, LiveryState>,
     library: ResMut<'w, super::configs::ConfigLibrary>,
-    loc: Res<'w, Localization>,
+    pub(super) loc: Res<'w, Localization>,
     next_state: ResMut<'w, NextState<AppState>>,
     leave: MessageWriter<'w, NavigateBack>,
     navigate: MessageWriter<'w, Navigate>,
-    modals: Query<'w, 's, Entity, With<OptionsModal>>,
+    pub(super) modals: Query<'w, 's, Entity, With<OptionsModal>>,
     formation_modals: Query<'w, 's, Entity, With<super::formation::FormationModal>>,
 }
 
@@ -116,7 +116,7 @@ pub fn handle_actions(
                 menu.selected = None;
                 menu.status.clear();
             }),
-            PlannerAction::ResetOptions => env.setup.custom_setvars.clear(),
+            PlannerAction::ResetOptions => reset_options(&mut env, &mut commands),
             PlannerAction::CloseOptions => close_options(&env.modals, &mut commands),
             PlannerAction::NoVehicle => {
                 env.setup.no_vehicle = true;

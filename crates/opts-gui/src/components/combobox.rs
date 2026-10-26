@@ -69,6 +69,10 @@ pub struct ComboboxLabelText(pub Entity);
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ComboboxMenu(pub Entity);
 
+/// The open menu's stacking order: above modal dialogs (`GlobalZIndex` 1000) and toasts, below
+/// tooltips (5000). At 50 a combobox in a dialog opened behind the dialog and showed nothing.
+pub const MENU_Z: i32 = 2000;
+
 /// Marker component for an individual selectable item in the combobox menu.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ComboboxMenuItem {
@@ -101,15 +105,25 @@ fn menu_wheel_scroll(
 }
 
 /// System handling clicks on the header button to toggle dropdown visibility.
+/// Opening one closes any other open combobox, so lists never pile up.
 pub fn combobox_header_system(
     mut activated: MessageReader<Activated>,
     header_query: Query<&ComboboxHeader>,
-    mut combo_query: Query<&mut M3Combobox, Without<Disabled>>,
+    mut combo_query: Query<(Entity, &mut M3Combobox), Without<Disabled>>,
 ) {
     for Activated(entity) in activated.read() {
-        if let Ok(header) = header_query.get(*entity) {
-            if let Ok(mut combo) = combo_query.get_mut(header.0) {
-                combo.is_open = !combo.is_open;
+        let Ok(header) = header_query.get(*entity) else {
+            continue;
+        };
+        let Ok((_, mut combo)) = combo_query.get_mut(header.0) else {
+            continue;
+        };
+        combo.is_open = !combo.is_open;
+        if combo.is_open {
+            for (other, mut c) in &mut combo_query {
+                if other != header.0 && c.is_open {
+                    c.is_open = false;
+                }
             }
         }
     }
