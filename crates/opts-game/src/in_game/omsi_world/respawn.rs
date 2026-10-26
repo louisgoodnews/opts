@@ -175,6 +175,12 @@ pub struct SpawnVehicleRequest {
     point: SpawnPoint,
 }
 
+/// Traffic and session vehicles (what makes a bus stop occupied).
+type VehicleFilter = Or<(
+    With<super::traffic::TrafficVehicle>,
+    With<opts_bevy::VehicleController>,
+)>;
+
 /// Works down the spawn requests of the registry: places the vehicle at its entry point, builds it
 /// and makes it the active vehicle.
 #[allow(clippy::too_many_arguments)]
@@ -188,13 +194,7 @@ pub fn handle_vehicle_requests(
     entries: Res<EntryIndex>,
     mut camera: ResMut<CameraState>,
     loc: Option<Res<Localization>>,
-    vehicles: Query<
-        &GlobalTransform,
-        Or<(
-            With<super::traffic::TrafficVehicle>,
-            With<opts_bevy::VehicleController>,
-        )>,
-    >,
+    vehicles: Query<&GlobalTransform, VehicleFilter>,
 ) {
     let Some(mut job) = job else {
         return;
