@@ -356,6 +356,7 @@ _Completed items from the last two cycles. Older items live in git history and m
 
 **2026-10-26**
 
+- `[x]` 🔴 **Waldhofen Bahnhof a slideshow: tree material broke draw batching** (M-0144, code) — project lead report, fixed 2026-10-26 on `agent/perf-waldhofen`: the tree wind's plain uniform gave every tree material its own bind group, so alpha-mask draws stopped batching (5,536 draw calls, median 285 ms per frame against 41 ms before the tree wind). The wind is now bindless data like the `StandardMaterial` it extends: 4 draw calls, median 9 ms, trees still sway.
 - `[x]` 🟡 **Trees move in the wind: mesh trees** (M-0144 phase C, code + spec) — 2026-10-26 on `agent/mesh-trees`: an object is a tree when all its cut-out materials have foliage textures (word rule that keeps shelters, railings and clock faces out; a building with glass next to its bush texture stays still); its foliage parts get the tree material with a height-only bend, the trunk stays. Bad Hügelsdorf: 1,162 foliage parts sway, nothing else moves. M-0144 done.
 - `[x]` 🟡 **Spawning at a bus stop during a session** (M-0145, code) — 2026-10-26 on `agent/spawn-stop`: `session.spawn {stop}` (protocol 1.29; a station id or a stop name) places the vehicle at the stop object with its front at the stop and refuses while another vehicle stands within 10 m (checked on Spandau: the second bus at Freudstr. is refused). The vehicle menu does not offer stops yet.
 - `[x]` 🟡 **Rattles on junction plates** (M-0146, code) — 2026-10-26 on `agent/plate-surf`: surface plates rattle with their own textures (`.surf` or surface type) instead of plain asphalt; Ahlheim 5: 995 plates, 37,074 triangles.
@@ -562,5 +563,6 @@ The agent should check these during P-001 audits:
 - `2026-10-26` — M-0144 (trees move in the wind) created at the project lead's request and started (`agent/tree-wind`).
 - `2026-10-26` — M-0144 phase B done (`[tree]` billboards sway); phase C (mesh trees) in Backlog.
 - `2026-10-26` — M-0144 phase C started and done (`agent/mesh-trees`): mesh trees sway; M-0144 done.
+- `2026-10-26` — Waldhofen slowdown (tree material broke batching) reported, fixed (`agent/perf-waldhofen`).
 - `2026-10-26` — M-0141/M-0100 fifth round (`agent/vdv-dim`): VDV stop-mode page fixed (mesh file order, textured emission).
 - `2026-10-26` — M-0141/M-0100 sixth round started (`agent/boards`): destination boards, printer screens.

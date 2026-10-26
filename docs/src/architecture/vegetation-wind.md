@@ -26,6 +26,7 @@ A vertex stage bends the tree; nothing moves on the CPU.
 
 * `graphics.tree_wind` (on by default, live): off sets the strength to 0; the trees stand still exactly as before.
 * The tree material (`opts_bevy::tree_wind::TreeMaterial`, a `StandardMaterial` extended by the vertex stage) carries the wind in a uniform (direction, strength, frequency). A system updates the tree materials only when the weather's wind or the setting changes; the time comes from the shader globals.
+* The wind is **bindless** material data, like the `StandardMaterial` it extends, so all tree materials share one bind group and are drawn together in a few multi-draw calls. A plain uniform gives every tree material its own bind group and draw batch: on Waldhofen Bahnhof that was 5,536 alpha-mask draw calls and 285 ms per frame instead of 9 ms.
 * One material per tree texture, as before; the static merger (`OPTS_INSTANCING=merge`, off by default) no longer bakes trees, which move.
 
 ## 4. Mesh trees (phase C)
