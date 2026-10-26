@@ -147,9 +147,9 @@ pub(super) const PART: &[CommandSpec] = &[
         "scene.load_map",
         "scene",
         "Start a session on a map",
-        "path:s@0 entry:s? accept_problems:b? vehicle:s? repaint:s? setvars:j? weather:s? date:s? time:s?",
+        "path:s@0 entry:s? accept_problems:j? vehicle:s? repaint:s? setvars:j? weather:s? date:s? time:s?",
     )
-    .doc("Since 1.24 the drive's choices can be given here like on the command line: `entry` (start point, a name or a word of it such as `Ahlheim Hbf`), `vehicle` (a `.bus` path, relative to `Vehicles`) with its `repaint`, `setvars` (`{name: n}` equipment options of the vehicle), `weather` (preset id or name), `date` (`YYYY-MM-DD`) and `time` (`HH:MM`). `accept_problems: true` starts the drive without waiting for *Continue* when the load ends with problems (broken tiles ...; since 1.22, one load; the `--accept-load-problems` flag does it for every load). A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): call `loading.continue` (or click `loading.continue` with `ui.click`) to start the drive.")
+    .doc("Since 1.24 the drive's choices can be given here like on the command line: `entry` (start point, a name or a word of it such as `Ahlheim Hbf`), `vehicle` (a `.bus` path, relative to `Vehicles`) with its `repaint`, `setvars` (`{name: n}` equipment options of the vehicle), `weather` (preset id or name), `date` (`YYYY-MM-DD`) and `time` (`HH:MM`). `accept_problems: true` starts the drive without waiting for *Continue* when the load ends with problems (broken tiles ...; since 1.22, one load; the `--accept-load-problems` flag does it for every load); since 1.27 `accept_problems: \"always\"` does it for this and every later load of the running game, as `loading.accept_problems {always: true}` does. `path` is a map folder, or since 1.27 just its name in the installation's `maps` folder (`Tram`); the installation is readable from the main menu on. A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): call `loading.continue` (or click `loading.continue` with `ui.click`) to start the drive.")
     .debug(),
     c(
         "loading.continue",
@@ -160,6 +160,16 @@ pub(super) const PART: &[CommandSpec] = &[
     .since("1.22")
     .result("`{continued, outcome, problems:[{key, args, fatal, detail}]}`")
     .doc("Presses *Continue* on a loading screen that waits because the load ended with problems (a map tile or part of the vehicle did not load; minor problems never wait). `continued` is false when nothing waited (still loading, or already continued); `outcome` is `Loading`, `Ready`, `ReadyWithProblems` or `Failed`; a failed load answers `1008` (nothing to continue). `accept_all: true` also lets the next load start by itself, `false` switches that off. The problems are listed either way so a script can decide whether the drive is worth it.")
+    .debug(),
+    c(
+        "loading.accept_problems",
+        "scene",
+        "Let every load start its drive despite problems",
+        "always:b?",
+    )
+    .since("1.27")
+    .result("`{always, next_load, command_line}`")
+    .doc("The running game's form of the `--accept-load-problems` flag: `always: true` makes every later load that ends with problems (broken tiles, a part of the vehicle that did not load) start its drive without waiting for *Continue*, loads begun in the plan-a-drive wizard (`ui.*`) included, until `always: false`. Without `always` it only reports. The answer lists the three switches: `always`, `next_load` (the one-load acceptance of `scene.load_map {accept_problems: true}` or `loading.continue {accept_all}`) and `command_line` (the flag). A failed load still stops; the problems are still logged and kept in the load report.")
     .debug(),
     c("scene.unload", "scene", "Return to the main menu", "")
     .doc("A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).")

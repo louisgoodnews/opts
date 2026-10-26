@@ -18,7 +18,6 @@ use crate::app::AppArgs;
 use crate::app_state::AppState;
 use crate::in_game::omsi_world::{WorldLoadJob, WorldStats};
 use crate::in_game::types::{InGameSessionInfo, SimulationLoadState};
-use crate::new_game_screen::types::NewGameSetup;
 
 /// Registers the game's control methods (needs `opts_bevy::control::ControlPlugin` first).
 pub struct GameControlPlugin;
@@ -30,7 +29,7 @@ impl Plugin for GameControlPlugin {
         };
         registry.register("state", state);
         registry.register("scene", scene);
-        registry.register("scene.load_map", load_map);
+        registry.register("scene.load_map", crate::control_loading::load_map);
         registry.register("scene.unload", unload);
         registry.register("vehicle.set", set_vehicle);
         registry.register("vehicle.script_vars", script_vars);
@@ -97,9 +96,25 @@ fn capture_metadata(world: &World, m: &mut serde_json::Map<String, Value>) {
     }
 }
 
-/// Lets control commands read below the OMSI installation of the running session.
-fn allow_session_reads(job: Option<Res<WorldLoadJob>>, policy: Option<ResMut<PathPolicy>>) {
-    let (Some(job), Some(mut policy)) = (job, policy) else {
+/// Lets control commands read below the OMSI installation: the one known at startup (so
+/// `scene.load_map` works from the main menu) and the one of the running session.
+fn allow_session_reads(
+    job: Option<Res<WorldLoadJob>>,
+    policy: Option<ResMut<PathPolicy>>,
+    mut startup_done: Local<bool>,
+) {
+    let Some(mut policy) = policy else {
+        return;
+    };
+    if !*startup_done {
+        *startup_done = true;
+        if let Some(root) = crate::omsi_root::known_omsi_root() {
+            if !policy.read_roots.contains(&root) {
+                policy.read_roots.push(root);
+            }
+        }
+    }
+    let Some(job) = job else {
         return;
     };
     let root = job.omsi_root().to_path_buf();
@@ -201,6 +216,9 @@ pub(crate) fn restart_waiter(world: &mut World) -> Waiter {
                     )));
                 }
                 LoadOutcome::ReadyWithProblems => {
+                    if crate::control_loading::accepted_and_starting(world, report) {
+                        return None;
+                    }
                     let stats = world.resource::<WorldStats>();
                     return Some(Ok(json!({
                         "map": stats.map_name, "vehicle": stats.vehicle_name,
@@ -235,75 +253,6 @@ fn read_path(world: &World, params: &Value, name: &str) -> Result<PathBuf, RpcEr
     world
         .resource::<PathPolicy>()
         .check_read(&PathBuf::from(raw))
-}
-
-fn load_map(world: &mut World, params: &Value) -> Outcome {
-    let dir = match read_path(world, params, "path") {
-        Ok(p) if p.is_dir() => p,
-        Ok(p) => {
-            return Outcome::err(RpcError::invalid_params(format!(
-                "{} is not a map folder",
-                p.display()
-            )))
-        }
-        Err(e) => return Outcome::err(e),
-    };
-    // The choices of the drive: start point, weather, date, time, equipment options (like the
-    // command line's `--entry`, `--weather`, `--date`, `--time`, `--setvar`), and the vehicle with
-    // its repaint.
-    let options = match crate::start_options::StartOptions::from_json(params) {
-        Ok(o) => o,
-        Err(e) => return Outcome::err(RpcError::invalid_params(e)),
-    };
-    let (vehicle, repaint) = match (opt_str(params, "vehicle"), opt_str(params, "repaint")) {
-        (Ok(v), Ok(r)) => (v.map(str::to_string), r.map(str::to_string)),
-        (Err(e), _) | (_, Err(e)) => return Outcome::err(e),
-    };
-    let vehicle_path = match vehicle {
-        None => None,
-        Some(v) => {
-            let given = PathBuf::from(&v);
-            let full = if given.is_absolute() {
-                given
-            } else {
-                // Relative to the installation's `Vehicles` folder.
-                match world.resource::<AppArgs>().0.omsi_path.clone() {
-                    Some(root) => root.join("Vehicles").join(given),
-                    None => given,
-                }
-            };
-            let checked = world.resource::<PathPolicy>().check_read(&full);
-            match checked {
-                Ok(p) if p.extension().is_some_and(|e| e.eq_ignore_ascii_case("bus")) => Some(p),
-                Ok(p) => {
-                    return Outcome::err(RpcError::invalid_params(format!(
-                        "{} is not a .bus file",
-                        p.display()
-                    )))
-                }
-                Err(e) => return Outcome::err(e),
-            }
-        }
-    };
-    let weather = world.get_resource::<opts_bevy::WeatherCatalogue>().cloned();
-    if let Some(mut setup) = world.get_resource_mut::<NewGameSetup>() {
-        if let Err(e) = options.apply(&mut setup, weather.as_ref()) {
-            return Outcome::err(RpcError::invalid_params(e));
-        }
-    }
-    if let Err(e) = crate::control_loading::accept_problems_param(world, params) {
-        return Outcome::err(e);
-    }
-    let mut args = world.resource_mut::<AppArgs>();
-    args.0.map_path = Some(dir);
-    args.0.entry.clone_from(&options.entry);
-    if let Some(p) = vehicle_path {
-        args.0.vehicle_path = Some(p);
-    }
-    if let Some(r) = repaint {
-        args.0.livery = Some(r);
-    }
-    restart_session(world)
 }
 
 fn unload(world: &mut World, _: &Value) -> Outcome {

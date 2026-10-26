@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-25 by Agent (board audit against master `6ce6d078`)_
+_Last updated: 2026-10-26 by Agent (load-problem switch done; M-0145 and M-0146 filed)_
 
 ---
 
@@ -114,6 +114,8 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
+- [ ] 🟠 **Plan a drive: choose a trip** (M-0145, code + spec) — project lead 2026-10-26: an optional wizard step before *Review*, offered when map, vehicle and date/time have matching trips; the chosen trip replaces the start point with its first stop, and the bus spawns at that stop when it is free.
+- [ ] 🟠 **Interior rattling sounds** (M-0146, code + spec) — project lead 2026-10-26: OMSI buses carry interior rattles (`klappern.osc`, 84 scripts in 37 vehicles); drive them from road surface, patches, curbs and the like.
 - [ ] 🟡 **Broken-link CI proof** (M-0042, chore) — push a deliberately broken link on a scratch branch and see the docs-links job fail; the last open item of M-0042 besides `cargo deny`.
 - [ ] 🟠 **Ahlheim V5, Eichenhöhe Bf: curbs below the ground; one spline/object slab over the road** (M-0090, content) — project lead 2026-10-19, screenshots: a dark slab covers the road below the viaduct; the stop's curbs sink under the terrain.
 - [ ] 🟠 **Scripted scenery (dynamic passenger information) is not functional** (M-0099/M-0100, code) — should show a default display and take its data from the stop's timetable/AI schedule (`GetTT*`, hof, `Busstops.cfg`).
@@ -357,6 +359,7 @@ _Completed items from the last two cycles. Older items live in git history and m
 
 **2026-10-26**
 
+- `[x]` 🟡 **Control protocol: accept load problems for every load of a running game** (M-0141, code) — project lead request, done 2026-10-26 on `agent/load-accept`: `loading.accept_problems {always}` and `scene.load_map {accept_problems: "always"}` (protocol 1.27.0) keep the acceptance on until switched off, wizard loads included; an accepted load's `scene.load_map` answers once the drive has begun (`waiting_for_continue: false`); the OMSI installation is readable from the main menu on and `scene.load_map Tram` takes a bare map name. Checked live: two *Tram* loads (6 missing tiles) without the start option started by themselves. Seen on the way: a SIGSEGV in the NVIDIA driver at process exit after a map reload (pipeline compilation still running), not caused by this change ❓.
 - `[x]` 🟠 **Trees move in the wind: `[tree]` billboards** (M-0144 phase B, code + spec) — project lead request, done 2026-10-26 on `agent/tree-wind`: OPTS extension (OMSI's trees are static); vertex stage in the main, depth and shadow passes, wind from the weather, setting `graphics.tree_wind`; live on Berlin-Spandau, frame time within noise.
 
 **2026-10-25 — Phase 8 review (M-0057, M-0058, M-0060), M-0025 ground layers, vehicle mesh paths**

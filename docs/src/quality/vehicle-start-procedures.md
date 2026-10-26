@@ -84,7 +84,7 @@ What the scripts do answer (keys, checked live through `vehicle.key`): `interior
 
 ## Loads with problems (broken tiles)
 
-The map *Tram* lists 20 tiles and 6 files are missing: the loading screen waits for *Continue*. For scripts and the command line: `loading.continue` presses it (and lists the problems), `scene.load_map {accept_problems: true}` starts the drive by itself for that load, `--accept-load-problems` does so for every load. A load that failed outright still stops. The problems stay in the report and are written to the log as a warning.
+The map *Tram* lists 20 tiles and 6 files are missing: the loading screen waits for *Continue*. For scripts and the command line: `loading.continue` presses it (and lists the problems), `scene.load_map {accept_problems: true}` starts the drive by itself for that load, `--accept-load-problems` does so for every load, and `loading.accept_problems {always: true}` (protocol 1.27) does the same for a game already running. A load that failed outright still stops. The problems stay in the report and are written to the log as a warning.
 
 ## Not yet looked at ❓
 
