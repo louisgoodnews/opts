@@ -101,8 +101,12 @@ pub fn draw_text(
     text: &str,
     spacing: i32,
 ) {
-    let [ca, cr, cg, cb] = canvas.current_color();
-    let colour = [cr, cg, cb, ca];
+    // The glyphs are opaque whatever alpha `STSetColor` set: the ATRON AFR4 sets alpha 0 (red
+    // 255) and shows its canvas as a `[matl_transmap]`, whose alpha is the text; the matrix
+    // displays read the red channel (`VMatrix.osc`); `STDrawRect` keeps the set alpha (the LED
+    // dots of the matrices).
+    let [_, cr, cg, cb] = canvas.current_color();
+    let colour = [cr, cg, cb, 255];
     let (cw, ch) = (canvas.width() as i32, canvas.height() as i32);
     let line = font.line_height.max(1) as i32;
     let mut pen = x;
@@ -134,7 +138,7 @@ pub fn draw_text(
                 }
                 let o = ((py * cw + px) * 4) as usize;
                 let dst = &mut buffer[o..o + 4];
-                // Each channel, alpha included, moves towards the colour by the coverage.
+                // Each channel moves towards the colour (alpha towards opaque) by the coverage.
                 let inv = 255 - cover;
                 for (d, c) in dst.iter_mut().zip(colour) {
                     *d = ((u32::from(c) * cover + u32::from(*d) * inv) / 255) as u8;

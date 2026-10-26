@@ -251,10 +251,11 @@ pub(in super::super::super) fn load_segment_meshes_for(
                         let (w, h) = (def.width.max(1), def.height.max(1));
                         // A canvas used as `[matl_transmap] \S:n` is only the alpha: the colour
                         // is the material's own texture (an LED matrix's `.dds`).
-                        let tint = m
+                        let transmap = m
                             .trans_map
                             .as_deref()
-                            .is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("\\s:"))
+                            .is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("\\s:"));
+                        let tint = transmap
                             .then(|| {
                                 tex_dirs
                                     .iter()
@@ -282,15 +283,17 @@ pub(in super::super::super) fn load_segment_meshes_for(
                             );
                         if let Some(rgb) = tint {
                             component = component.with_tint(rgb);
-                            // The colour texture may be named by a string variable
-                            // (`[matl_freetex]`, the LED matrix's `Matrix_Farbe`).
-                            if let Some(free) = &m.free_tex {
-                                component = component.following(
-                                    owner,
-                                    free.variable.trim(),
-                                    tex_dirs.to_vec(),
-                                );
-                            }
+                        }
+                        // The colour texture may be named by a string variable
+                        // (`[matl_freetex]`: the LED matrix's `Matrix_Farbe`, the ATRON AFR4's
+                        // `AFR4_ST_texture` over a black placeholder, which has no colour of its
+                        // own to start from).
+                        if let (true, Some(free)) = (transmap, &m.free_tex) {
+                            component = component.following(
+                                owner,
+                                free.variable.trim(),
+                                tex_dirs.to_vec(),
+                            );
                         }
                         commands.spawn((
                             component,

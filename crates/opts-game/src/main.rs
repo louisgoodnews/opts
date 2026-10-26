@@ -24,4 +24,19 @@ fn main() {
     tracing::info!("OPTS application starting up");
     build_app(args).run();
     tracing::info!("OPTS application exited cleanly");
+    drop(_guard);
+    end_process();
+}
+
+/// Ends the process once the app has shut down cleanly (settings saved, logs flushed) without
+/// running the C exit handlers: the render pipelines' background compile tasks may still be
+/// inside the GPU driver, and the driver's own exit handlers tore it down under them (a SIGSEGV
+/// in `libnvidia-glcore` after `exited cleanly`, seen 2026-10-26 after a map reload).
+fn end_process() {
+    #[cfg(unix)]
+    // SAFETY: `_exit` ends the process at once; nothing runs after it and no Rust state is left
+    // half-updated (the app and the log guard are dropped above).
+    unsafe {
+        libc::_exit(0)
+    }
 }
