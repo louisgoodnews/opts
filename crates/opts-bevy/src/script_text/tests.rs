@@ -65,13 +65,14 @@ fn glyphs_are_drawn_in_the_set_colour_through_the_fonts_coverage() {
 }
 
 #[test]
-fn a_colour_with_alpha_zero_still_carries_its_channels_for_the_scripts_that_read_them_back() {
+fn a_colour_with_alpha_zero_still_draws_opaque_glyphs_with_its_channels() {
     let (font, bmp) = font();
     let mut canvas = CpuScriptTexture::new(16, 8);
-    // The matrix script's text colour: alpha 0, red 255.
+    // The text colour of the matrix and AFR4 scripts: alpha 0, red 255. The matrix reads the red
+    // channel back; the AFR4 shows the canvas as a transparency map, whose alpha is the text.
     canvas.set_color(0, 255, 0, 0);
     draw_text(&mut canvas, 0, 0, &font, &bmp, "A", 0);
-    assert_eq!(px(&canvas, 1, 0), [255, 0, 0, 0]);
+    assert_eq!(px(&canvas, 1, 0), [255, 0, 0, 255]);
 }
 
 #[test]
