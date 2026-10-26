@@ -163,7 +163,7 @@ Material[material_count]
 | :--- | :--- | :--- |
 | `f32` ×4 | group A | `[0..3]`. **Diffuse RGBA**. Float 3 is **alpha (opacity)**: confirmed by test T03 (alpha 0.3 renders semi-transparent). [M: T03] |
 | `f32` ×3 | group B | `[4..6]`. **Specular RGB**. Contributes to specular highlights under directional light. [M: T03] |
-| `f32` ×3 | group C | `[7..9]`. **Emissive RGB**. Full-bright self-illumination. [M: T03] |
+| `f32` ×3 | group C | `[7..9]`. **Emissive RGB**. Full-bright self-illumination. [M: T03] In OMSI's fixed-function lighting it joins the light that multiplies the texture, so a textured surface with emissive 1 shows its texture at full brightness (the MAN Lion's City's VDV page); OPTS uses the texture as the emissive texture as well (`material::emission_texture`, 2026-10-26), a flat added colour would turn it white. |
 | `f32` | power | `[10]`. **Specular power / shininess exponent**. [M: T03] |
 | `u8` | `name_len` | Length of the texture name in bytes. |
 | `u8[name_len]` | `texture` | File name, **no terminator**. May be empty (`name_len = 0`, ~5 % of sampled materials = untextured). |

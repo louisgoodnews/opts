@@ -84,6 +84,7 @@ pub fn o3d_material_to_standard_material(
 
     StandardMaterial {
         base_color,
+        emissive_texture: emission_texture(emissive, texture_handle.as_ref()),
         base_color_texture: texture_handle,
         emissive,
         perceptual_roughness,
@@ -92,6 +93,21 @@ pub fn o3d_material_to_standard_material(
         alpha_mode,
         ..Default::default()
     }
+}
+
+/// The texture an OMSI material's self-illumination shows: its own texture. In OMSI's fixed-function
+/// lighting the emissive colour joins the light that **multiplies the texture** (a display with
+/// emissive 1 shows its picture at full brightness, the Lion's City's VDV page, the MB C2's display
+/// line); Bevy adds `emissive` on top without the texture unless it is the emissive texture too,
+/// which turned such surfaces into flat white.
+#[must_use]
+pub fn emission_texture(
+    emissive: LinearRgba,
+    texture: Option<&Handle<Image>>,
+) -> Option<Handle<Image>> {
+    (emissive.red > 0.0 || emissive.green > 0.0 || emissive.blue > 0.0)
+        .then(|| texture.cloned())
+        .flatten()
 }
 
 /// Converts a Microsoft DirectX `.x` [`XMaterial`] into a Bevy [`StandardMaterial`].
@@ -125,6 +141,7 @@ pub fn x_material_to_standard_material(
 
     StandardMaterial {
         base_color,
+        emissive_texture: emission_texture(emissive, texture_handle.as_ref()),
         base_color_texture: texture_handle,
         emissive,
         perceptual_roughness,
@@ -148,6 +165,32 @@ pub fn uses_texture_alpha(mode: Option<u32>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_self_illuminating_material_glows_with_its_own_texture() {
+        let tex: Handle<Image> = Handle::default();
+        let lit = LinearRgba::new(1.0, 1.0, 1.0, 1.0);
+        assert_eq!(emission_texture(lit, Some(&tex)), Some(tex.clone()));
+        assert_eq!(
+            emission_texture(LinearRgba::BLACK, Some(&tex)),
+            None,
+            "no glow, no texture"
+        );
+        assert_eq!(
+            emission_texture(lit, None),
+            None,
+            "untextured: the colour alone"
+        );
+        let mat = O3dMaterial {
+            diffuse: [0.64, 0.64, 0.64, 1.0],
+            specular: [0.0; 3],
+            emissive: [1.0; 3],
+            power: 0.0,
+            textures: Vec::new(),
+        };
+        let m = o3d_material_to_standard_material(&mat, Some(tex.clone()));
+        assert_eq!(m.emissive_texture, Some(tex));
+    }
 
     #[test]
     fn zero_diffuse_alpha_is_opaque_and_fractions_stay() {

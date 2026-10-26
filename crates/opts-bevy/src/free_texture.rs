@@ -125,9 +125,14 @@ pub fn free_texture_system(
         }
         tracing::debug!(variable = %binding.variable, texture = %path.display(), lit = lit.is_some(), "free texture applied");
         if let Some(mut m) = materials.get_mut(&material.0) {
-            m.base_color_texture = Some(texture);
+            // A self-illuminating part shows its picture as its glow (`material::emission_texture`).
+            let glows_with_picture =
+                m.emissive_texture.is_some() && m.emissive_texture == m.base_color_texture;
+            m.base_color_texture = Some(texture.clone());
             if lit.is_some() {
                 m.emissive_texture = lit;
+            } else if glows_with_picture {
+                m.emissive_texture = Some(texture);
             }
         }
     }

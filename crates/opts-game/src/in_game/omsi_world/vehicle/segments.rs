@@ -118,6 +118,8 @@ pub(in super::super::super) fn load_segment_meshes_for(
     let sibling_run = articulation_runs(&lod0.meshes);
     // `[mesh_ident]` / `[animparent]`: a mesh inherits the animation of its parent.
     let pivots = anim_pivots(commands, root, &lod0.meshes);
+    // How often a mesh of each file name came before (see `in_file_order`).
+    let mut repeats: std::collections::HashMap<String, u32> = Default::default();
     for (mesh_index, mesh_def) in lod0.meshes.iter().enumerate() {
         // Shadow-only and AI-only meshes are not part of the visible player model.
         let vp = mesh_def.viewpoint;
@@ -330,6 +332,11 @@ pub(in super::super::super) fn load_segment_meshes_for(
         } else {
             loader.o3d_parts(&o3d_path, tex_dirs, &overrides)
         };
+        let copy = *repeats
+            .entry(mesh_stem(&mesh_def.path))
+            .and_modify(|n| *n += 1)
+            .or_insert(0);
+        let parts = in_file_order(job, materials, parts, copy);
         for part in &parts {
             if let Some(mesh) = meshes.get(&part.mesh) {
                 if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
@@ -436,4 +443,60 @@ pub(in super::super::super) fn load_segment_meshes_for(
     }
     bind_skins(commands, root, &dummies, skins);
     (mesh_count, vertex_count, min, max)
+}
+
+/// The file name of a `[mesh]` path without folders and extension, lower case: layer copies of
+/// one display sit in different folders under one name.
+fn mesh_stem(path: &str) -> String {
+    let name = path.rsplit(['\\', '/']).next().unwrap_or(path);
+    name.rsplit_once('.')
+        .map_or(name, |(stem, _)| stem)
+        .to_lowercase()
+}
+
+/// Depth bias per earlier mesh of the same file name (constant depth-bias units).
+const COPY_DEPTH_BIAS: f32 = 1.0;
+
+/// The parts of the `copy`-th mesh of one file name in the model (0: the first). OMSI draws a
+/// model's meshes in file order and a later surface at equal depth wins, which displays rely on:
+/// the Lion's City's VDV display stacks a background (`VDV\BHD_LC_VDV_Display.o3d`, the
+/// placeholder texture), the page and its overlays (`VDV\Display\BHD_LC_VDV_Display.o3d`) on
+/// one screen. Bevy keeps no such order, so a later copy gets a slightly larger depth bias (its
+/// own material, shared through the pool).
+fn in_file_order(
+    job: &mut WorldLoadJob,
+    materials: &mut Assets<StandardMaterial>,
+    mut parts: Vec<opts_bevy::ModelPart>,
+    copy: u32,
+) -> Vec<opts_bevy::ModelPart> {
+    if copy == 0 {
+        return parts;
+    }
+    for part in &mut parts {
+        let Some(mut m) = materials.get(&part.material).cloned() else {
+            continue;
+        };
+        m.depth_bias += COPY_DEPTH_BIAS * copy as f32;
+        part.material = job.cache.pool.material(materials, m);
+    }
+    parts
+}
+
+#[cfg(test)]
+mod order_tests {
+    use super::mesh_stem;
+
+    #[test]
+    fn copies_in_other_folders_share_a_stem() {
+        assert_eq!(
+            mesh_stem("VDV\\BHD_LC_VDV_Display.o3d"),
+            "bhd_lc_vdv_display"
+        );
+        assert_eq!(
+            mesh_stem("VDV\\Display\\BHD_LC_VDV_Display.o3d"),
+            "bhd_lc_vdv_display"
+        );
+        assert_eq!(mesh_stem("plain.x"), "plain");
+        assert_eq!(mesh_stem("noext"), "noext");
+    }
 }
