@@ -45,7 +45,7 @@ Keep the kinematic traffic model and its pure-Rust boundary. Add one data type t
 | `mass_kg` | `[mass]` × 1000 (no lower bound: 0.4 t is valid) | `None` |
 | `domain` (`Road`, `Rail`, `Air`) | `[type]` (omitted/0/1, 2, 3) | `Road` |
 | `kind` (`Car`, `Cab`, `Bus`, `Truck`) | `[ai_veh_type]` 0-3 | `None`; the spawner then guesses as today |
-| `v_max`, `v_reach` (m/s) | `AI_v_max`, `AI_v_max_erreich` | `None` |
+| `v_max`, `v_reach` (m/s) | `AI_v_max`, `AI_v_max_erreich`; without `AI_v_max` a bicycle's script constants: `bike_V_max` (`TH_Fahrrad`), else `vmax_min` + half of `vmax_add` (`HC_Fahrrad`, `HH20_Fahrrad`: 15 + 6/2 = 18 km/h) — 2026-10-26, their scripts cap the speed with them | `None` |
 | `gas_max`, `brake_max` | `AI_M_gas_max`, `AI_F_brems_max` | `None` |
 | `motor_curve` | `AI_Motorkennlinie` points | `None` |
 | `brake_performance` | `[ai_brakeperformance]` | neutral |

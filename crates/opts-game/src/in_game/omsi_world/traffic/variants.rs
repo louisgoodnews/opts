@@ -183,3 +183,41 @@ pub(super) fn baseline_targets(
     let room = metres.iter().zip(factors).map(|(m, f)| m * f).sum::<f64>() / MIN_LANE_SPACING_M;
     group_targets(&wanted, room.floor().max(0.0) as usize)
 }
+
+/// The shortest road vehicle measured as such (m): a bicycle is 1.76 m long.
+const MIN_LENGTH_M: f32 = 0.5;
+
+/// A unit's length and the distance of its origin behind the front (m), from its meshes' extent
+/// along the vehicle (`min_z … max_z`). Bicycles and mopeds are under 2 m (`[boundingbox]` 1.76 …
+/// 1.83 m); a mesh that cannot be measured takes its `[boundingbox]` length (`boxed`), else a
+/// car's.
+pub(super) fn unit_size(min_z: f32, max_z: f32, boxed: Option<f32>) -> (f32, f32) {
+    let len = max_z - min_z;
+    if min_z.is_finite() && (MIN_LENGTH_M..25.0).contains(&len) {
+        (len, (-min_z).clamp(0.0, len + 2.0))
+    } else if let Some(len) = boxed.filter(|l| (MIN_LENGTH_M..25.0).contains(l)) {
+        (len, len * 0.5)
+    } else {
+        (4.4, 2.2)
+    }
+}
+
+#[cfg(test)]
+mod size_tests {
+    use super::unit_size;
+
+    #[test]
+    fn a_bicycle_keeps_its_length() {
+        assert_eq!(unit_size(-1.0, 0.76, None), (1.76, 1.0));
+        assert_eq!(
+            unit_size(f32::INFINITY, f32::NEG_INFINITY, Some(1.76)),
+            (1.76, 0.88)
+        );
+        assert_eq!(
+            unit_size(-0.1, 0.1, None),
+            (4.4, 2.2),
+            "a speck is no vehicle"
+        );
+        assert_eq!(unit_size(-40.0, 0.0, Some(30.0)), (4.4, 2.2));
+    }
+}
