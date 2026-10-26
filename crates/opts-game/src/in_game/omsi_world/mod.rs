@@ -28,6 +28,7 @@ mod job;
 pub(crate) mod mesh_dir;
 mod overlay;
 mod overlay_info;
+mod plate_surf;
 mod road_surf;
 mod road_surf_load;
 pub use overlay_info::DeveloperDetail;
@@ -273,6 +274,8 @@ pub struct WorldLoadJob {
     /// `.surf` maps by file (M-0146).
     surf_strips: HashMap<String, Arc<Vec<road_surf::TexStrip>>>,
     surf_maps: HashMap<PathBuf, Option<Arc<road_surf::SurfMap>>>,
+    /// The upward triangles of surface-plate meshes, by mesh file and crossing base (M-0146).
+    plate_tris: HashMap<plate_surf::PlateKey, Arc<Vec<plate_surf::LocalTri>>>,
     /// Bitmap fonts and rendered text textures (`[texttexture]`).
     fonts: opts_bevy::text_texture::FontRegistry,
     /// `[texttexture]` declarations of the vehicle model being loaded (set by its loader; the

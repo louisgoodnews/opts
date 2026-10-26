@@ -77,6 +77,9 @@ impl RoadSample {
     }
 }
 
+/// A surface plate's triangle with the tile it came from.
+type TilePlateTri = ((i32, i32), std::sync::Arc<super::plate_surf::SurfTri>);
+
 /// A road sample with the tile it came from.
 type TileSample = ((i32, i32), RoadSample);
 
@@ -93,6 +96,8 @@ pub struct GroundIndex {
     grid: TileGrid,
     /// The strips with a height map of each spline profile (by `.sli` name, M-0146).
     surf: HashMap<String, std::sync::Arc<Vec<super::road_surf::TexStrip>>>,
+    /// The upward triangles of the surface plates by cell, with their tile (M-0146).
+    plate_tris: HashMap<(i32, i32), Vec<TilePlateTri>>,
 }
 
 impl Default for GroundIndex {
@@ -104,6 +109,7 @@ impl Default for GroundIndex {
             start_tile: (0, 0),
             grid: TileGrid::default(),
             surf: HashMap::new(),
+            plate_tris: HashMap::new(),
         }
     }
 }
@@ -206,9 +212,40 @@ impl GroundIndex {
         }
         match best {
             Some((_, s)) => s.unevenness(x, y),
-            // Surface plates (junctions, squares) and the terrain carry no texture here: the
-            // roughness of plain asphalt, laid in metres.
-            None => super::road_surf::plain_unevenness(x, y),
+            // A surface plate (junction, square): the texture of its triangle under the wheel,
+            // the one nearest `near_z`; the terrain: plain asphalt, laid in metres.
+            None => {
+                let here = Vec2::new(x, y);
+                self.plate_tris
+                    .get(&cell_of(x, y))
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|(_, t)| t.at(here))
+                    .filter(|(z, _)| (z - near_z).abs() < 0.6)
+                    .min_by(|a, b| (a.0 - near_z).abs().total_cmp(&(b.0 - near_z).abs()))
+                    .map_or_else(|| super::road_surf::plain_unevenness(x, y), |(_, u)| u)
+            }
+        }
+    }
+
+    /// Registers the textured triangles of a tile's surface plates (M-0146).
+    pub fn insert_plate_triangles(
+        &mut self,
+        key: (i32, i32),
+        tris: impl IntoIterator<Item = super::plate_surf::SurfTri>,
+    ) {
+        for t in tris {
+            let t = std::sync::Arc::new(t);
+            let (lo, hi) = t.bounds();
+            let (a, b) = (cell_of(lo.x, lo.y), cell_of(hi.x, hi.y));
+            for cx in a.0..=b.0 {
+                for cy in a.1..=b.1 {
+                    self.plate_tris
+                        .entry((cx, cy))
+                        .or_default()
+                        .push((key, t.clone()));
+                }
+            }
         }
     }
 
@@ -223,6 +260,10 @@ impl GroundIndex {
     pub fn remove_tile(&mut self, key: (i32, i32)) {
         self.plates.remove(&key);
         self.terrain.remove(&key);
+        self.plate_tris.retain(|_, v| {
+            v.retain(|(k, _)| *k != key);
+            !v.is_empty()
+        });
         self.cells.retain(|_, v| {
             v.retain(|(k, _)| *k != key);
             !v.is_empty()
