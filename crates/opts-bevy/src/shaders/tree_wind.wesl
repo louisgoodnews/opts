@@ -11,6 +11,7 @@ import bevy_pbr::prepass::io::{Vertex, VertexOutput, decompress_vertex};
 import bevy_pbr::render::forward_io::{Vertex, VertexOutput, decompress_vertex};
 
 import bevy_pbr::render::{
+    mesh_bindings::mesh,
     mesh_functions,
     view_transformations::position_world_to_clip,
 };
@@ -25,15 +26,41 @@ import bevy_pbr::render::mesh_view_bindings::globals;
 @if(PREPASS_PIPELINE)
 @group(0) @binding(1) var<uniform> globals: Globals;
 
-// x, y: the direction the wind blows towards (Bevy x and z); z: crown displacement in metres for
-// a 10 m tree (0 keeps the tree still); w: sway frequency in Hz.
-@group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> wind: vec4<f32>;
-// x: 1 for a billboard (height from the texture), 0 for a modelled tree's foliage (height alone).
-@group(constants::MATERIAL_BIND_GROUP) @binding(101) var<uniform> shape: vec4<f32>;
+// wind: x, y the direction the wind blows towards (Bevy x and z); z crown displacement in metres
+// for a 10 m tree (0 keeps the tree still); w sway frequency in Hz.
+// shape: x 1 for a billboard (height from the texture), 0 for a modelled tree's foliage (height
+// alone).
+struct TreeWind {
+    wind: vec4<f32>,
+    shape: vec4<f32>,
+}
+
+// Bindless like the StandardMaterial it extends (`TreeWind` in `tree_wind.rs`).
+@if(BINDLESS) {
+struct TreeWindIndices {
+    data: u32, // 50
+}
+@group(constants::MATERIAL_BIND_GROUP) @binding(100) var<storage> tree_wind_indices: array<TreeWindIndices>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(101) var<storage> tree_wind_array: array<TreeWind>;
+}
+@else {
+@group(constants::MATERIAL_BIND_GROUP) @binding(50) var<uniform> tree_wind: TreeWind;
+}
+
+// The tree material of the mesh drawn as `instance`.
+fn tree_wind_of(instance: u32) -> TreeWind {
+@if(BINDLESS) {
+    let slot = mesh[instance].material_and_lightmap_bind_group_slot & 0xffffu;
+    return tree_wind_array[tree_wind_indices[slot].data];
+}
+@else {
+    return tree_wind;
+}
+}
 
 // The bend of a vertex at `local` (metres above the foot in y) with texture height fraction `h`,
 // for a tree whose foot is at `foot` (world), at time `t`.
-fn bend(local: vec3<f32>, h: f32, foot: vec3<f32>, t: f32) -> vec3<f32> {
+fn bend(wind: vec4<f32>, local: vec3<f32>, h: f32, foot: vec3<f32>, t: f32) -> vec3<f32> {
     if wind.z <= 0.0 {
         return vec3<f32>(0.0);
     }
@@ -54,14 +81,15 @@ fn vertex(vertex_in: Vertex) -> VertexOutput {
     let vertex = decompress_vertex(vertex_in, vertex_in.instance_index);
     let world_from_local = mesh_functions::get_world_from_local(vertex_in.instance_index);
     let foot = world_from_local[3].xyz;
+    let tree = tree_wind_of(vertex_in.instance_index);
 
 @if(VERTEX_UVS_A)
-    let h = select(1.0, 1.0 - vertex.uv.y, shape.x > 0.5);
+    let h = select(1.0, 1.0 - vertex.uv.y, tree.shape.x > 0.5);
 @else
-    let h = 1.0 - shape.x;
+    let h = 1.0 - tree.shape.x;
 
     var world = mesh_functions::mesh_position_local_to_world(world_from_local, vec4<f32>(vertex.position, 1.0));
-    world = vec4<f32>(world.xyz + bend(vertex.position, h, foot, globals.time), world.w);
+    world = vec4<f32>(world.xyz + bend(tree.wind, vertex.position, h, foot, globals.time), world.w);
     out.world_position = world;
     out.position = position_world_to_clip(world.xyz);
 
@@ -89,7 +117,7 @@ fn vertex(vertex_in: Vertex) -> VertexOutput {
 @if(PREPASS_PIPELINE && MOTION_VECTOR_PREPASS) {
     let prev_model = mesh_functions::get_previous_world_from_local(vertex_in.instance_index);
     let prev = mesh_functions::mesh_position_local_to_world(prev_model, vec4<f32>(vertex.position, 1.0));
-    out.previous_world_position = vec4<f32>(prev.xyz + bend(vertex.position, h, prev_model[3].xyz, globals.time - globals.delta_time), prev.w);
+    out.previous_world_position = vec4<f32>(prev.xyz + bend(tree.wind, vertex.position, h, prev_model[3].xyz, globals.time - globals.delta_time), prev.w);
 }
 
 @if(VERTEX_OUTPUT_INSTANCE_INDEX)
