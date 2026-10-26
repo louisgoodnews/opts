@@ -232,7 +232,11 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
         .map_or(1.0, |p| p.scale);
     let mk = |a: &AnimAction, translate: bool| {
         let slides = translate && swapped && door(a);
-        let a_factor = if translate { a.factor * scale } else { a.factor };
+        let a_factor = if translate {
+            a.factor * scale
+        } else {
+            a.factor
+        };
         AnimStep {
             frame: if slides {
                 slide_frame
