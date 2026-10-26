@@ -334,6 +334,13 @@ fn surfaces_step(b: &mut TileBuild, job: &mut WorldLoadJob, commands: &mut Comma
             roads.push((inst.clone(), (*profile).clone()));
         }
     }
+    let surf: Vec<_> = roads
+        .iter()
+        .map(|(inst, profile)| {
+            let strips = super::road_surf_load::strips_for(job, &inst.sli_file, profile);
+            (inst.sli_file.clone(), strips)
+        })
+        .collect();
     job.tile_ground = Some(super::GroundIndex::for_tile(
         b.key,
         b.origin,
@@ -342,6 +349,8 @@ fn surfaces_step(b: &mut TileBuild, job: &mut WorldLoadJob, commands: &mut Comma
         job.start_tile,
         job.grid,
     ));
+    // The strips first: the ground index attaches them to the samples of the tile's roads.
+    super::road_surf_load::register(commands, surf);
     super::ground_height::register(
         commands,
         b.key,

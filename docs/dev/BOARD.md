@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-26 by Agent (load-problem switch done; M-0145 and M-0146 filed)_
+_Last updated: 2026-10-26 by Agent (M-0145 trip step and M-0146 rattles done)_
 
 ---
 
@@ -114,7 +114,6 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🟠 **Interior rattling sounds** (M-0146, code + spec) — project lead 2026-10-26: OMSI buses carry interior rattles (`klappern.osc`, 84 scripts in 37 vehicles); drive them from road surface, patches, curbs and the like.
 - [ ] 🟡 **Broken-link CI proof** (M-0042, chore) — push a deliberately broken link on a scratch branch and see the docs-links job fail; the last open item of M-0042 besides `cargo deny`.
 - [ ] 🟠 **Ahlheim V5, Eichenhöhe Bf: curbs below the ground; one spline/object slab over the road** (M-0090, content) — project lead 2026-10-19, screenshots: a dark slab covers the road below the viaduct; the stop's curbs sink under the terrain.
 - [ ] 🟠 **Scripted scenery (dynamic passenger information) is not functional** (M-0099/M-0100, code) — should show a default display and take its data from the stop's timetable/AI schedule (`GetTT*`, hof, `Busstops.cfg`).
@@ -358,6 +357,7 @@ _Completed items from the last two cycles. Older items live in git history and m
 
 **2026-10-26**
 
+- `[x]` 🟠 **Interior rattling sounds** (M-0146, code + spec) — project lead request, done 2026-10-26 on `agent/rattles`: the vehicles' rattle scripts (`klappern.osc`) were silent because `A_Trans_Z` was 0 and nothing shook the body. Now `A_Trans_Z` is the ground following's plus the springs' vertical acceleration, and every wheel's spring gets the road texture's unevenness (`.surf` height maps beside the street textures, else a synthetic map from the texture's `[surface]` type; plain asphalt on surface plates and terrain). Checked live: NG272 on Spandau's setts and broken asphalt `klappern_vol` 0.3–0.97; HH109 on Rathausmarkt light rattling. Open ❓: loudness against OMSI by ear, the textures of surface plates.
 - `[x]` 🟠 **Plan a drive: choose a trip** (M-0145, code + spec) — project lead request, done 2026-10-26 on `agent/trip-step`: the optional wizard step *Trip* (the map's player runs on the plan's weekday departing within the hour; tours' short day names `Mo-Fr`, `Sa`, `So` count); the bus starts at the run's first stop (stop object found like an entry point, 6 m behind the stop) and follows the run; scheduled traffic leaves the player's run alone; `scene.load_map {trip}` (protocol 1.28). Fixed on the way: *Drive* stayed disabled for a vehicle whose display name another shares (`validate`). Checked live through `ui.*` and the protocol on Berlin-Spandau.
 - `[x]` 🟡 **Control protocol: accept load problems for every load of a running game** (M-0141, code) — project lead request, done 2026-10-26 on `agent/load-accept`: `loading.accept_problems {always}` and `scene.load_map {accept_problems: "always"}` (protocol 1.27.0) keep the acceptance on until switched off, wizard loads included; an accepted load's `scene.load_map` answers once the drive has begun (`waiting_for_continue: false`); the OMSI installation is readable from the main menu on and `scene.load_map Tram` takes a bare map name. Checked live: two *Tram* loads (6 missing tiles) without the start option started by themselves. Seen on the way: a SIGSEGV in the NVIDIA driver at process exit after a map reload (pipeline compilation still running), not caused by this change ❓.
 - `[x]` 🟠 **Trees move in the wind: `[tree]` billboards** (M-0144 phase B, code + spec) — project lead request, done 2026-10-26 on `agent/tree-wind`: OPTS extension (OMSI's trees are static); vertex stage in the main, depth and shadow passes, wind from the weather, setting `graphics.tree_wind`; live on Berlin-Spandau, frame time within noise.

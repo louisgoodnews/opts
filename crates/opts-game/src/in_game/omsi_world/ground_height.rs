@@ -8,19 +8,10 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use opts_bevy::scenery::spline_pose;
-use opts_bevy::{TileTerrain, VehicleController};
+use opts_bevy::TileTerrain;
 use opts_core::formats::map::{MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::SplineProfile;
 use opts_sim::collision::{ColliderGrid, Obb};
-
-/// Session vehicles (active or parked) that follow the ground (rail-bound ones follow their track instead).
-type GroundBound = (
-    Or<(
-        With<crate::session_vehicles::SessionVehicle>,
-        With<opts_bevy::PlayerVehicle>,
-    )>,
-    Without<super::RailPlayer>,
-);
 
 /// Spacing of the road centre-line samples (m).
 const SAMPLE_STEP_M: f32 = 2.0;
@@ -30,8 +21,6 @@ const CELL_M: f32 = 8.0;
 const TERRAIN_LAYER_MARGIN_M: f32 = 0.3;
 /// A road layer this far above the vehicle is a deck over it, not the ground (m).
 const DECK_GAP_M: f32 = 1.0;
-/// Distance between the two points the pitch is measured from (m).
-const PITCH_BASE_M: f32 = 6.0;
 
 #[derive(Clone)]
 struct RoadSample {
@@ -47,21 +36,44 @@ struct RoadSample {
     surface: std::sync::Arc<Vec<opts_core::formats::scenery::SurfaceSegment>>,
     /// The spline is mirrored (its profile's `x` is negated).
     mirrored: bool,
+    /// Distance of the sample along its spline (m).
+    along_m: f32,
+    /// The profile's strips with a height map (M-0146), shared by the samples of one spline.
+    strips: std::sync::Arc<Vec<super::road_surf::TexStrip>>,
 }
 
 impl RoadSample {
     /// Height of the drawn road surface at `(x, y)`: the datum plus the profile's ground
     /// surface at the point's lateral offset; the datum where the profile lays none there.
     fn surface_z(&self, x: f32, y: f32) -> f32 {
-        let (sin, cos) = self.heading.sin_cos();
-        // Right of the direction of travel: (cos h, -sin h), as the ribbons are extruded.
-        let lateral = (x - self.x) * cos - (y - self.y) * sin;
-        let side = if self.mirrored { -1.0 } else { 1.0 };
-        let px = lateral * side;
+        let px = self.profile_x(x, y);
         self.surface
             .iter()
             .find(|seg| seg.x0 - 0.05 <= px && px <= seg.x1 + 0.05)
             .map_or(self.z, |seg| self.z + seg.z_at(px))
+    }
+
+    /// Lateral offset of `(x, y)` in the profile's frame (m, right of the direction of travel,
+    /// as the ribbons are extruded: `(cos h, -sin h)`; negated for a mirrored spline).
+    fn profile_x(&self, x: f32, y: f32) -> f32 {
+        let (sin, cos) = self.heading.sin_cos();
+        let lateral = (x - self.x) * cos - (y - self.y) * sin;
+        if self.mirrored {
+            -lateral
+        } else {
+            lateral
+        }
+    }
+
+    /// The fine unevenness of the road texture at `(x, y)` (m, M-0146).
+    fn unevenness(&self, x: f32, y: f32) -> f32 {
+        if self.strips.is_empty() {
+            return 0.0;
+        }
+        let (sin, cos) = self.heading.sin_cos();
+        let along = self.along_m + (x - self.x) * sin + (y - self.y) * cos;
+        let surface = self.surface_z(x, y) - self.z;
+        super::road_surf::unevenness_at(&self.strips, self.profile_x(x, y), along, surface)
     }
 }
 
@@ -79,6 +91,8 @@ pub struct GroundIndex {
     cells: HashMap<(i32, i32), Vec<TileSample>>,
     start_tile: (i32, i32),
     grid: TileGrid,
+    /// The strips with a height map of each spline profile (by `.sli` name, M-0146).
+    surf: HashMap<String, std::sync::Arc<Vec<super::road_surf::TexStrip>>>,
 }
 
 impl Default for GroundIndex {
@@ -89,6 +103,7 @@ impl Default for GroundIndex {
             cells: HashMap::new(),
             start_tile: (0, 0),
             grid: TileGrid::default(),
+            surf: HashMap::new(),
         }
     }
 }
@@ -131,6 +146,7 @@ impl GroundIndex {
         }
         for (inst, profile) in roads {
             let surface = std::sync::Arc::new(profile.ground_surface());
+            let strips = self.surf.get(&inst.sli_file).cloned().unwrap_or_default();
             let half_width = profile
                 .graphical_profiles
                 .iter()
@@ -149,12 +165,50 @@ impl GroundIndex {
                     heading: p.heading,
                     surface: surface.clone(),
                     mirrored: inst.mirrored,
+                    along_m: inst.length_m * k as f32 / steps as f32,
+                    strips: strips.clone(),
                 };
                 self.cells
                     .entry(cell_of(s.x, s.y))
                     .or_default()
                     .push((key, s));
             }
+        }
+    }
+
+    /// Keeps the strips with a height map of a spline profile, for the tiles registered after.
+    pub fn set_surf_strips(
+        &mut self,
+        sli: &str,
+        strips: std::sync::Arc<Vec<super::road_surf::TexStrip>>,
+    ) {
+        self.surf.insert(sli.to_string(), strips);
+    }
+
+    /// The fine unevenness of the road texture under a tyre at `(x, y)` (m, ±2 cm; M-0146): from
+    /// the nearest road sample at about `near_z`; off the splines that of plain asphalt.
+    #[must_use]
+    pub fn unevenness_at(&self, x: f32, y: f32, near_z: f32) -> f32 {
+        let (cx, cy) = cell_of(x, y);
+        let mut best: Option<(f32, &RoadSample)> = None;
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                for (_, s) in self.cells.get(&(cx + dx, cy + dy)).into_iter().flatten() {
+                    let d = (s.x - x).hypot(s.y - y);
+                    if d <= s.half_width + SAMPLE_STEP_M * 0.5
+                        && (s.surface_z(x, y) - near_z).abs() < 0.6
+                        && best.is_none_or(|(bd, _)| d < bd)
+                    {
+                        best = Some((d, s));
+                    }
+                }
+            }
+        }
+        match best {
+            Some((_, s)) => s.unevenness(x, y),
+            // Surface plates (junctions, squares) and the terrain carry no texture here: the
+            // roughness of plain asphalt, laid in metres.
+            None => super::road_surf::plain_unevenness(x, y),
         }
     }
 
@@ -285,186 +339,6 @@ pub(super) fn unregister(commands: &mut Commands, key: (i32, i32)) {
     });
 }
 
-/// What `follow_ground` reads and writes of a player vehicle: its simulation and its transform.
-type GroundBody = (
-    Entity,
-    &'static mut VehicleController,
-    &'static mut Transform,
-);
-
-/// Gravity for a vehicle that has left the ground (m/s²).
-const GRAVITY: f32 = 9.81;
-/// A wheel whose ground lies this far below the chassis carries no load (m): the vehicle hangs
-/// on the other wheels (a road edge, a kerb) until the ground under all wheels is lower.
-const UNSUPPORTED_DROP_M: f32 = 0.6;
-use opts_sim::vehicle::ground::{GroundSample, MAX_TILT_RAD, RISE_RATE, TILT_RATE};
-
-/// The player's vertical motion between frames.
-#[derive(Default, Clone, Copy)]
-pub struct BodyMotion {
-    /// Falling speed (m/s, positive down).
-    fall: f32,
-    pitch: f32,
-    roll: f32,
-}
-
-/// Puts the player's vehicle on the ground: the height under each of its four wheel positions
-/// gives elevation, pitch and roll. Wheels over a drop carry nothing; when all wheels leave the
-/// ground the vehicle falls under gravity instead of snapping down.
-pub fn follow_ground(
-    time: Res<Time>,
-    index: Res<GroundIndex>,
-    mut motions: Local<std::collections::HashMap<Entity, BodyMotion>>,
-    mut vehicles: Query<GroundBody, GroundBound>,
-) {
-    let dt = time.delta_secs().min(0.1);
-    motions.retain(|e, _| vehicles.contains(*e));
-    for (entity, mut controller, mut tf) in &mut vehicles {
-        let motion = motions.entry(entity).or_default();
-        let (front, rear, track) = {
-            let axles = &controller.sim.axles;
-            let track = axles
-                .iter()
-                .map(|a| a.config.track_width_m)
-                .fold(0.0_f32, f32::max);
-            let ends = axles
-                .iter()
-                .map(|a| a.config.longitudinal_m)
-                .fold((f32::MIN, f32::MAX), |(hi, lo), l| (hi.max(l), lo.min(l)));
-            let (hi, lo) = ends;
-            (
-                (hi > f32::MIN).then_some(hi),
-                (lo < f32::MAX).then_some(lo),
-                if track > 0.5 { track } else { 2.0 },
-            )
-        };
-        let (front, rear) = (
-            front.unwrap_or(PITCH_BASE_M * 0.5),
-            rear.unwrap_or(-PITCH_BASE_M * 0.5),
-        );
-        let ch = &mut controller.sim.chassis;
-        let (px, py) = (ch.position.x, ch.position.y);
-        let h = ch.heading_rad;
-        let (sin, cos) = h.sin_cos();
-        let z = ch.elevation_z;
-        // Ground height under the wheel at `lon` along and `side` (±1) across the vehicle.
-        let at = |lon: f32, side: f32| {
-            let lat = side * track * 0.5;
-            index.height_at(px + sin * lon + cos * lat, py + cos * lon - sin * lat, z)
-        };
-        let (Some(fl), Some(fr), Some(rl), Some(rr)) = (
-            at(front, -1.0),
-            at(front, 1.0),
-            at(rear, -1.0),
-            at(rear, 1.0),
-        ) else {
-            continue;
-        };
-        let heights = [fl, fr, rl, rr];
-        let supported: Vec<f32> = heights
-            .iter()
-            .copied()
-            .filter(|g| *g >= z - UNSUPPORTED_DROP_M)
-            .collect();
-        let target = if supported.len() >= 2 {
-            supported.iter().sum::<f32>() / supported.len() as f32
-        } else {
-            // Nothing carries the vehicle: it falls towards the highest ground below it.
-            heights.iter().copied().fold(f32::MIN, f32::max)
-        };
-        if (target - z).abs() > 12.0 {
-            // Teleports (respawn, tile change): no motion between the two heights.
-            ch.elevation_z = target;
-            motion.fall = 0.0;
-        } else if target < z - 0.02 {
-            motion.fall += GRAVITY * dt;
-            ch.elevation_z = (z - motion.fall * dt).max(target);
-            if ch.elevation_z <= target {
-                motion.fall = 0.0;
-            }
-        } else {
-            motion.fall = 0.0;
-            ch.elevation_z = z + (target - z) * (1.0 - (-RISE_RATE * dt).exp());
-        }
-        let wheelbase = (front - rear).max(1.0);
-        let pitch_goal = (((fl + fr) - (rl + rr)) * 0.5 / wheelbase)
-            .atan()
-            .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
-        let roll_goal = (((fr + rr) - (fl + rl)) * 0.5 / track)
-            .atan()
-            .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
-        let blend = 1.0 - (-TILT_RATE * dt).exp();
-        motion.pitch += (pitch_goal - motion.pitch) * blend;
-        motion.roll += (roll_goal - motion.roll) * blend;
-        // The body on its springs (M-0073): heave, pitch and roll of the suspension model, on top
-        // of the plane through the wheels (its roll is right side down positive, this one's right
-        // side up).
-        let (heave, spring_pitch, spring_roll) = controller
-            .sim
-            .body
-            .as_ref()
-            .map_or((0.0, 0.0, 0.0), |b| (b.heave_m, b.pitch_rad, -b.roll_rad));
-        // What the ground under each wheel adds to the plane through the four (the twist), for
-        // the springs: front pair and rear pair of the outer axles.
-        let twist = (fl - fr - rl + rr) * 0.25;
-        let sim = &mut controller.sim;
-        let wheels = sim.axles.len() * 2;
-        sim.wheel_ground_m.clear();
-        sim.wheel_ground_m.resize(wheels, 0.0);
-        if wheels >= 4 {
-            // Axle 0 is the front one by the files' convention; the last is the rear.
-            let last = wheels - 2;
-            sim.wheel_ground_m[0] = twist;
-            sim.wheel_ground_m[1] = -twist;
-            sim.wheel_ground_m[last] = -twist;
-            sim.wheel_ground_m[last + 1] = twist;
-        }
-        tf.translation.y = sim.chassis.elevation_z + heave;
-        tf.rotation = Quat::from_rotation_y(-h)
-            * Quat::from_rotation_x(motion.pitch + spring_pitch)
-            * Quat::from_rotation_z(motion.roll + spring_roll);
-    }
-}
-
-/// Hands the simulation the ground under every unit of each articulated vehicle, once per fixed
-/// step (design D3): the pitch, roll and height of the chassis (for the joint variables) and of
-/// the following units are computed by `VehicleSimulation::apply_ground` with the fixed time
-/// step, so the joint variables `articulation_<k>_beta`/`_gamma` do not depend on the frame
-/// rate. The chassis' visible body motion stays in [`follow_ground`].
-///
-/// TEMPORARY (Q-ART-09): the heights come from the game's [`GroundIndex`]; they are replaced by
-/// the M-0025 ground query when that is merged.
-pub fn sample_consist_ground(
-    time: Res<Time>,
-    index: Res<GroundIndex>,
-    mut vehicles: Query<&mut VehicleController, (With<opts_bevy::ArticulatedChain>, GroundBound)>,
-) {
-    let dt = time.delta_secs();
-    if dt <= 0.0 {
-        return;
-    }
-    for mut controller in &mut vehicles {
-        let sim = &mut controller.sim;
-        // The height hint selects between layers (bridges): the fixed-step body of the chassis
-        // once it has one, else its own elevation.
-        let hint = sim
-            .head_body
-            .map_or(sim.chassis.elevation_z, |b| b.elevation);
-        let samples: Vec<Option<GroundSample>> = sim
-            .ground_probes()
-            .into_iter()
-            .map(|probe| {
-                let p = probe.points();
-                let h = |i: usize| index.height_at(p[i].x, p[i].y, hint);
-                let heights = [h(0)?, h(1)?, h(2)?, h(3)?];
-                let sample = GroundSample::from_heights(probe, heights);
-                Some(sample)
-            })
-            .collect();
-        sim.apply_ground(&samples, dt);
-    }
-}
-
 #[cfg(test)]
 mod surface_tests {
     use super::*;
@@ -493,6 +367,8 @@ mod surface_tests {
                 },
             ]),
             mirrored,
+            along_m: 0.0,
+            strips: Arc::default(),
         }
     }
 

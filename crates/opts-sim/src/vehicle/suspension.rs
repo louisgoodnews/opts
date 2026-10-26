@@ -230,6 +230,10 @@ pub struct BodySuspension {
     pub roll_inertia_kg_m2: f32,
     /// Height of the centre of gravity (m).
     pub cg_height_m: f32,
+    /// Vertical acceleration of the body on its springs over the last step (m/s², up
+    /// positive): what the scripts' `A_Trans_Z` adds to the ground's (M-0146).
+    #[serde(default)]
+    pub vertical_acc_m_s2: f32,
 }
 
 impl BodySuspension {
@@ -274,6 +278,7 @@ impl BodySuspension {
             pitch_inertia_kg_m2: pitch_inertia_kg_m2.max(100.0),
             roll_inertia_kg_m2: roll_inertia_kg_m2.max(100.0),
             cg_height_m: cg_height_m.max(0.1),
+            vertical_acc_m_s2: 0.0,
         }
     }
 
@@ -303,6 +308,7 @@ impl BodySuspension {
         // lifts the nose, turning right rolls the body to the left (right side up).
         let m_pitch_ext = m * a_long * self.cg_height_m;
         let m_roll_ext = -m * a_lat * self.cg_height_m;
+        let mut heave_acc_sum = 0.0f32;
         for _ in 0..n {
             let (mut fz, mut mp, mut mr) = (0.0f32, 0.0f32, 0.0f32);
             for (i, w) in self.wheels.iter_mut().enumerate() {
@@ -336,6 +342,7 @@ impl BodySuspension {
                 mr -= w.y_m * net;
             }
             let heave_acc = fz / m;
+            heave_acc_sum += heave_acc;
             let pitch_acc = (mp + m_pitch_ext) / ip;
             let roll_acc = (mr + m_roll_ext) / ir;
             self.heave_rate_m_s += heave_acc * h;
@@ -345,6 +352,7 @@ impl BodySuspension {
             self.pitch_rad += self.pitch_rate_rad_s * h;
             self.roll_rad += self.roll_rate_rad_s * h;
         }
+        self.vertical_acc_m_s2 = heave_acc_sum / n as f32;
     }
 
     /// Sets the weight of the people on board (N per axle, left and right wheel half each).

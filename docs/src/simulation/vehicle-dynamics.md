@@ -55,7 +55,7 @@ The brake force and the drive torque stay the vehicle scripts' (`M_Wheel`, `Brak
 | A right turn at 3 m/s² | the body rolls to the left and the left wheels carry more |
 | One wheel 4 cm up | the diagonal wheel gains load, the other two lose; the weight is conserved |
 
-In the game the wheel loads feed the brakes' tyre limit, the spring travel feeds the scripts (`axle_suspension_<n>_<l|r>`, the compression in m, sign and zero point ❓ against OMSI) and the visible body adds heave, pitch and roll to the plane through the four wheels (`follow_ground`). That function also gives the springs the **twist** of the ground (what the four wheel heights add to their best-fit plane) for the outer axles; the terrain is not otherwise sampled per wheel.
+In the game the wheel loads feed the brakes' tyre limit, the spring travel feeds the scripts (`axle_suspension_<n>_<l|r>`, the compression in m, sign and zero point ❓ against OMSI) and the visible body adds heave, pitch and roll to the plane through the four wheels (`follow_ground`). That function also gives the springs the **twist** of the ground (what the four wheel heights add to their best-fit plane) for the outer axles, and since M-0146 the fine **unevenness of the road texture** under every wheel (the `.surf` height map of the street texture, ±2 cm, else a synthetic one from the texture's surface type; [M-0146](../roadmap/phase-4/M-0146.md)). The scripts read the vertical acceleration as `A_Trans_Z`: the chassis following the ground (kerbs, slopes) plus the body on its springs; the rattle scripts (`klappern.osc`) turn it into interior rattling.
 
 ## 4. Brakes
 
