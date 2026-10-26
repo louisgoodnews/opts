@@ -1,6 +1,8 @@
 //! Spawning and despawning traffic.
 
-use super::variants::{baseline_targets, group_lane_metres, pick_slot, time_factor, unit_lod};
+use super::variants::{
+    baseline_targets, group_lane_metres, pick_slot, time_factor, unit_lod, unit_size,
+};
 use super::*;
 
 /// Spawns vehicles on lanes around the camera up to the density-derived target.
@@ -331,14 +333,9 @@ pub fn spawn_traffic(
         return;
     };
     for (unit, (min, max)) in variant.units.iter_mut().zip(&bounds) {
-        unit.size.get_or_insert_with(|| {
-            let len = max.z - min.z;
-            if min.z.is_finite() && (2.0..25.0).contains(&len) {
-                (len, (-min.z).clamp(0.0, len + 2.0))
-            } else {
-                (4.4, 2.2)
-            }
-        });
+        let boxed = unit.profile.body_length_m;
+        unit.size
+            .get_or_insert_with(|| unit_size(min.z, max.z, boxed));
     }
     let traits = variant.traits();
     let mut params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64());

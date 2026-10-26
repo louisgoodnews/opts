@@ -110,7 +110,17 @@ impl AiProfile {
         let mut notes = Vec::new();
         let kmh = |v: f32| v / 3.6;
         let mass_kg = m.mass_tonnes.filter(|t| *t > 0.0).map(|t| t * 1000.0);
-        let top_speed_ms = constant(consts, "AI_v_max").filter(|v| *v > 0.0).map(kmh);
+        // Bicycles have no `AI_v_max`: their scripts cap the speed with constants of their own
+        // (`TH_Fahrrad`: `bike_V_max` 20; `HC_Fahrrad`: `vmax_min` 15 plus a random `vmax_add`
+        // up to 6 km/h). Without one a bicycle drove at a car's speed.
+        let script_vmax = constant(consts, "bike_V_max").or_else(|| {
+            constant(consts, "vmax_min")
+                .map(|v| v + constant(consts, "vmax_add").unwrap_or(0.0).max(0.0) * 0.5)
+        });
+        let top_speed_ms = constant(consts, "AI_v_max")
+            .or(script_vmax)
+            .filter(|v| *v > 0.0)
+            .map(kmh);
         let reach_speed_ms = constant(consts, "AI_v_max_erreich")
             .filter(|v| *v > 0.0)
             .map(kmh);
@@ -248,6 +258,22 @@ mod tests {
         let b = ConstFile::parse(b"[const]\nai_V_MAX\n50\n");
         let p = AiProfile::from_manifest(&manifest("[mass]\n1\n"), &[a, b]);
         assert!((p.top_speed_ms.unwrap() - 50.0 / 3.6).abs() < 1e-4);
+    }
+
+    #[test]
+    fn a_bicycle_rides_at_its_script_speed() {
+        let th = ConstFile::parse(b"[const]\nbike_V_max\n20\n");
+        let p = AiProfile::from_manifest(&manifest("[mass]\n0.1\n"), &[th]);
+        assert!((p.top_speed_ms.unwrap() - 20.0 / 3.6).abs() < 1e-4);
+        let hc = ConstFile::parse(b"[const]\nvmax_min\n15\n\n[const]\nvmax_add\n6\n");
+        let p = AiProfile::from_manifest(&manifest("[mass]\n0.1\n"), &[hc]);
+        assert!((p.top_speed_ms.unwrap() - 18.0 / 3.6).abs() < 1e-4);
+        let both = ConstFile::parse(b"[const]\nAI_v_max\n15\n\n[const]\nvmax_min\n30\n");
+        let p = AiProfile::from_manifest(&manifest("[mass]\n0.1\n"), &[both]);
+        assert!(
+            (p.top_speed_ms.unwrap() - 15.0 / 3.6).abs() < 1e-4,
+            "AI_v_max wins"
+        );
     }
 
     #[test]
