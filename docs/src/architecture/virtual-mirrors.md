@@ -33,7 +33,7 @@ On the MAN Lion's City these are the tags 0 (left), 2 (right wide-angle, upper) 
 
 ## What it costs
 
-Nothing while no mirror is on. A mirror that is on renders every frame at twice the picture size (at most 1024 a side), whatever the light quality's `mirror_count`; with `mirror_count` 0 the cameras exist only for the mirrors that are on.
+Nothing while no mirror is on. A mirror that is on renders every frame at twice the picture size (at most 1024 a side), whatever the light quality's `mirror_count`. With `mirror_count` 0 (the automatic quality from level 4) the cameras exist only while the mode is open (they render nothing until a mirror is switched on; the areas need them) and for the mirrors that are on. Before 2026-10-26 they existed only for mirrors that were on, so with `mirror_count` 0 Tab showed no area and no mirror could be switched on.
 
 ## Tests
 

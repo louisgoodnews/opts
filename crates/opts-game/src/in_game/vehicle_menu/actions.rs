@@ -169,7 +169,7 @@ pub(super) fn menu_actions(
             Action::Despawn => match registry.active_id() {
                 None => menu.status = "There is no vehicle to despawn.".into(),
                 Some(id) => {
-                    commands.queue(move |w: &mut World| {
+                    crate::session_vehicles::defer(&mut commands, move |w: &mut World| {
                         if let Err(e) = ops::despawn(w, id, DespawnReason::User) {
                             tracing::warn!("despawn refused: {e}");
                         }
