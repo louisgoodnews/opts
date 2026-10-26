@@ -107,11 +107,26 @@ On Berlin-Spandau tile 2402/11279 it moves 409 vertices. Tests: `terrain/align.r
 
 Measured the same way, counting the gaps within 0.75 m (the rest is content: embankments, cuttings, bridges): median -0.032 m (the clearance), 33 % of the edges still off by more than 5 cm, 7.8 % by more than 20 cm (curbs where two edges 0.4 m apart differ in height, vertices held by a lower cap). Test `spandau_terrain_beside_the_surface_edges_fits_their_height` guards it (median within 5 cm, under 12 % over 20 cm). What would close the rest is more terrain vertices along the edges (a finer mesh) or a skirt strip, not done.
 
-**Open ❓:** whether OMSI shows the stored residue or aligns at run time is still not decided (Q-TC-01); the alignment follows the project lead's request.
+**Open ❓:** whether OMSI shows the stored residue or aligns at run time is still not decided (Q-TC-01); the alignment follows the project lead's request. *Partly answered by §10: OMSI does shape the terrain to splines marked `[spline_terrain_align]`, without a limit.*
+
+## 10. Terrain aligned to splines (2026-10-26)
+
+The project lead's report: on Winsenburg a street that should lead down below ground ran into the terrain. Splines followed by `[spline_terrain_align]` or `[spline_terrain_align_2]` with the value `1` (the block right after the spline record; `MapTile::terrain_aligned`) have the terrain set to their `[heightprofile]` strips. OMSI's own terrain cache shows it: `tile_<x>_<y>.map.terrain_0.rdy` ([`.rdy`](../formats/text/misc-types.md#rdy)) is the shaped terrain. On Winsenburg 103 of 292 caches differ from the plain 61 × 61 grid (more vertices, other triangles) and 87 % of those tiles have aligned splines, the plain ones none; at tile -3/-18 the grid under `RQ_28_Half.sli` (12 m down between 10 m walls, heightprofile 0 … 12.5 m at +0.1) is gone and the cache's vertices follow the strip's edges at -11.9 m. The carve (§4, 1 m guard) and the edge fit (§9, 0.75 m) could not do that: 33 aligned splines of Winsenburg lie more than 1 m (up to 12 m) under the authored grid.
+
+OPTS (`opts_bevy::terrain::cut`):
+
+* the strips of the aligned splines of the tile and its eight neighbours (`spline_cut_triangles`: the height profiles over the drawn spline's stations, less 3 cm) form a `TerrainCut`;
+* every terrain triangle is clipped against the strips: the part inside a strip takes the strip's height, kept 3 cm under the lowest drawn ground there (a strip is one level across a kerbed street; without the cap 3 % of Spandau's drawn surface under strips was covered); the part outside keeps the (carved) grid's height;
+* along the strips' outer edges a two-sided face joins the strip's height and the grid's, split where the grid's triangles change; an edge beyond which another strip continues (the two halves of a road, the next segment) gets none;
+* `TileTerrain::height` answers from the strips first, so objects, lanes and vehicles stand on the shaped terrain.
+
+The cache itself is not used: 52 of Winsenburg's tiles have none (tile -3/-17, the trough's other half, among them), and the carve and the edge fit still apply to the rest of the tile. Tests: `terrain/cut/tests.rs` (a 12 m trough, the halves of a road, the cap under a kerbed road, no height profile no cut) and the install-gated `opts-game/tests/terrain_cut_content.rs` (Winsenburg: 95 tiles with strips, 26,321 drawn-surface points under strips, none covered; Berlin-Spandau: 33 tiles, 9,064 points, none covered). Checked live on Winsenburg: the trough at tile -3/-18 is open down to its road; Spandau's start unchanged.
+
+Not done: `[terrainhole]` (objects, 161 files) and `[terrainholeprofile]` (splines, 38 files) cut holes for tunnels proper, where the terrain stays above the road (Q-TC-03); Winsenburg uses them only under five crossings of tiles 14/-4 … 14/-7.
 
 ## ❓ Open questions
 
-* **Q-TC-01** Does OMSI carve at runtime or show the stored residue (+0.15 m on aligned splines)? Needs a visual comparison at an aligned site.
+* **Q-TC-01** Does OMSI carve at runtime or show the stored residue (+0.15 m on aligned splines)? Needs a visual comparison at an aligned site. *Aligned splines: OMSI shapes the terrain to their height profile, however deep (§10, from the `.rdy` caches); unaligned ones still open.*
 * **Q-TC-02** OMSI's cell diagonal and object-height interpolation (moves up to 9 % of objects by more than 5 cm).
 * **Q-TC-03** `[terrainhole]` and `[terrainholeprofile]` (not implemented) for tunnels and river beds.
 * **Q-TC-04** Shared border vertices already disagree between neighbouring tiles by more than 1 cm at 484 / 189 / 262 vertices (up to 43.6 m) in the raw data, independent of carving: which tile wins?

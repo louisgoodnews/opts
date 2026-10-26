@@ -268,6 +268,10 @@ pub struct MapTile {
     pub has_variable_terrain: bool,
     /// Whether variable terrain lightmap is enabled.
     pub has_variable_terrain_lightmap: bool,
+    /// ID codes of the splines marked `[spline_terrain_align]` / `[spline_terrain_align_2]` (value
+    /// `1`, the block right after the spline): OMSI shapes the terrain to their `[heightprofile]`,
+    /// however deep (a road down into a trough or a tunnel mouth).
+    pub terrain_aligned: Vec<u64>,
     /// Placed scenery objects on this tile.
     pub objects: Vec<MapObjectInstance>,
     /// Placed spline segments on this tile.
@@ -338,6 +342,7 @@ impl MapTile {
                 "variable_terrainlightmap" => {
                     tile.has_variable_terrain_lightmap = true;
                 }
+                "spline_terrain_align" | "spline_terrain_align_2" => tile.mark_aligned(block),
                 "object" => {
                     // flag, .sco, ID, x, y, z, heading, [pitch, roll,] string count, strings.
                     let is_v10 = tile.version == Some(10);

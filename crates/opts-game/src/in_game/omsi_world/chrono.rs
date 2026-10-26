@@ -253,6 +253,7 @@ impl WorldLoadJob {
         }
         for key in &tiles {
             self.tile_splines.remove(key);
+            self.tile_aligned.remove(key);
             self.tile_objects.remove(key);
             self.tile_surfaces.remove(key);
         }

@@ -69,3 +69,14 @@ impl MapTrafficRule {
         })
     }
 }
+
+impl super::MapTile {
+    /// `[spline_terrain_align]` / `[spline_terrain_align_2]`: with the value `1` the spline right
+    /// before it is aligned ([`super::MapTile::terrain_aligned`]).
+    pub(super) fn mark_aligned(&mut self, block: &crate::formats::text::OmsiBlock) {
+        let on = block.parameters.first().is_some_and(|v| v.trim() == "1");
+        if let (true, Some(spline)) = (on, self.splines.last()) {
+            self.terrain_aligned.push(spline.id_code);
+        }
+    }
+}
