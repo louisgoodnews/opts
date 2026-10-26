@@ -268,6 +268,14 @@ pub(super) fn build_select(
                         let selected = menu.entry == Some(*id);
                         button(list, name, selected, Action::PickEntry(*id));
                     }
+                    // Bus stops: the vehicle stands with its front at the stop, if it is free.
+                    if !menu.shown_stops.is_empty() {
+                        label(list, "Bus stops", 15.0, ColorRole::Primary);
+                    }
+                    for (id, name) in &menu.shown_stops {
+                        let selected = menu.stop == Some(*id);
+                        button(list, name, selected, Action::PickStop(*id));
+                    }
                 });
             });
         });
@@ -283,7 +291,7 @@ pub(super) fn build_select(
         })
         .with_children(|footer| {
             button(footer, "Cancel", false, Action::Back);
-            let ready = veh.is_some() && menu.entry.is_some();
+            let ready = veh.is_some() && (menu.entry.is_some() || menu.stop.is_some());
             let confirm = button(footer, "✓ Confirm", true, Action::Confirm);
             if !ready {
                 footer.commands().entity(confirm).insert(Disabled);

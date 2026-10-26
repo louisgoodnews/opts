@@ -136,20 +136,67 @@ pub(super) fn free_entries(
     out
 }
 
+/// The map's bus stops by name (`Busstops.cfg` of the timetables), a name that several stops
+/// share numbered like the entry points.
+pub(super) fn stop_list(job: &mut WorldLoadJob) -> Vec<(u32, String)> {
+    let Some(tt) = job.timetables() else {
+        return Vec::new();
+    };
+    let mut stops: Vec<(u32, String)> = tt
+        .stops
+        .iter()
+        .filter(|s| !s.name.trim().is_empty())
+        .map(|s| (s.id, s.name.trim().to_string()))
+        .collect();
+    stops.sort_by(|a, b| {
+        a.1.to_lowercase()
+            .cmp(&b.1.to_lowercase())
+            .then(a.0.cmp(&b.0))
+    });
+    numbered(stops)
+}
+
+/// Labels that several rows share get their number: `Rathaus (1)`, `Rathaus (2)`.
+fn numbered(rows: Vec<(u32, String)>) -> Vec<(u32, String)> {
+    let mut total: HashMap<String, usize> = HashMap::new();
+    for (_, n) in &rows {
+        *total.entry(n.clone()).or_default() += 1;
+    }
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    rows.into_iter()
+        .map(|(id, name)| {
+            if total[&name] > 1 {
+                let n = seen.entry(name.clone()).or_default();
+                *n += 1;
+                (id, format!("{name} ({n})"))
+            } else {
+                (id, name)
+            }
+        })
+        .collect()
+}
+
 /// Marks the menu changed when the set of free entry points does.
 pub(super) fn refresh_entries(
     mut menu: ResMut<VehicleMenu>,
-    job: Option<Res<WorldLoadJob>>,
+    job: Option<ResMut<WorldLoadJob>>,
     index: Res<EntryIndex>,
     traffic: Query<&GlobalTransform, With<TrafficVehicle>>,
 ) {
     if !matches!(menu.page, Page::Select | Page::Formation) {
         return;
     }
-    let Some(job) = job else { return };
+    let Some(mut job) = job else { return };
     let total = job.entry_records().len();
     if menu.entry_total != total {
         menu.entry_total = total;
+    }
+    if menu.shown_stops.is_empty() {
+        // The timetables are read once and cached in the job; that is no change of the job.
+        let stops = stop_list(job.bypass_change_detection());
+        if !stops.is_empty() {
+            menu.shown_stops = stops;
+        }
     }
     let free = free_entries(&job, &index, &traffic);
     let progress = (index.entries().len(), index.is_done());
@@ -191,5 +238,27 @@ pub(super) fn refresh_session_rows(
         .collect();
     if rows != menu.shown_rows {
         menu.shown_rows = rows;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stops_that_share_a_name_are_numbered() {
+        let rows = vec![
+            (7, "Rathaus".to_string()),
+            (8, "Rathaus".to_string()),
+            (3, "Markt".to_string()),
+        ];
+        assert_eq!(
+            numbered(rows),
+            vec![
+                (7, "Rathaus (1)".to_string()),
+                (8, "Rathaus (2)".to_string()),
+                (3, "Markt".to_string()),
+            ]
+        );
     }
 }
