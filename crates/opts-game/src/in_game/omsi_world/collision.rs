@@ -208,9 +208,12 @@ pub(super) fn register_object(
     // wall; it went into the obstacle index and stopped buses at the first plate (Köln,
     // Frankenstraße).
     if sco.surface {
+        // The plate's textures under the wheels (M-0146).
+        let tris = super::plate_surf::plate_triangles(job, sco, model_dir, tf, bend);
         commands.queue(move |world: &mut World| {
             if let Some(mut ground) = world.get_resource_mut::<GroundIndex>() {
                 ground.insert_plates(key, boxes);
+                ground.insert_plate_triangles(key, tris);
             }
         });
         return;

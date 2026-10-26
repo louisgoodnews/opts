@@ -62,28 +62,11 @@ pub(super) fn strips_for(
         root.join("Texture"),
         root,
     ];
-    let find = |job: &WorldLoadJob, texture: &str, suffix: &str| {
-        beside_names(texture, suffix)
-            .iter()
-            .find_map(|name| dirs.iter().find_map(|d| job.install.find_in(d, name)))
-    };
     let mut maps: Vec<Option<(Arc<SurfMap>, Option<f32>)>> = Vec::new();
     let mut authored = 0;
     for tex in &profile.textures {
-        // The texture's own height map, else one made for its surface type.
-        let map = match find(job, &tex.file, "surf").and_then(|p| load(job, p)) {
-            Some(m) => {
-                authored += 1;
-                (m, None)
-            }
-            None => {
-                let surface = find(job, &tex.file, "cfg")
-                    .and_then(|p| std::fs::read(p).ok())
-                    .map_or(0, |b| surface_type(&String::from_utf8_lossy(&b)));
-                let (map, period) = SurfMap::synthetic(surface);
-                (Arc::new(map), Some(period))
-            }
-        };
+        let map = surf_of_texture(job, &tex.file, &dirs);
+        authored += usize::from(map.1.is_none());
         maps.push(Some(map));
     }
     let strips = Arc::new(strips_of(profile, |i| maps.get(i).cloned().flatten()));
@@ -92,6 +75,28 @@ pub(super) fn strips_for(
     }
     job.surf_strips.insert(sli.to_string(), strips.clone());
     strips
+}
+
+/// The height map of a texture found in `dirs`: its own `.surf`, else one made for its surface
+/// type (`[surface]` of its `.cfg`, asphalt without one) with the length it repeats over.
+pub(super) fn surf_of_texture(
+    job: &mut WorldLoadJob,
+    texture: &str,
+    dirs: &[PathBuf],
+) -> (Arc<SurfMap>, Option<f32>) {
+    let find = |job: &WorldLoadJob, suffix: &str| {
+        beside_names(texture, suffix)
+            .iter()
+            .find_map(|name| dirs.iter().find_map(|d| job.install.find_in(d, name)))
+    };
+    if let Some(m) = find(job, "surf").and_then(|p| load(job, p)) {
+        return (m, None);
+    }
+    let surface = find(job, "cfg")
+        .and_then(|p| std::fs::read(p).ok())
+        .map_or(0, |b| surface_type(&String::from_utf8_lossy(&b)));
+    let (map, period) = SurfMap::synthetic(surface);
+    (Arc::new(map), Some(period))
 }
 
 /// Hands the strips of a tile's road profiles to the ground index (before the tile's roads).
