@@ -2,7 +2,8 @@
 // Bevy's mesh and prepass shaders with one addition: the vertex is bent along the wind. The foot
 // stays; the displacement grows with the height fraction (1 - v, the billboard's texture runs from
 // v = 1 at the ground to v = 0 at the top) times the height above the foot, so the crown swings and
-// the trunk barely moves. Trees carry no skin and no morph targets.
+// the trunk barely moves; a mesh tree's foliage (`shape.x` 0) bends with the height alone. Trees
+// carry no skin and no morph targets.
 
 @if(PREPASS_PIPELINE)
 import bevy_pbr::prepass::io::{Vertex, VertexOutput, decompress_vertex};
@@ -27,6 +28,8 @@ import bevy_pbr::render::mesh_view_bindings::globals;
 // x, y: the direction the wind blows towards (Bevy x and z); z: crown displacement in metres for
 // a 10 m tree (0 keeps the tree still); w: sway frequency in Hz.
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> wind: vec4<f32>;
+// x: 1 for a billboard (height from the texture), 0 for a modelled tree's foliage (height alone).
+@group(constants::MATERIAL_BIND_GROUP) @binding(101) var<uniform> shape: vec4<f32>;
 
 // The bend of a vertex at `local` (metres above the foot in y) with texture height fraction `h`,
 // for a tree whose foot is at `foot` (world), at time `t`.
@@ -53,9 +56,9 @@ fn vertex(vertex_in: Vertex) -> VertexOutput {
     let foot = world_from_local[3].xyz;
 
 @if(VERTEX_UVS_A)
-    let h = 1.0 - vertex.uv.y;
+    let h = select(1.0, 1.0 - vertex.uv.y, shape.x > 0.5);
 @else
-    let h = 0.0;
+    let h = 1.0 - shape.x;
 
     var world = mesh_functions::mesh_position_local_to_world(world_from_local, vec4<f32>(vertex.position, 1.0));
     world = vec4<f32>(world.xyz + bend(vertex.position, h, foot, globals.time), world.w);
