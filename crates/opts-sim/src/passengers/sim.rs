@@ -13,6 +13,8 @@ const BUY_S: f32 = 4.0;
 const STAMP_S: f32 = 1.5;
 /// Chance that a passenger takes a free seat rather than standing.
 const SIT_CHANCE: f32 = 0.7;
+/// Walking distance (m) over which a free place becomes half as likely to be chosen.
+pub const PLACE_SPREAD_M: f32 = 6.0;
 
 /// What a passenger does now.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -159,10 +161,15 @@ impl PassengerSim {
     #[must_use]
     pub fn new(cabin: Cabin, paths: &Paths, tickets: TicketBook, seed: u64) -> Self {
         let graph = CabinGraph::new(paths);
+        let reach = graph.reachable(&cabin.entries);
         let place_node = cabin
             .places
             .iter()
-            .map(|p| graph.nearest_in_unit(p.position, p.unit).unwrap_or(0))
+            .map(|p| {
+                graph
+                    .nearest_reachable(p.position, p.unit, &reach)
+                    .unwrap_or(0)
+            })
             .collect();
         let entry_nodes = cabin.entries.clone();
         let exit_nodes = cabin.exits.clone();
@@ -186,8 +193,12 @@ impl PassengerSim {
     pub fn add_standing_room(&mut self) -> usize {
         let extra = super::crowd::standing_room(&self.cabin, &self.graph);
         let n = extra.len();
+        let reach = self.graph.reachable(&self.entry_nodes);
         for p in extra {
-            let node = self.graph.nearest_in_unit(p.position, p.unit).unwrap_or(0);
+            let node = self
+                .graph
+                .nearest_reachable(p.position, p.unit, &reach)
+                .unwrap_or(0);
             self.place_node.push(node);
             self.cabin.places.push(p);
         }
@@ -367,28 +378,31 @@ impl PassengerSim {
     }
 
     /// A free place for a passenger at `from`: a seat with the given chance and when there is
-    /// one, else a standing place; the nearest by walking distance.
+    /// one, else a standing place; drawn among the free ones that can be walked to, a place
+    /// [`PLACE_SPREAD_M`] farther away half as likely, so that people fill the whole vehicle (the
+    /// unit behind the joint too) and not only the places next to the door.
     fn pick_place(&mut self, from: usize) -> Option<usize> {
         let taken: Vec<usize> = self.passengers.iter().filter_map(|p| p.place).collect();
-        let free = |i: &usize| !taken.contains(i);
-        let nearest = |this: &Self, seats: bool| {
-            (0..this.cabin.places.len())
-                .filter(|i| free(i) && this.cabin.places[*i].is_seat() == seats)
-                .filter_map(|i| {
-                    this.graph
-                        .route(from, this.place_node[i])
-                        .map(|(_, len)| (i, len))
-                })
-                .min_by(|a, b| a.1.total_cmp(&b.1))
-                .map(|(i, _)| i)
-        };
+        let dist = self.graph.distances(from);
         let want_seat = self.rng.next_f32() < SIT_CHANCE;
-        let order = if want_seat {
-            [true, false]
-        } else {
-            [false, true]
-        };
-        order.iter().find_map(|&seats| nearest(self, seats))
+        let roll = self.rng.next_f32();
+        [want_seat, !want_seat].into_iter().find_map(|seats| {
+            let free: Vec<(usize, f32)> = (0..self.cabin.places.len())
+                .filter(|i| !taken.contains(i) && self.cabin.places[*i].is_seat() == seats)
+                .filter_map(|i| {
+                    let d = dist.get(self.place_node[i]).copied()?;
+                    d.is_finite().then(|| (i, 1.0 / (1.0 + d / PLACE_SPREAD_M)))
+                })
+                .collect();
+            let mut x = roll * free.iter().map(|f| f.1).sum::<f32>();
+            free.iter()
+                .find(|(_, w)| {
+                    x -= w;
+                    x < 0.0
+                })
+                .or(free.last())
+                .map(|f| f.0)
+        })
     }
 
     /// Advances the passengers by `dt` seconds with the doors as given.
