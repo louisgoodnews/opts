@@ -4,6 +4,7 @@ use super::search::{
     ComboboxFilter, ComboboxList, ComboboxNoMatch, ComboboxSearch, DEFAULT_SEARCH_THRESHOLD,
 };
 use super::*;
+use bevy::ui::OverrideClip;
 
 /// Builder for constructing Material Design 3 combobox widgets.
 ///
@@ -238,7 +239,10 @@ fn populate_combobox_children(
                     row_gap: Val::Px(4.0),
                     ..default()
                 },
-                GlobalZIndex(50),
+                // Above a modal (1000) whose content holds the box, and not clipped by the scroll
+                // area it sits in (the wizard's equipment dialog): the list is a popup.
+                GlobalZIndex(MENU_Z),
+                OverrideClip,
             ),
             ComboboxMenu(root),
             BackgroundRole(ColorRole::SurfaceContainerHigh),

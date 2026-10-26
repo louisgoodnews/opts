@@ -290,6 +290,20 @@ pub fn close_on_cancel(
 }
 
 /// Closes the dialog.
+/// *Reset*: clears the choices and rebuilds the open dialog (its controls kept showing the
+/// cleared choices until it was closed).
+pub(super) fn reset_options(env: &mut super::systems::Env, commands: &mut Commands) {
+    env.setup.custom_setvars.clear();
+    close_options(&env.modals, commands);
+    open_options(
+        commands,
+        &env.loc,
+        &env.catalogue,
+        &env.setup,
+        &env.liveries,
+    );
+}
+
 pub fn close_options(modals: &Query<Entity, With<OptionsModal>>, commands: &mut Commands) {
     for e in modals {
         commands.entity(e).despawn();
