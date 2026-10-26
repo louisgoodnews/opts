@@ -186,7 +186,9 @@ pub use keys::{has_drucker_keypad, has_ibis_keypad, ibis_keys, KeyQueue};
 /// Finds the depot (`.hof`) for a vehicle: a file of the vehicle's folder named like the map,
 /// one whose name contains the map's (or the other way round), the shared folders by the same
 /// rule, and last the first file of the vehicle's folder in name order. Files that do not parse
-/// are skipped.
+/// are skipped. Among several name matches the one with the most routes wins, then the longer
+/// name: for `Berlin-Spandau`, `Spandau.hof` (the map's lines) and not `Berlin.hof` (destinations
+/// only), which came first by name.
 #[must_use]
 pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_name: &str) -> Option<HofFile> {
     let map = map_name.trim().to_ascii_lowercase();
@@ -223,12 +225,13 @@ pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_name: &str) -> Option<Ho
                 }
             }
         }
-        for (stem, p) in &own {
-            if stem.contains(&map) || map.contains(stem.as_str()) {
-                if let Some(h) = parse(p) {
-                    return Some(h);
-                }
-            }
+        let best = own
+            .iter()
+            .filter(|(stem, _)| stem.contains(&map) || map.contains(stem.as_str()))
+            .filter_map(|(stem, p)| parse(p).map(|h| (h.routes.len(), stem.len(), h)))
+            .max_by_key(|(routes, len, _)| (*routes, *len));
+        if let Some((_, _, h)) = best {
+            return Some(h);
         }
     }
     if let Some(h) = own.iter().find_map(|(_, p)| parse(p)) {

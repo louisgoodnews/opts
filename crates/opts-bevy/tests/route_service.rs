@@ -292,3 +292,18 @@ Ponttor
         ));
     }
 }
+
+#[test]
+fn of_several_depots_named_after_the_map_the_one_with_its_lines_is_chosen() {
+    let dir = std::env::temp_dir().join(format!("opts-depot-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("dir");
+    // `Berlin.hof` comes first by name and has destinations but no routes.
+    let no_routes = HOF.split("[infosystem_trip]").next().expect("head");
+    std::fs::write(dir.join("Berlin.hof"), no_routes.replace("Depot", "Berlin")).expect("write");
+    std::fs::write(dir.join("Spandau.hof"), HOF.replace("Depot", "Spandau")).expect("write");
+    let depot = opts_bevy::route::find_depot(&dir, &dir, "Berlin-Spandau").expect("depot");
+    assert_eq!(depot.name, "Spandau");
+    assert_eq!(depot.routes.len(), 1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
