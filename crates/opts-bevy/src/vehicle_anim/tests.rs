@@ -128,6 +128,7 @@ fn swapped_matrix_mesh_steers_about_the_vertical_nlc() {
     let swapped = MeshPivot {
         origin: hub,
         rows: SWAP_YZ_ROWS,
+        scale: 1.0,
     };
     let anim = steering_mesh(NLC, Some(swapped));
     assert!(steers_about_vertical(&anim.steps, hub));
@@ -152,6 +153,7 @@ fn a_negative_steering_variable_turns_the_wheels_right() {
     let swapped = Some(MeshPivot {
         origin: hub,
         rows: SWAP_YZ_ROWS,
+        scale: 1.0,
     });
     let nlc21 = right_turn_x(NLC, swapped, hub);
     let nlc18 = right_turn_x(NLC18, swapped, hub);
@@ -166,6 +168,7 @@ fn door_leaves_turn_the_other_way_and_the_sliding_leaf_runs_along_the_bus() {
     let swapped = Some(MeshPivot {
         origin: Vec3::ZERO,
         rows: SWAP_YZ_ROWS,
+        scale: 1.0,
     });
     let leaf = "[mesh]\nd.o3d\n\n[newanim]\norigin_from_mesh\norigin_rot_z\n90\nanim_rot\ndoor0\n-177\n\n[newanim]\norigin_from_mesh\norigin_rot_y\n90\nanim_trans\ndoor_0_schiebe\n0.47\n\n++++++\n";
     let anim = steering_mesh(leaf, swapped);
@@ -191,6 +194,7 @@ fn the_matrix_is_left_out_where_the_axis_is_already_vertical() {
     let swapped = MeshPivot {
         origin: Vec3::ZERO,
         rows: SWAP_YZ_ROWS,
+        scale: 1.0,
     };
     let anim = steering_mesh(NLC, Some(swapped));
     // (factor 4: the variable is raised so that the angle is clearly measurable)
@@ -243,6 +247,7 @@ fn steering_wheel_turns_about_the_tilted_column_ng272() {
     let pivot = MeshPivot {
         origin: Vec3::new(-0.7, 5.2, 1.4),
         rows: GN92_ROWS,
+        scale: 1.0,
     };
     let anim = steering_mesh(GN92_WHEEL, Some(pivot));
     let axis = anim.steps[0].frame.transform_vector3(Vec3::X);
@@ -254,4 +259,24 @@ fn steering_wheel_turns_about_the_tilted_column_ng272() {
     let plain = steering_mesh(GN92_WHEEL, Some(MeshPivot::plain(pivot.origin)));
     let nod = plain.steps[0].frame.transform_vector3(Vec3::X);
     assert!(nod.dot(GN92_RIM_NORMAL).abs() < 0.1);
+}
+
+#[test]
+fn a_translation_in_the_mesh_frame_is_scaled_like_the_mesh_matrix() {
+    // The MB C2 BVG's gear button: `origin_from_mesh`, `anim_trans cockpit_gang3 0.8`, a matrix
+    // of scale about 0.0094: pressed it moves 7.5 mm, not 0.8 m (corpus: the O530's buttons 0.6,
+    // the DL05's horn -0.1, all on meshes scaled about 0.01).
+    let cfg = "[mesh]\nZF_D.o3d\n[newanim]\norigin_from_mesh\nanim_trans\ncockpit_gang3\n0.8\n";
+    let pivot = MeshPivot {
+        scale: 0.0094,
+        ..MeshPivot::plain(Vec3::new(-0.4, 5.47, 1.41))
+    };
+    let anim = steering_mesh(cfg, Some(pivot));
+    let moved = animation_matrix_from_values(&anim.steps, &[1.0]).transform_point3(Vec3::ZERO);
+    assert!((moved.length() - 0.8 * 0.0094).abs() < 1e-4, "{moved:?}");
+    // An explicit `origin_trans` frame is the vehicle's: metres.
+    let explicit = "[mesh]\nx.o3d\n[newanim]\norigin_trans\n0\n0\n0\nanim_trans\nv\n0.8\n";
+    let anim = steering_mesh(explicit, Some(pivot));
+    let moved = animation_matrix_from_values(&anim.steps, &[1.0]).transform_point3(Vec3::ZERO);
+    assert!((moved.length() - 0.8).abs() < 1e-4, "{moved:?}");
 }

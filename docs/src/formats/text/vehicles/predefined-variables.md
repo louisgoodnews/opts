@@ -268,7 +268,7 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 
 | Name | Uses in `.osc` | Accessor(s) | Meaning |
 | :--- | ---: | :--- | :--- |
-| `number` | 4,189 | L.$, S.$ |  |
+| `number` | 4,189 | L.$, S.$ | fleet number: an entry of the `.org` list the `.bus` names (`[number]`); OPTS draws it from the vehicle's script seed (2026-10-26) |
 | `yard` | 1,738 | L.$ |  |
 | `act_busstop` | 978 | L.$, S.$ |  |
 | `SetLineTo` | 544 | L.$, S.$ |  |
