@@ -84,9 +84,19 @@ impl FontBitmaps {
     }
 }
 
-/// Width in pixels of `text` drawn at native size (characters without a cell are skipped).
+/// Width in pixels of `text` drawn at native size: the glyph cells plus the font's gap between
+/// neighbours (characters without a cell are skipped).
 #[must_use]
 pub fn text_width(font: &OftFont, text: &str) -> u32 {
+    let n = text.chars().filter(|c| font.chars.contains_key(c)).count() as u32;
+    cells_width(font, text) + font.gap * n.saturating_sub(1)
+}
+
+/// The glyph cells of `text` alone, without the gap: what `TextLength` gives scripts. Display
+/// scripts size their `STTextOut` spacing from it (VMatrix.osc of the NG272), and their boards
+/// come out right only without the gap ❓.
+#[must_use]
+pub fn cells_width(font: &OftFont, text: &str) -> u32 {
     text.chars()
         .filter_map(|c| font.chars.get(&c))
         .map(|g| g.x_end.saturating_sub(g.x_start))
@@ -122,7 +132,7 @@ pub fn render_rgba(font: &OftFont, bmp: &FontBitmaps, spec: &TextSpec) -> Vec<u8
     for c in spec.text.chars() {
         if let Some(g) = font.chars.get(&c) {
             cells.push((pen, *g));
-            pen += g.x_end.saturating_sub(g.x_start);
+            pen += g.x_end.saturating_sub(g.x_start) + font.gap;
         }
     }
     for dy in 0..h {
@@ -141,6 +151,9 @@ pub fn render_rgba(font: &OftFont, bmp: &FontBitmaps, spec: &TextSpec) -> Vec<u8
                 .partition_point(|(start, _)| *start <= tx)
                 .saturating_sub(1);
             let (start, g) = cells[idx];
+            if tx - start >= g.x_end.saturating_sub(g.x_start) {
+                continue; // the gap after a glyph
+            }
             let (sx, sy) = (g.x_start + (tx - start), g.y_top + ty as u32);
             if !bmp.contains(sx, sy) {
                 continue;
@@ -396,6 +409,19 @@ mod tests {
     fn width_sums_cells_and_skips_unknown() {
         let (font, _) = demo();
         assert_eq!(text_width(&font, "AB?"), 8);
+    }
+
+    #[test]
+    fn the_fonts_gap_separates_neighbouring_glyphs() {
+        // `.oft` cells are inked edge to edge; `[newfont]`'s fifth line is the gap between them.
+        let (mut font, bmp) = demo();
+        font.gap = 2;
+        assert_eq!(text_width(&font, "AA"), 10);
+        let buf = render_rgba(&font, &bmp, &spec("AA", 10, 4, 1));
+        assert_eq!(
+            alpha_row(&buf, 10, 1),
+            [255, 255, 255, 255, 0, 0, 255, 255, 255, 255]
+        );
     }
 
     #[test]

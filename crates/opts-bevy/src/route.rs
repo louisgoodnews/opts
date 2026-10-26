@@ -183,13 +183,23 @@ mod handle;
 mod keys;
 pub use keys::{has_drucker_keypad, has_ibis_keypad, ibis_keys, KeyQueue};
 
-/// Finds the depot (`.hof`) for a vehicle: a file of the vehicle's folder named like the map,
-/// one whose name contains the map's (or the other way round), the shared folders by the same
-/// rule, and last the first file of the vehicle's folder in name order. Files that do not parse
-/// are skipped.
+/// Finds the depot (`.hof`) for a vehicle. `map_names` are the map's names to match, most
+/// telling first (its friendly name, then its folder name). For each name in turn: a file of the
+/// vehicle's folder named like it, then one whose name contains it (or the other way round);
+/// among several the one with the most routes wins, then the longer name: for `Berlin-Spandau`,
+/// `Spandau.hof` (the map's lines) and not `Berlin.hof` (destinations only), which came first by
+/// name. Next a file of the vehicle's folder sharing tokens with the names (`Hamburg109` and
+/// `1_HH109_HHA.hof` share `109`): shared numbers before shared words, then tokens of the
+/// vehicle's folder, then the fewest tokens neither names. Then the shared folders by name, and
+/// last the first file of the vehicle's folder in name order. Files that do not parse are
+/// skipped. The token step is OPTS's guess; OMSI lets the player pick the depot.
 #[must_use]
-pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_name: &str) -> Option<HofFile> {
-    let map = map_name.trim().to_ascii_lowercase();
+pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_names: &[&str]) -> Option<HofFile> {
+    let maps: Vec<String> = map_names
+        .iter()
+        .map(|n| n.trim().to_ascii_lowercase())
+        .filter(|n| !n.is_empty())
+        .collect();
     let parse = |p: &Path| {
         std::fs::read(p)
             .ok()
@@ -214,33 +224,76 @@ pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_name: &str) -> Option<Ho
         v.sort();
         v
     };
+    // The best parsed file among `candidates`, by `rank`, then the number of routes, then the
+    // longer name.
+    let best = |candidates: Vec<([i64; 5], &(String, std::path::PathBuf))>| {
+        candidates
+            .into_iter()
+            .filter_map(|(rank, (stem, p))| {
+                parse(p).map(|h| ((rank, h.routes.len(), stem.len()), h))
+            })
+            .max_by_key(|(key, _)| *key)
+            .map(|(_, h)| h)
+    };
     let own = hofs_in(bus_dir);
-    if !map.is_empty() {
+    for map in &maps {
         for (stem, p) in &own {
-            if *stem == map {
+            if stem == map {
                 if let Some(h) = parse(p) {
                     return Some(h);
                 }
             }
         }
-        for (stem, p) in &own {
-            if stem.contains(&map) || map.contains(stem.as_str()) {
-                if let Some(h) = parse(p) {
-                    return Some(h);
+        let named = own
+            .iter()
+            .filter(|(stem, _)| stem.contains(map.as_str()) || map.contains(stem.as_str()))
+            .map(|f| ([0; 5], f))
+            .collect();
+        if let Some(h) = best(named) {
+            return Some(h);
+        }
+    }
+    let wanted: std::collections::HashSet<String> =
+        maps.iter().flat_map(|m| name_tokens(m)).collect();
+    let folder = bus_dir
+        .file_name()
+        .map(|n| n.to_string_lossy().to_ascii_lowercase())
+        .unwrap_or_default();
+    let vehicle: std::collections::HashSet<String> = name_tokens(&folder).collect();
+    let shared = own
+        .iter()
+        .filter_map(|f| {
+            // Shared numbers (a line or edition) first, then shared words, then tokens of the
+            // vehicle's folder (the operator: `HHA` in `HH109_Stadtbus_HHA`); then the fewest
+            // numbers and words neither names (`1_HH109-2_HHA` and `1_HH109-VAN_HHA` lose to
+            // `1_HH109_HHA` for `Hamburg109`).
+            let mut rank = [0_i64; 5];
+            for t in name_tokens(&f.0) {
+                let number = t.chars().all(char::is_numeric);
+                match (wanted.contains(&t), vehicle.contains(&t), number) {
+                    (true, _, true) => rank[0] += 1,
+                    (true, _, false) => rank[1] += 1,
+                    (false, true, _) => rank[2] += 1,
+                    (false, false, true) => rank[3] -= 1,
+                    (false, false, false) => rank[4] -= 1,
                 }
             }
-        }
+            (rank[0] + rank[1] > 0).then_some((rank, f))
+        })
+        .collect();
+    if let Some(h) = best(shared) {
+        return Some(h);
     }
     if let Some(h) = own.iter().find_map(|(_, p)| parse(p)) {
         return Some(h);
     }
-    if !map.is_empty() {
+    for map in &maps {
         for dir in [
             omsi_root.join("Vehicles"),
             omsi_root.join("Vehicles/.hof Dateien"),
         ] {
             for (stem, p) in hofs_in(&dir) {
-                if stem == map || stem.contains(&map) {
+                if stem == *map || stem.contains(map.as_str()) {
                     if let Some(h) = parse(&p) {
                         return Some(h);
                     }
@@ -249,6 +302,25 @@ pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_name: &str) -> Option<Ho
         }
     }
     None
+}
+
+/// The word and number tokens of a lower-case name: runs of letters (two or more) and runs of
+/// digits, so `1_hh109-2_hha` gives `1`, `hh`, `109`, `2` and `hha`.
+fn name_tokens(name: &str) -> impl Iterator<Item = String> + '_ {
+    name.split(|c: char| !c.is_alphanumeric())
+        .flat_map(|word| {
+            let mut runs = Vec::new();
+            let mut cur = String::new();
+            for c in word.chars() {
+                if !cur.is_empty() && cur.chars().all(char::is_numeric) != c.is_numeric() {
+                    runs.push(std::mem::take(&mut cur));
+                }
+                cur.push(c);
+            }
+            runs.push(cur);
+            runs
+        })
+        .filter(|t| t.chars().all(char::is_numeric) && !t.is_empty() || t.chars().count() >= 2)
 }
 
 /// What the depot gives the scripts' predefined strings (`Yard`, `SetLineTo`, `Ident`) and the

@@ -89,7 +89,7 @@ pub(super) fn depot_for(
             opts_core::formats::hof::HofFile::parse_bytes(&std::fs::read(p).ok()?).ok()
         })
     });
-    pick.or_else(|| opts_bevy::route::find_depot(dir, root, ""))
+    pick.or_else(|| opts_bevy::route::find_depot(dir, root, &[]))
         .map(std::sync::Arc::new)
 }
 

@@ -357,7 +357,7 @@ The **script-texture API** (17 callbacks: `STNewTex`, `STLock`, `STUnlock`, `STD
 | `STGetG` | `tex: f32` | `G: f32` | Returns green channel (0.0..255.0) of last sampled pixel. |
 | `STGetB` | `tex: f32` | `B: f32` | Returns blue channel (0.0..255.0) of last sampled pixel. |
 | `STGetA` | `tex: f32` | `A: f32` | Returns alpha channel (0.0..255.0) of last sampled pixel. |
-| `STFilter` | `tex: f32` | – | Applies 3×3 softening filter kernel for LED dot matrix matrices. |
+| `STFilter` | `tex: f32` | – | Semantics ❓; OPTS treats it as a sampling-mode flag and leaves the pixels unchanged (a blur would compound across progressive refreshes). |
 | `STLoadTex` | string: `path`, float: `tex` | `msg: str` | Loads texture file from disk (relative to vehicle or OMSI root). Returns empty string on success. |
 | `STTextOut` | string: `text`, floats: `tex, x, y, font, mode, spacing` | – | Renders text string using `.oft` glyph cells, advancing pen by glyph width + spacing + font gap. |
 | `STCopyColor`| `tex: f32` | – | Copies color state. |

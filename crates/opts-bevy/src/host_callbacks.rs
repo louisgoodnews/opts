@@ -317,7 +317,7 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
                 let fonts = ctx.fonts.read().unwrap();
                 let width = if font_idx >= 0 && (font_idx as usize) < fonts.len() {
                     let f = &fonts[font_idx as usize];
-                    crate::text_texture::text_width(f, &t) as f32
+                    crate::text_texture::cells_width(f, &t) as f32
                 } else {
                     (t.chars().count() * 8) as f32
                 };

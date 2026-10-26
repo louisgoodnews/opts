@@ -24,7 +24,7 @@ OMSI renders text on displays, destination signs and bus-stop boards from **bitm
 
 ### Definition
 
-One `.oft` normally defines **one font**: `[newfont]` (5 lines: *name*, *colour bitmap*, *alpha bitmap*, *line height in pixels incl. spacing*, *horizontal gap*) followed by `[char]` entries (4 lines: *character*, *x start*, *x end incl. gap*, *y top*). 12 files define several fonts (1,128 `[newfont]` blocks in 1,056 files).
+One `.oft` normally defines **one font**: `[newfont]` (5 lines: *name*, *colour bitmap*, *alpha bitmap*, *line height in pixels incl. spacing*, *horizontal gap*) followed by `[char]` entries (4 lines: *character*, *x start*, *x end*, *y top*; the cells are inked edge to edge and the *horizontal gap* goes between them, checked 2026-10-26 on `DIN Narrow` and the Krüger fonts). 12 files define several fonts (1,128 `[newfont]` blocks in 1,056 files).
 
 | Property | Observed [C] |
 | :--- | :--- |

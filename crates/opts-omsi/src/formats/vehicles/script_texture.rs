@@ -62,7 +62,8 @@ pub trait ScriptTextureCanvas: Send + Sync {
     /// Alpha channel (0.0..255.0) of the last sampled pixel (`STGetA`).
     fn get_a(&self) -> f32;
 
-    /// Applies a 3x3 smoothing/filter kernel to the canvas (`STFilter`).
+    /// `STFilter`: marks the canvas for upload and leaves its pixels unchanged
+    /// (OMSI semantics ❓, assumed to be a sampling-mode flag).
     fn filter(&mut self);
 
     /// Clears the texture to transparent black (`STNewTex`).
@@ -239,38 +240,10 @@ impl ScriptTextureCanvas for CpuScriptTexture {
     }
 
     fn filter(&mut self) {
-        // 3x3 Box blur to soften matrix display LEDs
-        let w = self.width as usize;
-        let h = self.height as usize;
-        let mut filtered = self.buffer.clone();
-
-        for y in 1..h.saturating_sub(1) {
-            for x in 1..w.saturating_sub(1) {
-                let mut sum_r = 0u32;
-                let mut sum_g = 0u32;
-                let mut sum_b = 0u32;
-                let mut sum_a = 0u32;
-
-                for dy in [y - 1, y, y + 1] {
-                    let row = dy * w * 4;
-                    for dx in [x - 1, x, x + 1] {
-                        let idx = row + (dx * 4);
-                        sum_r += self.buffer[idx] as u32;
-                        sum_g += self.buffer[idx + 1] as u32;
-                        sum_b += self.buffer[idx + 2] as u32;
-                        sum_a += self.buffer[idx + 3] as u32;
-                    }
-                }
-
-                let dst_idx = (y * w + x) * 4;
-                filtered[dst_idx] = (sum_r / 9) as u8;
-                filtered[dst_idx + 1] = (sum_g / 9) as u8;
-                filtered[dst_idx + 2] = (sum_b / 9) as u8;
-                filtered[dst_idx + 3] = (sum_a / 9) as u8;
-            }
-        }
-
-        self.buffer = filtered;
+        // Pixels stay as drawn. Read as a blur, the call would compound across
+        // the progressive refresh of VMatrix.osc and smear every board, which
+        // OMSI's do not; the design assumes a sampling-mode flag instead, and
+        // the LED canvases already sample linearly.
         self.dirty = true;
     }
 
@@ -391,6 +364,20 @@ mod tests {
         canvas.unlock();
         assert!(!canvas.is_locked());
         assert!(canvas.is_dirty());
+    }
+
+    #[test]
+    fn st_filter_leaves_the_dots_sharp() {
+        let mut canvas = CpuScriptTexture::new(8, 8);
+        canvas.lock();
+        canvas.set_color(255, 255, 160, 0);
+        canvas.draw_rect(3, 3, 3, 3);
+        canvas.unlock();
+        let drawn = canvas.raw_rgba().to_vec();
+        for _ in 0..3 {
+            canvas.filter();
+        }
+        assert_eq!(canvas.raw_rgba(), &drawn[..]);
     }
 
     #[test]
