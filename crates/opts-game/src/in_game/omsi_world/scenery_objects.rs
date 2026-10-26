@@ -197,8 +197,8 @@ impl WorldLoadJob {
     }
 
     /// Whether an object is flat static scenery: no script, light, animation, visibility rule,
-    /// LOD group or driven light map, so it is only ever drawn at its placement (`needs_runtime`
-    /// would be false and nothing changes its parts).
+    /// LOD group or driven light map, and no tree that moves in the wind (M-0144), so it is only
+    /// ever drawn at its placement (`needs_runtime` would be false and nothing changes its parts).
     pub(super) fn is_flat_static(
         sco: &SceneryObject,
         mesh_parts: &[Vec<ModelPart>],
@@ -206,6 +206,7 @@ impl WorldLoadJob {
     ) -> bool {
         template.is_none_or(|t| !t.has_scripts)
             && sco.sound.is_none()
+            && !super::trees::is_mesh_tree(sco)
             && sco.lights.is_empty()
             && sco.meshes.iter().all(|m| {
                 m.lod_threshold.is_none() && m.visible.is_none() && m.animations.is_empty()
@@ -237,6 +238,12 @@ impl WorldLoadJob {
         // `[nomaplighting]`: recorded on the root (version 1 has no behaviour yet).
         if sco.no_map_lighting {
             commands.entity(root).insert(opts_bevy::NoMapLighting);
+        }
+        // A tree modelled as a mesh: its foliage moves in the wind (M-0144 phase C).
+        if super::trees::is_mesh_tree(sco) {
+            commands
+                .entity(root)
+                .insert(opts_bevy::tree_wind::MeshTreeRoot);
         }
         // `[maplight]` ground lights: markers the map light pool hands its point lights to.
         opts_bevy::scenery_runtime::spawn_map_lights(commands, root, sco);

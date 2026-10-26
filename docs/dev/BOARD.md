@@ -142,7 +142,6 @@ _None._
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
 #### Paused or partly done (moved here by the board audit 2026-10-25)
-- [ ] 🟡 **Trees move in the wind: mesh trees** (M-0144 phase C) — trees modelled as `.o3d` (trunk and foliage cards) need a classification that does not catch fences and signs; then the same tree material.
 - [~] 🟠 **AI road traffic: debug overlay, `traffic.*` control methods** (M-0049, code) — traffic runs in game; signal heads follow the junction programs (2026-10-12). Done since: traffic counts in the developer panel (F10, `e0393773`) and speed limits from rules; the depth work is M-0111. **Paused since 2026-10-17** (last M-0049 commit `c7ed22b0`); open: the lane/agent debug overlay and `traffic.dump`/`traffic.set_density`.
 - [~] 🟠 **Pedestrians: crossings and signals, holidays, separation/LOD** (M-0050, code) — paused since 2026-10-11; open: crossings and signals (AI yields on crossings), holidays, separation between walkers and LOD. Done since: `[trafficdensity_passenger]` is applied, the passenger spec is written (F-023), pedestrian density baselines (`e74f620e`, 2026-10-23).
 - [~] 🟡 **Script-driven animation: SD200 screenshot check, `delay`** (M-0045, test/code) — paused since 2026-10-11; done since: `[matl_nightmap]` (vehicle night maps, `7e922326`, 2026-10-25) and `[light_enh_2]` (`783b50dd`); open: the SD200 screenshot check and `delay`.
@@ -357,6 +356,7 @@ _Completed items from the last two cycles. Older items live in git history and m
 
 **2026-10-26**
 
+- `[x]` 🟡 **Trees move in the wind: mesh trees** (M-0144 phase C, code + spec) — 2026-10-26 on `agent/mesh-trees`: an object is a tree when all its cut-out materials have foliage textures (word rule that keeps shelters, railings and clock faces out; a building with glass next to its bush texture stays still); its foliage parts get the tree material with a height-only bend, the trunk stays. Bad Hügelsdorf: 1,162 foliage parts sway, nothing else moves. M-0144 done.
 - `[x]` 🟡 **Spawning at a bus stop during a session** (M-0145, code) — 2026-10-26 on `agent/spawn-stop`: `session.spawn {stop}` (protocol 1.29; a station id or a stop name) places the vehicle at the stop object with its front at the stop and refuses while another vehicle stands within 10 m (checked on Spandau: the second bus at Freudstr. is refused). The vehicle menu does not offer stops yet.
 - `[x]` 🟡 **Rattles on junction plates** (M-0146, code) — 2026-10-26 on `agent/plate-surf`: surface plates rattle with their own textures (`.surf` or surface type) instead of plain asphalt; Ahlheim 5: 995 plates, 37,074 triangles.
 - `[x]` 🟡 **Fleet number and the HH109 ATRON** (M-0141, code) — 2026-10-26 on `agent/fleet-number`: `anim_trans` in a mesh's own frame (`origin_from_mesh`) is scaled like the `.o3d` matrix (the MB C2 BVG's selected gear button floated 0.8 m in front of the windscreen; 7,071 such translations in the corpus, e.g. the O530's buttons); the C2 BVG's display line is hidden by the steering-wheel rim, as the model places it (closed). the predefined string `number` (4,189 script lines) was never set; it is now an entry of the vehicle's `.org` list (`[number]`), drawn from its script seed, for the player's and the AI vehicles. The HH109 VHH's ATRON printer works past its start page (module in, release key: *Dienstwechsel* with *Fahrzeug Nr. 9210*).
@@ -561,5 +561,6 @@ The agent should check these during P-001 audits:
 - `2026-10-25` — M-0141/M-0100 fourth round started (`agent/c2-display`): C2 display values; 2026-10-26 findings recorded, left open.
 - `2026-10-26` — M-0144 (trees move in the wind) created at the project lead's request and started (`agent/tree-wind`).
 - `2026-10-26` — M-0144 phase B done (`[tree]` billboards sway); phase C (mesh trees) in Backlog.
+- `2026-10-26` — M-0144 phase C started and done (`agent/mesh-trees`): mesh trees sway; M-0144 done.
 - `2026-10-26` — M-0141/M-0100 fifth round (`agent/vdv-dim`): VDV stop-mode page fixed (mesh file order, textured emission).
 - `2026-10-26` — M-0141/M-0100 sixth round started (`agent/boards`): destination boards, printer screens.

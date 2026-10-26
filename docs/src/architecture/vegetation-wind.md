@@ -1,6 +1,6 @@
 # Vegetation Wind
 
-Status: specified 2026-10-26 for [M-0144](../roadmap/phase-8/M-0144.md); phase B (`[tree]` billboards) implemented the same day (`opts_bevy::tree_wind`, `shaders/tree_wind.wesl`). Without `TreeWindPlugin` (headless runs) trees keep their ordinary material.
+Status: specified 2026-10-26 for [M-0144](../roadmap/phase-8/M-0144.md); phase B (`[tree]` billboards) implemented the same day (`opts_bevy::tree_wind`, `shaders/tree_wind.wesl`), phase C (mesh trees, §4) as well. Without `TreeWindPlugin` (headless runs) trees keep their ordinary material.
 
 ## 1. What OMSI does
 
@@ -28,7 +28,11 @@ A vertex stage bends the tree; nothing moves on the CPU.
 * The tree material (`opts_bevy::tree_wind::TreeMaterial`, a `StandardMaterial` extended by the vertex stage) carries the wind in a uniform (direction, strength, frequency). A system updates the tree materials only when the weather's wind or the setting changes; the time comes from the shader globals.
 * One material per tree texture, as before; the static merger (`OPTS_INSTANCING=merge`, off by default) no longer bakes trees, which move.
 
-## 4. Out of scope (phase C and later)
+## 4. Mesh trees (phase C)
 
-* Trees modelled as `.o3d` meshes (trunk plus foliage cards): they need a classification that does not catch other cutouts (fences, signs).
+* A placed object without `[tree]` is a **mesh tree** when all its cut-out or blended materials (`[matl_alpha]` 1 or 2) have foliage textures: a word of the texture name (split at anything but letters, umlauts as `ae`/`oe`/`ue`) is a foliage word (`laub`, `blatt`, `leaf`, `branch`, `zweig`, `nadel`, `baum`, `tree`, `busch`, `bush`, `strauch`, `hecke`, `hedge`, tree species such as `tanne`, `birke`, `eiche`, `chestnut`, `palm`, and `gras`), optionally inflected (`Tannen`, `Birken`); only the generic German words (`baum`, `busch`, `strauch`, `hecke`, `laub`, `gras`) may also end a compound (`Kastanienbaum`). This keeps `SK_Bushokje` (a shelter), `Lichtentanne_Gelaender` (a railing) and `Zifferblatt` (a clock face) out, and a building whose bush texture sits next to window glass (`building401`) stays still. OMSI's files carry no other hint.
+* The object's non-opaque parts (the foliage cards) get the tree material; its opaque parts (the trunk) keep theirs. Their bend grows with the height above the object alone: the cards' texture coordinates say nothing about height. Mesh trees are never baked into a merged tile mesh.
+
+## 5. Out of scope
+
 * Gusts that travel across the map, leaves, grass.
