@@ -99,6 +99,8 @@ pub struct ScheduledTraffic {
     retire: Vec<(AgentId, f64)>,
     /// Runs driven by a train or tram on the rails (`rail::scheduled`).
     rail_runs: std::collections::HashSet<RunRef>,
+    /// The run the player's vehicle follows: no scheduled vehicle drives it.
+    pub player_run: Option<RunRef>,
     /// The figures.
     pub stats: ScheduledStats,
 }
@@ -360,7 +362,7 @@ pub fn plan_scheduled(
     let mut seen = [0_u32; 4];
     for (run, schedule) in candidates {
         seen[0] += 1;
-        if sched.rail_runs.contains(&run) {
+        if sched.rail_runs.contains(&run) || sched.player_run.as_ref() == Some(&run) {
             continue;
         }
         let entry = sched.runs.entry(run.clone()).or_default();

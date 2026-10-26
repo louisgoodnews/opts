@@ -326,7 +326,7 @@ pub use ai_script::step_ai_scripts;
 pub(super) use ai_script::{
     engine_for, next_doors, Doors, DOORS_OPEN_SHARE, FRAME_S, SCRIPT_RADIUS_M,
 };
-pub use run_schedule::{active_runs, run_phase, RunPhase, RunRef};
+pub use run_schedule::{active_runs, line_runs_on, run_phase, RunPhase, RunRef};
 mod scheduled;
 pub use scheduled::{plan_scheduled, ScheduledStats, ScheduledTraffic};
 

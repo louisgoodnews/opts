@@ -123,6 +123,7 @@ impl Harness {
             map_dir: map.dir.clone(),
             vehicle_path: None,
             entry_point: super::mapgen::ENTRY_NAME.into(),
+            start_station: None,
             livery: String::new(),
             setvars: Vec::new(),
             human_path: None,

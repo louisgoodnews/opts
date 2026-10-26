@@ -40,6 +40,8 @@ A timetable run is a trip (its stops and times) started at a time of the day. Th
 
 ## The player's schedule
 
+The run the player's vehicle follows (`bus.set_timetable`, the vehicle menu, a trip planned in the wizard, M-0145) is not given a scheduled vehicle (`ScheduledTraffic::player_run`).
+
 A followed run (`route.select_run`) advances by itself: when the player's vehicle stands (below
 1 km/h) within 18 m of a bus stop object whose ID code is the station id of one of the next three
 stops of the run, `stop_index` moves to that stop (`route_progress.rs`). The delay is the session

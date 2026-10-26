@@ -71,6 +71,7 @@ const ALLOWED: &[(&str, &str, &str)] = &[
     ("first_run/mod.rs", "std::fs", "welcome flag: read once at startup, one 20-byte write when the welcome is closed"),
     ("first_run/mod.rs", ".save()", "a confirmed OMSI folder: one user action, the failure is shown as a banner"),
     ("home/hero.rs", "known_omsi_root(", "inside the IoTaskPool task that decodes the picture"),
+    ("new_game_screen/trips.rs", "known_omsi_root(", "inside the IoTaskPool task that reads the map's timetables"),
     ("home/mod.rs", "DriveHistory::load", "Startup system `load_drive_history`"),
     ("home/mod.rs", ".save()", "inside the `drive-history` writer thread"),
     ("hud/fullmap/overview.rs", "std::fs", "the `fullmap-overview` reader thread: it reads the tiles and the files they name, the game only receives the finished roads by channel"),

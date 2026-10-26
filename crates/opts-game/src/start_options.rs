@@ -46,6 +46,19 @@ pub fn parse_setvar(text: &str) -> Result<(String, i32), String> {
     Ok((name.trim().to_owned(), value))
 }
 
+/// `LINEFILE:TOUR:RUN` as a timetable run (the line file stem may contain spaces).
+pub fn parse_trip(text: &str) -> Result<(String, usize, usize), String> {
+    let bad = || format!("`{text}` is not a run (LINEFILE:TOUR:RUN)");
+    let mut parts = text.trim().rsplitn(3, ':');
+    let run: usize = parts.next().and_then(|p| p.parse().ok()).ok_or_else(bad)?;
+    let tour: usize = parts.next().and_then(|p| p.parse().ok()).ok_or_else(bad)?;
+    let line = parts
+        .next()
+        .filter(|l| !l.trim().is_empty())
+        .ok_or_else(bad)?;
+    Ok((line.trim().to_owned(), tour, run))
+}
+
 /// The options as they arrive: all optional.
 #[derive(Debug, Clone, Default)]
 pub struct StartOptions {
@@ -59,6 +72,8 @@ pub struct StartOptions {
     pub time: Option<String>,
     /// Equipment options.
     pub setvars: Vec<(String, i32)>,
+    /// A timetable run to drive, `LINEFILE:TOUR:RUN` (M-0145); without it no trip is planned.
+    pub trip: Option<String>,
 }
 
 impl StartOptions {
@@ -89,6 +104,7 @@ impl StartOptions {
             date: text("date")?,
             time: text("time")?,
             setvars,
+            trip: text("trip")?,
         })
     }
 
@@ -105,6 +121,7 @@ impl StartOptions {
             date: args.date.clone(),
             time: args.time.clone(),
             setvars,
+            trip: None,
         })
     }
 
@@ -135,6 +152,23 @@ impl StartOptions {
         for (name, value) in &self.setvars {
             setup.custom_setvars.insert(name.clone(), *value);
         }
+        // The stop and the texts are filled in when the map's timetables are read (loading).
+        setup.trip = match &self.trip {
+            Some(t) => {
+                let (line_file, tour, run) = parse_trip(t)?;
+                Some(crate::new_game_screen::trips::TripChoice {
+                    line_file,
+                    tour,
+                    run,
+                    station_id: 0,
+                    stop_name: String::new(),
+                    line: String::new(),
+                    destination: String::new(),
+                    depart_s: 0,
+                })
+            }
+            None => None,
+        };
         Ok(())
     }
 }
@@ -152,6 +186,11 @@ mod tests {
         assert!(parse_time("24:00").is_err() && parse_time("7").is_err());
         assert_eq!(parse_setvar("rollo=1"), Ok(("rollo".to_owned(), 1)));
         assert!(parse_setvar("rollo").is_err() && parse_setvar("x=y").is_err());
+        assert_eq!(
+            parse_trip("33 Samstag:0:2"),
+            Ok(("33 Samstag".to_owned(), 0, 2))
+        );
+        assert!(parse_trip("33:0").is_err() && parse_trip(":0:1").is_err());
     }
 
     #[test]

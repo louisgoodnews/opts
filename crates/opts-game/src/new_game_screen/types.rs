@@ -149,6 +149,9 @@ pub struct NewGameSetup {
     /// A composed train: every car's `.bus` path (relative to the OMSI root) and whether it is
     /// turned, the first being the chosen vehicle. Empty for a drive with the vehicle alone.
     pub formation: Vec<(String, bool)>,
+    /// The timetable run to drive (step *Trip*): the drive starts at its first stop instead of
+    /// the start point and follows it.
+    pub trip: Option<super::trips::TripChoice>,
 }
 
 impl Default for NewGameSetup {
@@ -171,6 +174,7 @@ impl Default for NewGameSetup {
             minute: 30,
             custom_setvars: HashMap::new(),
             formation: Vec::new(),
+            trip: None,
         }
     }
 }

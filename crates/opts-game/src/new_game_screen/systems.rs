@@ -275,7 +275,7 @@ fn configs_load(env: &mut Env, id: &str, commands: &mut Commands) {
 }
 
 fn back(env: &mut Env) {
-    match env.state.step.prev() {
+    match env.state.prev_step() {
         Some(prev) => env.state.step = prev,
         None => {
             env.leave.write(NavigateBack);
@@ -287,7 +287,7 @@ fn next(env: &mut Env) {
     if step_invalid(env.state.step, &env.setup, &env.catalogue).is_some() {
         return;
     }
-    if let Some(n) = env.state.step.next() {
+    if let Some(n) = env.state.next_step() {
         env.state.step = n;
     }
 }
@@ -341,7 +341,7 @@ pub fn handle_back_action(mut requests: MessageReader<ScreenBack>, mut env: Env)
 
 /// Tells the shell whether *Back* has a step to go back to inside the wizard.
 pub fn publish_back_steps(state: Res<PlannerState>, mut steps: ResMut<ScreenBackSteps>) {
-    steps.set_if_neq(ScreenBackSteps(state.step.prev().is_some()));
+    steps.set_if_neq(ScreenBackSteps(state.prev_step().is_some()));
 }
 
 /// `]` and `[` switch steps like tabs.
@@ -350,7 +350,7 @@ pub fn handle_tab_actions(mut actions: MessageReader<UiAction>, mut env: Env) {
         match action {
             UiAction::NextTab => next(&mut env),
             UiAction::PrevTab => {
-                if let Some(p) = env.state.step.prev() {
+                if let Some(p) = env.state.prev_step() {
                     env.state.step = p;
                 }
             }
@@ -372,7 +372,7 @@ pub fn handle_start_point(
     }
 }
 
-/// Selection, stars and *Enter* of the two lists.
+/// Selection, stars and *Enter* of the lists.
 #[allow(clippy::too_many_arguments)]
 pub fn handle_list_events(
     mut selected: MessageReader<MasterDetailSelected>,
@@ -389,6 +389,7 @@ pub fn handle_list_events(
     loc: Res<Localization>,
     mut eras: Local<std::collections::HashMap<String, Option<MapEra>>>,
     fixed_today: Option<Res<super::planner::Today>>,
+    trips: Res<super::trips::TripState>,
     mut commands: Commands,
 ) {
     for ev in selected.read() {
@@ -440,6 +441,7 @@ pub fn handle_list_events(
                     setup: &setup,
                     history: &history,
                     notes: &state.notes,
+                    trips: &trips,
                 };
                 fill_where_detail(&mut commands, detail, &ctx, map);
             }
@@ -476,6 +478,25 @@ pub fn handle_list_events(
                     &catalogue,
                 );
             }
+            (PlannerStep::Trip, Some(id)) if id == super::trips::NO_TRIP_ID => {
+                if setup.trip.is_some() {
+                    setup.trip = None;
+                }
+                super::trips::fill_no_trip_detail(
+                    &mut commands,
+                    detail,
+                    &setup.selected_entry_point,
+                );
+            }
+            (PlannerStep::Trip, Some(id)) => {
+                let Some(trip) = trips.find(id) else {
+                    continue;
+                };
+                if setup.trip.as_ref() != Some(&trip.choice) {
+                    setup.trip = Some(trip.choice.clone());
+                }
+                super::trips::fill_trip_detail(&mut commands, detail, trip);
+            }
             (PlannerStep::Where, None) => {
                 fill_empty_detail(&mut commands, detail, "wiz-where-empty")
             }
@@ -487,6 +508,9 @@ pub fn handle_list_events(
         let Ok((StepList(step), _)) = lists.get(ev.root) else {
             continue;
         };
+        if !matches!(step, PlannerStep::Where | PlannerStep::What) {
+            continue;
+        }
         let vehicle = *step == PlannerStep::What;
         if let Err(e) = history.set_favourite(vehicle, &ev.id, ev.favourite) {
             tracing::warn!("cannot save favourites: {e}");
@@ -494,7 +518,7 @@ pub fn handle_list_events(
     }
     for ev in chosen.read() {
         if lists.contains(ev.root) && step_invalid(state.step, &setup, &catalogue).is_none() {
-            if let Some(n) = state.step.next() {
+            if let Some(n) = state.next_step() {
                 state.step = n;
             }
         }

@@ -45,6 +45,7 @@ mod traffic_variant;
 pub(crate) use pedestrians::passenger_factor;
 #[cfg(test)]
 pub(crate) use pedestrians::DEFAULT_PEDESTRIAN_BASELINE;
+pub(crate) use traffic::line_runs_on;
 #[cfg(test)]
 pub(crate) use traffic::DEFAULT_TRAFFIC_BASELINE;
 mod trees;
@@ -121,6 +122,9 @@ pub struct OmsiSessionConfig {
     pub vehicle_path: Option<PathBuf>,
     /// Entry point name chosen in the New Game screen.
     pub entry_point: String,
+    /// The station id of a chosen trip's first stop (M-0145): the drive starts at that bus stop
+    /// object instead of the entry point.
+    pub start_station: Option<u32>,
     /// Repaint of the player's vehicle (empty: the default of its `.bus`).
     pub livery: String,
     /// Equipment options (`[setvar]`-style script variables) set on the vehicle's scripts after

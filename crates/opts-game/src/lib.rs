@@ -62,6 +62,7 @@ pub mod sound_logic;
 pub mod start_options;
 pub mod steam_library;
 pub mod theme_files;
+pub mod trip_start;
 pub mod ui_typography;
 pub mod vehicle_keys;
 pub mod vehicle_setup_settings;
@@ -137,6 +138,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(opts_bevy::door_camera::DoorCameraPlugin)
             .add_plugins(passengers::PassengersPlugin)
             .add_plugins(route_progress::RouteProgressPlugin)
+            .add_plugins(trip_start::TripStartPlugin)
             .add_plugins(in_game::weather::WeatherPlugin)
             .add_plugins(scenery_sound::SceneryAudioPlugin)
             .add_plugins(vehicle_sound::AiAudioPlugin)

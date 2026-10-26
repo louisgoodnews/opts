@@ -189,7 +189,18 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_STEP_WHERE,
     wiz::WIZ_STEP_WHAT,
     wiz::WIZ_STEP_WHEN,
+    wiz::WIZ_STEP_TRIP,
     wiz::WIZ_STEP_REVIEW,
+    wiz::WIZ_TRIP_SEARCH,
+    wiz::WIZ_TRIP_EMPTY,
+    wiz::WIZ_TRIP_NONE,
+    wiz::WIZ_TRIP_NONE_HINT,
+    wiz::WIZ_TRIP_NONE_DETAIL,
+    wiz::WIZ_TRIP_DEPARTS,
+    wiz::WIZ_TRIP_STOPS,
+    wiz::WIZ_TRIP_TOUR,
+    wiz::WIZ_TRIP_START_HINT,
+    wiz::WIZ_REVIEW_TRIP_FROM,
     wiz::WIZ_BACK,
     wiz::WIZ_NEXT,
     wiz::WIZ_SKIP,
@@ -327,8 +338,30 @@ pub mod wiz {
     pub const WIZ_STEP_WHAT: &str = "wiz-step-what";
     /// `wiz-step-when`.
     pub const WIZ_STEP_WHEN: &str = "wiz-step-when";
+    /// `wiz-step-trip`.
+    pub const WIZ_STEP_TRIP: &str = "wiz-step-trip";
     /// `wiz-step-review`.
     pub const WIZ_STEP_REVIEW: &str = "wiz-step-review";
+    /// `wiz-trip-search`.
+    pub const WIZ_TRIP_SEARCH: &str = "wiz-trip-search";
+    /// `wiz-trip-empty`.
+    pub const WIZ_TRIP_EMPTY: &str = "wiz-trip-empty";
+    /// `wiz-trip-none`.
+    pub const WIZ_TRIP_NONE: &str = "wiz-trip-none";
+    /// `wiz-trip-none-hint`.
+    pub const WIZ_TRIP_NONE_HINT: &str = "wiz-trip-none-hint";
+    /// `wiz-trip-none-detail`.
+    pub const WIZ_TRIP_NONE_DETAIL: &str = "wiz-trip-none-detail";
+    /// `wiz-trip-departs`.
+    pub const WIZ_TRIP_DEPARTS: &str = "wiz-trip-departs";
+    /// `wiz-trip-stops`.
+    pub const WIZ_TRIP_STOPS: &str = "wiz-trip-stops";
+    /// `wiz-trip-tour`.
+    pub const WIZ_TRIP_TOUR: &str = "wiz-trip-tour";
+    /// `wiz-trip-start-hint`.
+    pub const WIZ_TRIP_START_HINT: &str = "wiz-trip-start-hint";
+    /// `wiz-review-trip-from`.
+    pub const WIZ_REVIEW_TRIP_FROM: &str = "wiz-review-trip-from";
     /// `wiz-back`.
     pub const WIZ_BACK: &str = "wiz-back";
     /// `wiz-next`.

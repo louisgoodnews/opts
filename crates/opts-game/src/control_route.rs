@@ -123,8 +123,29 @@ fn set_timetable(world: &mut World, params: &Value) -> Outcome {
     set_timetable_impl(world, params).map_or_else(Outcome::err, Outcome::ok)
 }
 
-/// `bus.set_timetable` as a function: the vehicle menu calls it too.
+/// `bus.set_timetable` as a function: the vehicle menu and a planned trip call it too. The run
+/// the player follows is left out of the scheduled traffic.
 pub(crate) fn set_timetable_impl(world: &mut World, params: &Value) -> Result<Value, RpcError> {
+    let out = select_timetable(world, params);
+    if out.is_ok() {
+        let run = (!opt_bool(params, "clear").ok().flatten().unwrap_or(false))
+            .then(|| opt_str(params, "line").ok().flatten())
+            .flatten()
+            .map(|line| crate::in_game::omsi_world::RunRef {
+                line_file: line.to_string(),
+                tour: opt_u64(params, "tour").ok().flatten().unwrap_or(0) as usize,
+                run: opt_u64(params, "run").ok().flatten().unwrap_or(0) as usize,
+            });
+        if let Some(mut s) =
+            world.get_resource_mut::<crate::in_game::omsi_world::ScheduledTraffic>()
+        {
+            s.player_run = run;
+        }
+    }
+    out
+}
+
+fn select_timetable(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     (|| {
         let clear = opt_bool(params, "clear")?.unwrap_or(false);
         let line = opt_str(params, "line")?.map(str::to_string);

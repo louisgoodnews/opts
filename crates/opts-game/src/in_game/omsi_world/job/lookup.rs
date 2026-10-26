@@ -2,6 +2,10 @@
 
 use super::*;
 
+/// How far behind a bus stop object a vehicle starting there stands (m): about half a 12 m bus,
+/// so its front is at the stop.
+pub(in super::super::super) const STOP_SPAWN_BACK_M: f32 = 6.0;
+
 impl WorldLoadJob {
     /// The map's timetable files (`TTData`), read on the first call and shared by every vehicle
     /// of the session; `None` when the map has none.
@@ -471,27 +475,50 @@ impl WorldLoadJob {
         ep: &opts_core::formats::map::MapEntryPoint,
         keys: &[(i32, i32)],
     ) -> Option<((i32, i32), (Vec3, f32))> {
+        let (key, position, heading, sco) = self.find_placed_object(u64::from(ep.id_code), keys)?;
+        tracing::info!(entry = %ep.name, id_code = ep.id_code, %sco, tile = ?key, "entry point resolved");
+        self.resolved_entry = Some((ep.id, ep.name.clone()));
+        Some((
+            key,
+            (Vec3::new(position.x, position.y, ep.position.y), heading),
+        ))
+    }
+
+    /// The spawn at the bus stop object with this station id (the trip's first stop, M-0145):
+    /// the stop marks where a bus's front comes to rest, so the vehicle stands
+    /// [`STOP_SPAWN_BACK_M`] behind it along the road.
+    pub(in super::super::super) fn find_stop_spawn(
+        &mut self,
+        station_id: u32,
+        keys: &[(i32, i32)],
+    ) -> Option<((i32, i32), (Vec3, f32))> {
+        let (key, position, heading, sco) = self.find_placed_object(u64::from(station_id), keys)?;
+        let h = heading.to_radians();
+        let back = Vec3::new(h.sin(), h.cos(), 0.0) * STOP_SPAWN_BACK_M;
+        tracing::info!(station_id, %sco, tile = ?key, "trip start stop resolved");
+        Some((key, (position - back, heading)))
+    }
+
+    /// The object with this ID code in the first of `keys` that has it: placed in its tile, or
+    /// attached to a spline (`[splineAttachement]`, e.g. `entrypoint_bus.sco` along a bus lane
+    /// in Wuppertal 639, or a bus stop along a road), whose place follows from the carrier
+    /// spline. Position (tile frame), heading and `.sco` file.
+    fn find_placed_object(
+        &mut self,
+        id_code: u64,
+        keys: &[(i32, i32)],
+    ) -> Option<((i32, i32), Vec3, f32, String)> {
         for &key in keys {
             let Some(tile) = self.read_tile(key) else {
                 continue;
             };
-            if let Some(obj) = tile
-                .objects
-                .iter()
-                .find(|o| o.id_code == u64::from(ep.id_code))
-            {
-                let pos = Vec3::new(obj.position.x, obj.position.y, ep.position.y);
-                tracing::info!(entry = %ep.name, id_code = ep.id_code, sco = %obj.sco_file, tile = ?key, "entry point resolved");
-                self.resolved_entry = Some((ep.id, ep.name.clone()));
-                return Some((key, (pos, obj.heading_deg)));
+            if let Some(obj) = tile.objects.iter().find(|o| o.id_code == id_code) {
+                return Some((key, obj.position, obj.heading_deg, obj.sco_file.clone()));
             }
-            // The entry-point object may be attached to a spline (`[splineAttachement]`, e.g.
-            // `entrypoint_bus.sco` along a bus lane in Wuppertal 639): its place follows from the
-            // carrier spline.
             if let Some(att) = tile
                 .spline_attachments
                 .iter()
-                .find(|a| a.id_code == u64::from(ep.id_code))
+                .find(|a| a.id_code == id_code)
             {
                 let index = self.spline_index();
                 let placed = crate::in_game::attachments::expand_attachments(
@@ -503,10 +530,7 @@ impl WorldLoadJob {
                     |_, _| 0.0,
                 );
                 if let Some((obj, _)) = placed.first() {
-                    let pos = Vec3::new(obj.position.x, obj.position.y, ep.position.y);
-                    tracing::info!(entry = %ep.name, id_code = ep.id_code, sco = %obj.sco_file, tile = ?key, "entry point resolved (spline attachment)");
-                    self.resolved_entry = Some((ep.id, ep.name.clone()));
-                    return Some((key, (pos, obj.heading_deg)));
+                    return Some((key, obj.position, obj.heading_deg, obj.sco_file.clone()));
                 }
             }
         }

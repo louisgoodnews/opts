@@ -371,6 +371,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).
 - [x] **🗺️ Per-Map Configuration Profiles and Load Profiler** — [M-0130](docs/src/roadmap/phase-9/M-0130.md)
   - [x] Phase A design (profile scope, TOML store, lifecycle and fallback map → Chrono → global, profiler heuristics, modal); checkpoint; phase B implementation; checkpoint; phase C verification — accepted by the project lead after testing 2026-10-22.
+- [x] **🚏 Plan a Drive: Choose a Trip** — [M-0145](docs/src/roadmap/phase-9/M-0145.md)
+  - [x] Optional wizard step *Trip* (the map's player runs departing within the hour on the plan's weekday); the bus starts at the run's first stop and follows the run; `scene.load_map {trip}` (protocol 1.28) — 2026-10-26.
 
 ---
 

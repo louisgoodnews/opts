@@ -11,7 +11,7 @@ This page is the contract the code and the tests are written against. Copy is En
 
 ## 1. The wizard as a whole
 
-State: `AppState::VehicleSelection` stays the wizard's state (renaming is owned by the shell). The wizard keeps its own `PlannerState { step: PlannerStep }` resource with `PlannerStep::{Where, What, When, Review}`; leaving the state resets it to *Where*. The choices live in the existing `NewGameSetup` resource.
+State: `AppState::VehicleSelection` stays the wizard's state (renaming is owned by the shell). The wizard keeps its own `PlannerState { step: PlannerStep }` resource with `PlannerStep::{Where, What, When, Trip, Review}` (*Trip* only while runs are offered, §5a); leaving the state resets it to *Where*. The choices live in the existing `NewGameSetup` resource.
 
 **Layout** (screen root made by `spawn_screen_root`, so it sits inside the shell's content area when the shell exists):
 
@@ -23,7 +23,7 @@ State: `AppState::VehicleSelection` stays the wizard's state (renaming is owned 
 ```
 
 - **No fixed pixel heights** for panels: the body is a flex child (`flex_grow: 1`, `min_height: 0`), lists fill it; the only pixel sizes are row heights, control sizes and the fixed-size pickers.
-- **Stepper**: four step buttons (also reachable with `[` / `]` = `PrevTab`/`NextTab`). The current step is marked by fill and an underline, reached steps show a check; a step can be jumped to at any time because all defaults are valid.
+- **Stepper**: four step buttons (five while the step *Trip* is offered, §5a) (also reachable with `[` / `]` = `PrevTab`/`NextTab`). The current step is marked by fill and an underline, reached steps show a check; a step can be jumped to at any time because all defaults are valid.
 - **Persistent summary**: exactly one summary line above the footer on every step (it replaces the two duplicate lines of today, audit F16). It names map (and start point when ambiguous), vehicle (and livery), clock and weather; clicking a part jumps to its step.
 - **Footer**: *Back*, *Next*, and *Skip to review* (steps ① to ③ only, enabled while the defaults are valid). On ④ the primary action is *Drive*. *Back* on ① leaves the wizard (to the screen the user came from). `Esc` = `UiAction::Back` = *Back* (one step back, then out); inside a text field the first `Esc` only leaves the field (library behaviour), inside a modal it closes it.
 - **Validity**: *Next* and *Drive* are enabled only when the selection is valid: a map that exists in the catalogue, a start point of that map (or none when the map has none), a vehicle that exists in the catalogue. When invalid the control is disabled **with a reason** (`DisabledReason`, e.g. "Choose a map first") — never silently.
@@ -83,6 +83,17 @@ Keys: `md-search` (variable `$count`), `md-section-recent`, `md-section-favourit
 | Weather | preset cards (a short list, at most 9; the pause page lists all): glyph, name and a **one-line effect that is true**. With an OMSI install the cards are its `Weather/*.owt` presets, named by their `.dsc` in the UI language, and the line is built from the preset's data (`9 °C · Rain · Overcast · Fog, 700 m visibility`, `wiz-weather-fx-*`); without an install they are the five built-in presets with `wiz-weather-clear-effect` "Clear sky, full sunlight", `…-overcast-effect`, `…-rain-effect` "Rain, dimmer diffuse light", `…-snow-effect`, `…-fog-effect`. Weather now changes sky, light, fog, clouds, rain/snow and the ground ([weather](../../architecture/weather.md)). Preset ids stay the ones stored in `NewGameSetup::weather_preset` and in the history; old ids (`Clear Summer Day`, …) are accepted and show their stand-in selected. |
 | **Live weather** | stays visible as a card at the end of the weather list, **registered `NotYet` place** `wizard.live-weather` (milestone M-0062, "The weather query is never called; live conditions need an explicit, explained opt-in") and carries the red "Feature not available yet!". No numbers, no network call, no placeholder values (audit F06). The existing background query function and `DeviceLocationWeather` resource are removed from the wizard (the dead code goes). |
 | Defaults | the last choice; first start: the time of day of the chosen map's saved state (`laststn.osn` `[time]`, [global-cfg](../../formats/map/global-cfg.md)) or, when the map has none, the device's current local time (M-0070, 2026-10-18; the label under the time says *Map default* or *Now* and goes away once the user sets the time; choosing another map updates a default time but keeps one the user set or a remembered drive brought), and the first preset of the list (`#CAVOK`, or `Clear Summer Day` without an install); the date: see step ①. |
+
+## 5a. Step *Trip* (optional, M-0145)
+
+Shown between *When* and *Review* only while the plan has runs to offer: a map whose `TTData` has line files marked `[userallowed]`, a road vehicle driven alone, and runs on the plan's weekday that depart within the hour after the plan's clock (the stepper hides its button otherwise and numbers the steps shown; *Next*, *Back* and the keys skip it).
+
+| Part | Content |
+| :--- | :--- |
+| List | *No trip* (start at the start point) first, then the runs earliest first: `08:45  92 → Stadtgrenze`, subtitle first stop · tour; search; no stars and no recents (runs are not kept). |
+| Detail | line and destination, `Departs 08:45 from Freudstr`, number of stops and the last stop, the tour, and that the bus starts at the first stop and follows the trip. |
+| Effect | the trip replaces the start point (summary line, review row *Where*, the loading card); *Review* has a fourth row *Trip*. A trip that no longer fits the plan is dropped. |
+| Defaults | *No trip*; a trip is not remembered between drives. |
 
 ## 6. Step ④ Review and thumbnails
 

@@ -48,6 +48,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0086 — Searchable Dropdowns and Honest Catalogue Counts](M-0086.md) — ✅ Implemented on `feat/combobox-search` (R-24, R-28, R-29)
 - [M-0088 — No Blocking Work on the Main Thread (Settings Content Page Freeze)](M-0088.md) — ✅ Implemented 2026-10-13 on `fix/settings-content-freeze` (R-31)
 - [M-0130 — Per-Map Configuration Profiles and Load Profiler](M-0130.md) — 🟢 Accepted 2026-10-22 (project lead; was top priority; design first, checkpoints after each phase)
+- [M-0145 — Plan a Drive: Choose a Trip](M-0145.md) — ✅ Implemented 2026-10-26 (project lead's request): optional step *Trip*, start at the trip's first stop
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — 🟡 In progress (automatic part done: WCAG audit, gamepad, de/en; usability test not run)
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
@@ -121,3 +122,5 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [x] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).
 - [x] **🗺️ Per-Map Configuration Profiles and Load Profiler** — [M-0130](M-0130.md)
   - [x] Phase A design (profile scope, TOML store, lifecycle and fallback map → Chrono → global, profiler heuristics, modal); checkpoint; phase B implementation; checkpoint; phase C verification — accepted by the project lead after testing 2026-10-22.
+- [x] **🚏 Plan a Drive: Choose a Trip** — [M-0145](M-0145.md)
+  - [x] Optional wizard step *Trip* (the map's player runs departing within the hour on the plan's weekday); the bus starts at the run's first stop and follows the run; `scene.load_map {trip}` (protocol 1.28) — 2026-10-26.
