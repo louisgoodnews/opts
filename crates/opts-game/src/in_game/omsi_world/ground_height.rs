@@ -77,6 +77,9 @@ impl RoadSample {
     }
 }
 
+/// A surface plate's triangle with the tile it came from.
+type TilePlateTri = ((i32, i32), std::sync::Arc<super::plate_surf::SurfTri>);
+
 /// A road sample with the tile it came from.
 type TileSample = ((i32, i32), RoadSample);
 
@@ -94,7 +97,7 @@ pub struct GroundIndex {
     /// The strips with a height map of each spline profile (by `.sli` name, M-0146).
     surf: HashMap<String, std::sync::Arc<Vec<super::road_surf::TexStrip>>>,
     /// The upward triangles of the surface plates by cell, with their tile (M-0146).
-    plate_tris: HashMap<(i32, i32), Vec<((i32, i32), std::sync::Arc<super::plate_surf::SurfTri>)>>,
+    plate_tris: HashMap<(i32, i32), Vec<TilePlateTri>>,
 }
 
 impl Default for GroundIndex {
