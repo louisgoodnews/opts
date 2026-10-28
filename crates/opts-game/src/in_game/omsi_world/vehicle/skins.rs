@@ -79,12 +79,73 @@ pub(super) fn pivot_of(
     pivots.get(&ident?.trim().to_lowercase()).copied()
 }
 
-/// A skinned mesh waiting for its bones: its entities, its `[setbone]` list and the run of
-/// `bone_<letter>` dummies declared before it.
+/// A skinned mesh waiting for its bones: its entities, its `[setbone]` list, the run of
+/// `bone_<letter>` dummies declared before it and the frame its parts hang in (the vehicle root,
+/// or the pivot of its `[animparent]`).
 pub(super) struct SkinBinding {
     pub(super) entities: Vec<Entity>,
     pub(super) bones: Vec<opts_core::formats::vehicles::model::MeshBone>,
     pub(super) run: Vec<Entity>,
+    pub(super) frame: Entity,
+}
+
+/// The run of numbered dummies a skinned mesh numbers its bones along: the run touched last if it
+/// is long enough for the highest `[setbone]` number, else the most recent one that is (damper
+/// pairs `…_l`/`…_r` form short runs), else the run touched last.
+pub(super) fn pick_run(
+    runs: &[(String, Vec<Entity>)],
+    last_run: Option<usize>,
+    bones: &[opts_core::formats::vehicles::model::MeshBone],
+) -> Vec<Entity> {
+    let need = bones
+        .iter()
+        .filter_map(|b| usize::try_from(b.index).ok())
+        .max()
+        .map_or(0, |m| m + 1);
+    let mut order: Vec<usize> = (0..runs.len()).rev().collect();
+    if let Some(at) = last_run {
+        order.retain(|i| *i != at);
+        order.insert(0, at);
+    }
+    order
+        .into_iter()
+        .map(|i| &runs[i].1)
+        .find(|r| r.len() >= need)
+        .or_else(|| last_run.and_then(|at| runs.get(at)).map(|r| &r.1))
+        .cloned()
+        .unwrap_or_default()
+}
+
+/// The joint list of a skin whose parts hang in `frame`. A skin in the vehicle frame uses the
+/// dummies themselves. A skin below an `[animparent]` pivot (the rear half of the Valiant and
+/// Heuliez bellows, `[animparent] tourelle`) moves its bones in that frame, as its parts do: each
+/// dummy is repeated as a child of the frame with the same animation (`proxy`), and the bones
+/// that stay on the vehicle stay on the frame. Bevy ignores the transform of a skinned mesh, so
+/// without this the half followed the dummies alone and missed the trailer by half the angle.
+pub(super) fn joints_in_frame(
+    joints: &[Entity],
+    root: Entity,
+    frame: Entity,
+    mut proxy: impl FnMut(Entity) -> Entity,
+) -> Vec<Entity> {
+    if frame == root {
+        return joints.to_vec();
+    }
+    let mut made: Vec<(Entity, Entity)> = Vec::new();
+    joints
+        .iter()
+        .map(|&j| {
+            if j == root {
+                return frame;
+            }
+            if let Some(&(_, p)) = made.iter().find(|(d, _)| *d == j) {
+                return p;
+            }
+            let p = proxy(j);
+            made.push((j, p));
+            p
+        })
+        .collect()
 }
 
 /// Marks the meshes that belong to a run of numbered dummies: two or more meshes of the model whose
@@ -177,6 +238,7 @@ pub(super) fn bind_skins(
         entities,
         bones,
         run,
+        frame,
     } in skins
     {
         let run_stems: Vec<(&String, Entity)> = dummies
@@ -223,6 +285,22 @@ pub(super) fn bind_skins(
             }
         }
         commands.queue(move |world: &mut World| {
+            let joints = joints_in_frame(&joints, root, frame, |dummy| {
+                let anim = world.get::<opts_bevy::MeshAnimation>(dummy).cloned();
+                let name = world
+                    .get::<Name>(dummy)
+                    .map_or_else(|| "joint".to_owned(), |n| n.as_str().to_owned());
+                let mut proxy = world.spawn((
+                    Name::new(format!("{name}_in_frame")),
+                    Transform::IDENTITY,
+                    Visibility::Inherited,
+                    ChildOf(frame),
+                ));
+                if let Some(anim) = anim {
+                    proxy.insert(anim);
+                }
+                proxy.id()
+            });
             let handle = world
                 .resource_mut::<Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>()
                 .add(bevy::mesh::skinning::SkinnedMeshInverseBindposes::from(
