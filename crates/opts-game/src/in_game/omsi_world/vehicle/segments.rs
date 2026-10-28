@@ -1,8 +1,8 @@
 //! Loading the segment meshes of a vehicle and its repaints.
 
 use super::skins::{
-    anim_pivots, articulation_runs, bind_skins, forms_cycle, is_bone_stem, mesh_pivot, pivot_of,
-    SkinBinding,
+    anim_pivots, articulation_runs, bind_skins, forms_cycle, is_bone_stem, mesh_pivot, pick_run,
+    pivot_of, SkinBinding,
 };
 use super::*;
 
@@ -385,28 +385,8 @@ pub(in super::super::super) fn load_segment_meshes_for(
             skins.push(SkinBinding {
                 entities: spawned.clone(),
                 bones: mesh_def.bones.clone(),
-                run: {
-                    // Most recently touched run first; the skinned mesh takes the first one long
-                    // enough for its bone numbers (damper pairs `…_l`/`…_r` form short runs).
-                    let need = mesh_def
-                        .bones
-                        .iter()
-                        .filter_map(|b| usize::try_from(b.index).ok())
-                        .max()
-                        .map_or(0, |m| m + 1);
-                    let mut order: Vec<usize> = (0..bone_runs.len()).rev().collect();
-                    if let Some(at) = last_run {
-                        order.retain(|i| *i != at);
-                        order.insert(0, at);
-                    }
-                    order
-                        .into_iter()
-                        .map(|i| &bone_runs[i].1)
-                        .find(|r| r.len() >= need)
-                        .or_else(|| last_run.and_then(|at| bone_runs.get(at)).map(|r| &r.1))
-                        .cloned()
-                        .unwrap_or_default()
-                },
+                run: pick_run(&bone_runs, last_run, &mesh_def.bones),
+                frame: parts_parent,
             });
         }
         for (e, part) in spawned.iter().copied().zip(&parts) {
