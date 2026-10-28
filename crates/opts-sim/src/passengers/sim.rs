@@ -3,6 +3,8 @@
 use super::graph::CabinGraph;
 use super::rng::Rng;
 use super::spec::{Cabin, Paths, TicketBook};
+use super::state::Next;
+pub use super::state::{Doors, Event, Passenger, Phase};
 use glam::Vec3;
 
 /// Walking speed inside the vehicle (m/s).
@@ -15,127 +17,6 @@ const STAMP_S: f32 = 1.5;
 const SIT_CHANCE: f32 = 0.7;
 /// Walking distance (m) over which a free place becomes half as likely to be chosen.
 pub const PLACE_SPREAD_M: f32 = 6.0;
-
-/// What a passenger does now.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Phase {
-    /// Outside, waiting for entry door `entry` to open.
-    WaitingOutside {
-        /// Index into the cabin's entries.
-        entry: usize,
-    },
-    /// Walking to a pathpoint.
-    Walking {
-        /// The goal pathpoint.
-        to: usize,
-    },
-    /// Buying a ticket at a sale point.
-    Buying {
-        /// Seconds left.
-        left_s: f32,
-    },
-    /// Stamping at a validator.
-    Stamping {
-        /// Seconds left.
-        left_s: f32,
-    },
-    /// Sitting or standing on a place.
-    Settled {
-        /// Index into the cabin's places.
-        place: usize,
-    },
-    /// At exit `exit`, waiting for its door to open.
-    WaitingToLeave {
-        /// Index into the cabin's exits.
-        exit: usize,
-    },
-}
-
-/// What the passenger does after the current phase.
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum Next {
-    Sale,
-    Stamp,
-    Place,
-    Exit,
-}
-
-/// A passenger.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Passenger {
-    /// Identifier, unique in the simulation.
-    pub id: u32,
-    /// Age in years (tickets are bought by age).
-    pub age: u32,
-    /// Where in the plan the passenger is.
-    pub phase: Phase,
-    /// The ticket held (index in the ticket pack).
-    pub ticket: Option<usize>,
-    /// The ticket was stamped.
-    pub stamped: bool,
-    /// Stops to ride before getting off.
-    pub stops_left: u32,
-    /// Position in the space of the unit the passenger is in.
-    pub position: Vec3,
-    /// The unit of the chain the passenger is in.
-    pub unit: usize,
-    /// The pathpoint last reached.
-    pub at: usize,
-    route: Vec<usize>,
-    next: Next,
-    place: Option<usize>,
-}
-
-/// The state of the doors the passengers use, by entry and exit index of the cabin.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Doors {
-    /// Entry doors open.
-    pub entries: Vec<bool>,
-    /// Exit doors open.
-    pub exits: Vec<bool>,
-}
-
-/// Something that happened (for the sounds, the scripts and the displays).
-#[derive(Debug, Clone, PartialEq)]
-pub enum Event {
-    /// A passenger came in through entry `entry`.
-    Boarded {
-        /// Passenger.
-        id: u32,
-        /// Index into the cabin's entries.
-        entry: usize,
-    },
-    /// A ticket was bought.
-    Sold {
-        /// Passenger.
-        id: u32,
-        /// Index in the ticket pack.
-        ticket: usize,
-        /// Price.
-        price: f32,
-    },
-    /// A ticket was stamped.
-    Stamped {
-        /// Passenger.
-        id: u32,
-    },
-    /// A passenger took a seat or a standing place.
-    Settled {
-        /// Passenger.
-        id: u32,
-        /// Index into the cabin's places.
-        place: usize,
-        /// A seat (else standing).
-        seated: bool,
-    },
-    /// A passenger got off through exit `exit`.
-    Alighted {
-        /// Passenger.
-        id: u32,
-        /// Index into the cabin's exits.
-        exit: usize,
-    },
-}
 
 /// The passengers of one unit.
 #[derive(Debug, Clone)]
@@ -534,9 +415,31 @@ impl PassengerSim {
     }
 
     fn walk(&mut self, i: usize, to: usize, dt: f32) {
-        if self.passengers[i].route.is_empty() && self.passengers[i].at != to {
-            match self.graph.route(self.passengers[i].at, to) {
-                Some((r, _)) => self.passengers[i].route = r,
+        if self.passengers[i].route.is_empty() {
+            let (at, unit, position) = {
+                let p = &self.passengers[i];
+                (p.at, p.unit, p.position)
+            };
+            let way = if at == to {
+                Some(Vec::new())
+            } else {
+                self.graph.route(at, to).map(|(r, _)| r)
+            };
+            match way {
+                Some(mut r) => {
+                    // From a place (or a walk cut short) back onto the paths first: straight to
+                    // the next point of the way would cut through the seats.
+                    let off_path = self.graph.unit(at) == unit
+                        && self
+                            .graph
+                            .points
+                            .get(at)
+                            .is_some_and(|q| q.distance(position) > 0.01);
+                    if off_path {
+                        r.insert(0, at);
+                    }
+                    self.passengers[i].route = r;
+                }
                 None => {
                     // No way: the passenger arrives where they are.
                     self.passengers[i].at = to;

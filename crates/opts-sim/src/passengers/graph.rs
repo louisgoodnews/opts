@@ -3,6 +3,11 @@
 use super::spec::Paths;
 use glam::Vec3;
 
+/// Parts of a unit's paths that are not linked to each other but this close (m) are joined: the
+/// file evidently misses a link (the Valiant 7700A's rear unit has no link between its points 9
+/// and 10, 0.2 m apart, which cuts its rear half off the doors).
+pub const GAP_BRIDGE_M: f32 = 0.5;
+
 /// Walkable graph of a vehicle (links are walkable both ways unless they are one-way).
 #[derive(Debug, Clone, Default)]
 pub struct CabinGraph {
@@ -10,6 +15,8 @@ pub struct CabinGraph {
     pub points: Vec<Vec3>,
     /// `(from, to)` of every link in file order (the index of `GetHumanCountOnPathLink`).
     pub links: Vec<(usize, usize)>,
+    /// Links added across gaps of at most [`GAP_BRIDGE_M`] (not in [`Self::links`]).
+    pub bridges: Vec<(usize, usize)>,
     unit_of: Vec<usize>,
     adjacent: Vec<Vec<(usize, f32)>>,
 }
@@ -38,12 +45,69 @@ impl CabinGraph {
         }
         let mut unit_of = paths.unit_of.clone();
         unit_of.resize(points.len(), 0);
-        Self {
+        let mut graph = Self {
             points,
             links,
+            bridges: Vec::new(),
             unit_of,
             adjacent,
+        };
+        graph.bridge_gaps();
+        graph
+    }
+
+    /// Joins the parts of the paths that no link connects where two of their points in the same
+    /// unit lie at most [`GAP_BRIDGE_M`] apart, the nearest pair first, until none is left.
+    fn bridge_gaps(&mut self) {
+        loop {
+            let part = self.parts();
+            let mut best: Option<(usize, usize, f32)> = None;
+            for a in 0..self.points.len() {
+                for b in a + 1..self.points.len() {
+                    if part[a] == part[b] || self.unit(a) != self.unit(b) {
+                        continue;
+                    }
+                    let d = self.points[a].distance(self.points[b]);
+                    if d <= GAP_BRIDGE_M && best.is_none_or(|(_, _, e)| d < e) {
+                        best = Some((a, b, d));
+                    }
+                }
+            }
+            let Some((a, b, d)) = best else {
+                return;
+            };
+            self.adjacent[a].push((b, d));
+            self.adjacent[b].push((a, d));
+            self.bridges.push((a, b));
         }
+    }
+
+    /// The part (connected component, links taken both ways) of every pathpoint, named by its
+    /// lowest point.
+    fn parts(&self) -> Vec<usize> {
+        let n = self.points.len();
+        let mut part = vec![usize::MAX; n];
+        let mut undirected = vec![Vec::new(); n];
+        for (u, edges) in self.adjacent.iter().enumerate() {
+            for &(v, _) in edges {
+                undirected[u].push(v);
+                undirected[v].push(u);
+            }
+        }
+        for s in 0..n {
+            if part[s] != usize::MAX {
+                continue;
+            }
+            let mut todo = vec![s];
+            while let Some(u) = todo.pop() {
+                if part[u] != usize::MAX {
+                    continue;
+                }
+                part[u] = s;
+                todo.extend(undirected[u].iter().copied());
+            }
+        }
+        part
     }
 
     /// The pathpoint nearest to `p`.

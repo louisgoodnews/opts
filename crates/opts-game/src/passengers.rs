@@ -381,8 +381,11 @@ pub fn update_passengers(
             match e {
                 Event::Settled { id, place, seated } => {
                     if let Some(s) = rig.actors.get_mut(&id) {
-                        s.seated =
-                            seated.then(|| rig.sim.cabin.places[place].rotation_deg.to_radians());
+                        let pl = rig.sim.cabin.places[place];
+                        s.seated = seated.then(|| rig::SeatPose {
+                            rotation_rad: pl.rotation_deg.to_radians(),
+                            height_m: pl.seat_height,
+                        });
                     }
                 }
                 Event::Alighted { id, exit } => {

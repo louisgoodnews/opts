@@ -240,6 +240,57 @@ pub fn hip_offset(p: &HumanProfile) -> Vec3 {
     rest_pivots(p)[0]
 }
 
+/// The most the hip joint is put above the point a seated character rests on (m); the corpus
+/// lies between 0 and 0.14.
+const MAX_SEAT_LIFT_M: f32 = 0.15;
+/// The thigh angle of a fitted seated pose, from hanging straight down (rad): from sloping down
+/// by 40° on a high seat (the feet then hang) to the knees 25° up on a low one.
+const THIGH_MIN_RAD: f32 = 50.0 * std::f32::consts::PI / 180.0;
+const THIGH_MAX_RAD: f32 = 115.0 * std::f32::consts::PI / 180.0;
+
+/// How far the hip joint of a seated character lies above the point it rests on (m).
+///
+/// `[seatheight]` is the height, in the standing character's frame, of the part that rests on a
+/// seat: in all 58 installed `.hum` files it lies 0–0.14 m below the hip joint (`[links]`), the
+/// thickness of the thigh and buttocks under the hip joint. A `[passpos]` seat point is that
+/// contact ("Arsch"), so the hip joint goes this much above it.
+#[must_use]
+pub fn seat_hip_lift(p: &HumanProfile) -> f32 {
+    (p.links.hip.z - p.seat_height_m).clamp(0.0, MAX_SEAT_LIFT_M)
+}
+
+/// The thigh angle from hanging straight down (rad) at which the shin, hanging vertically from
+/// the knee, puts the sole on the floor `hip_above_floor_m` below the hip joint; clamped to a
+/// natural range (a high seat leaves the feet hanging, a low one raises the knees).
+///
+/// The thigh is the hip-to-knee pivot height of `[links]`, the shin and foot the knee's height
+/// above the ground.
+#[must_use]
+pub fn seated_thigh_angle(p: &HumanProfile, hip_above_floor_m: f32) -> f32 {
+    let thigh = (p.links.hip.z - p.links.knee.z).max(0.05);
+    let shin = p.links.knee.z.max(0.05);
+    ((hip_above_floor_m - shin) / thigh)
+        .clamp(-1.0, 1.0)
+        .acos()
+        .clamp(THIGH_MIN_RAD, THIGH_MAX_RAD)
+}
+
+/// The seated pose fitted to a seat `seat_height_m` above the floor (the `h` of `[passpos]`):
+/// thighs at [`seated_thigh_angle`], shins vertical, so that the feet rest on the floor. A seat
+/// of unknown height (`0`) keeps the generic pose (thighs horizontal).
+#[must_use]
+pub fn seated_rotations(p: &HumanProfile, seat_height_m: f32) -> [Quat; 13] {
+    let mut q = pose_rotations(p, HumanPose::Seated);
+    if seat_height_m > 0.0 {
+        let a = seated_thigh_angle(p, seat_height_m + seat_hip_lift(p));
+        q[3] = Quat::from_rotation_x(a);
+        q[4] = Quat::from_rotation_x(a);
+        q[5] = Quat::from_rotation_x(-a);
+        q[6] = Quat::from_rotation_x(-a);
+    }
+    q
+}
+
 /// Spawns a human: root, joint hierarchy, head anchor and skinned mesh parts.
 ///
 /// The root is returned inside the [`Human`] component. Position it with a `Transform` and call
@@ -360,6 +411,73 @@ mod tests {
         assert!(
             arm.y < 0.0 && arm.x > 0.0,
             "right arm hangs down and out: {arm:?}"
+        );
+    }
+
+    /// The right sole in the character's root frame for joint rotations `q` (forward kinematics
+    /// of hip, thigh and shin; the sole is the ground point under the knee pivot).
+    fn sole(p: &HumanProfile, q: &[Quat; 13]) -> Vec3 {
+        let v = rest_pivots(p);
+        let sole_from_knee = Vec3::new(0.0, -v[6].y, 0.0);
+        v[4] + q[4] * ((v[6] - v[4]) + q[6] * sole_from_knee)
+    }
+
+    #[test]
+    fn a_fitted_seated_pose_puts_the_feet_on_the_floor_and_never_below_it() {
+        // The test profile (hip 0.92, knee 0.53, [seatheight] 0.81) and an aXYZ-like one (hip
+        // 0.84, knee 0.43, [seatheight] 0.75).
+        let tall = HumanProfile::from_text(HUM).unwrap();
+        let short = HumanProfile::from_text(
+            &HUM.replace("0.81\n", "0.75\n")
+                .replace("0.92\n0.09\n-0.03\n0.53", "0.84\n0.09\n-0.03\n0.43"),
+        )
+        .unwrap();
+        assert!((seat_hip_lift(&tall) - 0.11).abs() < 1e-5);
+        assert!((seat_hip_lift(&short) - 0.09).abs() < 1e-5);
+        for p in [&tall, &short] {
+            let hip = rest_pivots(p)[0].y;
+            for h in [0.15_f32, 0.3, 0.38, 0.42, 0.45, 0.5, 0.56, 0.7, 1.0] {
+                let q = seated_rotations(p, h);
+                // The figure stands with its hip joint `lift` above the seat point, the floor `h`
+                // below that point: in the root frame the floor is this high.
+                let floor = hip - seat_hip_lift(p) - h;
+                let sole = sole(p, &q);
+                assert!(
+                    sole.y >= floor - 1e-4,
+                    "h {h}: sole {} below the floor {floor}",
+                    sole.y
+                );
+                let a = seated_thigh_angle(p, h + seat_hip_lift(p));
+                if a > THIGH_MIN_RAD && a < THIGH_MAX_RAD {
+                    assert!(
+                        (sole.y - floor).abs() < 1e-4,
+                        "h {h}: the sole rests on the floor"
+                    );
+                }
+                let shin = (q[4] * q[6]) * Vec3::NEG_Y;
+                assert!(
+                    (shin - Vec3::NEG_Y).length() < 1e-5,
+                    "the shins hang vertically"
+                );
+                assert!(
+                    sole.z < rest_pivots(p)[4].z,
+                    "the feet are in front of the hips"
+                );
+            }
+            // Ordinary bus seats (0.38–0.5 m) are fitted, not clamped.
+            for h in [0.38_f32, 0.5] {
+                let a = seated_thigh_angle(p, h + seat_hip_lift(p));
+                assert!(a > THIGH_MIN_RAD && a < THIGH_MAX_RAD, "h {h}: {a}");
+            }
+        }
+        // A higher seat lowers the knees.
+        let low = seated_thigh_angle(&tall, 0.40 + 0.11);
+        let high = seated_thigh_angle(&tall, 0.55 + 0.11);
+        assert!(high < low);
+        // No seat height: the generic pose.
+        assert_eq!(
+            seated_rotations(&tall, 0.0),
+            pose_rotations(&tall, HumanPose::Seated)
         );
     }
 }

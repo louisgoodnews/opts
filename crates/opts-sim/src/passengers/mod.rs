@@ -11,6 +11,7 @@ mod graph;
 mod rng;
 mod sim;
 mod spec;
+mod state;
 
 pub use crowd::standing_room;
 pub use graph::CabinGraph;
@@ -20,3 +21,5 @@ pub use spec::{chain, Behaviour, Cabin, Paths, Place, Ticket, TicketBook, Unit};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_trailer;
