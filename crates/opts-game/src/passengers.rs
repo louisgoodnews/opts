@@ -15,11 +15,10 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use opts_bevy::bus_stops::{nearest_stop, BusStopMarker};
-use opts_bevy::coords::omsi_to_bevy_pos;
 use opts_bevy::{
     Human, HumanPose, PassengerFeed, PlayerVehicle, VehicleController, VehicleScripts,
 };
-use opts_sim::passengers::{Doors, Event, Phase, WALK_SPEED_M_S};
+use opts_sim::passengers::{Doors, Event};
 
 use crate::in_game::omsi_world::{advance_phase, apply_gait, apply_rest_pose, PedestrianPool};
 
@@ -76,6 +75,7 @@ fn facing(direction: Vec3) -> Quat {
 
 mod convert;
 mod crowd;
+mod draw;
 mod protocol;
 mod rig;
 mod weight;
@@ -420,55 +420,7 @@ pub fn update_passengers(
             }
         }
         // Draw the passengers inside.
-        for p in rig.sim.passengers() {
-            let Some(s) = rig.actors.get_mut(&p.id) else {
-                continue;
-            };
-            let target = omsi_to_bevy_pos(p.position);
-            if p.unit != s.unit {
-                // Through the joint: the person now belongs to the other unit's frame.
-                if let Some(u) = rig.units.get(p.unit) {
-                    commands.entity(s.entity).insert(ChildOf(u.root));
-                    s.local = target;
-                    s.unit = p.unit;
-                }
-            }
-            let moving = matches!(
-                p.phase,
-                Phase::Walking { .. } | Phase::WaitingOutside { .. }
-            );
-            let delta = target - s.local;
-            let d = delta.length();
-            let step = WALK_SPEED_M_S * 1.5 * dt;
-            let yaw = if d > 0.02 { Some(facing(delta)) } else { None };
-            s.local = if d <= step {
-                target
-            } else {
-                s.local + delta / d * step
-            };
-            let Ok(mut t) = transforms.get_mut(s.entity) else {
-                continue;
-            };
-            t.translation = s.local;
-            if let Some(q) = yaw.filter(|_| moving || d > 0.05) {
-                t.rotation = q;
-            } else if let Some(rot) = s.seated {
-                t.rotation = Quat::from_rotation_y(-rot);
-            }
-            if let Ok(h) = humans.get(s.entity) {
-                if d > 0.02 {
-                    s.phase = advance_phase(h, s.phase, WALK_SPEED_M_S, dt);
-                    apply_gait(h, s.leg_m, s.phase, &mut transforms);
-                } else {
-                    let pose = if s.seated.is_some() {
-                        HumanPose::Seated
-                    } else {
-                        HumanPose::Standing
-                    };
-                    apply_rest_pose(h, pose, &mut transforms);
-                }
-            }
-        }
+        draw::draw_inside(rig, &mut commands, &humans, &mut transforms, dt);
         // Those who got off walk away and vanish.
         let mut walking = Vec::new();
         for mut w in std::mem::take(&mut rig.leaving) {
