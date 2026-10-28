@@ -10,7 +10,7 @@
 //!   material), once, when the mesh appears. The player's own panes carry the mark too and are
 //!   skipped when choosing (they have [`MirrorSurface`] or a [`PlayerVehicle`] ancestor).
 //! * **Budget.** [`LightQuality::mirror_count`] cameras (the same budget as the player's mirrors:
-//!   2 up to level 3, none above) serve the panes that are visible, within
+//!   2 up to level 3, 1 above) serve the panes that are visible, within
 //!   [`AMBIENT_RANGE_M`], in front of the main camera and facing it, nearest first. A pane keeps
 //!   its camera while it stays among the nearest, so the picture does not jump around.
 //! * **Cost.** Small pictures ([`AMBIENT_PICTURE`] pixels square) rendered every

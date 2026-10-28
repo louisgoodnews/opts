@@ -1,5 +1,6 @@
 //! Per-frame mirror work: placing the cameras behind the mirrors and following the driver's look.
 
+use super::schedule::{mirror_in_view, pick_renders, renders_in_frame, MIRROR_MIN_ANGLE};
 use super::*;
 
 /// A group's pose in the world for the current frame.
@@ -23,7 +24,7 @@ pub fn update_mirror_cameras(
     mut virtual_mirrors: ResMut<VirtualMirrors>,
     mut images: ResMut<Assets<Image>>,
     vehicles: Query<&GlobalTransform, With<PlayerVehicle>>,
-    main: Query<&GlobalTransform, (With<MainCamera>, Without<MirrorCamera>)>,
+    main: Query<(&GlobalTransform, Option<&Projection>), (With<MainCamera>, Without<MirrorCamera>)>,
     mut cameras: Query<(
         Entity,
         &mut MirrorCamera,
@@ -57,7 +58,7 @@ pub fn update_mirror_cameras(
     stats.cameras = live.len();
     stats.selected = 0;
     stats.rendering = 0;
-    let Some(view) = main.iter().next() else {
+    let Some((view, main_projection)) = main.iter().next() else {
         for e in &live {
             if let Ok((_, _, _, mut cam, _)) = cameras.get_mut(*e) {
                 if cam.is_active {
@@ -111,10 +112,29 @@ pub fn update_mirror_cameras(
         });
     }
     let distances: Vec<f32> = poses.iter().map(|p| p.distance).collect();
-    let mut selected = nearest(&distances, usize::from(quality.mirror_count));
+    let count = quality.mirror_count;
+    // The panes in the player's view (and large enough to matter) show a live picture.
+    let in_view: Vec<bool> = poses
+        .iter()
+        .map(|p| {
+            if count == 0 || !p.distance.is_finite() {
+                return false;
+            }
+            let radius = 0.5 * p.height * (1.0 + p.aspect * p.aspect).sqrt();
+            if 2.0 * (p.height / (2.0 * p.distance.max(0.01))).atan() < MIRROR_MIN_ANGLE {
+                return false;
+            }
+            match main_projection {
+                Some(Projection::Perspective(persp)) => {
+                    mirror_in_view(view, persp.fov, persp.aspect_ratio, p.centre, radius)
+                }
+                _ => mirror_in_front(viewer, forward, p.centre),
+            }
+        })
+        .collect();
 
     // The virtual mirrors: name the groups by their place on the vehicle and keep the ones that
-    // are switched on streaming (always selected, rendered every frame).
+    // are switched on streaming (rendered every frame, outside the budget).
     let candidates: Vec<(Entity, Vec3)> = poses
         .iter()
         .filter_map(|p| {
@@ -149,17 +169,32 @@ pub fn update_mirror_cameras(
         });
         if let Some(camera) = virtual_mirrors.streaming_camera(slot) {
             streaming.push(camera);
-            if let Some(index) = poses.iter().position(|p| p.camera == camera) {
-                if !selected.contains(&index) {
-                    selected.push(index);
-                }
-            }
         }
     }
-    stats.selected = selected.len();
+
+    // The budget of this frame goes to the visible panes whose picture is oldest.
+    let last: Vec<u64> = poses
+        .iter()
+        .map(|p| cameras.get(p.camera).map_or(0, |c| c.1.last_render))
+        .collect();
+    let pickable: Vec<bool> = poses
+        .iter()
+        .zip(&in_view)
+        .map(|(p, v)| *v && !streaming.contains(&p.camera))
+        .collect();
+    let picked = pick_renders(
+        &last,
+        &distances,
+        &pickable,
+        renders_in_frame(frame.0, count, quality.mirror_every),
+    );
+    stats.selected = poses
+        .iter()
+        .zip(&in_view)
+        .filter(|(p, v)| **v || streaming.contains(&p.camera))
+        .count();
 
     for (index, p) in poses.iter().enumerate() {
-        let rank = selected.iter().position(|i| *i == index);
         let Ok((_, mut info, mut t, mut cam, mut projection)) = cameras.get_mut(p.camera) else {
             continue;
         };
@@ -179,30 +214,26 @@ pub fn update_mirror_cameras(
             }
             info.enlarged = streams;
         }
-        // The picture shown on the panes: live when selected, the static texture otherwise.
+        let render = streams || picked.contains(&index);
+        // The picture shown on the panes: live once the camera has rendered (a pane waiting for
+        // its turn keeps its last picture), the static texture while the budget is 0.
+        let live = (count > 0 || streams) && (render || info.last_render != 0);
         for m in &info.members {
-            let target = if rank.is_some() {
-                &info.dynamic
-            } else {
-                &m.original
-            };
+            let target = if live { &info.dynamic } else { &m.original };
             if let Ok(mut material) = materials_of.get_mut(m.entity) {
                 if material.0 != *target {
                     material.0 = target.clone();
                 }
             }
         }
-        let render = streams
-            || rank.is_some_and(|r| {
-                mirror_in_front(viewer, forward, p.centre)
-                    && is_render_frame(frame.0, r, quality.mirror_every)
-            });
         if cam.is_active != render {
             cam.is_active = render;
         }
-        if rank.is_none() {
+        if !render {
             continue;
         }
+        info.last_render = frame.0;
+        stats.rendering += 1;
         if let (Some(tag), Ok(vehicle)) = (&info.tag, vehicles.get(info.vehicle)) {
             let (local, rotation, fov) = tag_pose(tag, &settings.adjust);
             let (_, vrot, vpos) = vehicle.to_scale_rotation_translation();
@@ -213,9 +244,6 @@ pub fn update_mirror_cameras(
                     persp.fov = fov;
                 }
                 persp.aspect_ratio = 1.0;
-            }
-            if render {
-                stats.rendering += 1;
             }
             continue;
         }
@@ -232,9 +260,6 @@ pub fn update_mirror_cameras(
             if (persp.aspect_ratio - aspect).abs() > 1e-3 {
                 persp.aspect_ratio = aspect;
             }
-        }
-        if render {
-            stats.rendering += 1;
         }
     }
 }

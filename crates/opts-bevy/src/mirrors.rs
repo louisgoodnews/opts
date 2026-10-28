@@ -20,14 +20,17 @@
 //!   projection aspect is the pane's own, so the picture is not distorted when it is stretched
 //!   over the pane's UV rectangle ([`pane_uv_transform`]). The picture replaces the base-colour
 //!   texture of a **private copy** of the material (the pooled material is shared with every other
-//!   vehicle of the same type); the original comes back whenever the group is not selected,
-//!   `mirror_count` is 0, or the vehicle is no longer the player's.
-//! * **Budget.** [`LightQuality::mirror_count`] (0..=2) groups are selected, nearest to the
-//!   viewer first; a selected group renders when it is in front of the main camera
-//!   ([`mirror_in_front`]) and on its turn ([`is_render_frame`]: every `mirror_every`-th frame,
-//!   staggered by rank so two mirrors do not render in the same frame). The switch is
+//!   vehicle of the same type); the original comes back while `mirror_count` is 0 and no
+//!   virtual mirror streams, or when the vehicle is no longer the player's.
+//! * **Budget** (`mirrors/schedule.rs`). Every group with a pane **in the main camera's view**
+//!   ([`mirror_in_view`], at least [`MIRROR_MIN_ANGLE`] across) shows a live picture.
+//!   [`LightQuality::mirror_count`] pictures render every `mirror_every` frames
+//!   ([`renders_in_frame`]: 2 every 2nd frame is one render per frame); they go round-robin to
+//!   the visible groups, the oldest picture first ([`pick_renders`]), so with more mirrors in view
+//!   than the budget each updates less often instead of falling back to the static bitmap. A
+//!   group waiting for its turn or out of view keeps its last picture. The switch is
 //!   `Camera::is_active`, never the removal of `Camera3d`. Members that are hidden (a model keeps
-//!   mutually exclusive variants) do not count for the pose and the distance.
+//!   mutually exclusive variants) do not count for the pose, the distance and the view test.
 //! * **Parity.** [`sync_mirror_camera_look`] copies `Hdr` and `DistanceFog` from the
 //!   [`MainCamera`]; the mirror camera does **not** tonemap (the picture is scene-linear and is
 //!   tonemapped once, by the main camera, when it is shown) and carries no colour grading for the
@@ -153,7 +156,8 @@ pub struct MirrorFrame(pub u64);
 pub struct MirrorStats {
     /// Mirror cameras (groups) that exist.
     pub cameras: usize,
-    /// Groups selected for the quality (showing a live picture when visible).
+    /// Groups whose panes are in the player's view (or that stream into a panel): they show a
+    /// live picture and share the render budget.
     pub selected: usize,
     /// Mirror cameras active (rendering) in the last frame.
     pub rendering: usize,
@@ -223,6 +227,9 @@ pub struct MirrorCamera {
     /// The `.bus` camera of this pane (`reflexion<N>.bmp` is tag N), when the vehicle has one and
     /// [`MirrorSettings::use_tags`] is on: the camera then follows it instead of the reflection.
     pub tag: Option<BusMirrorCamera>,
+    /// [`MirrorFrame`] of the camera's last render (0 = never): the oldest picture in view
+    /// renders next ([`pick_renders`]).
+    pub last_render: u64,
 }
 
 /// On a pane mesh that belongs to a group.
@@ -396,6 +403,9 @@ pub fn pane_uv_transform(min: Vec2, max: Vec2, flip_u: bool, flip_v: bool) -> be
 
 mod spawn;
 pub use spawn::spawn_mirror_cameras;
+
+mod schedule;
+pub use schedule::{mirror_in_view, pick_renders, renders_in_frame, MIRROR_MIN_ANGLE};
 
 mod update;
 pub use update::{sync_mirror_camera_look, update_mirror_cameras};
