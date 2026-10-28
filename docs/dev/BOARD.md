@@ -114,7 +114,7 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🟡 **Broken-link CI proof** (M-0042, chore) — push a deliberately broken link on a scratch branch and see the docs-links job fail; the last open item of M-0042 besides `cargo deny`.
+- [ ] 🟡 **Broken-link CI proof** (M-0042, chore) — push a deliberately broken link on a scratch branch and see the docs-links job fail; the last open item of M-0042 (`cargo-deny-action` added 2026-10-28).
 - [ ] 🟠 **Ahlheim V5, Eichenhöhe Bf: curbs below the ground; one spline/object slab over the road** (M-0090, content) — project lead 2026-10-19, screenshots: a dark slab covers the road below the viaduct; the stop's curbs sink under the terrain.
 - [ ] 🟠 **Scripted scenery (dynamic passenger information) is not functional** (M-0099/M-0100, code) — should show a default display and take its data from the stop's timetable/AI schedule (`GetTT*`, hof, `Busstops.cfg`).
 - [ ] 🟠 **Vehicle overrides and visual editor (Phase 14)** (M-0135 design, M-0136 profile schema, loader and validation, M-0137 in-game visual mesh editor; design + code) — project lead 2026-10-19. `VehicleProfile` TOML patch layer in `~/.local/share/opts/vehicles/` (sound, script, constant and mesh swaps) with compatibility validation against varlists and constants, and an in-game editor (picking, gizmos, `.o3d` browser). **Design first (M-0135), approval before implementation;** [Phase 14](../src/roadmap/phase-14/README.md).
@@ -247,7 +247,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟡 **State-chain research on the twin corpus; record negatives in o3d.md** (M-0038, research) — F-001. Done 2026-10-16 (`c3d10946`, [report](../src/meta/scramble-chain-2026-10-16.md), o3d.md Addendum 14).
 
 #### M-0040 — Code-Quality Debt
-- [~] 🟠 **Fail CI on new size violations (baseline file)** (M-0040, chore) — critical review F-005. The M-0125 ratchet (`structure_audit.py check`) runs in `local-ci.sh`, not yet in the hosted CI.
+- [x] 🟠 **Fail CI on new size violations (baseline file)** (M-0040, chore) — critical review F-005. The M-0125/M-0147 ratchets (`structure_audit.py check` and `omsi_uses.py --check`) run in `local-ci.sh`, `scripts/pre-commit`, and `.github/workflows/ci.yml` (`docs-links` job, 2026-10-28).
 - [~] 🟠 **Split the functions over 80 lines (239 today)** (M-0040, refactor) — F-009 (audit), F-005. The file part is done (refactoring cycle 1: 0 files over 500 lines of code; `from_text` 28 lines, `traffic.rs` split in `d538a8f3`).
 - [ ] 🟡 **Group system/load-job parameters into `SystemParam`s; remove the lint allows (144 today)** (M-0040, refactor) — F-010 (audit), F-006.
 - [x] 🟡 **Fix rustdoc links to removed Bevy bundles** (M-0040, docs) — critical review F-007. Done with the CI gate fix (10 stale rustdoc links, 2026-10-22).
@@ -314,6 +314,12 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Passenger load: a save field of its own** (M-0124)
 - [ ] 🟡 **Resolve the ❓ in M-0123: tank content unit, state-of-charge variable, who raises `veh_tank`** (M-0123) — [Fuel and Battery State](../src/roadmap/phase-12/M-0123.md)
 - [ ] 🟡 **Decide the anti-aliasing path (MSAA vs SMAA vs TAA) against M-0059 foliage coverage** (M-0122) — [Graphics Overhaul](../src/roadmap/phase-12/M-0122.md)
+
+#### M-0147–M-0150 — Phase 15: AI-Optimized Code Structure & Pre-Commit Enforcement (proposed 2026-10-28)
+- [x] 🔴 **Structure Audit v2 & Pre-Commit Ratchet Gates** (M-0147, tooling + ci) — **done 2026-10-28**: 350-line file limit, >250-line inline-test rule, >80-line function ratchet (`docs/dev/function-known.txt`), signature allow ratchet (`docs/dev/structure-known.txt`), unit tests, and `pre-commit` + `ci.yml` enforcement; [M-0147](../src/roadmap/phase-15/M-0147.md)
+- [ ] 🟠 **Batch 1: Inline Test Extraction Above 250 Lines (101 files, 9,274 test lines)** (M-0148, refactor) — [M-0148](../src/roadmap/phase-15/M-0148.md)
+- [ ] 🟠 **Batch 2: Production File Splits to the 350-Line Ceiling (102 prod + 18 test/example files)** (M-0149, refactor) — [M-0149](../src/roadmap/phase-15/M-0149.md)
+- [ ] 🟡 **Batch 3: Function Size Ratchet (< 80 Lines, 191 fns) & ECS `SystemParam` Bundling (155 allows)** (M-0150, refactor) — [M-0150](../src/roadmap/phase-15/M-0150.md)
 
 ---
 

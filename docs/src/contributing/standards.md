@@ -793,6 +793,19 @@ texture cache (M-0088, field report R-31). The frame budget is 1 ms per UI syste
   added to the `ALLOWED` table with the reason it is fine (it runs on a worker, at startup
   or exit, or is a tiny user-initiated write). Stale entries fail too.
 
+### 3.14 AI-Agent Token Efficiency & File/Function Budgets
+
+OPTS is developed with heavy participation from autonomous AI coding agents. To minimize both **input token consumption** (`read_file` context pollution) and **output token payloads** (`edit_file` target/replacement block sizes), all source files follow the two-tier structural budget established in [AI-Agent Token Optimization](../architecture/ai-token-optimization.md) ([Phase 15](../roadmap/phase-15/README.md)):
+
+| Rule | Target / Optimum | Hard Ceiling (Ratcheted) | Rationale |
+| :--- | :--- | :--- | :--- |
+| **R1 — Production File Size** (`crates/*/src/**/*.rs`, excl. `tests.rs`) | **150–200 code lines** (~1,600–2,100 tokens) | **350 code lines** (ratcheted down from 500 in [M-0147](../roadmap/phase-15/M-0147.md)) | Prevents multi-concern 400–500 line files without forcing micro-file fragmentation (~131 boilerplate tokens + extra tool calls per split file). |
+| **R2 — Inline Test Separation** (`#[cfg(test)]` in `src/`) | **0 inline test lines** when file > 250 code lines | **250 code lines** when `test_code > 0` ([M-0148](../roadmap/phase-15/M-0148.md)) | Agents reading production logic never pay input tokens for test fixtures; tests in files > 250 lines belong in a sibling `tests.rs`. |
+| **R3 — Function Size Limit** (`fn` bodies in `src/`) | **≤ 40 code lines** (~430 tokens) | **80 code lines** (`docs/dev/function-known.txt`, [M-0150](../roadmap/phase-15/M-0150.md)) | Directly bounds `edit_file` output token payloads to < 900 tokens per function edit and reduces indentation/context-mismatch retries. |
+| **R4 — ECS `SystemParam` Bundling** | **≤ 7 system parameters** | **0 new `#[allow(clippy::too_many_arguments \| clippy::type_complexity)]`** ([M-0150](../roadmap/phase-15/M-0150.md)) | Replaces 10–16 argument Bevy system signatures with reusable `#[derive(SystemParam)]` structs, saving 15–25 lines per system. |
+
+**Enforcement:** `scripts/structure_audit.py check` runs in both `scripts/pre-commit` and `scripts/local-ci.sh` ([M-0147](../roadmap/phase-15/M-0147.md)), ratcheting `docs/dev/structure-known.txt` and `docs/dev/function-known.txt` so existing exceptions may only shrink and no new violations can be committed.
+
 ---
 
 ## 🔧 Tooling
@@ -861,6 +874,7 @@ Before submitting a pull request, verify:
 
 - [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) — Contribution workflow
 - [`dev/prompts/README.md`](../../dev/prompts/README.md) — Dev agent prompt library (replaces the deprecated `PROMPTS.md`)
+- [`docs/src/architecture/ai-token-optimization.md`](../architecture/ai-token-optimization.md) — Empirical research and token cost model for Phase 15 file/function budgets
 - [`docs/src/adr/0001-why-bevy-and-rust.md`](../adr/0001-why-bevy-and-rust.md) — Technology choices
 - [`docs/src/adr/0002-clean-room-policy.md`](../adr/0002-clean-room-policy.md) — Legal constraints
 - [`docs/src/glossary.md`](../glossary.md) — Shared vocabulary
@@ -876,6 +890,7 @@ Before submitting a pull request, verify:
 
 ## 📝 Changelog
 
+- `2026-10-28` — Added §3.14 on AI-agent token efficiency, two-tier file budgets (150–200 optimum, 250 inline-test trigger, 350 ceiling), function ratchets, and `SystemParam` bundling (Phase 15).
 - `2026-10-14` — Added the rule on generated files and test artefacts.
 - `2026-10-04` — Initial version. Three-part structure: universal
   principles, Rust practices, OPTS design conventions.

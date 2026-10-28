@@ -112,15 +112,15 @@ else
     STATUS_ROADMAP="skipped (no python3)"
 fi
 
-# 7. Structure: files over 500 lines of code may only shrink (M-0125, docs/dev/structure-known.txt)
+# 7. Structure: file/function/inline-test/allow ratchets (M-0125, M-0147)
 echo
-echo "--- Checking the structure of the code (file-size ratchet) ---"
+echo "--- Checking the structure of the code (Phase 15 ratchets) ---"
 if command -v python3 >/dev/null 2>&1; then
     STRUCT_OK=1
     python3 scripts/test_structure_audit.py >/dev/null 2>&1 || { echo >&2 "scripts/test_structure_audit.py failed"; STRUCT_OK=0; }
     if ! python3 scripts/structure_audit.py check; then
-        echo >&2 "A file is over the 500-line limit or grew beyond docs/dev/structure-known.txt."
-        echo >&2 "Split it by concern (standards.md 3.7); see the FAIL lines above for the file."
+        echo >&2 "A file, inline-test block, function, or allow grew beyond docs/dev/structure-known.txt or function-known.txt."
+        echo >&2 "Split by concern or extract helpers (standards.md §3.7 & §3.14); see the FAIL lines above."
         STRUCT_OK=0
     fi
     if [ "$STRUCT_OK" -eq 1 ]; then

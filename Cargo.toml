@@ -78,7 +78,6 @@ bevy = { version = "0.20", features = ["file_watcher", "system_font_discovery"] 
 
 # --- Parsing & Serialization ---
 nom = "7.1"                 # For parsing OMSI text config files (.sco, .sli, .cfg)
-binrw = "0.13"              # For parsing the binary .o3d files (much better than manual byte reading)
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ron = "0.8"                 # Rusty Object Notation for config files/save games

@@ -1,34 +1,37 @@
 #!/usr/bin/env python3
-"""Structure audit of the Rust code (M-0125): file and function sizes, modules, crates, standards.
+"""Structure audit of the Rust code (M-0125, M-0147): file/function sizes, inline tests, allows, crates.
 
 A repeatable measurement of the codebase's structure, in the units of `docs/src/contributing/
-standards.md`, so a refactoring cycle (Phase 999) can show that it improved something and CI can
-refuse a regression.
+standards.md` (§3.7 and §3.14), so a refactoring cycle (Phase 15 / Phase 999) can show that it
+improved something and pre-commit / CI can refuse a regression.
 
 Sub-commands (Python 3, no dependencies):
 
   report [--date YYYY-MM-DD] [--out FILE]  write the Markdown report (default
                                            docs/src/meta/structure-audit-<date>.md)
-  check                                    the ratchet: exit 1 when a file grew beyond what
-                                           docs/dev/structure-known.txt records, or a new file
-                                           passes the limit
+  check                                    the ratchet: exit 1 when a file, inline-test file,
+                                           function (> 80 LOC), or signature allow grew beyond what
+                                           docs/dev/structure-known.txt or
+                                           docs/dev/function-known.txt records
   json                                     the measurements as JSON (for a cycle comparison)
-  seed                                     (re)write docs/dev/structure-known.txt from the tree,
-                                           keeping the reasons of entries that already exist
+  seed                                     (re)write docs/dev/structure-known.txt and
+                                           docs/dev/function-known.txt from the tree, keeping the
+                                           reasons of entries that already exist
   show PATH...                             total, code, comment, blank and test lines of files
                                            (the before and after counts of a commit message)
 
-MEASUREMENT RULES (quoted from standards.md section 3.7: "No .rs file exceeds 500 lines of code,
-excluding doc comments and blank lines"):
+MEASUREMENT RULES (standards.md §3.7 & §3.14):
 
   * a *blank* line has only whitespace; a *comment* line has no code outside comments (line
     comments `//`, doc comments `///` and `//!`, block comments `/* */`, nested); every other line
     is *code*, including a line with code and a trailing comment, and a line inside a string.
   * the in-file unit tests (`#[cfg(test)] mod tests { .. }`) **count**: the standard says "lines of
-    code" of the file; the report also shows how many of them are tests, because moving a test
-    module out is the cheapest split.
-  * the limit is 500 lines of code per file (the standard) and 80 per function (hard limit; 40 is
-    the target); the ratchet holds the file rule, the function rule is a warning list.
+    code" of the file; any production file (`crates/*/src/**/*.rs`, excluding `tests.rs`) over
+    250 code lines that contains inline test code (`test_code > 0`) must move its `#[cfg(test)]`
+    module to a sibling `tests.rs` file (Rule R2).
+  * the hard file limit is 350 lines of code per file (Rule R1; target 150-200) and 80 lines of
+    code per function (Rule R3; target 40), plus signature-complexity allows
+    (`too_many_arguments`, `type_complexity`, Rule R4).
   * *total* lines (what `wc -l` counts) are reported next to *code*, so the figures of the phase
     README (which are totals) can be compared: the difference is comments and blanks.
 
@@ -36,18 +39,6 @@ EXCLUDED as generated or fixture: a file whose first 5 lines contain `structure-
 or `@generated`, any file below a `golden/`, `fixtures/` or `target/` directory, and `*.generated.rs`.
 A long lookup table that must stay one file carries the marker `structure-audit: table` in its
 first 5 lines: it is measured and listed, but not held against the limit.
-
-BLIND SPOTS (a textual scan, not a Rust parser):
-  * functions inside `macro_rules!` bodies and functions produced by macros are not seen; closures
-    are part of their enclosing function;
-  * a `fn` whose signature contains a `{` outside a string (const-generic blocks) is mis-measured;
-  * `pub` items are found by line start, so `pub` items declared inside macros are not counted, and
-    a doc comment separated from its item by a non-attribute line is not seen;
-  * `unwrap()`/`expect(` are counted outside `#[cfg(test)]` modules and outside files named
-    `tests.rs`, `main.rs`, below `tests/`, `examples/`, `benches/` or `bin/`; a call in a doc
-    example is not code and is not counted;
-  * a character literal such as `'{'` is recognised; an unusual lifetime/char mix may confuse the
-    lexer for the rest of one file (the report lists files whose braces do not balance).
 """
 from __future__ import annotations
 
@@ -62,14 +53,19 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 KNOWN = ROOT / "docs/dev/structure-known.txt"
-FILE_LIMIT = 500
+FN_KNOWN = ROOT / "docs/dev/function-known.txt"
+FILE_LIMIT = 350
+INLINE_TEST_LIMIT = 250
 FN_LIMIT = 80
 FN_TARGET = 40
-REPORT_FILE_FLOOR = 400
+REPORT_FILE_FLOOR = 350
 FN_FLOOR = 60
 SKIP_DIRS = {"golden", "fixtures", "target", ".git"}
 PUB_ITEM = re.compile(r"^\s*pub\s+(?:async\s+|const\s+|unsafe\s+|extern\s+\"C\"\s+)*(fn|struct|enum|trait|type|const|static|mod)\b")
 FN_NAME = re.compile(r"(?<![A-Za-z0-9_])fn\s+([A-Za-z_][A-Za-z0-9_]*)")
+SIG_ALLOW = re.compile(r"#!?\[allow\([^]]*\b(?:clippy::)?(?:too_many_arguments|type_complexity)\b")
+CODE_STOP = re.compile(r'[/\'"]')
+BRACE = re.compile(r"[{}]")
 
 
 # --------------------------------------------------------------------------------------------
@@ -85,26 +81,35 @@ def lex(text: str) -> tuple[list[str], list[str]]:
     depth = 0  # block comment nesting
     raw_hashes = 0
     while i < n:
-        c = text[i]
-        two = text[i : i + 2]
         if state == "code":
+            m = CODE_STOP.search(text, i)
+            if m is None:
+                out.append(text[i:])
+                break
+            if m.start() > i:
+                out.append(text[i : m.start()])
+                i = m.start()
+            c = text[i]
+            two = text[i : i + 2]
             if two == "//":
-                state = "line"
-                out.append("  ")
-                i += 2
+                nl = text.find("\n", i + 2)
+                if nl == -1:
+                    out.append(" " * (n - i))
+                    break
+                out.append(" " * (nl - i) + "\n")
+                i = nl + 1
             elif two == "/*":
                 state = "block"
                 depth = 1
                 out.append("  ")
                 i += 2
             elif c == '"':
-                # raw string? look back for r / br and #s
-                j = len(out) - 1
+                j = i - 1
                 hashes = 0
-                while j >= 0 and out[j] == "#":
+                while j >= 0 and text[j] == "#":
                     hashes += 1
                     j -= 1
-                if j >= 0 and out[j] == "r" and (j == 0 or not (out[j - 1].isalnum() or out[j - 1] == "_") or out[j - 1] == "b"):
+                if j >= 0 and text[j] == "r" and (j == 0 or not (text[j - 1].isalnum() or text[j - 1] == "_") or text[j - 1] == "b"):
                     state = "rawstr"
                     raw_hashes = hashes
                 else:
@@ -112,7 +117,6 @@ def lex(text: str) -> tuple[list[str], list[str]]:
                 out.append('"')
                 i += 1
             elif c == "'":
-                # char literal or lifetime
                 if text[i + 1 : i + 2] == "\\":
                     j = text.find("'", i + 2)
                     j = j if j != -1 else i + 1
@@ -127,14 +131,8 @@ def lex(text: str) -> tuple[list[str], list[str]]:
             else:
                 out.append(c)
                 i += 1
-        elif state == "line":
-            if c == "\n":
-                state = "code"
-                out.append("\n")
-            else:
-                out.append(" ")
-            i += 1
         elif state == "block":
+            two = text[i : i + 2]
             if two == "/*":
                 depth += 1
                 out.append("  ")
@@ -146,9 +144,10 @@ def lex(text: str) -> tuple[list[str], list[str]]:
                 if depth == 0:
                     state = "code"
             else:
-                out.append("\n" if c == "\n" else " ")
+                out.append("\n" if text[i] == "\n" else " ")
                 i += 1
         elif state == "str":
+            c = text[i]
             if c == "\\" and i + 1 < n:
                 out.append("  " if text[i + 1] != "\n" else " \n")
                 i += 2
@@ -160,6 +159,7 @@ def lex(text: str) -> tuple[list[str], list[str]]:
                 out.append("\n" if c == "\n" else " ")
                 i += 1
         else:  # rawstr
+            c = text[i]
             if c == '"' and text[i + 1 : i + 1 + raw_hashes] == "#" * raw_hashes:
                 state = "code"
                 out.append('"' + " " * raw_hashes)
@@ -169,14 +169,10 @@ def lex(text: str) -> tuple[list[str], list[str]]:
                 i += 1
     cleaned = "".join(out).split("\n")
     orig = text.split("\n")
-    classes = []
-    for k, line in enumerate(cleaned):
-        if k < len(orig) and not orig[k].strip():
-            classes.append("blank")
-        elif line.strip():
-            classes.append("code")
-        else:
-            classes.append("comment")
+    classes = [
+        "blank" if (k < len(orig) and not orig[k].strip()) else ("code" if line.strip() else "comment")
+        for k, line in enumerate(cleaned)
+    ]
     return classes, cleaned
 
 
@@ -205,6 +201,7 @@ class FileInfo:
     has_module_doc: bool = True
     undocumented_pub: list[int] = field(default_factory=list)
     allow_without_reason: list[int] = field(default_factory=list)
+    signature_allows: int = 0
     unwraps: list[int] = field(default_factory=list)
     tests: int = 0
     unbalanced: bool = False
@@ -215,14 +212,13 @@ class FileInfo:
 def balanced_end(cleaned_text: str, open_at: int) -> int:
     """Index of the `}` matching the `{` at `open_at`, or -1."""
     depth = 0
-    for k in range(open_at, len(cleaned_text)):
-        ch = cleaned_text[k]
-        if ch == "{":
+    for m in BRACE.finditer(cleaned_text, open_at):
+        if m.group() == "{":
             depth += 1
-        elif ch == "}":
+        else:
             depth -= 1
             if depth == 0:
-                return k
+                return m.start()
     return -1
 
 
@@ -352,6 +348,8 @@ def measure(path: Path) -> FileInfo | None:
             prev = orig[k - 1].strip() if k else ""
             if "//" not in line.split("]", 1)[-1] and not prev.startswith("//"):
                 info.allow_without_reason.append(k + 1)
+        if SIG_ALLOW.search(cleaned[k]) and k not in in_test:
+            info.signature_allows += 1
     if info.is_library_path:
         for k, line in enumerate(cleaned):
             if k in in_test:
@@ -433,65 +431,170 @@ def module_table(files: list[FileInfo]) -> list[dict]:
 
 
 # --------------------------------------------------------------------------------------------
-# Ratchet
+# Ratchet (R1: FILE_LIMIT=350, R2: INLINE_TEST_LIMIT=250 w/ test_code>0, R3: FN_LIMIT=80, R4: allows)
 # --------------------------------------------------------------------------------------------
+def has_inline_test_violation(f: FileInfo) -> bool:
+    return f.is_library_path and f.code > INLINE_TEST_LIMIT and f.test_code > 0 and f.marker != "table"
+
+
 def over_limit(files: list[FileInfo]) -> dict[str, int]:
-    return {f.path: f.code for f in files if f.code > FILE_LIMIT and f.marker != "table"}
+    return {
+        f.path: f.code
+        for f in files
+        if (f.code > FILE_LIMIT or has_inline_test_violation(f)) and f.marker != "table"
+    }
 
 
-def read_known() -> tuple[dict[str, int], dict[str, str]]:
+def fn_and_allow_over_limit(files: list[FileInfo]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for f in files:
+        if f.marker == "table":
+            continue
+        for fn in f.fns:
+            if fn.code > FN_LIMIT:
+                key = f"{f.path}::{fn.name}"
+                out[key] = max(out.get(key, 0), fn.code)
+        if f.signature_allows > 0:
+            out[f"{f.path}::@allow"] = f.signature_allows
+    return out
+
+
+def read_known_file(path: Path) -> tuple[dict[str, int], dict[str, str]]:
     sizes, reasons = {}, {}
-    if KNOWN.exists():
-        for line in KNOWN.read_text(encoding="utf-8").splitlines():
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
             if not line.strip() or line.startswith("#"):
                 continue
-            body, _, reason = line.partition("#")
-            path, num = body.split()
-            sizes[path] = int(num)
-            reasons[path] = reason.strip()
+            parts = re.split(r"\s+#", line, maxsplit=1)
+            body = parts[0]
+            reason = parts[1].strip() if len(parts) > 1 else ""
+            key, num = body.split()
+            sizes[key] = int(num)
+            reasons[key] = reason
     return sizes, reasons
 
 
+def read_known() -> tuple[dict[str, int], dict[str, str]]:
+    return read_known_file(KNOWN)
+
+
+def read_fn_known() -> tuple[dict[str, int], dict[str, str]]:
+    return read_known_file(FN_KNOWN)
+
+
 def cmd_check(files: list[FileInfo]) -> int:
+    by_path = {f.path: f for f in files}
     now = over_limit(files)
     known, _ = read_known()
     bad = 0
     for path, code in sorted(now.items()):
+        f = by_path[path]
         if path not in known:
-            print(f"FAIL {path}: {code} lines of code, over the {FILE_LIMIT}-line limit and not in "
-                  f"docs/dev/structure-known.txt (split it by concern, or record it with a reason)")
+            if f.code <= FILE_LIMIT and has_inline_test_violation(f):
+                print(
+                    f"FAIL {path}: {code} lines of code (with {f.test_code} in #[cfg(test)]), over the "
+                    f"{INLINE_TEST_LIMIT}-line inline-test limit and not in docs/dev/structure-known.txt "
+                    f"(move #[cfg(test)] to tests.rs)"
+                )
+            else:
+                print(
+                    f"FAIL {path}: {code} lines of code, over the {FILE_LIMIT}-line limit and not in "
+                    f"docs/dev/structure-known.txt (split it by concern, or record it with a reason)"
+                )
             bad += 1
         elif code > known[path]:
-            print(f"FAIL {path}: grew from {known[path]} to {code} lines of code (it is over the "
-                  f"{FILE_LIMIT}-line limit; known files may only shrink)")
+            print(
+                f"FAIL {path}: grew from {known[path]} to {code} lines of code (it is over the "
+                f"{FILE_LIMIT}-line / {INLINE_TEST_LIMIT}-line inline-test limit; known files may only shrink)"
+            )
             bad += 1
         elif code < known[path]:
             print(f"ok   {path}: {code} (known {known[path]}: lower the ratchet with `structure_audit.py seed`)")
     for path in sorted(set(known) - set(now)):
         print(f"ok   {path}: no longer over the limit (remove it from docs/dev/structure-known.txt with `seed`)")
-    print(f"structure: {len(now)} files over {FILE_LIMIT} lines of code, {len(known)} known, {bad} regression(s)")
+
+    fn_now = fn_and_allow_over_limit(files)
+    fn_known, _ = read_fn_known()
+    for key, val in sorted(fn_now.items()):
+        is_allow = key.endswith("::@allow")
+        if key not in fn_known:
+            if is_allow:
+                path = key[: -len("::@allow")]
+                print(
+                    f"FAIL {path}: {val} signature-complexity #[allow] attribute(s) "
+                    f"(too_many_arguments/type_complexity), not in docs/dev/function-known.txt "
+                    f"(bundle parameters into #[derive(SystemParam)])"
+                )
+            else:
+                print(
+                    f"FAIL {key}: {val} lines of code, over the {FN_LIMIT}-line function limit and not in "
+                    f"docs/dev/function-known.txt (extract helpers <= {FN_TARGET} lines)"
+                )
+            bad += 1
+        elif val > fn_known[key]:
+            unit = "signature-complexity #[allow](s)" if is_allow else "lines of code"
+            print(f"FAIL {key}: grew from {fn_known[key]} to {val} {unit} (known entries may only shrink)")
+            bad += 1
+        elif val < fn_known[key]:
+            print(f"ok   {key}: {val} (known {fn_known[key]}: lower the ratchet with `structure_audit.py seed`)")
+    for key in sorted(set(fn_known) - set(fn_now)):
+        print(f"ok   {key}: no longer over the limit (remove it from docs/dev/function-known.txt with `seed`)")
+
+    over_350 = sum(1 for f in files if f.code > FILE_LIMIT and f.marker != "table")
+    inline_250 = sum(1 for f in files if has_inline_test_violation(f))
+    fns_80 = sum(1 for k in fn_now if not k.endswith("::@allow"))
+    allows = sum(v for k, v in fn_now.items() if k.endswith("::@allow"))
+    print(
+        f"structure: {over_350} files over {FILE_LIMIT} LOC, {inline_250} prod files > {INLINE_TEST_LIMIT} LOC "
+        f"with inline tests, {fns_80} functions > {FN_LIMIT} LOC, {allows} signature allows, {bad} regression(s)"
+    )
     return 1 if bad else 0
 
 
 def cmd_seed(files: list[FileInfo]) -> int:
+    by_path = {f.path: f for f in files}
     now = over_limit(files)
     _, reasons = read_known()
     lines = [
-        "# Files over the 500-line limit (lines of code, standards.md 3.7) that are tolerated for now.",
-        "# Format: <path> <lines of code>  # <reason or the planned cycle>. A known file may only shrink;",
-        "# a file that is not listed and passes 500 lines fails `scripts/structure_audit.py check`.",
+        f"# Files over the {FILE_LIMIT}-line limit (R1) or production files over {INLINE_TEST_LIMIT} lines with inline",
+        "# #[cfg(test)] modules (R2, standards.md §3.7 & §3.14) that are tolerated for now.",
+        "# Format: <path> <lines of code>  # <reason or planned milestone>. A known file may only shrink;",
+        f"# a new file over {FILE_LIMIT} lines (or > {INLINE_TEST_LIMIT} lines with inline tests) fails `structure_audit.py check`.",
         "# Regenerate (keeping the reasons) with `python3 scripts/structure_audit.py seed`.",
     ]
     for path, code in sorted(now.items()):
+        f = by_path[path]
         if path in reasons and reasons[path]:
             reason = reasons[path]
+        elif has_inline_test_violation(f) and f.code - f.test_code <= FILE_LIMIT:
+            reason = f"planned: M-0148 batch 1 (extract {f.test_code} inline test lines to tests.rs)"
+        elif has_inline_test_violation(f):
+            reason = f"planned: M-0148 + M-0149 (extract {f.test_code} test lines to tests.rs, then split > {FILE_LIMIT} LOC)"
         elif "/examples/" in path or "/tests/" in path or path.endswith("/tests.rs"):
-            reason = "planned: M-0128 batch 4 (oversized test file or example: split by concern)"
+            reason = "planned: M-0149 batch 2 (oversized test or example file: split by concern)"
         else:
-            reason = "planned: M-0127 / M-0128 (refactoring cycle 1: split along concern boundaries)"
+            reason = f"planned: M-0149 batch 2 (split production file > {FILE_LIMIT} LOC along concern boundaries)"
         lines.append(f"{path} {code}  # {reason}")
     KNOWN.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"wrote {KNOWN.relative_to(ROOT)}: {len(now)} files")
+
+    fn_now = fn_and_allow_over_limit(files)
+    _, fn_reasons = read_fn_known()
+    fn_lines = [
+        f"# Functions over the {FN_LIMIT}-line limit (R3) and per-file signature-complexity #[allow] counts",
+        "# (too_many_arguments / type_complexity, R4, standards.md §3.7 & §3.14) tolerated for now.",
+        "# Format: <path>::<fn_name_or_@allow> <code_lines_or_count>  # <reason>. Entries may only shrink.",
+        "# Regenerate (keeping the reasons) with `python3 scripts/structure_audit.py seed`.",
+    ]
+    for key, val in sorted(fn_now.items()):
+        if key in fn_reasons and fn_reasons[key]:
+            reason = fn_reasons[key]
+        elif key.endswith("::@allow"):
+            reason = "planned: M-0150 batch 3 (bundle system parameters into #[derive(SystemParam)])"
+        else:
+            reason = f"planned: M-0150 batch 3 (decompose function > {FN_LIMIT} LOC into <= {FN_TARGET}-line helpers)"
+        fn_lines.append(f"{key} {val}  # {reason}")
+    FN_KNOWN.write_text("\n".join(fn_lines) + "\n", encoding="utf-8")
+    print(f"wrote {KNOWN.relative_to(ROOT)}: {len(now)} files; {FN_KNOWN.relative_to(ROOT)}: {len(fn_now)} entries")
     return 0
 
 
@@ -512,7 +615,7 @@ def cmd_report(files: list[FileInfo], date: str, out: Path | None) -> int:
     total_lines = sum(f.total for f in files)
     code = sum(f.code for f in files)
     big = sorted(files, key=lambda f: -f.code)
-    thresholds = [400, 500, 800, 1000]
+    thresholds = [250, 350, 400, 500, 800, 1000]
     by_total = {t: sum(1 for f in files if f.total > t) for t in thresholds}
     by_code = {t: sum(1 for f in files if f.code > t) for t in thresholds}
     all_fns = [(f, fn) for f in files for fn in f.fns]
@@ -526,9 +629,11 @@ def cmd_report(files: list[FileInfo], date: str, out: Path | None) -> int:
         ["total lines (`wc -l`)", f"{total_lines:,}"],
         ["lines of code (no comments, no blanks)", f"{code:,}"],
         ["comment lines / blank lines", f"{sum(f.comment for f in files):,} / {sum(f.blank for f in files):,}"],
-        [f"files over {FILE_LIMIT} lines of code (the rule)", by_code[500]],
-        ["functions over 80 lines of code (the hard limit)", sum(1 for _, fn in all_fns if fn.code > FN_LIMIT)],
-        ["functions over 40 lines of code (the target)", sum(1 for _, fn in all_fns if fn.code > FN_TARGET)],
+        [f"files over {FILE_LIMIT} lines of code (R1 hard ceiling)", by_code[FILE_LIMIT]],
+        [f"production files over {INLINE_TEST_LIMIT} lines of code with inline tests (R2)", sum(1 for f in files if has_inline_test_violation(f))],
+        ["functions over 80 lines of code (R3 hard limit)", sum(1 for _, fn in all_fns if fn.code > FN_LIMIT)],
+        ["functions over 40 lines of code (R3 target)", sum(1 for _, fn in all_fns if fn.code > FN_TARGET)],
+        ["signature-complexity `#[allow]` attributes (R4)", sum(f.signature_allows for f in files)],
     ]))
     parts.append("\nFiles above a size, counted two ways. The Phase 999 README counts **total** lines; the standard counts **lines of code**; the difference is comments and blank lines.\n")
     parts.append(md_table(["Over", "total lines", "lines of code"], [[t, by_total[t], by_code[t]] for t in thresholds]))
@@ -557,13 +662,13 @@ def cmd_report(files: list[FileInfo], date: str, out: Path | None) -> int:
         parts.append("\nSingle-file module directories: " + ", ".join(f"`{d}`" for d in singles) + "\n")
     tops = [f for f in files if re.fullmatch(r"crates/[^/]+/src/[^/]+\.rs", f.path) and not f.path.endswith(("lib.rs", "main.rs")) and f.code > REPORT_FILE_FLOOR]
     if tops:
-        parts.append("\nFiles at a crate's top level over 400 lines of code that probably belong in a submodule: " + ", ".join(f"`{f.path}` ({f.code})" for f in tops) + "\n")
+        parts.append(f"\nFiles at a crate's top level over {REPORT_FILE_FLOOR} lines of code that probably belong in a submodule: " + ", ".join(f"`{f.path}` ({f.code})" for f in tops) + "\n")
     parts.append("\n## 6. Crates\n")
     parts.append(md_table(["Crate", "files", "code", "pub items", "module depth", "external dependencies", "notes"], [[f"`{c['crate']}`", c["files"], f"{c['code']:,}", c["pub_items"], c["depth"], ", ".join(c["external"]) or "none", "; ".join(c["notes"]) or ""] for c in crates]))
     parts.append("\n## 7. Standards violations (textual scan)\n")
     lib_files = [f for f in files if f.path.split("/")[2:3] == ["src"]]
     parts.append(md_table(["Rule", "count", "worst files"], [
-        [f"file over {FILE_LIMIT} lines of code (3.7)", by_code[500], ", ".join(f"`{f.path.split('/')[-1]}` {f.code}" for f in big[:3])],
+        [f"file over {FILE_LIMIT} lines of code (3.7 / 3.14)", by_code[FILE_LIMIT], ", ".join(f"`{f.path.split('/')[-1]}` {f.code}" for f in big[:3])],
         [f"function over {FN_LIMIT} lines of code", sum(1 for _, fn in all_fns if fn.code > FN_LIMIT), ", ".join(f"`{fn.name}` {fn.code}" for _, fn in fn_over[:3])],
         ["module file without a `//!` document (3.8)", sum(1 for f in lib_files if not f.has_module_doc), ", ".join(f"`{f.path}`" for f in [f for f in lib_files if not f.has_module_doc][:3])],
         ["`pub` item without a `///` document (3.9)", sum(len(f.undocumented_pub) for f in lib_files), ", ".join(f"`{f.path.split('/')[-1]}` {len(f.undocumented_pub)}" for f in sorted(lib_files, key=lambda f: -len(f.undocumented_pub))[:3] if f.undocumented_pub)],
@@ -577,10 +682,10 @@ def cmd_report(files: list[FileInfo], date: str, out: Path | None) -> int:
     tests = sorted((f for f in files if f.is_test_file and f.total > 500), key=lambda f: -f.total)
     parts.append(md_table(["File", "total", "code", "`#[test]` count"], [[f"`{f.path}`", f.total, f.code, f.tests] for f in tests]) if tests else "None.")
     parts.append("\n## 9. How to read this\n")
-    parts.append("The numbers come from a textual scan (blind spots in the script header). A cycle (Phase 999) runs `report` before and after and compares; CI runs `check`, which holds only the file rule: a file over 500 lines of code that is not in `docs/dev/structure-known.txt`, or a known one that grew, fails. Known files may shrink freely; to record a new exception, edit the file with a reason in the commit.\n")
+    parts.append(f"The numbers come from a textual scan (blind spots in the script header). Pre-commit and CI run `check`, which enforces the four Phase 15 ratchets (`docs/dev/structure-known.txt` and `docs/dev/function-known.txt`): files over {FILE_LIMIT} lines of code, production files over {INLINE_TEST_LIMIT} lines with inline tests, functions over {FN_LIMIT} lines, and signature-complexity `#[allow]` attributes. Known items may shrink freely.\n")
     target = out or ROOT / f"docs/src/meta/structure-audit-{date}.md"
     target.write_text("\n".join(parts) + "\n", encoding="utf-8")
-    print(f"wrote {target.relative_to(ROOT) if target.is_relative_to(ROOT) else target}: {len(files)} files, {code:,} lines of code, {by_code[500]} over {FILE_LIMIT}")
+    print(f"wrote {target.relative_to(ROOT) if target.is_relative_to(ROOT) else target}: {len(files)} files, {code:,} lines of code, {by_code[FILE_LIMIT]} over {FILE_LIMIT}")
     return 0
 
 
@@ -600,11 +705,12 @@ def cmd_show(files: list[FileInfo], paths: list[str]) -> int:
 def cmd_json(files: list[FileInfo]) -> int:
     print(json.dumps({
         "files": [dict(path=f.path, crate=f.crate, total=f.total, code=f.code, comment=f.comment, blank=f.blank,
-                       test_code=f.test_code, marker=f.marker,
+                       test_code=f.test_code, signature_allows=f.signature_allows, marker=f.marker,
                        functions=[dict(name=x.name, code=x.code, start=x.start, end=x.end) for x in f.fns if x.code > FN_FLOOR])
                   for f in files],
         "crates": crate_table(files),
         "over_limit": over_limit(files),
+        "fn_over_limit": fn_and_allow_over_limit(files),
     }, indent=1))
     return 0
 
@@ -617,10 +723,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path)
     ap.add_argument("--root", type=Path, help="measure another tree (tests)")
     a = ap.parse_args(argv)
-    global ROOT, KNOWN
+    global ROOT, KNOWN, FN_KNOWN
     if a.root:
         ROOT = a.root.resolve()
         KNOWN = ROOT / "docs/dev/structure-known.txt"
+        FN_KNOWN = ROOT / "docs/dev/function-known.txt"
     files = collect()
     if a.command == "check":
         return cmd_check(files)

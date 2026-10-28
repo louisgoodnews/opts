@@ -60,6 +60,11 @@ jobs:
       - name: Check compilation (all targets)
         run: cargo check --workspace --all-targets
 
+      - name: Dependency license and ban check (M-0042)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          arguments: check licenses bans sources
+
   docs-links:
     name: Documentation links
     runs-on: ubuntu-latest
@@ -79,6 +84,14 @@ jobs:
 
       - name: Crate graph matches the workspace
         run: python3 scripts/crate_graph.py --check
+
+      - name: Structure and function ratchets (M-0125, M-0147)
+        run: |
+          python3 scripts/test_structure_audit.py
+          python3 scripts/structure_audit.py check
+
+      - name: Legacy OMSI boundary ratchet (Phase 13)
+        run: python3 scripts/omsi_uses.py --check
 
   windows:
     name: Windows build and tests

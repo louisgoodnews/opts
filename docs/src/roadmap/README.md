@@ -27,6 +27,7 @@
 | 🎨 **Phase 12** — Visual Fidelity & Advanced Physics | dirt and light maps, wetness and snow, graphics overhaul, fuel and battery, passenger load | 🟡 approved 2026-10-20 — M-0124 in progress (mass, axle loads, ride height, override; save field open); M-0120–M-0123 not started | [`phase-12/`](phase-12/README.md) |
 | 🏗️ **Phase 13** — Crate Architecture: Legacy vs. Native Separation | `opts-omsi` (legacy parsers, leaf adapter), `opts-model` (native TOML), shared base crate; no engine crate depends on `opts-omsi` | ✅ delivered 2026-10-19 (no direct Cargo dependency on opts-omsi); consumer migration not started — engine crates still reach OMSI types through the opts-core facade (omsi_uses.py: bevy 130, sim 31, traffic 14, catalogue 5, unchanged since 2026-10-19) | [`phase-13/`](phase-13/README.md) |
 | 🛠️ **Phase 14** — Vehicle Overrides & Visual Editor | `VehicleProfile` TOML patch layer (sound, script, constant, mesh swaps with validation) and an in-game visual mesh editor | 📝 proposed 2026-10-19, design first | [`phase-14/`](phase-14/README.md) |
+| 🤖 **Phase 15** — AI-Optimized Code Structure & Pre-Commit Enforcement | two-tier file budget (150–200 optimum, 250 inline-test split, 350 ceiling), 80-line function ratchet, `SystemParam` bundling, and `< 1.5 s` pre-commit enforcement | 🟡 in progress — M-0147 done 2026-10-28; M-0148–M-0150 open ([research](../architecture/ai-token-optimization.md)) | [`phase-15/`](phase-15/README.md) |
 | ♾️ **Phase 999** — Refactoring Taskforce (continuous) | a structural cleanup without behaviour change at the end of every development cycle and before every versioned release | ♾️ continuous; set-up and cycle 1 done 2026-10-19 (63 → 0 files over 500 lines of code, still 0 on 2026-10-25); cycle 2 not started | [`phase-999/`](phase-999/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
@@ -247,10 +248,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🧹 Audit-Driven Hardening (audit 5037f89a, 2026-10-10)**
   - [~] Code-quality debt (rustdoc, panics, fixtures, stubs, Bevy bundle links and file splits done — 0 files over 500 lines of code; function splits and `SystemParam` grouping open): size limits, panics in library code, stubs, rustdoc — [M-0040](phase-5/M-0040.md) (F-005, F-006, F-009–F-012).
   - [x] Documentation repair and developer switch reference — [M-0041](phase-5/M-0041.md) (F-013, F-018, F-020–F-023).
-  - [~] CI and toolchain hardening (running on GitHub since 2026-10-13; every job green since 2026-10-25, the Windows test failures were test assumptions about line ends, letter case, Unix paths and timing; `binrw` no longer built; broken-link proof open): link check, mdBook build, toolchain pin, Windows job — [M-0042](phase-5/M-0042.md) (F-024–F-026).
+  - [~] CI and toolchain hardening (running on GitHub since 2026-10-13; every job green since 2026-10-25, the Windows test failures were test assumptions about line ends, letter case, Unix paths and timing; `binrw` removed and `cargo-deny-action` added 2026-10-28; broken-link proof open): link check, mdBook build, toolchain pin, Windows job — [M-0042](phase-5/M-0042.md) (F-024–F-026).
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../meta/critical-review-2026-10-11.md))**
   - [ ] 🟡 GitHub hosts the repository (2026-10-24), CI runs on every branch, commits can be gated on the staged tree (`scripts/install-hooks.sh`); Pages deploys and the site is live; `ci.yml` fully green since 2026-10-25; open: the remote broken-push proof — [M-0052](phase-5/M-0052.md) (F-001, F-018, F-019, F-020).
-  - [~] Stop the size and lint-allow growth: fail CI on new size violations (file ratchet in `local-ci.sh` since 2026-10-19, M-0125; not in hosted CI), group load-job parameters (open; lint allows 37 → 144), fix stale Bevy rustdoc links (done, `3c760f73`) (appended to [M-0040](phase-5/M-0040.md); F-005–F-007).
+  - [~] Stop the size and lint-allow growth: fail CI on new size violations (file/function/inline-test/allow ratchets in `local-ci.sh`, `pre-commit` and `ci.yml` since 2026-10-28, M-0125/M-0147), group load-job parameters (open; lint allows 37 → 140), fix stale Bevy rustdoc links (done, `3c760f73`) (appended to [M-0040](phase-5/M-0040.md); F-005–F-007).
   - [x] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](phase-5/M-0047.md); F-019) — fast-forwarded 2026-10-11.
   - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).
 - [ ] **🔬 Scenery Object Load Verification** — [M-0054](phase-5/M-0054.md) (spec: [scenery benchmark](../architecture/scenery-benchmark.md))
@@ -475,6 +476,20 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] TOML profiles in `~/.local/share/opts/vehicles/`, sound/script/constant/mesh overrides, validation warnings, derived vehicles in the selection.
 - [ ] **🛠️ In-Game Visual Mesh Editor** — [M-0137](phase-14/M-0137.md) — 📝 proposed 2026-10-19
   - [ ] Picking, gizmos, catalogue browser, live swap, undo, saving profiles.
+
+---
+
+## 🤖 Phase 15: AI-Optimized Code Structure & Pre-Commit Enforcement
+*Goal: minimise AI-agent input and output token consumption across the workspace by enforcing a two-tier source file budget (150–200 code lines target, 250-line inline-test extraction trigger, 350-line hard ceiling), an 80-line function ratchet, and Bevy `SystemParam` bundling—backed by fast `< 1.5 s` pre-commit and CI gates. Status: proposed 2026-10-28. Documents: [phase page](phase-15/README.md), [AI-Agent Token Optimization](../architecture/ai-token-optimization.md), [Coding Standards §3.14](../contributing/standards.md).*
+
+- [x] **🛡️ Structure Audit v2 & Pre-Commit Ratchet Gates** — [M-0147](phase-15/M-0147.md) — ✅ done 2026-10-28
+  - [x] Lower `FILE_LIMIT` to 350 code lines, flag production files > 250 code lines with inline `#[cfg(test)]`, ratchet functions > 80 lines (`docs/dev/function-known.txt`) and `too_many_arguments`/`type_complexity` allows, and run `structure_audit.py check` + `omsi_uses.py --check` in `scripts/pre-commit` and `.github/workflows/ci.yml`.
+- [ ] **🧪 Batch 1: Inline Test Extraction Above 250 Lines** — [M-0148](phase-15/M-0148.md) — 📝 proposed 2026-10-28
+  - [ ] Move inline `#[cfg(test)] mod tests` blocks out of the 101 production files > 250 code lines into sibling `tests.rs` files (removing 9,274 test lines from production context and dropping 47 files to ≤ 250 lines and 39 files to ≤ 350 lines).
+- [ ] **✂️ Batch 2: Production File Splits to the 350-Line Ceiling** — [M-0149](phase-15/M-0149.md) — 📝 proposed 2026-10-28
+  - [ ] Split the 102 remaining production files > 350 non-test code lines (and 18 oversized test/example files) along concern boundaries into 150–220 line modules.
+- [ ] **🧩 Batch 3: Function Size Ratchet (< 80 Lines) & ECS `SystemParam` Bundling** — [M-0150](phase-15/M-0150.md) — 📝 proposed 2026-10-28
+  - [ ] Decompose the 191 production functions > 80 code lines into ≤ 40-line helpers and replace the 155 `too_many_arguments`/`type_complexity` allows across 113 files with `#[derive(SystemParam)]` structs.
 
 ---
 

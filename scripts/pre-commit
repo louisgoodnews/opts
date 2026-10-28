@@ -45,12 +45,18 @@ echo "2. Clippy (-D warnings)..."
 cargo clippy --workspace --all-targets --all-features -- -D warnings \
     || fail "cargo clippy found warnings or errors."
 
-echo "3. Roadmap copies, links, audit and crate graph..."
+echo "3. Roadmap copies, links, audit, crate graph, structure and OMSI boundary..."
 python3 scripts/gen_roadmap_copy.py --check \
     || fail "the roadmap copies are stale: run 'python3 scripts/gen_roadmap_copy.py' and stage the result."
 python3 scripts/check_links.py || fail "a relative markdown link is broken."
 python3 scripts/roadmap_audit.py --check || fail "the roadmap, board and phase pages disagree."
 python3 scripts/crate_graph.py --check || fail "the crate graph page does not match the workspace."
+python3 scripts/test_structure_audit.py >/dev/null \
+    || fail "scripts/test_structure_audit.py failed."
+python3 scripts/structure_audit.py check \
+    || fail "structure or function ratchet failed (see docs/dev/structure-known.txt and docs/dev/function-known.txt)."
+python3 scripts/omsi_uses.py --check \
+    || fail "an engine crate added a dependency on opts_core::formats or opts_omsi."
 
 if [ "${OPTS_PRECOMMIT_TESTS:-0}" = "1" ]; then
     echo "4. Tests (cargo test)..."
