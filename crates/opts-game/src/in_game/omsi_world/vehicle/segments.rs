@@ -376,11 +376,7 @@ pub(in super::super::super) fn load_segment_meshes_for(
             )
         };
         let view_scope = opts_bevy::ViewScope::of(mesh_def.viewpoint);
-        let hot_spot = mesh_def
-            .mouseevent
-            .as_deref()
-            .map(str::trim)
-            .filter(|t| !t.is_empty());
+        let hot_spot = super::hot_spots::hot_spot_of(&lod0.meshes, mesh_index);
         if skinned {
             skins.push(SkinBinding {
                 entities: spawned.clone(),
