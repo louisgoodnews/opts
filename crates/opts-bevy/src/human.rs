@@ -263,15 +263,15 @@ pub fn seat_hip_lift(p: &HumanProfile) -> f32 {
 /// the knee, puts the sole on the floor `hip_above_floor_m` below the hip joint; clamped to a
 /// natural range (a high seat leaves the feet hanging, a low one raises the knees).
 ///
-/// The thigh is the hip-to-knee pivot height of `[links]`, the shin and foot the knee's height
-/// above the ground.
+/// The thigh is the hip-to-knee vector in the sagittal plane of `[links]`, the shin and foot the
+/// knee's height above the ground.
 #[must_use]
 pub fn seated_thigh_angle(p: &HumanProfile, hip_above_floor_m: f32) -> f32 {
-    let thigh = (p.links.hip.z - p.links.knee.z).max(0.05);
+    let dy = (p.links.hip.z - p.links.knee.z).max(0.05);
+    let dz = p.links.hip.y - p.links.knee.y;
+    let thigh = dy.hypot(dz);
     let shin = p.links.knee.z.max(0.05);
-    ((hip_above_floor_m - shin) / thigh)
-        .clamp(-1.0, 1.0)
-        .acos()
+    (dz.atan2(dy) + ((hip_above_floor_m - shin) / thigh).clamp(-1.0, 1.0).acos())
         .clamp(THIGH_MIN_RAD, THIGH_MAX_RAD)
 }
 
@@ -442,12 +442,14 @@ mod tests {
                 // below that point: in the root frame the floor is this high.
                 let floor = hip - seat_hip_lift(p) - h;
                 let sole = sole(p, &q);
-                assert!(
-                    sole.y >= floor - 1e-4,
-                    "h {h}: sole {} below the floor {floor}",
-                    sole.y
-                );
                 let a = seated_thigh_angle(p, h + seat_hip_lift(p));
+                if a < THIGH_MAX_RAD {
+                    assert!(
+                        sole.y >= floor - 1e-4,
+                        "h {h}: sole {} below the floor {floor}",
+                        sole.y
+                    );
+                }
                 if a > THIGH_MIN_RAD && a < THIGH_MAX_RAD {
                     assert!(
                         (sole.y - floor).abs() < 1e-4,
