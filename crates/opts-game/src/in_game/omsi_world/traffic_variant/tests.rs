@@ -1,7 +1,7 @@
 //! Unit tests for `super` (`traffic_variant.rs`).
 
 use super::*;
-use opts_core::formats::map::UnschedGroup;
+use opts_core::formats::map::{AiLists, UnschedGroup};
 
 fn lists() -> AiLists {
     AiLists::parse(

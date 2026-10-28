@@ -53,6 +53,9 @@ use phases::Startup;
 mod route;
 use route::{buses, depot_for, find_ci, route_report, seed_of, unconsumed, ENGINE_SET};
 
+mod summary;
+use summary::{print_summary, write_or_check_golden, SummaryCounts};
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let root = PathBuf::from(args.next().expect("OMSI root"));
@@ -332,51 +335,7 @@ fn main() {
         if let Some(o) = out.as_mut() {
             let _ = writeln!(o, "{line}");
         }
-        let golden_doc =
-            serde_json::json!({ "vehicle": rel, "frames_per_second": 60, "samples": samples });
-        if let Some(path) = &golden {
-            std::fs::write(
-                path,
-                serde_json::to_string_pretty(&golden_doc).unwrap_or_default(),
-            )
-            .expect("write the golden file");
-            println!("golden run of {rel} written to {}", path.display());
-        }
-        if let Some(path) = &check {
-            let want: serde_json::Value =
-                serde_json::from_slice(&std::fs::read(path).expect("read the golden file"))
-                    .expect("golden file is JSON");
-            let mut bad = Vec::new();
-            for (w, g) in want["samples"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .zip(golden_doc["samples"].as_array().into_iter().flatten())
-            {
-                for name in GOLDEN_VARS {
-                    let (a, b) = (
-                        w["values"][name].as_f64().unwrap_or(f64::NAN),
-                        g["values"][name].as_f64().unwrap_or(f64::NAN),
-                    );
-                    if (a - b).abs() > 0.001 + 0.02 * a.abs() {
-                        bad.push(format!("t={} {name}: golden {a}, run {b}", w["time"]));
-                    }
-                }
-            }
-            if want["samples"].as_array().map(Vec::len)
-                != golden_doc["samples"].as_array().map(Vec::len)
-            {
-                bad.push("a different number of samples".into());
-            }
-            if bad.is_empty() {
-                println!("golden run of {rel} matches");
-            } else {
-                for b in &bad {
-                    println!("{b}");
-                }
-                std::process::exit(1);
-            }
-        }
+        write_or_check_golden(&rel, &samples, golden.as_deref(), check.as_deref());
         if filter.is_some() {
             println!(
                 "{}",
@@ -385,50 +344,18 @@ fn main() {
         }
     }
 
-    frame_us.sort_by(f64::total_cmp);
-    let pct = |p: f64| {
-        frame_us
-            .get(((frame_us.len() as f64 - 1.0) * p) as usize)
-            .copied()
-            .unwrap_or(0.0)
-    };
-    let top = |m: &BTreeMap<String, usize>, n: usize| {
-        let mut v: Vec<_> = m.iter().collect();
-        v.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
-        v.into_iter()
-            .take(n)
-            .map(|(k, c)| format!("{k} {c}"))
-            .collect::<Vec<_>>()
-            .join(", ")
-    };
-    println!("{with_scripts} vehicles with scripts run for {frames} frames");
-    println!("  with a compile or load error: {load_errors}");
-    println!("  with a stack underflow at run time: {underflow_vehicles}");
-    println!("  with a non-finite variable: {non_finite_vehicles}");
-    println!(
-        "  microseconds per frame: median {:.0}, p90 {:.0}, max {:.0}",
-        pct(0.5),
-        pct(0.9),
-        pct(1.0)
-    );
-    println!(
-        "  unfed inputs ({} names): {}",
-        unfed.len(),
-        top(&unfed, 25)
-    );
-    println!(
-        "  stubbed callbacks ({} names): {}",
-        stubbed.len(),
-        top(&stubbed, 25)
-    );
-    println!(
-        "  real callbacks ({} names): {}",
-        real.len(),
-        top(&real, 25)
-    );
-    println!(
-        "  unconsumed outputs ({} names): {}",
-        unconsumed_count.len(),
-        top(&unconsumed_count, 25)
+    print_summary(
+        SummaryCounts {
+            with_scripts,
+            frames,
+            load_errors,
+            underflow_vehicles,
+            non_finite_vehicles,
+            unfed: &unfed,
+            stubbed: &stubbed,
+            real: &real,
+            unconsumed_count: &unconsumed_count,
+        },
+        &mut frame_us,
     );
 }

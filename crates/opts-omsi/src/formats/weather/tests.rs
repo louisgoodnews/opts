@@ -1,6 +1,7 @@
 //! Tests of the `weather.cfg` parser (moved out of `mod.rs`, which stays under the 500-line limit).
 
 use super::*;
+use std::collections::BTreeMap;
 
 const STORM: &str = "[name]\nSturm\n\n[description]\nEin Sturm.\nZweite Zeile.\n[end]\n\n[fog]\n700.0\n0.5\n\n[wind]\n209\n18.9\n\n[temp]\n9\n9\n\n[press]\n1013\n\n[clouds]\nCumulus 3\n200\n\n[precip]\n1\n132\n0\n-2\n0\n\n[groundwet]\n30.6\n255\n0\n";
 

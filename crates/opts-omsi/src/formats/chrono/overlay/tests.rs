@@ -1,6 +1,7 @@
 //! Unit tests of `overlay.rs` (moved out of the file to keep it under the 500-line limit, refactoring cycle 1).
 
 use super::*;
+use crate::formats::map::RuleOwner;
 
 fn object(id: u64, sco: &str, strings: &[&str]) -> String {
     let mut s = format!(

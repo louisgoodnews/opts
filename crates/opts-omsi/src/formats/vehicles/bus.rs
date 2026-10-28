@@ -7,7 +7,7 @@
 //! See specification in `docs/src/formats/text/vehicles/bus.md`.
 
 use super::error::BusParseError;
-use crate::formats::text::{decode_bytes, parse_float, scan_blocks};
+use crate::formats::text::{decode_bytes, parse_float, scan_blocks, OmsiBlock};
 
 /// Human-readable vehicle identity for selection menus.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -240,395 +240,77 @@ pub struct BusManifest {
     pub extras: VehicleExtras,
 }
 
-impl BusManifest {
-    /// Parses a `.bus` vehicle manifest from text.
-    ///
-    /// # Errors
-    /// Returns [`BusParseError`] if parameters cannot be parsed.
-    pub fn parse(text: &str) -> Result<Self, BusParseError> {
-        let blocks = scan_blocks(text);
-
-        let mut friendly_name = None;
-        let mut description = Vec::new();
-        let mut number_file = None;
-        let mut registration_mode = RegistrationMode::None;
-        let mut sound_cfg = None;
-        let mut sound_ai_cfg = None;
-        let mut model_cfg = None;
-        let mut paths_cfg = None;
-        let mut passengercabin_cfg = None;
-        let mut varnamelists = Vec::new();
-        let mut stringvarnamelists = Vec::new();
-        let mut scripts = Vec::new();
-        let mut constfiles = Vec::new();
-        let mut script_share = false;
-        let mut mass_tonnes = None;
-        let mut vehicle_type: Option<u32> = None;
-        let mut bogie_half_span: Option<f32> = None;
-        let mut bounding_box = None;
-        let mut axles = Vec::new();
-        let mut coupling_front_y = None;
-        let mut coupling_back_y = None;
-        let mut coupling_front = None;
-        let mut coupling_back = None;
-        let mut couple_back = None;
-        let mut couple_back_reversed = false;
-        let mut coupling_front_limits = None;
-        let mut driver_cameras = Vec::new();
-        let mut pax_cameras = Vec::new();
-        let mut mirror_cameras = Vec::new();
-        let mut std_camera_index = None;
-        let mut outside_camera_center = None;
-        let mut extras = VehicleExtras::default();
-        let mut legacy_inertia: Option<[f32; 3]> = None;
-
-        for block in blocks {
-            match block.keyword.as_str() {
-                "friendlyname" => {
-                    if block.parameters.len() >= 3 {
-                        friendly_name = Some(FriendlyName {
-                            manufacturer: block.parameters[0].clone(),
-                            model: block.parameters[1].clone(),
-                            livery: block.parameters[2].clone(),
-                        });
-                    }
+impl VehicleExtras {
+    pub(super) fn apply_block(&mut self, block: &OmsiBlock) -> bool {
+        match block.keyword.as_str() {
+            "momentofintertia" => {
+                let v: Vec<f32> = block
+                    .parameters
+                    .iter()
+                    .take(3)
+                    .map_while(|p| parse_float(p).ok())
+                    .collect();
+                if let [x, y, z] = v[..] {
+                    self.inertia_t_m2 = Some([x, y, z]);
                 }
-                "description" => {
-                    for line in block.parameters {
-                        if line == "[end]" {
-                            break;
-                        }
-                        description.push(line);
-                    }
-                }
-                "number" => {
-                    if let Some(first) = block.parameters.first() {
-                        number_file = Some(first.clone());
-                    }
-                }
-                "registration_list" => {
-                    if let Some(first) = block.parameters.first() {
-                        registration_mode = RegistrationMode::List(first.clone());
-                    }
-                }
-                "registration_automatic" => {
-                    if let Some(first) = block.parameters.first() {
-                        registration_mode = RegistrationMode::Automatic(first.clone());
-                    }
-                }
-                "registration_free" => {
-                    registration_mode = RegistrationMode::Free;
-                }
-                "sound" => {
-                    if let Some(first) = block.parameters.first() {
-                        sound_cfg = Some(first.clone());
-                    }
-                }
-                "sound_ai" => {
-                    if let Some(first) = block.parameters.first() {
-                        sound_ai_cfg = Some(first.clone());
-                    }
-                }
-                "model" => {
-                    if let Some(first) = block.parameters.first() {
-                        model_cfg = Some(first.clone());
-                    }
-                }
-                "paths" => {
-                    if let Some(first) = block.parameters.first() {
-                        paths_cfg = Some(first.clone());
-                    }
-                }
-                "passengercabin" => {
-                    if let Some(first) = block.parameters.first() {
-                        passengercabin_cfg = Some(first.clone());
-                    }
-                }
-                "varnamelist" => {
-                    extract_counted_list(&block.parameters, &mut varnamelists);
-                }
-                "stringvarnamelist" => {
-                    extract_counted_list(&block.parameters, &mut stringvarnamelists);
-                }
-                "script" => {
-                    extract_counted_list(&block.parameters, &mut scripts);
-                }
-                "constfile" => {
-                    extract_counted_list(&block.parameters, &mut constfiles);
-                }
-                "scriptshare" => {
-                    script_share = true;
-                }
-                "boundingbox" => {
-                    let v: Vec<f32> = block
-                        .parameters
-                        .iter()
-                        .take(6)
-                        .filter_map(|p| parse_float(p).ok())
-                        .collect();
-                    if v.len() == 6 {
-                        bounding_box = Some((
-                            glam::Vec3::new(v[0], v[1], v[2]),
-                            glam::Vec3::new(v[3], v[4], v[5]),
-                        ));
-                    }
-                }
-                "type" => {
-                    vehicle_type = block
-                        .parameters
-                        .first()
-                        .and_then(|p| p.trim().parse::<u32>().ok());
-                }
-                "boogies" => {
-                    bogie_half_span = block
-                        .parameters
-                        .first()
-                        .and_then(|p| parse_float(p).ok())
-                        .filter(|y| *y > 0.0);
-                }
-                "mass" => {
-                    if let Some(first) = block.parameters.first() {
-                        if let Ok(m) = parse_float(first) {
-                            mass_tonnes = Some(m);
-                        }
-                    }
-                    // Lines 2 to 4: the legacy moments of inertia (kept unless the modern block
-                    // gives its own).
-                    let legacy: Vec<f32> = block
-                        .parameters
-                        .iter()
-                        .skip(1)
-                        .take(3)
-                        .map_while(|p| parse_float(p).ok())
-                        .collect();
-                    if let [x, y, z] = legacy[..] {
-                        if (x, y, z) != (0.0, 0.0, 0.0) {
-                            legacy_inertia = Some([x, y, z]);
-                        }
-                    }
-                }
-                "momentofintertia" => {
-                    let v: Vec<f32> = block
-                        .parameters
-                        .iter()
-                        .take(3)
-                        .map_while(|p| parse_float(p).ok())
-                        .collect();
-                    if let [x, y, z] = v[..] {
-                        extras.inertia_t_m2 = Some([x, y, z]);
-                    }
-                }
-                "newachse" => {
-                    let mut axle = BusAxle {
-                        longitudinal_m: 0.0,
-                        max_width_m: None,
-                        min_width_m: None,
-                        wheel_diameter_m: None,
-                        spring_rate: None,
-                        max_force: None,
-                        damping: None,
-                        is_driven: false,
-                    };
-                    parse_axle_block(&block.parameters, &mut axle);
-                    axles.push(axle);
-                }
-                "coupling_front" | "coupling_back" => {
-                    // `[coupling_*]` carries `x, y, z`; the longitudinal position is the second.
-                    let v: Vec<f32> = block
-                        .parameters
-                        .iter()
-                        .take(3)
-                        .filter_map(|p| parse_float(p).ok())
-                        .collect();
-                    let front = block.keyword == "coupling_front";
-                    if v.len() >= 3 {
-                        let point = glam::Vec3::new(v[0], v[1], v[2]);
-                        if front {
-                            coupling_front = Some(point);
-                            coupling_front_y = Some(point.y);
-                        } else {
-                            coupling_back = Some(point);
-                            coupling_back_y = Some(point.y);
-                        }
-                    } else if let [y] = v[..] {
-                        // Hand-written files give only the longitudinal position.
-                        if front {
-                            coupling_front_y = Some(y);
-                        } else {
-                            coupling_back_y = Some(y);
-                        }
-                    }
-                }
-                "coupling_front_character" => {
-                    let v: Vec<f32> = block
-                        .parameters
-                        .iter()
-                        .take(4)
-                        .filter_map(|p| parse_float(p).ok())
-                        .collect();
-                    if let [a, b0, b1, k] = v[..] {
-                        coupling_front_limits = Some(CouplingLimits {
-                            max_alpha_deg: a,
-                            min_beta_deg: b0,
-                            max_beta_deg: b1,
-                            kind: k.max(0.0) as u32,
-                        });
-                    }
-                }
-                "couple_back" => {
-                    couple_back = block
-                        .parameters
-                        .first()
-                        .map(|f| f.trim().to_string())
-                        .filter(|f| !f.is_empty());
-                    couple_back_reversed = block
-                        .parameters
-                        .get(1)
-                        .is_some_and(|f| f.trim().eq_ignore_ascii_case("true"));
-                }
-                "add_camera_driver" if block.parameters.len() >= 7 => {
-                    if let Some(cam) = parse_camera_block(&block.parameters, true) {
-                        driver_cameras.push(cam);
-                    }
-                }
-                "add_camera_pax" if block.parameters.len() >= 7 => {
-                    if let Some(cam) = parse_camera_block(&block.parameters, false) {
-                        pax_cameras.push(cam);
-                    }
-                }
-                "add_camera_reflexion" | "add_camera_reflexion_2" => {
-                    if let Some(cam) = parse_mirror_block(&block.parameters) {
-                        mirror_cameras.push(cam);
-                    }
-                }
-                "set_camera_std" => {
-                    if let Some(first) = block.parameters.first() {
-                        std_camera_index = first.trim().parse::<usize>().ok();
-                    }
-                }
-                "set_camera_outside_center" if block.parameters.len() >= 3 => {
-                    let x = parse_float(&block.parameters[0]).unwrap_or(0.0);
-                    let y = parse_float(&block.parameters[1]).unwrap_or(0.0);
-                    let z = parse_float(&block.parameters[2]).unwrap_or(0.0);
-                    outside_camera_center = Some(glam::Vec3::new(x, y, z));
-                }
-                "ai_veh_type" => {
-                    extras.ai_veh_type = block
-                        .parameters
-                        .first()
-                        .and_then(|p| p.trim().parse::<u32>().ok());
-                }
-                "ai_brakeperformance" => {
-                    extras.ai_brake_performance = block
-                        .parameters
-                        .iter()
-                        .map_while(|p| parse_float(p).ok())
-                        .collect();
-                }
-                "rowdy_factor" => {
-                    let v: Vec<f32> = block
-                        .parameters
-                        .iter()
-                        .map_while(|p| parse_float(p).ok())
-                        .take(2)
-                        .collect();
-                    if let [lo, hi] = v[..] {
-                        extras.rowdy_factor = Some((lo.min(hi), lo.max(hi)));
-                    }
-                }
-                "ai_deltaheight" => extras.ai_delta_height = first_float(&block.parameters),
-                "rollwiderstand" => extras.roll_resistance_n = first_float(&block.parameters),
-                "inv_min_turnradius" => {
-                    extras.inv_min_turn_radius = first_float(&block.parameters);
-                }
-                "schwerpunkt" => {
-                    extras.centre_of_gravity_height = first_float(&block.parameters);
-                }
-                tag @ ("control_cable_front" | "control_cable_back") => {
-                    if let [kind, index, receive, send, coupling, ..] = &block.parameters[..] {
-                        if let (Some(kind), Ok(index)) =
-                            (kind.trim().chars().next(), index.trim().parse::<u32>())
-                        {
-                            extras.control_cables.push(ControlCable {
-                                front: tag == "control_cable_front",
-                                kind: kind.to_ascii_uppercase(),
-                                index,
-                                receive: receive.trim().to_owned(),
-                                send: send.trim().to_owned(),
-                                coupling: coupling.trim().to_owned(),
-                            });
-                        }
-                    }
-                }
-                "rot_pnt_long" => extras.rotation_point_long = first_float(&block.parameters),
-                "view_schedule" => {
-                    if let Some(cam) = driver_cameras.last_mut() {
-                        cam.is_schedule_view = true;
-                    }
-                }
-                "view_ticketselling" => {
-                    if let Some(cam) = driver_cameras.last_mut() {
-                        cam.is_ticket_view = true;
-                    }
-                }
-                _ => {}
             }
+            "ai_veh_type" => {
+                self.ai_veh_type = block
+                    .parameters
+                    .first()
+                    .and_then(|p| p.trim().parse::<u32>().ok());
+            }
+            "ai_brakeperformance" => {
+                self.ai_brake_performance = block
+                    .parameters
+                    .iter()
+                    .map_while(|p| parse_float(p).ok())
+                    .collect();
+            }
+            "rowdy_factor" => {
+                let v: Vec<f32> = block
+                    .parameters
+                    .iter()
+                    .map_while(|p| parse_float(p).ok())
+                    .take(2)
+                    .collect();
+                if let [lo, hi] = v[..] {
+                    self.rowdy_factor = Some((lo.min(hi), lo.max(hi)));
+                }
+            }
+            "ai_deltaheight" => self.ai_delta_height = blocks::first_float(&block.parameters),
+            "rollwiderstand" => self.roll_resistance_n = blocks::first_float(&block.parameters),
+            "inv_min_turnradius" => {
+                self.inv_min_turn_radius = blocks::first_float(&block.parameters);
+            }
+            "schwerpunkt" => {
+                self.centre_of_gravity_height = blocks::first_float(&block.parameters);
+            }
+            tag @ ("control_cable_front" | "control_cable_back") => {
+                if let [kind, index, receive, send, coupling, ..] = &block.parameters[..] {
+                    if let (Some(kind), Ok(index)) =
+                        (kind.trim().chars().next(), index.trim().parse::<u32>())
+                    {
+                        self.control_cables.push(ControlCable {
+                            front: tag == "control_cable_front",
+                            kind: kind.to_ascii_uppercase(),
+                            index,
+                            receive: receive.trim().to_owned(),
+                            send: send.trim().to_owned(),
+                            coupling: coupling.trim().to_owned(),
+                        });
+                    }
+                }
+            }
+            "rot_pnt_long" => self.rotation_point_long = blocks::first_float(&block.parameters),
+            _ => return false,
         }
-
-        if extras.inertia_t_m2.is_none() {
-            extras.inertia_t_m2 = legacy_inertia;
-        }
-
-        Ok(Self {
-            friendly_name,
-            description,
-            number_file,
-            registration_mode,
-            sound_cfg,
-            sound_ai_cfg,
-            model_cfg,
-            paths_cfg,
-            passengercabin_cfg,
-            varnamelists,
-            stringvarnamelists,
-            scripts,
-            constfiles,
-            script_share,
-            mass_tonnes,
-            vehicle_type,
-            bogie_half_span,
-            bounding_box,
-            axles,
-            coupling_front_y,
-            coupling_back_y,
-            coupling_front,
-            coupling_back,
-            couple_back,
-            couple_back_reversed,
-            coupling_front_limits,
-            driver_cameras,
-            pax_cameras,
-            mirror_cameras,
-            std_camera_index,
-            outside_camera_center,
-            extras,
-        })
-    }
-
-    /// Parses a `.bus` vehicle manifest from raw bytes.
-    ///
-    /// # Errors
-    /// Returns [`BusParseError`] on syntax error.
-    pub fn parse_bytes(bytes: &[u8]) -> Result<Self, BusParseError> {
-        let text = decode_bytes(bytes);
-        Self::parse(&text)
+        true
     }
 }
 
 mod blocks;
-use blocks::{
-    extract_counted_list, first_float, parse_axle_block, parse_camera_block, parse_mirror_block,
-};
+mod parse;
 
 /// Convenience function to parse a `.bus` file from a string slice.
 pub fn parse_bus(text: &str) -> Result<BusManifest, BusParseError> {

@@ -22,18 +22,14 @@ use opts_core::formats::scenery::sco::{ScoPath, ScoTrafficLightGroup};
 use opts_core::formats::scenery::{SceneryObject, SplinePath, SplineProfile};
 use opts_core::formats::vehicles::model::ModelLod;
 use opts_traffic::{
-    group_targets, segments_from_tile, signals_from_tile, AgentId, Calibration, ConnectParams,
-    IdmParams, LaneGraph, LaneKind, LaneSegment, PathSource, Rng, SignalKey, SignalProgram,
-    TrafficWorld, VehicleClass,
+    group_targets, segments_from_tile, signals_from_tile, AgentId, ConnectParams, LaneGraph,
+    LaneKind, LaneSegment, PathSource, Rng, SignalKey, SignalProgram, TrafficWorld, VehicleClass,
 };
-
-use crate::in_game::types::InGameEntity;
 
 use super::traffic_chain::{despawn_chain, ChainUnit, TrafficChain};
 use super::traffic_variant::{
     load_variant, read_groups, PoolGroup, PoolSetup, Slot, SlotState, Unit,
 };
-use super::vehicle::load_segment_meshes_for;
 use super::WorldLoadJob;
 
 /// Default baseline of driving AI vehicles around the player (setting `gameplay.traffic`): how

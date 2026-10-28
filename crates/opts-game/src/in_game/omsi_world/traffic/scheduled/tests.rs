@@ -1,3 +1,4 @@
+use super::path::place_along;
 use super::*;
 
 #[test]

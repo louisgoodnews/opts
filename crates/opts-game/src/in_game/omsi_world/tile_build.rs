@@ -14,20 +14,22 @@ use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::TileTerrain;
 use opts_core::formats::map::{MapObjectInstance, MapTile};
 
-use crate::in_game::attachments::expand_attachments;
 use crate::in_game::stream_budget::FrameBudget;
 use crate::in_game::types::InGameEntity;
 
-use super::tile::{place_attached_objects, spawn_object, Placement, TileRoot, SURFACE_MIN_WIDTH_M};
-use super::tile_ground::{
-    ensure_surfaces, load_terrain, prune_tile_surfaces, spawn_splines, spawn_terrain, spawn_water,
-    TerrainInput, NEIGHBOURHOOD_LEN,
-};
+use super::tile::{place_attached_objects, TileRoot};
+use super::tile_ground::{ensure_surfaces, load_terrain, TerrainInput, NEIGHBOURHOOD_LEN};
 use super::{WorldLoadJob, WorldStats};
+
+mod steps;
+use steps::{
+    attachments_step, finish, objects_step, registries_step, splines_step, surfaces_step,
+    terrain_step,
+};
 
 /// The step a build is at.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Phase {
+pub(super) enum Phase {
     /// The terrain grid and the tile's ground painting.
     TerrainRead,
     /// The ground surfaces of the tile and its neighbours, one tile per step.
@@ -54,20 +56,20 @@ enum Phase {
 pub(super) struct TileBuild {
     /// The tile.
     pub(super) key: (i32, i32),
-    tile: MapTile,
-    origin: (f32, f32),
-    root: Entity,
+    pub(super) tile: MapTile,
+    pub(super) origin: (f32, f32),
+    pub(super) root: Entity,
     /// Children spawned since the last call, not yet added to the root.
-    children: Vec<Entity>,
-    terrain: Option<TileTerrain>,
+    pub(super) children: Vec<Entity>,
+    pub(super) terrain: Option<TileTerrain>,
     /// What the terrain read produced, until the terrain is built.
-    terrain_input: Option<TerrainInput>,
+    pub(super) terrain_input: Option<TerrainInput>,
     /// Neighbours whose surfaces are ready (index into the nine-tile neighbourhood).
-    next_neighbour: usize,
-    attached: Vec<(MapObjectInstance, f32)>,
-    splines_failed_before: usize,
-    phase: Phase,
-    next_object: usize,
+    pub(super) next_neighbour: usize,
+    pub(super) attached: Vec<(MapObjectInstance, f32)>,
+    pub(super) splines_failed_before: usize,
+    pub(super) phase: Phase,
+    pub(super) next_object: usize,
 }
 
 impl TileBuild {
@@ -249,236 +251,4 @@ pub(super) fn advance(
         job.building = Some(b);
     }
     finished
-}
-
-fn terrain_step(
-    b: &mut TileBuild,
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-) {
-    let _t = opts_logging::stream_trace::span("tile.terrain");
-    b.terrain = spawn_terrain(
-        job,
-        stats,
-        commands,
-        meshes,
-        b.terrain_input.take(),
-        b.key,
-        b.origin,
-        &mut b.children,
-    );
-    spawn_water(
-        job,
-        stats,
-        commands,
-        meshes,
-        materials,
-        &b.tile,
-        b.terrain.as_ref(),
-        b.key,
-        b.origin,
-        &mut b.children,
-    );
-    b.splines_failed_before = stats.splines_failed;
-    b.phase = Phase::Splines;
-}
-
-fn splines_step(
-    b: &mut TileBuild,
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-) {
-    let _t = opts_logging::stream_trace::span("tile.splines");
-    spawn_splines(
-        job,
-        stats,
-        commands,
-        meshes,
-        materials,
-        images,
-        &b.tile,
-        b.origin,
-        &mut b.children,
-    );
-    if opts_bevy::scene_trace::enabled() {
-        let failed = stats.splines_failed.saturating_sub(b.splines_failed_before);
-        super::trace::tile_content(job, &b.tile, b.key, b.origin, b.terrain.is_some(), failed);
-    }
-    b.phase = Phase::Surfaces;
-}
-
-fn surfaces_step(b: &mut TileBuild, job: &mut WorldLoadJob, commands: &mut Commands) {
-    let _t = opts_logging::stream_trace::span("tile.surfaces");
-    // Surfaces the player's vehicle can stand on: drivable splines (road or rail lanes) and
-    // terrain.
-    let mut roads = Vec::new();
-    for inst in &b.tile.splines {
-        let Some(profile) = job.sli(&inst.sli_file) else {
-            continue;
-        };
-        if !profile.only_editor
-            && (profile
-                .paths
-                .iter()
-                .any(|p| p.path_type == 0 || p.path_type == 2)
-                || profile.flat_width() >= SURFACE_MIN_WIDTH_M)
-            && !profile.graphical_profiles.is_empty()
-        {
-            roads.push((inst.clone(), (*profile).clone()));
-        }
-    }
-    let surf: Vec<_> = roads
-        .iter()
-        .map(|(inst, profile)| {
-            let strips = super::road_surf_load::strips_for(job, &inst.sli_file, profile);
-            (inst.sli_file.clone(), strips)
-        })
-        .collect();
-    job.tile_ground = Some(super::GroundIndex::for_tile(
-        b.key,
-        b.origin,
-        b.terrain.clone(),
-        &roads,
-        job.start_tile,
-        job.grid,
-    ));
-    // The strips first: the ground index attaches them to the samples of the tile's roads.
-    super::road_surf_load::register(commands, surf);
-    super::ground_height::register(
-        commands,
-        b.key,
-        b.origin,
-        b.terrain.clone(),
-        roads,
-        job.start_tile,
-        job.grid,
-    );
-    b.phase = Phase::Attachments;
-}
-
-fn attachments_step(b: &mut TileBuild, job: &mut WorldLoadJob) {
-    let _t = opts_logging::stream_trace::span("tile.attachments");
-    // Spline attachments become ordinary placements once resolved against their carrier spline.
-    b.attached = if b.tile.spline_attachments.is_empty() {
-        Vec::new()
-    } else {
-        let index = job.spline_index();
-        let terrain = b.terrain.as_ref();
-        expand_attachments(
-            &b.tile.spline_attachments,
-            &b.tile.splines,
-            &index,
-            b.key,
-            &job.grid,
-            |x, y| terrain.map_or(0.0, |t| t.height(x, y)),
-        )
-    };
-    b.phase = Phase::Registries;
-}
-
-fn registries_step(b: &mut TileBuild, job: &mut WorldLoadJob, commands: &mut Commands) {
-    let _t = opts_logging::stream_trace::span("tile.registries");
-    let (key, origin, terrain) = (b.key, b.origin, b.terrain.as_ref());
-    let lanes = super::pedestrians::tile_lanes(job, &b.tile, &b.attached, terrain, origin);
-    super::pedestrians::register_tile(commands, key, lanes);
-    let rail = super::rail::tile_rail_lanes(job, &b.tile, &b.attached, terrain, origin);
-    super::rail::register_tile(commands, key, rail);
-    let bikes = super::rail::tile_bike_lanes(job, &b.tile, origin);
-    super::rail::register_bike_tile(commands, key, bikes);
-    let road = super::traffic::tile_segments(job, &b.tile, terrain, origin);
-    super::traffic::register_tile(commands, key, road);
-    job.scenery.index_tile(&b.tile);
-    b.phase = Phase::Objects;
-    b.next_object = 0;
-    job.placed.clear();
-}
-
-/// Spawns the scenery objects from where the build stopped, each one a step of its own. Returns
-/// `true` when all are placed.
-#[allow(clippy::too_many_arguments)]
-fn objects_step(
-    b: &mut TileBuild,
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    budget: &mut FrameBudget,
-) -> bool {
-    let _t = opts_logging::stream_trace::span("tile.objects");
-    let on_tile = b.tile.objects.len();
-    let total = on_tile + b.attached.len();
-    let mut first = true;
-    while b.next_object < total {
-        // The step that was granted covers the first object; every further one asks again.
-        if !first && !budget.allow() {
-            return false;
-        }
-        first = false;
-        let i = b.next_object;
-        let (obj, placement, list, index) = if i < on_tile {
-            (&b.tile.objects[i], Placement::Tile, "objects", i)
-        } else {
-            let (o, z) = &b.attached[i - on_tile];
-            (o, Placement::OnSpline(*z), "attachments", i - on_tile)
-        };
-        spawn_object(
-            job,
-            stats,
-            commands,
-            meshes,
-            materials,
-            images,
-            obj,
-            placement,
-            b.terrain.as_ref(),
-            b.key,
-            b.origin,
-            &mut b.children,
-            &b.tile,
-            super::trace::Site {
-                list,
-                index,
-                marker: None,
-            },
-        );
-        b.next_object += 1;
-    }
-    true
-}
-
-fn finish(
-    b: &mut TileBuild,
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-) {
-    if opts_bevy::instancing::merge() {
-        let merged = job.cache.merger.flush(commands, meshes);
-        b.children.extend(merged);
-        let st = job.cache.merger.stats;
-        tracing::info!(
-            tile = ?b.key,
-            parts_merged = st.parts_merged,
-            entities = st.entities,
-            refused = st.refused,
-            "static scenery merged (running totals)"
-        );
-    }
-    let _t = opts_logging::stream_trace::span("tile.root_adopt");
-    let deps = std::mem::take(&mut job.loading_deps);
-    job.tile_deps.insert(b.key, deps);
-    prune_tile_surfaces(job);
-    stats.tiles_loaded = job.resident.len();
-    stats.meshes_exact = job.cache.stats.exact_meshes;
-    stats.asset_failures = job.cache.stats.failures.len();
 }

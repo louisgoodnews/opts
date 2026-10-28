@@ -136,20 +136,23 @@ fn rust_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
 
 /// Files that legitimately hold literals: protocol vocabulary, registries, key tables, paths.
 const LITERAL_OK_FILES: &[&str] = &[
-    "actions.rs",          // `ui.action` spellings
-    "ui_tree.rs",          // protocol role names
-    "ui_id.rs",            // id syntax
-    "showcase.rs",         // demo content of the gallery and the CI fixture
-    "not_yet.rs",          // developer registry text (the user-visible marker text is a key)
-    "fonts.rs",            // asset paths
-    "icons.rs",            // code points
-    "l10n/keys.rs",        // key table
-    "l10n/wizard_keys.rs", // key table of the wizard, the patterns and the loading screen
-    "patterns/glyphs.rs",  // icon code points
-    "l10n/mod.rs",         // `⟦key⟧` marker and the env name
-    "l10n/pseudo.rs",      // transformation tables
-    "l10n/fold.rs",        // diacritics folding tables
-    "l10n/fluent.rs",      // parser
+    "actions.rs",              // `ui.action` spellings
+    "ui_tree.rs",              // protocol role names
+    "ui_tree/snapshot.rs",     // snapshot role names and state
+    "ui_id.rs",                // id syntax
+    "showcase.rs",             // demo content of the gallery and the CI fixture
+    "showcase/sections.rs",    // gallery sections
+    "not_yet.rs",              // developer registry text (the user-visible marker text is a key)
+    "fonts.rs",                // asset paths
+    "icons.rs",                // code points
+    "l10n/keys.rs",            // key table
+    "l10n/wizard_keys.rs",     // key table of the wizard, the patterns and the loading screen
+    "l10n/wizard_keys/wiz.rs", // wizard keys
+    "patterns/glyphs.rs",      // icon code points
+    "l10n/mod.rs",             // `⟦key⟧` marker and the env name
+    "l10n/pseudo.rs",          // transformation tables
+    "l10n/fold.rs",            // diacritics folding tables
+    "l10n/fluent.rs",          // parser
 ];
 
 /// Lines whose literals are not user-visible.
@@ -186,6 +189,7 @@ fn no_user_visible_literals_outside_key_tables() {
             .replace('\\', "/");
         if LITERAL_OK_FILES.contains(&rel.as_str())
             || rel.ends_with("tests.rs")
+            || rel.contains("/tests/")
             || rel.starts_with("testing/")
         {
             continue;

@@ -15,7 +15,7 @@ pub struct CabinGraph {
     pub points: Vec<Vec3>,
     /// `(from, to)` of every link in file order (the index of `GetHumanCountOnPathLink`).
     pub links: Vec<(usize, usize)>,
-    /// Links added across gaps of at most [`GAP_BRIDGE_M`] (not in [`Self::links`]).
+    /// Links added across gaps of at most `GAP_BRIDGE_M` (not in [`Self::links`]).
     pub bridges: Vec<(usize, usize)>,
     unit_of: Vec<usize>,
     adjacent: Vec<Vec<(usize, f32)>>,
@@ -57,7 +57,7 @@ impl CabinGraph {
     }
 
     /// Joins the parts of the paths that no link connects where two of their points in the same
-    /// unit lie at most [`GAP_BRIDGE_M`] apart, the nearest pair first, until none is left.
+    /// unit lie at most `GAP_BRIDGE_M` apart, the nearest pair first, until none is left.
     fn bridge_gaps(&mut self) {
         loop {
             let part = self.parts();

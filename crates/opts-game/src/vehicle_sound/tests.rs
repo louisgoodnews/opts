@@ -1,6 +1,7 @@
 //! Unit tests of `vehicle_sound.rs`.
 
 use super::*;
+use crate::vehicle_sound::stream::ai_loop;
 
 fn cfg(text: &str) -> SoundConfig {
     SoundConfig::parse(text)

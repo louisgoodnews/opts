@@ -2,7 +2,7 @@
 
 *Goal: minimise AI-agent input and output token consumption across the workspace by enforcing a two-tier source file budget (150–200 code lines target, 250-line inline-test extraction trigger, 350-line hard ceiling), an 80-line function ratchet, and Bevy `SystemParam` bundling—backed by fast `< 1.5 s` pre-commit and CI gates.*
 
-**Status:** 🟡 In Progress — [M-0147](M-0147.md) and [M-0148](M-0148.md) done 2026-10-28; [M-0149](M-0149.md)–[M-0150](M-0150.md) open (research and workload audit in [AI-Agent Token Optimization & Source File Budgets](../../architecture/ai-token-optimization.md); coding rules in [Coding Standards §3.7 & §3.14](../../contributing/standards.md)).
+**Status:** 🟡 In Progress — [M-0147](M-0147.md), [M-0148](M-0148.md), and [M-0149](M-0149.md) done 2026-10-28; [M-0150](M-0150.md) open (research and workload audit in [AI-Agent Token Optimization & Source File Budgets](../../architecture/ai-token-optimization.md); coding rules in [Coding Standards §3.7 & §3.14](../../contributing/standards.md)).
 
 The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 15); this page holds the details.
 
@@ -19,7 +19,7 @@ Phase 999 Cycle 1 ([M-0125](../phase-999/M-0125.md)–[M-0129](../phase-999/M-01
 
 1. ✅ [M-0147 — Structure Audit v2 & Pre-Commit Ratchet Gates](M-0147.md) *(done 2026-10-28)*: extend `scripts/structure_audit.py` with the 350-line file ceiling, 250-line inline-test extraction rule, 80-line function ratchet (`docs/dev/function-known.txt`), and Clippy allow ratchet; enforce in `scripts/pre-commit` and `.github/workflows/ci.yml`.
 2. ✅ [M-0148 — Batch 1: Inline Test Extraction Above 250 Lines](M-0148.md) *(done 2026-10-28)*: extract inline `#[cfg(test)] mod tests` blocks from all 101 production files over 250 code lines into sibling `tests.rs` files.
-3. [M-0149 — Batch 2: Production File Splits to the 350-Line Ceiling](M-0149.md): split the 102 production files over 350 non-test code lines (and 18 oversized test/example files) along concern boundaries into 150–250 line modules.
+3. ✅ [M-0149 — Batch 2: Production File Splits to the 350-Line Ceiling](M-0149.md) *(done 2026-10-28)*: split the 102 production files over 350 non-test code lines (and 18 oversized test/example files) along concern boundaries into 150–250 line modules.
 4. [M-0150 — Batch 3: Function Size Ratchet (< 80 Lines) & ECS `SystemParam` Bundling](M-0150.md): decompose the 191 production functions over 80 code lines into ≤ 40-line helpers and replace the 155 `too_many_arguments` / `type_complexity` allows with `#[derive(SystemParam)]` bundles.
 
 ## Baseline and workload summary (2026-10-28)
@@ -28,5 +28,5 @@ Phase 999 Cycle 1 ([M-0125](../phase-999/M-0125.md)–[M-0129](../phase-999/M-01
 | :--- | ---: | ---: | :--- |
 | Pre-commit + CI ratchet v2 (`M-0147`) | ✅ Done 2026-10-28 | 4 ratchets in `pre-commit` + `ci.yml` | Done |
 | Prod files > 250 LOC with inline `#[cfg(test)]` (`M-0148`) | ✅ Done 2026-10-28 (101 → 0) | **0** | Done |
-| Prod files > 350 non-test LOC (`M-0149`) | 102 files (+18 test/example files) | **0** (new modules 150–220 LOC) | 6–8 sessions |
+| Prod files > 350 non-test LOC (`M-0149`) | ✅ Done 2026-10-28 (120 → 0) | **0** (new modules 150–220 LOC) | Done |
 | Prod functions > 80 LOC & `SystemParam` allows (`M-0150`) | 191 functions / 155 allows | **0** unratcheted | 8–10 sessions |
