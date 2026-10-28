@@ -2,11 +2,48 @@
 
 Implementation: `crates/opts-bevy/src/vehicle_anim.rs` (the task text names an `animation/` module; the pipeline is this file).
 
-## Conventions in force
-- Frame = `T(origin) · Rx·Ry·Rz(origin_rot)`; `anim_rot` turns about the frame's X axis, `anim_trans` moves along it.
-- Explicit `origin_trans` frames are in vehicle axes (x right, y forward, z up): SD77 steering `origin_rot_y 90`
-  makes X vertical, suspension `origin_rot_y -90`, wheel spin needs no rotation.
+## Conventions in force (one handedness, 2026-10-26)
+- OMSI turns in its own left-handed axes (o3d: x right, y up, z forward). In the right-handed vehicle axes used
+  here (x right, y forward, z up) every angle therefore takes the **opposite sign**: the origin rotation is
+  `Rx(-x)·Ry(-y)·Rz(-z)` and `anim_rot` turns by `-(variable × factor)` about the frame's X axis.
+- Frame = `T(origin) · P · R(origin_rot)`, with `P` the mesh matrix (`origin_from_mesh` without `origin_trans`, see
+  below) or identity; `anim_trans` moves along X (without `P`, except the NLC's sliding leaves).
+- `origin_rot_y 90` turns X **up** (SD77 steering: a positive `Axle_Steering` turns the wheels right), `-90` down
+  (suspension: a positive `Axle_Suspension`, OMSI's extension, moves the wheel down).
 - `origin_from_mesh` takes the mesh's pivot (translation of the o3d 0x79 matrix).
+
+### Evidence for one handedness
+- The scripts' automatic indicator cancel (`lights.osc` of the VW T3 and the TA cars) arms the right indicator on a
+  positive `Axle_Steering_0_L`: positive is a right turn. The old right-handed origin rotation needed the opposite
+  sign to steer the wheels right.
+- The levelling of the brake scripts fills a bellows while `Axle_Suspension` is below -0.105 and drains it above:
+  positive is a higher body, the wheel further down; `origin_rot_y -90` must point X down.
+- Tilted steering wheels: SD77 (`rot_x -10, rot_y 90`, identity matrix) has the rim normal (0, -0.174, 0.985), the
+  column leaning back towards the driver; the old rotation leaned it forward (the rim wobbled by 20 degrees). The
+  Valiant 7700 (`rot_x 30.7, rot_z 90`, scaled y/z-swap matrix, normal (0, -0.487, 0.873)) and its needles
+  (`rot_x 52, rot_z 90`, dial normal (0, -0.738, 0.675)) match only with the negated angles and the matrix; the old
+  axis lay in the wheel's plane (the project lead's "turns on the y axis", "needles turn in the z axis").
+- The four sign patches of the old convention all follow from it and are gone: door leaves (`door*` factors),
+  the NLC's blind arms, mesh-origin translations on `origin_rot_y ±90` (buttons, the Bremen blind), the swap rule.
+- Census (`anim_axis_probe`, 2026-10-26, all installed `.cfg`): 4,600 `origin_from_mesh` steering and spin
+  animations. Steering wheels: every one turns about its measured rim normal and clockwise (seen by the driver) on
+  a right turn (before: the 49 tilted ones turned about a wrong axis, 89 more, without origin rotation or with
+  `rot (32.25,-90,0)`, the wrong way). Road wheels: as before (1,000+
+  vertical and turning right). Wheel spins on matrix meshes: 479 of 550 roll forward (112 before).
+Tests: `the_tilted_steering_wheel_turns_about_its_column_valiant`, `the_needles_turn_on_the_dial_valiant`,
+`the_column_of_the_sd77_leans_towards_the_driver`, `steering_wheels_turn_with_the_road_wheels`,
+`a_positive_steering_variable_turns_the_wheels_right` (`vehicle_anim/tests.rs`).
+
+### When the matrix is composed (`matrix_rotation`)
+`origin_from_mesh` without `origin_trans`, an `anim_rot`, a non-identity matrix, except: on a y/z-swapped mesh an
+axis the origin rotation already makes vertical (12 main steering entries `rot_y 90`, the NLC's factor-4 entry), and
+a pure `origin_rot_x` on a proper rotation matrix (4 wheel spins with a yaw matrix). The sections below record how
+the two earlier scoped rules were found; they are the special cases of this one.
+
+### Wheel travel in the animation
+The scripts read OMSI's travel (about -0.1 m at rest); the models draw the wheels where they stand at rest, so the
+animation shows the travel from rest (`suspension_rest`; the rest value of an axle without a body model, the trailer
+of an articulated bus, is the head's mean). Whether OMSI draws the body lower by the static deflection instead ❓.
 
 ## Problem: the mesh matrix swap (MAN New Lion's City)
 NLC wheel meshes (`solo\rad_vl_felge.o3d`) carry the matrix rotation `[1,0,0|0,0,1|0,1,0]` (y/z swap) and
@@ -54,7 +91,7 @@ OMSI's frame for `origin_from_mesh` is the object's own, and the data say so for
 Verify gauges and switches against OMSI; restrict the rule if one of them turns the wrong way.
 
 **Direction:** with a rotated or reflected frame the sense of the rotation follows from the composition (a reflection
-reverses it). Whether wheels and the steering wheel turn the right way is not verified against OMSI.
+reverses it). Since 2026-10-26 checked by the census above (steering wheels turn right on a right turn).
 
 ## Outstanding class of issues (not part of P-1011)
 The axis rule for `origin_from_mesh` is now two scoped fixes (swap with vertical intent, matrix `P·R` for other

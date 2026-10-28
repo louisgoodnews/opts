@@ -45,7 +45,8 @@ wheels (radius from its `.bus` axles); the articulation step rolls them by the s
 `anim_rot Axle_Steering_0_L` (925 uses; factor in degrees per rad of front-wheel steering: 1680 ×505, 1080 ×127,
 1300 ×114, 1450 ×113, 1350, 1413, 1200, 1575). Outliers: `lenkwinkel` (9 uses, one folder, a script variable),
 `cp_steering_tilt` (column tilt, 2). `Halycon_AI_Pack_2` has unanimated wheels (AI pack). OPTS feeds
-`axle_steering_0_l` as `-steer_angle_rad` of the front wheel, so the steering wheel needs no extra variable.
+`axle_steering_0_l` as the steer angle of the front wheel, positive to the right (2026-10-26; it was negated
+before, with the opposite origin rotation), so the steering wheel needs no extra variable.
 
 ## MAN New Lion's City (`MAN_NewLionsCity`, `model_21C_4door_main.cfg`, mesh `solo\rad_vl_felge.o3d`)
 ```

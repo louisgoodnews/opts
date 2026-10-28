@@ -228,7 +228,7 @@ The scripts and the physics exchange values only through the tables; the wheel m
 
 | Direction | Variables | Rule |
 | :--- | :--- | :--- |
-| in | `Velocity`, `Velocity_Ground` (km/h), `A_Trans_X/Y/Z` (m/s² in vehicle axes), `n_Wheel`, `Wheel_RotationSpeed_n_s` (rpm, **from the wheel model, not from chassis speed**), `Wheel_Rotation_n_s` (rad), `Axle_Steering_n_s` (rad, sign ❓ item 10), `Axle_Suspension_n_s` (m), `articulation_n_alpha/beta` | fed to parts with the axles; `articulation_*` has one writer (the consist physics) |
+| in | `Velocity`, `Velocity_Ground` (km/h), `A_Trans_X/Y/Z` (m/s² in vehicle axes), `n_Wheel`, `Wheel_RotationSpeed_n_s` (rpm, **from the wheel model, not from chassis speed**), `Wheel_Rotation_n_s` (rad), `Axle_Steering_n_s` (rad, positive to the right, 2026-10-26), `Axle_Suspension_n_s` (m, extension from the unloaded spring, negative at rest, 2026-10-26), `articulation_n_alpha/beta` | fed to parts with the axles; `articulation_*` has one writer (the consist physics) |
 | out | `M_Wheel` (N·m at the driven wheels, `M_WHEEL_UNIT` calibrated by E1), `Brakeforce`, `Axle_Brakeforce_n_s`, `Axle_Springfactor_n_s`, `Throttle`/`Brake` when the script owns the pedals | read after the frame; the three-way fallback of D4 (script torque → const-file curve → constants model) chooses the source per consist and logs the choice once |
 | hold | parking and stop brake | a non-zero script brake at standstill holds the vehicle: the zero-speed clamp uses the **script's** brake, not the driver's (fixes item 1) |
 
