@@ -168,3 +168,56 @@ str_asphdrk_1line.bmp
     assert_eq!(sli.paths[1].offset_x, 2.5);
     assert_eq!(sli.paths[1].direction, 0);
 }
+
+mod lane_kind_tests {
+    use super::super::*;
+
+    fn path(t: u32, off: f32, w: f32) -> SplinePath {
+        SplinePath {
+            path_type: t,
+            offset_x: off,
+            offset_z: 0.1,
+            width: w,
+            direction: 2,
+            extra: None,
+        }
+    }
+
+    #[test]
+    fn narrow_road_paths_are_bike_lanes_and_the_profile_is_a_composite() {
+        // Invis_Human_Fahrrad.sli: a footpath and two 0.1 m road paths at ±0.85 m.
+        let p = SplineProfile {
+            paths: vec![path(1, 0.0, 0.1), path(0, -0.85, 0.1), path(0, 0.85, 0.1)],
+            ..Default::default()
+        };
+        assert_eq!(
+            p.composition("Invis_Human_Fahrrad.sli"),
+            vec![LaneKind::Bike, LaneKind::Pedestrian]
+        );
+        assert!(p.has_bike_lane("x.sli"));
+    }
+
+    #[test]
+    fn a_street_with_sidewalk_and_a_bike_name_is_a_composite() {
+        let p = SplineProfile {
+            paths: vec![
+                path(0, -1.6, 3.0),
+                path(0, 6.0, 1.2),
+                path(1, 7.0, 0.98),
+                path(2, 0.0, 1.0),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            p.composition("RQ_sidewalk+fahrrad.sli"),
+            vec![
+                LaneKind::Road,
+                LaneKind::Bike,
+                LaneKind::Pedestrian,
+                LaneKind::Rail
+            ]
+        );
+        // Without the name hint the 1.2 m road path stays a road lane.
+        assert_eq!(p.lane_kinds("str.sli")[1].0, LaneKind::Road);
+    }
+}

@@ -317,7 +317,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### M-0147–M-0150 — Phase 15: AI-Optimized Code Structure & Pre-Commit Enforcement (proposed 2026-10-28)
 - [x] 🔴 **Structure Audit v2 & Pre-Commit Ratchet Gates** (M-0147, tooling + ci) — **done 2026-10-28**: 350-line file limit, >250-line inline-test rule, >80-line function ratchet (`docs/dev/function-known.txt`), signature allow ratchet (`docs/dev/structure-known.txt`), unit tests, and `pre-commit` + `ci.yml` enforcement; [M-0147](../src/roadmap/phase-15/M-0147.md)
-- [ ] 🟠 **Batch 1: Inline Test Extraction Above 250 Lines (101 files, 9,274 test lines)** (M-0148, refactor) — [M-0148](../src/roadmap/phase-15/M-0148.md)
+- [x] 🟠 **Batch 1: Inline Test Extraction Above 250 Lines (101 files, 9,274 test lines)** (M-0148, refactor) — **done 2026-10-28**: extracted inline `#[cfg(test)]` modules from all 101 production files > 250 LOC into `tests.rs` files (0 inline-test violations remaining, `docs/dev/structure-known.txt` reduced from 210 to 121 entries, 2,630 `#[test]` attributes preserved); [M-0148](../src/roadmap/phase-15/M-0148.md)
 - [ ] 🟠 **Batch 2: Production File Splits to the 350-Line Ceiling (102 prod + 18 test/example files)** (M-0149, refactor) — [M-0149](../src/roadmap/phase-15/M-0149.md)
 - [ ] 🟡 **Batch 3: Function Size Ratchet (< 80 Lines, 191 fns) & ECS `SystemParam` Bundling (155 allows)** (M-0150, refactor) — [M-0150](../src/roadmap/phase-15/M-0150.md)
 

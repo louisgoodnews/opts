@@ -125,6 +125,7 @@ const REVIEWED: &[&str] = &[
     "opts-gui/src/interaction/activation.rs",
     "opts-gui/src/interaction/focus.rs",
     "opts-gui/src/interaction/layer.rs",
+    "opts-gui/src/interaction/layer/tests.rs",
     "opts-gui/src/interaction/mod.rs",
     "opts-gui/src/interaction/state.rs",
     // Patterns: keyboard only while their list has focus (focus is trapped by modals).
