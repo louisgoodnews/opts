@@ -41,7 +41,22 @@ pub(crate) fn apply_rest_pose(
     pose: HumanPose,
     transforms: &mut Query<&mut Transform>,
 ) {
-    let q = pose_rotations(&human.profile, pose);
+    apply_rotations(human, &pose_rotations(&human.profile, pose), transforms);
+}
+
+/// Poses a seated character with its legs fitted to a seat `seat_height_m` above the floor
+/// ([`opts_bevy::seated_rotations`]).
+pub(crate) fn apply_seated_pose(
+    human: &Human,
+    seat_height_m: f32,
+    transforms: &mut Query<&mut Transform>,
+) {
+    let q = opts_bevy::seated_rotations(&human.profile, seat_height_m);
+    apply_rotations(human, &q, transforms);
+}
+
+/// Sets the joint rotations `q`, the hip at its rest pivot.
+fn apply_rotations(human: &Human, q: &[Quat; 13], transforms: &mut Query<&mut Transform>) {
     for (i, joint) in human.rig.joints.iter().enumerate() {
         if let Ok(mut t) = transforms.get_mut(*joint) {
             t.rotation = q[i];

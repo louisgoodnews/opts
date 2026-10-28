@@ -62,7 +62,16 @@ pub(super) struct Shown {
     pub(super) leg_m: f32,
     pub(super) phase: f32,
     pub(super) local: Vec3,
-    pub(super) seated: Option<f32>,
+    pub(super) seated: Option<SeatPose>,
+}
+
+/// The seat a passenger sits on, as the figure needs it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct SeatPose {
+    /// Rotation about the vertical (rad, `[passpos]` `rot`).
+    pub(super) rotation_rad: f32,
+    /// Height of the seat point above the floor (m, `[passpos]` `h`).
+    pub(super) height_m: f32,
 }
 
 /// A person at the stop who is not drawn (the crowd beyond [`super::MAX_VISIBLE_WAITING`]).

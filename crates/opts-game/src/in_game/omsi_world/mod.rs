@@ -74,7 +74,7 @@ pub use overlay::{
     track_position, update_debug_overlay, update_wheel_vars_overlay, DebugOverlayText,
     DebugWheelVars, WheelVarsText,
 };
-pub(crate) use pedestrians::{advance_phase, apply_gait, apply_rest_pose};
+pub(crate) use pedestrians::{advance_phase, apply_gait, apply_rest_pose, apply_seated_pose};
 pub use pedestrians::{
     configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,
     PedestrianNetwork, PedestrianPool, PedestrianSettings,

@@ -111,8 +111,9 @@ pub use environment::{
     WeatherKind, WeatherSky,
 };
 pub use human::{
-    apply_pose, hip_offset, pose_rotations, rest_pivots, spawn_human, sync_player_head, AlignEyes,
-    DriverHead, Human, HumanHead, HumanPose, HumanRig, PlayerHead, HUMAN_BONES,
+    apply_pose, hip_offset, pose_rotations, rest_pivots, seat_hip_lift, seated_rotations,
+    seated_thigh_angle, spawn_human, sync_player_head, AlignEyes, DriverHead, Human, HumanHead,
+    HumanPose, HumanRig, PlayerHead, HUMAN_BONES,
 };
 pub use install::OmsiInstall;
 pub use light_cones::{

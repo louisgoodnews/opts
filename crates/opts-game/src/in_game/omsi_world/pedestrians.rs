@@ -453,7 +453,7 @@ pub fn configure_pedestrians(
 }
 
 mod actor;
-pub(crate) use actor::{advance_phase, apply_gait, apply_rest_pose};
+pub(crate) use actor::{advance_phase, apply_gait, apply_rest_pose, apply_seated_pose};
 
 #[cfg(test)]
 mod tests {
