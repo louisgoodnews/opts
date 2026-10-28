@@ -19,6 +19,7 @@ use crate::in_game::types::InGameEntity;
 use super::{CameraSetup, WorldLoadJob, WorldStats};
 
 pub(super) mod doors;
+mod hot_spots;
 mod passengers;
 mod segments;
 use segments::{ensure_repaints, repaint_map};
