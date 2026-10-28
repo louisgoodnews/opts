@@ -98,14 +98,20 @@ fn with_mirrors_off_in_the_light_quality_the_open_mode_still_offers_the_mirrors(
     s.quality(0, 1);
     s.app.update();
     s.app.update();
-    assert!(s.cameras().is_empty(), "no cameras while nothing needs them");
+    assert!(
+        s.cameras().is_empty(),
+        "no cameras while nothing needs them"
+    );
     s.app.world_mut().resource_mut::<VirtualMirrors>().open = true;
     s.app.update();
     s.app.update();
     assert_eq!(s.cameras().len(), 2, "the open mode brings the cameras");
     let vm = s.app.world().resource::<VirtualMirrors>().clone();
     assert!(vm.feeds[MirrorSlot::Left.index()].is_some(), "left area");
-    assert!(vm.feeds[MirrorSlot::RightUpper.index()].is_some(), "right area");
+    assert!(
+        vm.feeds[MirrorSlot::RightUpper.index()].is_some(),
+        "right area"
+    );
     // A mirror switched on keeps its camera after the mode closes; the others go.
     s.app
         .world_mut()
