@@ -50,6 +50,43 @@ pub struct PlaceLabel(pub Option<String>);
 #[derive(Resource, Debug, Clone, Copy, Default)]
 pub struct PendingDespawn(pub Option<VehicleId>);
 
+/// An operation on the `World` that waits for the next frame to start.
+type WorldOp = Box<dyn FnOnce(&mut World) + Send + Sync>;
+
+/// Vehicle operations that remove entities, held until the next frame starts ([`defer`]).
+#[derive(Resource, Default)]
+pub struct DeferredOps(Vec<WorldOp>);
+
+/// Runs `op` at the start of the next frame (schedule `First`), when no system has commands
+/// waiting. A despawn queued as an ordinary command is applied in the middle of the frame's
+/// command buffers: a command of another system that was queued for the vehicle in the same
+/// frame (the passengers' `PassengerFeed`, for one) is applied after it and hits a despawned
+/// entity, which panics (Bevy's default error handler).
+pub fn defer(commands: &mut Commands, op: impl FnOnce(&mut World) + Send + Sync + 'static) {
+    commands.queue(move |world: &mut World| {
+        world
+            .get_resource_or_init::<DeferredOps>()
+            .0
+            .push(Box::new(op));
+    });
+}
+
+/// Runs the deferred operations, then keeps the registry honest (both remove entities, so both
+/// run where no command of another system is waiting).
+fn frame_start(world: &mut World) {
+    let ops = std::mem::take(&mut world.get_resource_or_init::<DeferredOps>().0);
+    for op in ops {
+        op(world);
+    }
+    world.flush();
+    if world
+        .get_resource::<State<AppState>>()
+        .is_some_and(|s| *s.get() == AppState::InGame)
+    {
+        maintain(world);
+    }
+}
+
 /// Computes the label from the registry.
 #[must_use]
 pub fn place_label(reg: &SessionVehicles) -> Option<String> {
@@ -102,7 +139,7 @@ pub fn despawn_choices(
             continue;
         }
         if let Some(id) = id {
-            commands.queue(move |world: &mut World| {
+            defer(&mut commands, move |world: &mut World| {
                 if let Err(e) = ops::despawn(world, id, DespawnReason::User) {
                     tracing::warn!("despawn refused: {e}");
                 }
@@ -184,11 +221,12 @@ impl Plugin for SessionVehiclesPlugin {
         app.init_resource::<SessionVehicles>()
             .init_resource::<PlaceLabel>()
             .init_resource::<PendingDespawn>()
+            .init_resource::<DeferredOps>()
             .add_message::<DialogChoice>()
+            .add_systems(First, frame_start)
             .add_systems(
                 Update,
                 (
-                    maintain,
                     update_place_label,
                     despawn_choices,
                     quick_switch.run_if(opts_bevy::reporting::not_modal_active),

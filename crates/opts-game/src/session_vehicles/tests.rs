@@ -341,3 +341,48 @@ fn the_session_ends_with_an_empty_registry() {
     run(&mut app, 3);
     assert_eq!(app.world().resource::<SessionVehicles>().records().len(), 0);
 }
+
+/// What a system writes onto the player's vehicle every frame (like the passengers' feed).
+#[derive(Component)]
+struct EveryFrame;
+
+fn write_every_frame(mut commands: Commands, players: Query<Entity, With<PlayerVehicle>>) {
+    for e in &players {
+        commands.entity(e).insert(EveryFrame);
+    }
+}
+
+#[test]
+fn a_confirmed_despawn_waits_for_the_frame_start_so_other_commands_never_hit_the_vehicle() {
+    // The despawn confirmation used to despawn through a command of `despawn_choices`; the
+    // command of a system after it (here: one that writes onto the vehicle each frame, as the
+    // passengers do) was applied to a despawned entity and the game panicked.
+    let mut app = app();
+    // Both buffers are applied at the same sync point, the despawn's first: the order a frame
+    // can have when the systems are not ordered.
+    app.edit_schedule(Update, |s| {
+        s.set_build_settings(bevy::ecs::schedule::ScheduleBuildSettings {
+            auto_insert_apply_deferred: false,
+            ..Default::default()
+        });
+    });
+    app.add_systems(Update, write_every_frame.after(despawn_choices));
+    let (a, ea) = add(&mut app, "A", "x", Vec2::ZERO);
+    ops::switch_to(app.world_mut(), a).expect("a");
+    run(&mut app, 2);
+    app.world_mut().resource_mut::<PendingDespawn>().0 = Some(a);
+    app.world_mut().write_message(DialogChoice {
+        tag: DESPAWN_DIALOG,
+        choice: DESPAWN,
+    });
+    run(&mut app, 3);
+    assert!(app.world().get_entity(ea).is_err(), "the vehicle is gone");
+    assert_eq!(
+        app.world()
+            .resource::<SessionVehicles>()
+            .get(a)
+            .map(|r| r.lifecycle),
+        Some(Lifecycle::Despawned)
+    );
+    assert!(players(&mut app).is_empty());
+}

@@ -479,8 +479,9 @@ pub fn update_passengers(
                 *slot = r;
             }
         }
+        // `try_insert`: a vehicle despawned in this frame takes its feed with it.
         for (store, feed) in feeds {
-            commands.entity(store).insert(feed);
+            commands.entity(store).try_insert(feed);
         }
     }
 }

@@ -78,6 +78,15 @@ impl VirtualMirrors {
         self.streams.iter().any(|s| *s)
     }
 
+    /// Whether the player's mirrors need their cameras for the virtual mirrors: a mirror streams,
+    /// or the areas are open to be clicked. Without this the areas need cameras that only exist
+    /// when the light quality's `mirror_count` is above 0, so with mirrors off (the automatic
+    /// quality drops them at level 4) Tab showed nothing to click.
+    #[must_use]
+    pub fn needs_cameras(&self) -> bool {
+        self.open || self.any_stream()
+    }
+
     /// The camera of `slot` when its stream is on and the vehicle has such a mirror.
     #[must_use]
     pub fn streaming_camera(&self, slot: MirrorSlot) -> Option<Entity> {

@@ -85,3 +85,41 @@ fn panes_with_different_materials_but_one_mirror_number_share_a_camera() {
         assert_eq!(current.0, *original);
     }
 }
+
+#[test]
+fn with_mirrors_off_in_the_light_quality_the_open_mode_still_offers_the_mirrors() {
+    // The automatic light quality turns the mirrors off from level 4 (`mirror_count` 0). The areas
+    // to click come from the mirror cameras, so opening the mode must bring them; otherwise Tab
+    // shows nothing and no mirror can be switched on.
+    let mut s = Scene::new(
+        &[Vec3::new(-1.3, 0.0, -2.0), Vec3::new(1.3, 0.0, -2.0)],
+        true,
+    );
+    s.quality(0, 1);
+    s.app.update();
+    s.app.update();
+    assert!(s.cameras().is_empty(), "no cameras while nothing needs them");
+    s.app.world_mut().resource_mut::<VirtualMirrors>().open = true;
+    s.app.update();
+    s.app.update();
+    assert_eq!(s.cameras().len(), 2, "the open mode brings the cameras");
+    let vm = s.app.world().resource::<VirtualMirrors>().clone();
+    assert!(vm.feeds[MirrorSlot::Left.index()].is_some(), "left area");
+    assert!(vm.feeds[MirrorSlot::RightUpper.index()].is_some(), "right area");
+    // A mirror switched on keeps its camera after the mode closes; the others go.
+    s.app
+        .world_mut()
+        .resource_mut::<VirtualMirrors>()
+        .toggle(MirrorSlot::Left);
+    s.app.world_mut().resource_mut::<VirtualMirrors>().open = false;
+    s.app.update();
+    s.app.update();
+    assert!(!s.cameras().is_empty(), "the streaming mirror stays");
+    s.app
+        .world_mut()
+        .resource_mut::<VirtualMirrors>()
+        .toggle(MirrorSlot::Left);
+    s.app.update();
+    s.app.update();
+    assert!(s.cameras().is_empty(), "nothing needs a camera any more");
+}

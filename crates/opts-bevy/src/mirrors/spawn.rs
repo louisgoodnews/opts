@@ -45,7 +45,7 @@ pub fn spawn_mirror_cameras(
     mut cameras: Query<(Entity, &mut MirrorCamera)>,
     candidates: Query<(&MeshMaterial3d<StandardMaterial>, &Mesh3d), Without<MirrorSurface>>,
 ) {
-    if quality.mirror_count == 0 && !virtual_mirrors.any_stream() {
+    if quality.mirror_count == 0 && !virtual_mirrors.needs_cameras() {
         return;
     }
     let now = time.elapsed_secs_f64();

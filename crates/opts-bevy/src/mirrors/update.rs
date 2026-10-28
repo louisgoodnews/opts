@@ -39,7 +39,7 @@ pub fn update_mirror_cameras(
     let mut live = Vec::new();
     for (entity, mut info, ..) in &mut cameras {
         info.members.retain(|m| panes.contains(m.entity));
-        let gone = (quality.mirror_count == 0 && !virtual_mirrors.any_stream())
+        let gone = (quality.mirror_count == 0 && !virtual_mirrors.needs_cameras())
             || !vehicles.contains(info.vehicle)
             || info.members.is_empty();
         if gone {
