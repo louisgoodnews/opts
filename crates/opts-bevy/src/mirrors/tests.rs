@@ -26,8 +26,8 @@ struct Scene {
 }
 
 impl Scene {
-    /// A main camera at the origin looking down -Z, a player vehicle with one mirror per given
-    /// position (a quad facing +Z).
+    /// A main camera at the origin looking down -Z (a wide view: 120 degrees high, aspect 2),
+    /// a player vehicle with one mirror per given position (a quad facing +Z).
     fn new(positions: &[Vec3], player: bool) -> Self {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -56,6 +56,11 @@ impl Scene {
                 MainCamera,
                 Hdr,
                 GlobalTransform::default(),
+                Projection::Perspective(PerspectiveProjection {
+                    fov: 120f32.to_radians(),
+                    aspect_ratio: 2.0,
+                    ..default()
+                }),
             ))
             .id();
         let mesh = app
@@ -173,32 +178,28 @@ fn three_mirrors() -> [Vec3; 3] {
 }
 
 #[test]
-fn mirror_count_two_selects_the_nearest_two_and_the_rest_keep_their_texture() {
+fn every_mirror_in_view_goes_live_and_the_budget_takes_turns() {
     let mut s = Scene::new(&three_mirrors(), true);
     s.quality(2, 1);
     s.app.update();
     assert_eq!(s.cameras().len(), 3, "one camera per mirror mesh");
-    // Distances: mirror 1 (2.0), mirror 2 (2.24), mirror 0 (3.6).
+    // Distances: mirror 1 (2.0), mirror 2 (2.24), mirror 0 (3.6). The two nearest go first.
     assert!(s.shows_live(s.mirrors[1]) && s.shows_live(s.mirrors[2]));
     assert!(
         !s.shows_live(s.mirrors[0]),
-        "the third keeps the static texture"
+        "not rendered yet: the static texture"
     );
     assert!(s.active(s.camera_of(s.mirrors[1])) && s.active(s.camera_of(s.mirrors[2])));
     assert!(!s.active(s.camera_of(s.mirrors[0])));
     let st = *s.app.world().resource::<MirrorStats>();
-    assert_eq!((st.cameras, st.selected, st.rendering), (3, 2, 2));
-}
-
-#[test]
-fn mirror_count_one_selects_only_the_nearest() {
-    let mut s = Scene::new(&three_mirrors(), true);
-    s.quality(1, 1);
+    assert_eq!((st.cameras, st.selected, st.rendering), (3, 3, 2));
+    // Next frame: the never-rendered mirror first, then the oldest-nearest one.
     s.app.update();
-    assert!(s.shows_live(s.mirrors[1]));
-    assert!(!s.shows_live(s.mirrors[2]) && !s.shows_live(s.mirrors[0]));
-    assert!(s.active(s.camera_of(s.mirrors[1])));
+    assert!(s.active(s.camera_of(s.mirrors[0])) && s.active(s.camera_of(s.mirrors[1])));
     assert!(!s.active(s.camera_of(s.mirrors[2])));
+    for m in s.mirrors.clone() {
+        assert!(s.shows_live(m), "every mirror in view keeps a live picture");
+    }
 }
 
 #[test]
@@ -243,15 +244,17 @@ fn is_active_toggles_on_the_expected_frames() {
         s.app.update();
         for _ in 0..8 {
             let frame = s.app.world().resource::<MirrorFrame>().0;
+            let mut active = 0;
             for (rank, m) in s.mirrors.clone().iter().enumerate() {
-                let active = s.active(s.camera_of(*m));
-                assert_eq!(
-                    active,
-                    is_render_frame(frame, rank, every),
-                    "every {every}, frame {frame}, rank {rank}"
-                );
-                seen[rank].push(active);
+                let a = s.active(s.camera_of(*m));
+                active += usize::from(a);
+                seen[rank].push(a);
             }
+            assert_eq!(
+                active,
+                renders_in_frame(frame, 2, every),
+                "every {every}, frame {frame}"
+            );
             s.app.update();
         }
         for pattern in &seen {
@@ -477,5 +480,6 @@ fn the_picture_is_mapped_over_the_pane_uv_rectangle_and_the_camera_has_the_pane_
 }
 
 mod ambient;
+mod schedule;
 mod tags;
 mod virtual_view;

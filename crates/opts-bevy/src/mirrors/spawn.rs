@@ -235,6 +235,7 @@ pub fn spawn_mirror_cameras(
                 base_size: size,
                 enlarged: false,
                 tag,
+                last_render: 0,
             });
             existing.insert(key, camera);
         }

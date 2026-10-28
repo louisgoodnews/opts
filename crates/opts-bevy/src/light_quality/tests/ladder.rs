@@ -66,8 +66,8 @@ fn the_ladder_table_is_exact() {
             false,
             0,
             false,
-            0,
-            2,
+            1,
+            4,
             true,
             false,
         ),
@@ -79,8 +79,8 @@ fn the_ladder_table_is_exact() {
             false,
             0,
             false,
-            0,
-            2,
+            1,
+            4,
             true,
             false,
         ),
@@ -118,6 +118,11 @@ fn the_ladder_never_adds_cost_going_down() {
         assert!(q.shafts.steps() <= prev.shafts.steps());
         assert!(q.cone_cap <= prev.cone_cap);
         assert!(q.mirror_count <= prev.mirror_count);
+        // Mirror pictures per frame never grow going down.
+        assert!(
+            u32::from(q.mirror_count) * u32::from(prev.mirror_every)
+                <= u32::from(prev.mirror_count) * u32::from(q.mirror_every)
+        );
         assert!(!q.lantern_cones || prev.lantern_cones);
         assert!(!q.headlight_cones || prev.headlight_cones);
         assert!(!q.night_shafts || prev.night_shafts);
