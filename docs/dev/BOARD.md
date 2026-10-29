@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-26 by Agent (M-0145 trip step and M-0146 rattles done)_
+_Last updated: 2026-10-29 by Agent (status sync: the 2026-10-28 fixes and Phase 15 batches M-0147–M-0149 recorded; M-0150 first batch)_
 
 ---
 
@@ -360,6 +360,14 @@ _Small items discovered during implementation that don't warrant a milestone._
 
 _Completed items from the last two cycles. Older items live in git history and milestone files (pruned under Rule 3 on 2026-10-25: the groups of 2026-10-04 to 2026-10-14)._
 
+**2026-10-28**
+
+- `[x]` 🔴 **Phase 15 structure gates and the first two batches** (M-0147, M-0148, M-0149; tooling + refactor) — `0d9e26ae`: the structure ratchets (350-line files, inline tests in files over 250 lines, 80-line functions, signature allows) and `omsi_uses.py --check` run in `scripts/pre-commit`, `local-ci.sh` and `ci.yml`, with `cargo-deny-action` (M-0042); `a8f95b6e`: inline tests moved out of 101 production files; `606e50ef`: 120 files split below 350 lines, `structure-known.txt` empty. Details in the Phase 15 group of the Backlog and in [Phase 15](../src/roadmap/phase-15/README.md).
+- `[x]` 🟠 **Every mirror in view shows a live picture and shares the render budget** (M-0085, code) — `c6e989d5`.
+- `[x]` 🟠 **Seated passengers: legs fit to the floor, short path gaps bridged, back to the aisle first; sagittal knee offset in the thigh angle** (M-0101, code) — `2c0529b4` (`agent/pax-legs`), `9b00249b`.
+- `[x]` 🟡 **Child meshes on an animated hot-spot answer its mouse event** (M-0141, code) — `9c367641` (`agent/dash-beep`).
+- `[x]` 🟡 **Skinned bellows below an `animparent` move their bones in the same frame** (M-0053, code) — `4c2230ee` (`agent/artic-bellows`).
+
 **2026-10-26**
 
 - `[x]` 🔴 **Bus would not stand still; steering wheel and needles on the wrong axis (Valiant 7700A)** (code + spec) — project lead report, fixed 2026-10-26 on `agent/bus-roll`: the scripts were given the wheel travel `Axle_Suspension_*` as compression (positive under load), where OMSI gives the extension from the unloaded spring (about -0.1 m at rest; the brake scripts level to `bremse_level_setpoint` -0.105). The levelling therefore drained every bellows: the body sank and leaned (spring factors 0.3 to 0.5), and the compressor load made the idle governor open the throttle, so the Valiant crept to 9.6 km/h at idle in D (BHD Lion's City 4.8 km/h). Now the bellows hold 3-4 bar at the set point and the Valiant creeps to about 4 km/h (the scripts' own torque-converter creep; the brake holds it). Released wheel brakes with negative script forces no longer cancel the others. Animations: one handedness for OMSI's angles (origin rotations negated, the mesh matrix composed into `origin_from_mesh` frames), which turns the 49 tilted steering wheels (Valiant, HOH, C2; `rot_x` 8.9 to 31.6 with `rot_z ±90`) and the Valiant's needles about their column and dial instead of across, leans the SD77's column the right way and replaces four sign patches (doors, blind arms, pushed buttons, swap rule); `Axle_Steering` is now positive for a right turn (the scripts' indicator cancel says so). Census of 4,600 installed steering and spin animations: every steering wheel on its measured rim normal and turning right on a right turn. Checked live on Waldhofen (7700A, 7700, SD77, NG272, BHD A20). Open: OMSI reference screenshots of the wheel travel at rest (the animation shows the travel from rest ❓), 71 wheel spins of 550 on matrix meshes still roll backwards.
@@ -504,7 +512,7 @@ and the milestone file.
 
 The agent should check these during P-001 audits:
 
-| Metric | Target | Red Flag | 2026-10-25 |
+| Metric | Target | Red Flag | 2026-10-29 |
 | :--- | :--- | :--- | :--- |
 | **WIP (In Progress count)** | ≤ 1 | > 1 means context switching | 2 items, one milestone (M-0141/M-0100) ⚠️ |
 | **Blocked count** | ≤ 3 | > 3 means dependencies are tangled | 0 (the M-0109 item was unblocked 2026-10-25) |
@@ -582,3 +590,6 @@ The agent should check these during P-001 audits:
 - `2026-10-26` — Equipment dialog choice boxes without list reported, fixed (`agent/combobox-modal`).
 - `2026-10-26` — M-0141/M-0100 fifth round (`agent/vdv-dim`): VDV stop-mode page fixed (mesh file order, textured emission).
 - `2026-10-26` — M-0141/M-0100 sixth round started (`agent/boards`): destination boards, printer screens.
+- `2026-10-28` — Mirrors (M-0085), seated passengers (M-0101), hot-spot child meshes (M-0141) and bellows under an `animparent` (M-0053) fixed and merged.
+- `2026-10-28` — Phase 15: M-0147 (ratchet gates, with `cargo-deny` for M-0042), M-0148 (inline-test extraction) and M-0149 (file splits) done.
+- `2026-10-29` — M-0150 first batch: work left uncommitted in the main checkout was moved to `agent/m0150-functions`, checked and merged; functions over 80 lines 249 → 172, signature allows 145 → 112. Board, Recently Done and `priority-list.md` re-synced with master.
