@@ -28,13 +28,12 @@ fn container(direction: FlexDirection) -> Node {
     }
 }
 
-/// Spawns the pattern (detached: the caller parents `parts.root`) and returns its entities.
-pub fn spawn_master_detail(
+fn create_parts(
     commands: &mut Commands,
     loc: &Localization,
-    config: MasterDetailConfig,
-    model: MasterDetail,
-) -> MasterDetailParts {
+    config: &MasterDetailConfig,
+    model: &MasterDetail,
+) -> (MasterDetailParts, Entity, Entity, Entity) {
     let root = commands.spawn_empty().id();
     let list_col = commands.spawn_empty().id();
     let chips = commands.spawn_empty().id();
@@ -53,6 +52,9 @@ pub fn spawn_master_detail(
         .compact()
         .full_width()
         .spawn(commands);
+    commands
+        .entity(search)
+        .insert(UiId::new(format!("{}.search", config.prefix)));
     let parts = MasterDetailParts {
         root,
         detail,
@@ -66,10 +68,44 @@ pub fn spawn_master_detail(
         track,
         thumb,
     };
+    (parts, root, wrap, panel)
+}
+
+fn spawn_detail_panel(commands: &mut Commands, parts: MasterDetailParts, panel: Entity) {
+    commands.entity(panel).insert((
+        Node {
+            flex_grow: 1.0,
+            padding: UiRect::all(Val::Px(16.0)),
+            overflow: Overflow::scroll_y(),
+            ..container(FlexDirection::Column)
+        },
+        BackgroundRole(ColorRole::SurfaceContainerLow),
+        RadiusToken(RadiusLevel::Large),
+        FocusRegion(Landmark::Detail),
+        Name::new("MasterDetailPanel"),
+    ));
+    commands.entity(parts.detail).insert((
+        Node {
+            flex_shrink: 0.0,
+            width: Val::Percent(100.0),
+            row_gap: Val::Px(12.0),
+            ..container(FlexDirection::Column)
+        },
+        Name::new("MasterDetailContent"),
+    ));
+    commands.entity(panel).add_child(parts.detail);
+    crate::patterns::scroll::wheel_scroll(commands, panel);
+}
+
+/// Spawns the pattern (detached: the caller parents `parts.root`) and returns its entities.
+pub fn spawn_master_detail(
+    commands: &mut Commands,
+    loc: &Localization,
+    config: MasterDetailConfig,
+    model: MasterDetail,
+) -> MasterDetailParts {
+    let (parts, root, wrap, panel) = create_parts(commands, loc, &config, &model);
     let prefix = config.prefix;
-    commands
-        .entity(search)
-        .insert(UiId::new(format!("{prefix}.search")));
     commands.entity(root).insert((
         Node {
             width: Val::Percent(100.0),
@@ -102,65 +138,49 @@ pub fn spawn_master_detail(
         Name::new("MasterDetail"),
     ));
     spawn_list_column(commands, parts, wrap, prefix);
-    crate::patterns::master_detail_input::attach_pointer_observers(commands, root, list, thumb);
-    commands.entity(panel).insert((
-        Node {
-            flex_grow: 1.0,
-            padding: UiRect::all(Val::Px(16.0)),
-            overflow: Overflow::scroll_y(),
-            ..container(FlexDirection::Column)
-        },
-        BackgroundRole(ColorRole::SurfaceContainerLow),
-        RadiusToken(RadiusLevel::Large),
-        FocusRegion(Landmark::Detail),
-        Name::new("MasterDetailPanel"),
-    ));
-    // The screen fills this inner node; it never shrinks, so the panel scrolls instead.
-    commands.entity(detail).insert((
-        Node {
-            flex_shrink: 0.0,
-            width: Val::Percent(100.0),
-            row_gap: Val::Px(12.0),
-            ..container(FlexDirection::Column)
-        },
-        Name::new("MasterDetailContent"),
-    ));
-    commands.entity(panel).add_child(detail);
-    crate::patterns::scroll::wheel_scroll(commands, panel);
+    crate::patterns::master_detail_input::attach_pointer_observers(
+        commands,
+        root,
+        parts.list,
+        parts.thumb,
+    );
+    spawn_detail_panel(commands, parts, panel);
     crate::patterns::scroll::wheel_scroll(commands, root);
-    commands.entity(root).add_children(&[list_col, panel]);
+    commands.entity(root).add_children(&[parts.list_col, panel]);
     parts
 }
 
-fn spawn_list_column(commands: &mut Commands, p: MasterDetailParts, wrap: Entity, prefix: &str) {
-    commands.entity(p.list_col).insert((
+fn spawn_track_and_thumb(commands: &mut Commands, p: MasterDetailParts) {
+    commands.entity(p.track).insert((
         Node {
-            width: Val::Percent(40.0),
-            min_width: Val::Px(320.0),
-            max_width: Val::Px(520.0),
-            row_gap: Val::Px(8.0),
-            ..container(FlexDirection::Column)
+            position_type: PositionType::Absolute,
+            right: Val::Px(2.0),
+            top: Val::Px(2.0),
+            bottom: Val::Px(2.0),
+            width: Val::Px(8.0),
+            display: Display::None,
+            ..default()
         },
-        FocusRegion(Landmark::Content),
-        Name::new("MasterList"),
+        Name::new("MasterScrollTrack"),
     ));
-    commands.entity(p.chips).insert((
+    commands.entity(p.thumb).insert((
         Node {
-            flex_wrap: FlexWrap::Wrap,
-            column_gap: Val::Px(8.0),
-            row_gap: Val::Px(8.0),
-            ..container(FlexDirection::Row)
+            position_type: PositionType::Absolute,
+            left: Val::Px(0.0),
+            right: Val::Px(0.0),
+            top: Val::Px(0.0),
+            height: Val::Px(24.0),
+            ..default()
         },
-        Name::new("MasterChips"),
+        BackgroundRole(ColorRole::Outline),
+        RadiusToken(RadiusLevel::Full),
+        MasterScrollThumb(p.root),
+        Name::new("MasterScrollThumb"),
     ));
-    commands.entity(wrap).insert((
-        Node {
-            flex_grow: 1.0,
-            position_type: PositionType::Relative,
-            ..container(FlexDirection::Column)
-        },
-        Name::new("MasterListWrap"),
-    ));
+    commands.entity(p.track).add_child(p.thumb);
+}
+
+fn spawn_viewport(commands: &mut Commands, p: MasterDetailParts, prefix: &str) {
     commands.entity(p.list).insert((
         Node {
             width: Val::Percent(100.0),
@@ -194,36 +214,42 @@ fn spawn_list_column(commands: &mut Commands, p: MasterDetailParts, wrap: Entity
     commands
         .entity(p.list)
         .insert(UiId::new(format!("{prefix}.list")));
-    commands.entity(p.track).insert((
-        Node {
-            position_type: PositionType::Absolute,
-            right: Val::Px(2.0),
-            top: Val::Px(2.0),
-            bottom: Val::Px(2.0),
-            width: Val::Px(8.0),
-            display: Display::None,
-            ..default()
-        },
-        Name::new("MasterScrollTrack"),
-    ));
-    commands.entity(p.thumb).insert((
-        Node {
-            position_type: PositionType::Absolute,
-            left: Val::Px(0.0),
-            right: Val::Px(0.0),
-            top: Val::Px(0.0),
-            height: Val::Px(24.0),
-            ..default()
-        },
-        BackgroundRole(ColorRole::Outline),
-        RadiusToken(RadiusLevel::Full),
-        MasterScrollThumb(p.root),
-        Name::new("MasterScrollThumb"),
-    ));
-    commands.entity(p.track).add_child(p.thumb);
+    spawn_track_and_thumb(commands, p);
     commands
         .entity(p.list)
         .add_children(&[p.content, p.notice, p.track]);
+}
+
+fn spawn_list_column(commands: &mut Commands, p: MasterDetailParts, wrap: Entity, prefix: &str) {
+    commands.entity(p.list_col).insert((
+        Node {
+            width: Val::Percent(40.0),
+            min_width: Val::Px(320.0),
+            max_width: Val::Px(520.0),
+            row_gap: Val::Px(8.0),
+            ..container(FlexDirection::Column)
+        },
+        FocusRegion(Landmark::Content),
+        Name::new("MasterList"),
+    ));
+    commands.entity(p.chips).insert((
+        Node {
+            flex_wrap: FlexWrap::Wrap,
+            column_gap: Val::Px(8.0),
+            row_gap: Val::Px(8.0),
+            ..container(FlexDirection::Row)
+        },
+        Name::new("MasterChips"),
+    ));
+    commands.entity(wrap).insert((
+        Node {
+            flex_grow: 1.0,
+            position_type: PositionType::Relative,
+            ..container(FlexDirection::Column)
+        },
+        Name::new("MasterListWrap"),
+    ));
+    spawn_viewport(commands, p, prefix);
     commands.entity(wrap).add_child(p.list);
     commands
         .entity(p.list_col)

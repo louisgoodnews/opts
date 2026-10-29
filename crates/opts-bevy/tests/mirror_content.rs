@@ -106,24 +106,12 @@ fn a_vehicle_without_mirrors_has_none() {
     assert!(found.is_empty(), "no mirror pane on a ship: {found:?}");
 }
 
-/// The whole chain on real meshes: the loader registers the pane materials, and the mirror
-/// system turns the panes of a player vehicle into cameras (one per `reflexion<N>` material).
-#[test]
-fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
+fn build_mirror_test_app() -> bevy::prelude::App {
     use bevy::prelude::*;
     use opts_bevy::mirrors::{
-        spawn_mirror_cameras, update_mirror_cameras, MirrorCamera, MirrorFrame, MirrorSettings,
-        MirrorStats,
+        spawn_mirror_cameras, update_mirror_cameras, MirrorFrame, MirrorSettings, MirrorStats,
     };
-    use opts_bevy::{ContentCache, ContentLoader, OmsiInstall, PlayerVehicle};
 
-    let Some(root) = root() else { return };
-    let dir = root.join("Vehicles/MAN_NewLionsCity/model/generic");
-    if !dir.join("Spiegel_links.o3d").exists() {
-        eprintln!("MAN_NewLionsCity not installed; skipping");
-        return;
-    }
-    let install = OmsiInstall::new(&root);
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<Assets<Image>>()
@@ -157,32 +145,90 @@ fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
         opts_bevy::MainCamera,
         GlobalTransform::default(),
     ));
+    app
+}
+
+fn load_mirror_parts(
+    app: &mut bevy::prelude::App,
+    install: &opts_bevy::OmsiInstall,
+    dir: &Path,
+) -> Vec<opts_bevy::model::ModelPart> {
+    use bevy::prelude::*;
+    use opts_bevy::{ContentCache, ContentLoader};
 
     let mut cache = ContentCache::default();
     let mut parts = Vec::new();
-    {
-        let world = app.world_mut();
-        let mut meshes = world.remove_resource::<Assets<Mesh>>().unwrap();
-        let mut materials = world.remove_resource::<Assets<StandardMaterial>>().unwrap();
-        let mut images = world.remove_resource::<Assets<Image>>().unwrap();
-        for file in [
-            "Spiegel_links.o3d",
-            "Spiegel_rechts_II.o3d",
-            "Innenspiegel.o3d",
-        ] {
-            let mut loader = ContentLoader {
-                install: &install,
-                cache: &mut cache,
-                meshes: &mut meshes,
-                materials: &mut materials,
-                images: &mut images,
-            };
-            parts.extend(loader.o3d_parts(&dir.join(file), &[], &[]));
-        }
-        world.insert_resource(meshes);
-        world.insert_resource(materials);
-        world.insert_resource(images);
+    let world = app.world_mut();
+    let mut meshes = world.remove_resource::<Assets<Mesh>>().unwrap();
+    let mut materials = world.remove_resource::<Assets<StandardMaterial>>().unwrap();
+    let mut images = world.remove_resource::<Assets<Image>>().unwrap();
+    for file in [
+        "Spiegel_links.o3d",
+        "Spiegel_rechts_II.o3d",
+        "Innenspiegel.o3d",
+    ] {
+        let mut loader = ContentLoader {
+            install,
+            cache: &mut cache,
+            meshes: &mut meshes,
+            materials: &mut materials,
+            images: &mut images,
+        };
+        parts.extend(loader.o3d_parts(&dir.join(file), &[], &[]));
     }
+    world.insert_resource(meshes);
+    world.insert_resource(materials);
+    world.insert_resource(images);
+    parts
+}
+
+fn spawn_test_vehicle(
+    app: &mut bevy::prelude::App,
+    parts: &[opts_bevy::model::ModelPart],
+    player: bool,
+) {
+    use bevy::prelude::*;
+    use opts_bevy::PlayerVehicle;
+
+    let root = app.world_mut().spawn(Transform::default()).id();
+    if player {
+        app.world_mut().entity_mut(root).insert(PlayerVehicle);
+    }
+    let mut cmds = Vec::new();
+    for (i, part) in parts.iter().enumerate() {
+        cmds.push(
+            app.world_mut()
+                .spawn((
+                    Mesh3d(part.mesh.clone()),
+                    MeshMaterial3d(part.material.clone()),
+                    Transform::from_xyz(i as f32 * 0.5, 0.0, -3.0),
+                    GlobalTransform::from_xyz(i as f32 * 0.5, 0.0, -3.0),
+                ))
+                .id(),
+        );
+    }
+    for c in cmds {
+        app.world_mut().entity_mut(root).add_child(c);
+    }
+}
+
+/// The whole chain on real meshes: the loader registers the pane materials, and the mirror
+/// system turns the panes of a player vehicle into cameras (one per `reflexion<N>` material).
+#[test]
+fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
+    use opts_bevy::mirrors::MirrorCamera;
+    use opts_bevy::OmsiInstall;
+
+    let Some(root) = root() else { return };
+    let dir = root.join("Vehicles/MAN_NewLionsCity/model/generic");
+    if !dir.join("Spiegel_links.o3d").exists() {
+        eprintln!("MAN_NewLionsCity not installed; skipping");
+        return;
+    }
+    let install = OmsiInstall::new(&root);
+    let mut app = build_mirror_test_app();
+    let parts = load_mirror_parts(&mut app, &install, &dir);
+
     let panes = parts
         .iter()
         .filter(|p| opts_bevy::glass::surface_kind(p.material.id()) == Some(SurfaceKind::Mirror))
@@ -193,29 +239,7 @@ fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
         parts.len()
     );
 
-    let spawn_vehicle = |app: &mut App, player: bool| {
-        let root = app.world_mut().spawn(Transform::default()).id();
-        if player {
-            app.world_mut().entity_mut(root).insert(PlayerVehicle);
-        }
-        let mut cmds = Vec::new();
-        for (i, part) in parts.iter().enumerate() {
-            cmds.push(
-                app.world_mut()
-                    .spawn((
-                        Mesh3d(part.mesh.clone()),
-                        MeshMaterial3d(part.material.clone()),
-                        Transform::from_xyz(i as f32 * 0.5, 0.0, -3.0),
-                        GlobalTransform::from_xyz(i as f32 * 0.5, 0.0, -3.0),
-                    ))
-                    .id(),
-            );
-        }
-        for c in cmds {
-            app.world_mut().entity_mut(root).add_child(c);
-        }
-    };
-    spawn_vehicle(&mut app, false);
+    spawn_test_vehicle(&mut app, &parts, false);
     app.update();
     app.update();
     let mut q = app.world_mut().query::<&MirrorCamera>();
@@ -224,7 +248,6 @@ fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
         0,
         "no player vehicle, no mirror cameras"
     );
-    // The panes of another vehicle in front of the viewer get the live pictures of the pool.
     let mut ambient = app
         .world_mut()
         .query::<&opts_bevy::mirrors::AmbientCamera>();
@@ -235,7 +258,7 @@ fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
     eprintln!("ambient cameras with a pane: {served}");
     assert!(served >= 1, "another vehicle's mirror is live");
 
-    spawn_vehicle(&mut app, true);
+    spawn_test_vehicle(&mut app, &parts, true);
     app.update();
     app.update();
     let mut q = app.world_mut().query::<&MirrorCamera>();

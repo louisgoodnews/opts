@@ -24,7 +24,6 @@ pub fn free_roam_rotation(yaw: f32, pitch: f32) -> Quat {
 }
 
 /// Moves and orients the camera while in free-roam mode.
-#[allow(clippy::too_many_arguments)]
 pub fn update_free_roam_camera(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,

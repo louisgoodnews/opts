@@ -45,6 +45,86 @@ use crate::{
 #[derive(Default)]
 pub struct OptsGuiPlugin;
 
+fn register_messages(app: &mut App) {
+    app.add_message::<ButtonClicked>()
+        .add_message::<CheckboxToggled>()
+        .add_message::<SwitchToggled>()
+        .add_message::<RadioSelected>()
+        .add_message::<TextChanged>()
+        .add_message::<DateSelected>()
+        .add_message::<DateTimeSelected>()
+        .add_message::<ComboboxSelected>()
+        .add_message::<NotebookTabSelected>()
+        .add_message::<ToastDismissed>()
+        .add_message::<ToplevelClosed>()
+        .add_message::<TreeNodeSelected>()
+        .add_message::<TreeNodeToggled>()
+        .add_message::<ThemeChanged>();
+}
+
+fn register_form_systems(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            button_click_system,
+            date_select_system,
+            datetime_select_system,
+            checkbox_toggle_system,
+            checkbox_sync_system,
+            switch_toggle_system,
+            switch_sync_system,
+            radio_select_system,
+            radio_sync_system,
+        )
+            .after(ActivationSet),
+    );
+    app.add_systems(
+        Update,
+        (
+            text_field_sync_system,
+            text_field_chrome_system,
+            text_field_clear_system,
+            text_field_disabled_system,
+            text_field_cursor_style_system,
+        )
+            .after(ActivationSet),
+    );
+}
+
+fn register_widget_systems(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            combobox_header_system,
+            combobox_arrow_system,
+            combobox_item_system,
+            combobox_sync_system,
+            notebook_tab_click_system,
+            notebook_action_system,
+            notebook_focus_selects_system,
+            notebook_sync_system,
+        )
+            .after(ActivationSet),
+    );
+    app.add_systems(
+        Update,
+        (
+            toast_timer_system,
+            crate::components::toast_stack::stack_toasts,
+            toast_action_click_system,
+            toplevel_close_system,
+            treeview_click_system,
+            treeview_arrow_system,
+            treeview_sync_system,
+        )
+            .after(ActivationSet),
+    );
+    app.add_systems(
+        Update,
+        crate::components::combobox::combobox_search_systems().after(ActivationSet),
+    );
+}
+
 impl Plugin for OptsGuiPlugin {
     fn build(&self, app: &mut App) {
         if !app.world().contains_resource::<MaterialTheme>() {
@@ -54,21 +134,7 @@ impl Plugin for OptsGuiPlugin {
         app.add_plugins(crate::interaction::InteractionPlugin);
         crate::l10n::build(app);
 
-        // Register widget event streams
-        app.add_message::<ButtonClicked>()
-            .add_message::<CheckboxToggled>()
-            .add_message::<SwitchToggled>()
-            .add_message::<RadioSelected>()
-            .add_message::<TextChanged>()
-            .add_message::<DateSelected>()
-            .add_message::<DateTimeSelected>()
-            .add_message::<ComboboxSelected>()
-            .add_message::<NotebookTabSelected>()
-            .add_message::<ToastDismissed>()
-            .add_message::<ToplevelClosed>()
-            .add_message::<TreeNodeSelected>()
-            .add_message::<TreeNodeToggled>()
-            .add_message::<ThemeChanged>();
+        register_messages(app);
 
         crate::actions::build(app);
         app.add_plugins(crate::patterns::PatternsPlugin);
@@ -103,54 +169,8 @@ impl Plugin for OptsGuiPlugin {
             ),
         );
 
-        // Register form and input interaction systems
-        app.add_systems(
-            Update,
-            (
-                button_click_system,
-                date_select_system,
-                datetime_select_system,
-                text_field_sync_system,
-                text_field_chrome_system,
-                text_field_clear_system,
-                text_field_disabled_system,
-                text_field_cursor_style_system,
-                checkbox_toggle_system,
-                checkbox_sync_system,
-                switch_toggle_system,
-                switch_sync_system,
-                radio_select_system,
-                radio_sync_system,
-            )
-                .after(ActivationSet),
-        );
-
-        // Register advanced navigation and container widget systems
-        app.add_systems(
-            Update,
-            (
-                combobox_header_system,
-                combobox_arrow_system,
-                combobox_item_system,
-                combobox_sync_system,
-                notebook_tab_click_system,
-                notebook_action_system,
-                notebook_focus_selects_system,
-                notebook_sync_system,
-                toast_timer_system,
-                crate::components::toast_stack::stack_toasts,
-                toast_action_click_system,
-                toplevel_close_system,
-                treeview_click_system,
-                treeview_arrow_system,
-                treeview_sync_system,
-            )
-                .after(ActivationSet),
-        );
-        app.add_systems(
-            Update,
-            crate::components::combobox::combobox_search_systems().after(ActivationSet),
-        );
+        register_form_systems(app);
+        register_widget_systems(app);
     }
 }
 

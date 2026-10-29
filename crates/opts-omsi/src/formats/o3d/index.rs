@@ -24,6 +24,79 @@ pub struct Face {
     pub material_index: u16,
 }
 
+fn read_face_count(reader: &mut Cursor<&[u8]>, header: &Header) -> Result<usize> {
+    let count_pos = reader.position() as usize;
+    if header.is_32bit_counts() {
+        let mut count_buf = [0u8; 4];
+        reader.read_exact(&mut count_buf).map_err(|_| {
+            let actual = reader.get_ref().len().saturating_sub(count_pos);
+            O3dParseError::Truncated {
+                expected: 4,
+                actual,
+            }
+        })?;
+        Ok(u32::from_le_bytes(count_buf) as usize)
+    } else {
+        let mut count_buf = [0u8; 2];
+        reader.read_exact(&mut count_buf).map_err(|_| {
+            let actual = reader.get_ref().len().saturating_sub(count_pos);
+            O3dParseError::Truncated {
+                expected: 2,
+                actual,
+            }
+        })?;
+        Ok(u16::from_le_bytes(count_buf) as usize)
+    }
+}
+
+fn parse_faces_32bit(
+    face_slice: &[u8],
+    face_count: usize,
+    vertex_count: usize,
+) -> Result<Vec<Face>> {
+    let mut faces = Vec::with_capacity(face_count);
+    for chunk in face_slice.chunks_exact(FACE_STRIDE_32BIT) {
+        let i0 = u32::from_le_bytes(read_u32_bytes(chunk, 0)?);
+        let i1 = u32::from_le_bytes(read_u32_bytes(chunk, 4)?);
+        let i2 = u32::from_le_bytes(read_u32_bytes(chunk, 8)?);
+        let mat_idx = u16::from_le_bytes(read_u16_bytes(chunk, 12)?);
+
+        validate_index(i0, vertex_count)?;
+        validate_index(i1, vertex_count)?;
+        validate_index(i2, vertex_count)?;
+
+        faces.push(Face {
+            indices: [i0, i1, i2],
+            material_index: mat_idx,
+        });
+    }
+    Ok(faces)
+}
+
+fn parse_faces_16bit(
+    face_slice: &[u8],
+    face_count: usize,
+    vertex_count: usize,
+) -> Result<Vec<Face>> {
+    let mut faces = Vec::with_capacity(face_count);
+    for chunk in face_slice.chunks_exact(FACE_STRIDE_16BIT) {
+        let i0 = u32::from(u16::from_le_bytes(read_u16_bytes(chunk, 0)?));
+        let i1 = u32::from(u16::from_le_bytes(read_u16_bytes(chunk, 2)?));
+        let i2 = u32::from(u16::from_le_bytes(read_u16_bytes(chunk, 4)?));
+        let mat_idx = u16::from_le_bytes(read_u16_bytes(chunk, 6)?);
+
+        validate_index(i0, vertex_count)?;
+        validate_index(i1, vertex_count)?;
+        validate_index(i2, vertex_count)?;
+
+        faces.push(Face {
+            indices: [i0, i1, i2],
+            material_index: mat_idx,
+        });
+    }
+    Ok(faces)
+}
+
 /// Decodes the face/index chunk (`0x49`) into a vector of [`Face`] records.
 ///
 /// Supports both 16-bit and 32-bit index buffers based on `header.is_32bit_indices()`.
@@ -40,30 +113,7 @@ pub fn parse_face_chunk(
     vertex_count: usize,
 ) -> Result<Vec<Face>> {
     expect_tag(reader, TAG_FACE)?;
-
-    let count_pos = reader.position() as usize;
-    let face_count = if header.is_32bit_counts() {
-        let mut count_buf = [0u8; 4];
-        reader.read_exact(&mut count_buf).map_err(|_| {
-            let actual = reader.get_ref().len().saturating_sub(count_pos);
-            O3dParseError::Truncated {
-                expected: 4,
-                actual,
-            }
-        })?;
-        u32::from_le_bytes(count_buf) as usize
-    } else {
-        let mut count_buf = [0u8; 2];
-        reader.read_exact(&mut count_buf).map_err(|_| {
-            let actual = reader.get_ref().len().saturating_sub(count_pos);
-            O3dParseError::Truncated {
-                expected: 2,
-                actual,
-            }
-        })?;
-        u16::from_le_bytes(count_buf) as usize
-    };
-
+    let face_count = read_face_count(reader, header)?;
     let is_32bit = header.is_32bit_indices();
     let stride = if is_32bit {
         FACE_STRIDE_32BIT
@@ -89,41 +139,11 @@ pub fn parse_face_chunk(
     }
 
     let face_slice = &slice[start_pos..start_pos + required];
-    let mut faces = Vec::with_capacity(face_count);
-
-    if is_32bit {
-        for chunk in face_slice.chunks_exact(FACE_STRIDE_32BIT) {
-            let i0 = u32::from_le_bytes(read_u32_bytes(chunk, 0)?);
-            let i1 = u32::from_le_bytes(read_u32_bytes(chunk, 4)?);
-            let i2 = u32::from_le_bytes(read_u32_bytes(chunk, 8)?);
-            let mat_idx = u16::from_le_bytes(read_u16_bytes(chunk, 12)?);
-
-            validate_index(i0, vertex_count)?;
-            validate_index(i1, vertex_count)?;
-            validate_index(i2, vertex_count)?;
-
-            faces.push(Face {
-                indices: [i0, i1, i2],
-                material_index: mat_idx,
-            });
-        }
+    let faces = if is_32bit {
+        parse_faces_32bit(face_slice, face_count, vertex_count)?
     } else {
-        for chunk in face_slice.chunks_exact(FACE_STRIDE_16BIT) {
-            let i0 = u32::from(u16::from_le_bytes(read_u16_bytes(chunk, 0)?));
-            let i1 = u32::from(u16::from_le_bytes(read_u16_bytes(chunk, 2)?));
-            let i2 = u32::from(u16::from_le_bytes(read_u16_bytes(chunk, 4)?));
-            let mat_idx = u16::from_le_bytes(read_u16_bytes(chunk, 6)?);
-
-            validate_index(i0, vertex_count)?;
-            validate_index(i1, vertex_count)?;
-            validate_index(i2, vertex_count)?;
-
-            faces.push(Face {
-                indices: [i0, i1, i2],
-                material_index: mat_idx,
-            });
-        }
-    }
+        parse_faces_16bit(face_slice, face_count, vertex_count)?
+    };
 
     reader.set_position((start_pos + required) as u64);
     Ok(faces)

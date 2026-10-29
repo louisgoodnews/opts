@@ -90,18 +90,11 @@ fn read_text(path: &Path, shown: &str, issues: &mut Vec<Issue>) -> Option<String
     }
 }
 
-/// Reads and checks the pack in `dir` against `reference`.
-#[must_use]
-pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {
-    let folder = dir
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let mut issues = Vec::new();
+fn load_meta(dir: &Path, folder: &str, issues: &mut Vec<Issue>) -> Option<PackMeta> {
     let meta_path = dir.join("pack.json");
-    let meta = if meta_path.exists() {
-        read_text(&meta_path, "pack.json", &mut issues).and_then(|t| {
-            let (m, i) = parse_meta(&t, &folder);
+    if meta_path.exists() {
+        read_text(&meta_path, "pack.json", issues).and_then(|t| {
+            let (m, i) = parse_meta(&t, folder);
             issues.extend(i);
             m
         })
@@ -115,7 +108,10 @@ pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {
             "missing; create it with `opts-tools l10n new <code>` or copy it from another pack. The folder is ignored",
         ));
         None
-    };
+    }
+}
+
+fn list_pack_files(dir: &Path, issues: &mut Vec<Issue>) -> Vec<String> {
     let mut names: Vec<String> = std::fs::read_dir(dir)
         .into_iter()
         .flatten()
@@ -141,60 +137,70 @@ pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {
         ));
         names.truncate(MAX_FILES);
     }
-    let lang = meta
-        .as_ref()
-        .map_or(folder.as_str(), |m| m.code.as_str())
-        .to_string();
-    let mut table = Table::default();
-    let mut origin: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-    let mut files = Vec::new();
-    {
-        for name in names {
-            let Some(text) = read_text(&dir.join(&name), &name, &mut issues) else {
-                continue;
-            };
-            files.push(name.clone());
-            let parsed = if name.ends_with(".json") {
-                let imported = interchange::parse_json(&text);
-                if let (Some(l), Some(m)) = (&imported.language, &meta) {
-                    if *l != m.code {
-                        issues.push(Issue::new(
-                            Severity::Warning,
-                            "language-mismatch",
-                            &name,
-                            interchange::line_of_json_key(&text, "language", 0),
-                            None,
-                            format!("`language` is `{l}` but the pack is `{}`", m.code),
-                        ));
-                    }
-                }
-                imported.table
-            } else {
-                fluent::parse(&text)
-            };
-            let checked = check::validate(&parsed, &name, &lang, reference);
-            issues.extend(checked.issues);
-            for key in checked.table.order {
-                if let Some(prev) = origin.insert(key.clone(), name.clone()) {
-                    issues.push(Issue::new(
-                        Severity::Warning,
-                        "duplicate-key",
-                        &name,
-                        checked.table.lines.get(&key).copied(),
-                        Some(&key),
-                        format!("also defined in {prev}; this later definition wins"),
-                    ));
-                } else {
-                    table.order.push(key.clone());
-                }
-                if let Some(p) = checked.table.messages.get(&key) {
-                    table.messages.insert(key.clone(), p.clone());
-                }
+    names
+}
+
+fn parse_pack_file(
+    name: &str,
+    text: &str,
+    meta: Option<&PackMeta>,
+    issues: &mut Vec<Issue>,
+) -> Table {
+    if name.ends_with(".json") {
+        let imported = interchange::parse_json(text);
+        if let (Some(l), Some(m)) = (&imported.language, meta) {
+            if *l != m.code {
+                issues.push(Issue::new(
+                    Severity::Warning,
+                    "language-mismatch",
+                    name,
+                    interchange::line_of_json_key(text, "language", 0),
+                    None,
+                    format!("`language` is `{l}` but the pack is `{}`", m.code),
+                ));
             }
         }
+        imported.table
+    } else {
+        fluent::parse(text)
     }
-    let (missing_fonts, rtl_text) = check::scripts_beyond_fonts(&table);
-    if let Some(m) = &meta {
+}
+
+fn merge_file_messages(
+    name: &str,
+    checked: check::Checked,
+    origin: &mut std::collections::HashMap<String, String>,
+    table: &mut Table,
+    issues: &mut Vec<Issue>,
+) {
+    issues.extend(checked.issues);
+    for key in checked.table.order {
+        if let Some(prev) = origin.insert(key.clone(), name.to_string()) {
+            issues.push(Issue::new(
+                Severity::Warning,
+                "duplicate-key",
+                name,
+                checked.table.lines.get(&key).copied(),
+                Some(&key),
+                format!("also defined in {prev}; this later definition wins"),
+            ));
+        } else {
+            table.order.push(key.clone());
+        }
+        if let Some(p) = checked.table.messages.get(&key) {
+            table.messages.insert(key.clone(), p.clone());
+        }
+    }
+}
+
+fn check_pack_warnings(
+    meta: Option<&PackMeta>,
+    table: &Table,
+    reference: &Reference,
+    issues: &mut Vec<Issue>,
+) -> (BTreeSet<&'static str>, bool) {
+    let (missing_fonts, rtl_text) = check::scripts_beyond_fonts(table);
+    if let Some(m) = meta {
         if !missing_fonts.is_empty() {
             issues.push(Issue::new(
                 Severity::Warning,
@@ -229,9 +235,7 @@ pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {
         }
     }
     let revision = reference.revision();
-    let outdated = meta
-        .as_ref()
-        .is_some_and(|m| !m.base_version.is_empty() && m.base_version != revision);
+    let outdated = meta.is_some_and(|m| !m.base_version.is_empty() && m.base_version != revision);
     if outdated {
         issues.push(Issue::new(
             Severity::Warning,
@@ -239,9 +243,43 @@ pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {
             "pack.json",
             None,
             None,
-            format!("made against English revision {} but the current one is {revision}; run `opts-tools l10n check` and translate the new or changed keys, then update `base_version`", meta.as_ref().map_or("", |m| m.base_version.as_str())),
+            format!(
+                "made against English revision {} but the current one is {revision}; run `opts-tools l10n check` and translate the new or changed keys, then update `base_version`",
+                meta.map_or("", |m| m.base_version.as_str())
+            ),
         ));
     }
+    (missing_fonts, outdated)
+}
+
+/// Reads and checks the pack in `dir` against `reference`.
+#[must_use]
+pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {
+    let folder = dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut issues = Vec::new();
+    let meta = load_meta(dir, &folder, &mut issues);
+    let names = list_pack_files(dir, &mut issues);
+    let lang = meta
+        .as_ref()
+        .map_or(folder.as_str(), |m| m.code.as_str())
+        .to_string();
+    let mut table = Table::default();
+    let mut origin: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut files = Vec::new();
+    for name in names {
+        let Some(text) = read_text(&dir.join(&name), &name, &mut issues) else {
+            continue;
+        };
+        files.push(name.clone());
+        let parsed = parse_pack_file(&name, &text, meta.as_ref(), &mut issues);
+        let checked = check::validate(&parsed, &name, &lang, reference);
+        merge_file_messages(&name, checked, &mut origin, &mut table, &mut issues);
+    }
+    let (missing_fonts, outdated) =
+        check_pack_warnings(meta.as_ref(), &table, reference, &mut issues);
     let stats = check::stats(reference, &table, &lang);
     Pack {
         dir: dir.to_path_buf(),

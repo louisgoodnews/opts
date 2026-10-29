@@ -299,7 +299,6 @@ const REPEAT_INTERVAL: f32 = 0.05;
 ///
 /// Shift + Tab does nothing in other views, so it never steals a key there. Leaving the driver's view or
 /// changing the sub camera cancels an open editor.
-#[allow(clippy::too_many_arguments)]
 pub fn handle_viewpoint_keys(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time<Real>>,

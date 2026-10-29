@@ -107,6 +107,70 @@ fn frame(exp: &Expected, placement: &Placement) -> (Bounds, [View; 2]) {
     (bounds, views)
 }
 
+fn settle_object(
+    h: &mut Harness,
+    t0: Instant,
+    before: &WorldStats,
+    timing: &mut Timing,
+) -> (bool, super::Diagnostics) {
+    let t = Instant::now();
+    let deadline = t0 + h.config.object_timeout;
+    let settled = h.settle(deadline).unwrap_or(false);
+    timing.settle = ms(t);
+    let drained = h.drain_events();
+    let events = h.baseline.filter(drained);
+    let stats = stats_delta(before, &h.stats());
+    (settled, super::Diagnostics { stats, events })
+}
+
+/// What one object's script check works from.
+struct ScriptJob<'a> {
+    entry: &'a ObjectEntry,
+    pre: &'a Preflight,
+    strings_a: &'a [String],
+    tile_place: mapgen::Placement,
+    bounds: &'a Bounds,
+    views: &'a [View; 2],
+    expect_place: &'a Placement,
+    exp: &'a Expected,
+    t0: Instant,
+}
+
+fn run_scripts(h: &mut Harness, job: &ScriptJob, record: &mut Record, analysis: &mut Analysis) {
+    let ScriptJob {
+        entry,
+        pre,
+        strings_a,
+        tile_place,
+        bounds,
+        views,
+        expect_place,
+        exp,
+        t0,
+    } = *job;
+    let editor_only = record.class.iter().any(|c| c == "editor-only")
+        && !record.class.iter().any(|c| c == "tree");
+    if h.config.scripts && script_check::is_scripted(pre) && editor_only {
+        record.tags.script = Some("editor-only".into());
+    } else if h.config.scripts && script_check::is_scripted(pre) {
+        let script_views = script_check::views(bounds, expect_place.heading_deg, pre, views);
+        let thresholds = h.config.thresholds.script.clone();
+        let ctx = script_run::Ctx {
+            entry,
+            pre,
+            strings: strings_a,
+            tile_place,
+            views: &script_views,
+            deadline: t0 + h.config.object_timeout,
+            thresholds: &thresholds,
+            effects_off: h.config.seed_fault.as_deref() == Some("script-effect-off"),
+        };
+        analysis
+            .text_shots
+            .extend(script_check::stage(h, &ctx, exp, expect_place, record));
+    }
+}
+
 /// Processes one object; the flag is `false` when the worker should be recycled afterwards.
 pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
     let t0 = Instant::now();
@@ -127,17 +191,12 @@ pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
         return (record, true);
     }
     timing.load = ms(t);
-    let t = Instant::now();
-    let deadline = t0 + h.config.object_timeout;
-    let settled = h.settle(deadline).unwrap_or(false);
-    timing.settle = ms(t);
-    let drained = h.drain_events();
-    let events = h.baseline.filter(drained);
-    let stats = stats_delta(&before, &h.stats());
+
+    let (settled, diagnostics) = settle_object(h, t0, &before, &mut timing);
     if !settled {
         record.categories.push("F-TIMEOUT".into());
         record.verdict = super::Verdict::Fail;
-        record.diagnostics = super::Diagnostics { stats, events };
+        record.diagnostics = diagnostics;
         timing.total = ms(t0);
         record.timing_ms = timing;
         return (record, false);
@@ -156,7 +215,7 @@ pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
     let Ok(pixels) = pixels else {
         record.categories.push("F-CAPTURE".into());
         record.verdict = super::Verdict::Fail;
-        record.diagnostics = super::Diagnostics { stats, events };
+        record.diagnostics = diagnostics;
         return (record, false);
     };
 
@@ -169,34 +228,19 @@ pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
         c
     });
 
-    let diagnostics = super::Diagnostics { stats, events };
     judge(h, &mut record, &pre, &exp, diagnostics, text);
-    let editor_only = record.class.iter().any(|c| c == "editor-only")
-        && !record.class.iter().any(|c| c == "tree");
-    if h.config.scripts && script_check::is_scripted(&pre) && editor_only {
-        // The loader spawns nothing for `[onlyeditor]` objects: there is no script to run.
-        record.tags.script = Some("editor-only".into());
-    } else if h.config.scripts && script_check::is_scripted(&pre) {
-        let script_views = script_check::views(&bounds, expect_place.heading_deg, &pre, &views);
-        let thresholds = h.config.thresholds.script.clone();
-        let ctx = script_run::Ctx {
-            entry,
-            pre: &pre,
-            strings: &strings_a,
-            tile_place,
-            views: &script_views,
-            deadline: t0 + h.config.object_timeout,
-            thresholds: &thresholds,
-            effects_off: h.config.seed_fault.as_deref() == Some("script-effect-off"),
-        };
-        analysis.text_shots.extend(script_check::stage(
-            h,
-            &ctx,
-            &exp,
-            &expect_place,
-            &mut record,
-        ));
-    }
+    let job = ScriptJob {
+        entry,
+        pre: &pre,
+        strings_a: &strings_a,
+        tile_place,
+        bounds: &bounds,
+        views: &views,
+        expect_place: &expect_place,
+        exp: &exp,
+        t0,
+    };
+    run_scripts(h, &job, &mut record, &mut analysis);
     images::keep(h, &mut record, &analysis);
     timing.total = ms(t0);
     record.timing_ms = timing;

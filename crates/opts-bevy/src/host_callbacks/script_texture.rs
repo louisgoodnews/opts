@@ -2,14 +2,8 @@
 
 use super::*;
 
-pub(super) fn handle_script_texture_callback(
-    ctx: &VehicleHostContext,
-    name: &str,
-    st: &mut Stacks,
-) -> Option<bool> {
+fn handle_font_metrics(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
     match name {
-        // Fonts & Metrics
-        // `fontName (M.V.GetFontIndex)` -> font handle/index
         "getfontindex" => {
             let name = st.strings.pop().unwrap_or_default();
             let name_trim = name.trim();
@@ -45,8 +39,6 @@ pub(super) fn handle_script_texture_callback(
             st.numbers.push(idx);
             Some(true)
         }
-
-        // `font text (M.V.TextLength)` -> text width in pixels
         "textlength" => {
             let font_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
             let t = st.strings.pop().unwrap_or_default();
@@ -63,48 +55,12 @@ pub(super) fn handle_script_texture_callback(
             st.numbers.push(width);
             Some(true)
         }
+        _ => None,
+    }
+}
 
-        // Script Textures (ST*)
-        // `tex (M.V.STNewTex)` -> void
-        "stnewtex" => {
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            if tex_idx >= 0 {
-                if let Ok(mut texs) = ctx.script_textures.write() {
-                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
-                        tex.new_tex();
-                    }
-                }
-            }
-            Some(true)
-        }
-
-        // `tex (M.V.STLock)` -> void
-        "stlock" => {
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            if tex_idx >= 0 {
-                if let Ok(mut texs) = ctx.script_textures.write() {
-                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
-                        tex.lock();
-                    }
-                }
-            }
-            Some(true)
-        }
-
-        // `tex (M.V.STUnlock)` -> void
-        "stunlock" => {
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            if tex_idx >= 0 {
-                if let Ok(mut texs) = ctx.script_textures.write() {
-                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
-                        tex.unlock();
-                    }
-                }
-            }
-            Some(true)
-        }
-
-        // `tex A R G B (M.V.STSetColor)` -> void
+fn handle_st_pixel_write(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
+    match name {
         "stsetcolor" => {
             let b = st.numbers.pop().unwrap_or(0.0) as u8;
             let g = st.numbers.pop().unwrap_or(0.0) as u8;
@@ -120,8 +76,6 @@ pub(super) fn handle_script_texture_callback(
             }
             Some(true)
         }
-
-        // `tex x1 y1 x2 y2 (M.V.STDrawRect)` -> void
         "stdrawrect" => {
             let y2 = st.numbers.pop().unwrap_or(0.0) as i32;
             let x2 = st.numbers.pop().unwrap_or(0.0) as i32;
@@ -137,8 +91,6 @@ pub(super) fn handle_script_texture_callback(
             }
             Some(true)
         }
-
-        // `tex x y (M.V.STDrawPixel)` -> void
         "stdrawpixel" => {
             let y = st.numbers.pop().unwrap_or(0.0) as i32;
             let x = st.numbers.pop().unwrap_or(0.0) as i32;
@@ -152,8 +104,6 @@ pub(super) fn handle_script_texture_callback(
             }
             Some(true)
         }
-
-        // `tex x y (M.V.STReadPixel)` -> void
         "streadpixel" => {
             let y = st.numbers.pop().unwrap_or(0.0) as i32;
             let x = st.numbers.pop().unwrap_or(0.0) as i32;
@@ -167,91 +117,67 @@ pub(super) fn handle_script_texture_callback(
             }
             Some(true)
         }
+        _ => None,
+    }
+}
 
-        // `tex (M.V.STGetR)` -> R
+fn handle_st_color_read(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
+    match name {
         "stgetr" => {
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            let val = if tex_idx >= 0 {
-                ctx.script_textures
-                    .read()
-                    .ok()
-                    .and_then(|texs| texs.get(tex_idx as usize).map(|t| t.get_r()))
-                    .unwrap_or(0.0)
-            } else {
-                0.0
-            };
+            let val = read_channel(ctx, st, |t| t.get_r());
             st.numbers.push(val);
             Some(true)
         }
-
-        // `tex (M.V.STGetG)` -> G
         "stgetg" => {
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            let val = if tex_idx >= 0 {
-                ctx.script_textures
-                    .read()
-                    .ok()
-                    .and_then(|texs| texs.get(tex_idx as usize).map(|t| t.get_g()))
-                    .unwrap_or(0.0)
-            } else {
-                0.0
-            };
+            let val = read_channel(ctx, st, |t| t.get_g());
             st.numbers.push(val);
             Some(true)
         }
-
-        // `tex (M.V.STGetB)` -> B
         "stgetb" => {
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            let val = if tex_idx >= 0 {
-                ctx.script_textures
-                    .read()
-                    .ok()
-                    .and_then(|texs| texs.get(tex_idx as usize).map(|t| t.get_b()))
-                    .unwrap_or(0.0)
-            } else {
-                0.0
-            };
+            let val = read_channel(ctx, st, |t| t.get_b());
             st.numbers.push(val);
             Some(true)
         }
-
-        // `tex (M.V.STGetA)` -> A
         "stgeta" => {
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            let val = if tex_idx >= 0 {
-                ctx.script_textures
-                    .read()
-                    .ok()
-                    .and_then(|texs| texs.get(tex_idx as usize).map(|t| t.get_a()))
-                    .unwrap_or(0.0)
-            } else {
-                0.0
-            };
+            let val = read_channel(ctx, st, |t| t.get_a());
             st.numbers.push(val);
             Some(true)
         }
-
-        // `tex (M.V.STFilter)` -> void
-        "stfilter" => {
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            if tex_idx >= 0 {
-                if let Ok(mut texs) = ctx.script_textures.write() {
-                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
-                        tex.filter();
-                    }
-                }
-            }
+        "stcopycolor" => {
+            let _tex = st.numbers.pop();
             Some(true)
         }
+        _ => None,
+    }
+}
 
-        // `file tex (M.V.STLoadTex)` -> msg
+fn read_channel(
+    ctx: &VehicleHostContext,
+    st: &mut Stacks,
+    f: impl FnOnce(&CpuScriptTexture) -> f32,
+) -> f32 {
+    let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+    if tex_idx >= 0 {
+        ctx.script_textures
+            .read()
+            .ok()
+            .and_then(|texs| texs.get(tex_idx as usize).map(f))
+            .unwrap_or(0.0)
+    } else {
+        0.0
+    }
+}
+
+fn handle_st_lifecycle_text(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
+    match name {
+        "stnewtex" => mutate_tex(ctx, st, |t| t.new_tex()),
+        "stlock" => mutate_tex(ctx, st, |t| t.lock()),
+        "stunlock" => mutate_tex(ctx, st, |t| t.unlock()),
+        "stfilter" => mutate_tex(ctx, st, |t| t.filter()),
         "stloadtex" => {
             let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
             let file = st.strings.pop().unwrap_or_default();
             if tex_idx >= 0 && !file.is_empty() {
-                // OMSI paths: backslashes, any letter case, relative to the vehicle's
-                // texture folder (`..\..\Anzeigen\...` reaches `Vehicles/Anzeigen`).
                 let path = match &ctx.texture_base_dir {
                     Some(base) => crate::script_text::resolve_path(base, &file),
                     None => Some(std::path::PathBuf::from(file.replace('\\', "/"))),
@@ -265,42 +191,64 @@ pub(super) fn handle_script_texture_callback(
             st.strings.push(String::new());
             Some(true)
         }
-
-        // `tex x y font a b (text) (M.V.STTextOut)` -> void
         "sttextout" => {
-            let text = st.strings.pop().unwrap_or_default();
-            let spacing = st.numbers.pop().unwrap_or(0.0) as i32;
-            let alignment = st.numbers.pop().unwrap_or(0.0) as u32;
-            let font_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            let y = st.numbers.pop().unwrap_or(0.0) as i32;
-            let x = st.numbers.pop().unwrap_or(0.0) as i32;
-            let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-            if tex_idx >= 0 && font_idx >= 0 {
-                if let Ok(fonts) = ctx.fonts.read() {
-                    if let Some(font) = fonts.get(font_idx as usize) {
-                        let bitmaps = ctx.font_bitmaps.get(font_idx as usize);
-                        if let Ok(mut texs) = ctx.script_textures.write() {
-                            if let Some(tex) = texs.get_mut(tex_idx as usize) {
-                                match bitmaps {
-                                    Some(b) => crate::script_text::draw_text(
-                                        tex, x, y, font, &b, &text, spacing,
-                                    ),
-                                    None => tex.text_out(x, y, font, &text, alignment, spacing),
-                                }
+            draw_st_text(ctx, st);
+            Some(true)
+        }
+        _ => None,
+    }
+}
+
+fn mutate_tex(
+    ctx: &VehicleHostContext,
+    st: &mut Stacks,
+    f: impl FnOnce(&mut CpuScriptTexture),
+) -> Option<bool> {
+    let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+    if tex_idx >= 0 {
+        if let Ok(mut texs) = ctx.script_textures.write() {
+            if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                f(tex);
+            }
+        }
+    }
+    Some(true)
+}
+
+fn draw_st_text(ctx: &VehicleHostContext, st: &mut Stacks) {
+    let text = st.strings.pop().unwrap_or_default();
+    let spacing = st.numbers.pop().unwrap_or(0.0) as i32;
+    let alignment = st.numbers.pop().unwrap_or(0.0) as u32;
+    let font_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+    let y = st.numbers.pop().unwrap_or(0.0) as i32;
+    let x = st.numbers.pop().unwrap_or(0.0) as i32;
+    let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+    if tex_idx >= 0 && font_idx >= 0 {
+        if let Ok(fonts) = ctx.fonts.read() {
+            if let Some(font) = fonts.get(font_idx as usize) {
+                let bitmaps = ctx.font_bitmaps.get(font_idx as usize);
+                if let Ok(mut texs) = ctx.script_textures.write() {
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        match bitmaps {
+                            Some(b) => {
+                                crate::script_text::draw_text(tex, x, y, font, &b, &text, spacing)
                             }
+                            None => tex.text_out(x, y, font, &text, alignment, spacing),
                         }
                     }
                 }
             }
-            Some(true)
         }
-
-        // `tex (M.V.STCopyColor)` -> void
-        "stcopycolor" => {
-            let _tex = st.numbers.pop();
-            Some(true)
-        }
-
-        _ => None,
     }
+}
+
+pub(super) fn handle_script_texture_callback(
+    ctx: &VehicleHostContext,
+    name: &str,
+    st: &mut Stacks,
+) -> Option<bool> {
+    handle_font_metrics(ctx, name, st)
+        .or_else(|| handle_st_pixel_write(ctx, name, st))
+        .or_else(|| handle_st_color_read(ctx, name, st))
+        .or_else(|| handle_st_lifecycle_text(ctx, name, st))
 }

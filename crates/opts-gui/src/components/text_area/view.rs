@@ -44,6 +44,73 @@ fn total_visual_lines(area: &TextArea, chars_per_line: usize) -> usize {
         .sum()
 }
 
+fn update_scroll(area: &mut TextArea, computed: &ComputedNode) {
+    let size = computed.size() * computed.inverse_scale_factor();
+    let width = (size.x - 2.0 * PAD).max(FONT_SIZE);
+    let cpl = ((width / (FONT_SIZE * GLYPH_WIDTH)) as usize).max(1);
+    let visible_h = (size.y - 2.0 * PAD).max(LINE_HEIGHT);
+    let cur_y = cursor_visual_line(area, cpl) as f32 * LINE_HEIGHT;
+    let max_scroll = (total_visual_lines(area, cpl) as f32 * LINE_HEIGHT - visible_h).max(0.0);
+    let mut scroll = area.scroll_px.min(max_scroll);
+    if cur_y < scroll {
+        scroll = cur_y;
+    } else if cur_y + LINE_HEIGHT > scroll + visible_h {
+        scroll = cur_y + LINE_HEIGHT - visible_h;
+    }
+    if (scroll - area.scroll_px).abs() > f32::EPSILON {
+        area.scroll_px = scroll;
+    }
+}
+
+struct RenderSegments {
+    before: String,
+    middle: String,
+    after: String,
+    middle_color: Color,
+    base_color: Color,
+}
+
+fn split_render_segments(
+    area: &TextArea,
+    cursor_on: bool,
+    theme: &MaterialTheme,
+) -> RenderSegments {
+    let color = |role| theme.scheme.get(role);
+    if area.buffer.text().is_empty() && !area.focused {
+        RenderSegments {
+            before: area.placeholder.clone(),
+            middle: String::new(),
+            after: String::new(),
+            middle_color: Color::NONE,
+            base_color: color(ColorRole::OnSurfaceVariant),
+        }
+    } else {
+        let (before, selected, after) = area.buffer.split_for_render();
+        if selected.is_empty() {
+            let cursor = if cursor_on {
+                color(ColorRole::Primary)
+            } else {
+                Color::NONE
+            };
+            RenderSegments {
+                before,
+                middle: "|".to_owned(),
+                after,
+                middle_color: cursor,
+                base_color: color(ColorRole::OnSurface),
+            }
+        } else {
+            RenderSegments {
+                before,
+                middle: selected,
+                after,
+                middle_color: color(ColorRole::Primary),
+                base_color: color(ColorRole::OnSurface),
+            }
+        }
+    }
+}
+
 /// Rebuilds the visible text, blinks the cursor on real time and keeps the cursor in view.
 pub fn text_area_render_system(
     real: Res<Time<Real>>,
@@ -53,81 +120,31 @@ pub fn text_area_render_system(
     mut spans: Query<(&mut TextSpan, &mut TextColor, &TextAreaSpan), Without<TextAreaText>>,
 ) {
     let dt = real.delta_secs();
-    let color = |role| theme.scheme.get(role);
     for (mut area, computed, children) in &mut areas {
         area.blink_clock += dt;
         let cursor_on = area.focused && (area.blink_clock % BLINK_PERIOD) < BLINK_PERIOD * 0.5;
 
-        let size = computed.size() * computed.inverse_scale_factor();
-        let width = (size.x - 2.0 * PAD).max(FONT_SIZE);
-        let cpl = ((width / (FONT_SIZE * GLYPH_WIDTH)) as usize).max(1);
-        let visible_h = (size.y - 2.0 * PAD).max(LINE_HEIGHT);
-        let cur_y = cursor_visual_line(&area, cpl) as f32 * LINE_HEIGHT;
-        let max_scroll = (total_visual_lines(&area, cpl) as f32 * LINE_HEIGHT - visible_h).max(0.0);
-        let mut scroll = area.scroll_px.min(max_scroll);
-        if cur_y < scroll {
-            scroll = cur_y;
-        } else if cur_y + LINE_HEIGHT > scroll + visible_h {
-            scroll = cur_y + LINE_HEIGHT - visible_h;
-        }
-        if (scroll - area.scroll_px).abs() > f32::EPSILON {
-            area.scroll_px = scroll;
-        }
-
-        // (before, middle, after) with their colours.
-        let (before, middle, after, middle_color, base_color) =
-            if area.buffer.text().is_empty() && !area.focused {
-                (
-                    area.placeholder.clone(),
-                    String::new(),
-                    String::new(),
-                    Color::NONE,
-                    color(ColorRole::OnSurfaceVariant),
-                )
-            } else {
-                let (before, selected, after) = area.buffer.split_for_render();
-                if selected.is_empty() {
-                    let cursor = if cursor_on {
-                        color(ColorRole::Primary)
-                    } else {
-                        Color::NONE
-                    };
-                    (
-                        before,
-                        "|".to_owned(),
-                        after,
-                        cursor,
-                        color(ColorRole::OnSurface),
-                    )
-                } else {
-                    (
-                        before,
-                        selected,
-                        after,
-                        color(ColorRole::Primary),
-                        color(ColorRole::OnSurface),
-                    )
-                }
-            };
+        update_scroll(&mut area, computed);
+        let segs = split_render_segments(&area, cursor_on, &theme);
 
         for &child in children {
             let Ok((mut text, mut text_color, mut node, span_children)) = texts.get_mut(child)
             else {
                 continue;
             };
-            if text.0 != before {
-                text.0 = before.clone();
+            if text.0 != segs.before {
+                text.0 = segs.before.clone();
             }
-            if text_color.0 != base_color {
-                text_color.0 = base_color;
+            if text_color.0 != segs.base_color {
+                text_color.0 = segs.base_color;
             }
             for &span in span_children {
                 let Ok((mut span_text, mut span_color, kind)) = spans.get_mut(span) else {
                     continue;
                 };
                 let (value, c) = match kind {
-                    TextAreaSpan::Middle => (&middle, middle_color),
-                    TextAreaSpan::After => (&after, base_color),
+                    TextAreaSpan::Middle => (&segs.middle, segs.middle_color),
+                    TextAreaSpan::After => (&segs.after, segs.base_color),
                 };
                 if span_text.0 != *value {
                     span_text.0 = value.clone();

@@ -20,6 +20,93 @@ fn main() {
         .run();
 }
 
+fn spawn_header_section(parent: &mut ChildSpawnerCommands) {
+    LabelBuilder::new("Material Design 3 Widgets")
+        .with_style(TypeScale::Headline)
+        .with_color(ColorRole::Primary)
+        .spawn_child(parent);
+
+    LabelBuilder::new("Tier 1 Components: Buttons, Labels & Icons")
+        .with_style(TypeScale::TitleMedium)
+        .with_color(ColorRole::OnSurfaceVariant)
+        .spawn_child(parent);
+}
+
+fn spawn_buttons_row(parent: &mut ChildSpawnerCommands) {
+    parent
+        .spawn((RowBuilder::new()
+            .with_spacing(SpacingScale::Standard)
+            .build(),))
+        .with_children(|row| {
+            ButtonBuilder::filled("Filled")
+                .on_click(|_commands, _entity| {
+                    info!("Filled button clicked!");
+                })
+                .spawn_child(row);
+
+            ButtonBuilder::elevated("Elevated")
+                .on_click(|_commands, _entity| {
+                    info!("Elevated button clicked!");
+                })
+                .spawn_child(row);
+
+            ButtonBuilder::tonal("Tonal")
+                .on_click(|_commands, _entity| {
+                    info!("Tonal button clicked!");
+                })
+                .spawn_child(row);
+
+            ButtonBuilder::outlined("Outlined")
+                .on_click(|_commands, _entity| {
+                    info!("Outlined button clicked!");
+                })
+                .spawn_child(row);
+
+            ButtonBuilder::text("Text")
+                .on_click(|_commands, _entity| {
+                    info!("Text button clicked!");
+                })
+                .spawn_child(row);
+
+            ButtonBuilder::filled("Disabled")
+                .with_disabled(true)
+                .spawn_child(row);
+        });
+}
+
+fn spawn_typography_showcase(parent: &mut ChildSpawnerCommands) {
+    parent
+        .spawn((
+            StackBuilder::new()
+                .with_spacing(SpacingScale::Small)
+                .build(),
+            BackgroundRole(ColorRole::SurfaceContainerLow),
+            RadiusToken(RadiusLevel::Medium),
+        ))
+        .with_children(|card| {
+            LabelBuilder::new("Typography Scale Showcase")
+                .with_style(TypeScale::TitleLarge)
+                .with_color(ColorRole::Primary)
+                .spawn_child(card);
+
+            LabelBuilder::new("Headline Medium (28px)")
+                .with_style(TypeScale::Headline)
+                .spawn_child(card);
+
+            LabelBuilder::new(
+                "Body Large — standard body text for route descriptions and timetables.",
+            )
+            .with_style(TypeScale::BodyLarge)
+            .with_color(ColorRole::OnSurface)
+            .spawn_child(card);
+
+            LabelBuilder::new("Label Small — badge or micro metadata tag")
+                .with_style(TypeScale::Label)
+                .with_color(ColorRole::OnSurfaceVariant)
+                .spawn_child(card);
+        });
+}
+
 fn setup_scene(mut commands: Commands) {
     commands.spawn(Camera2d);
 
@@ -39,94 +126,10 @@ fn setup_scene(mut commands: Commands) {
         ))
         .id();
 
-    // 1. Headers Section
     commands.entity(root).with_children(|parent| {
-        LabelBuilder::new("Material Design 3 Widgets")
-            .with_style(TypeScale::Headline)
-            .with_color(ColorRole::Primary)
-            .spawn_child(parent);
-
-        LabelBuilder::new("Tier 1 Components: Buttons, Labels & Icons")
-            .with_style(TypeScale::TitleMedium)
-            .with_color(ColorRole::OnSurfaceVariant)
-            .spawn_child(parent);
-    });
-
-    // 2. Buttons Row Section
-    commands.entity(root).with_children(|parent| {
-        parent
-            .spawn((RowBuilder::new()
-                .with_spacing(SpacingScale::Standard)
-                .build(),))
-            .with_children(|row| {
-                ButtonBuilder::filled("Filled")
-                    .on_click(|_commands, _entity| {
-                        info!("Filled button clicked!");
-                    })
-                    .spawn_child(row);
-
-                ButtonBuilder::elevated("Elevated")
-                    .on_click(|_commands, _entity| {
-                        info!("Elevated button clicked!");
-                    })
-                    .spawn_child(row);
-
-                ButtonBuilder::tonal("Tonal")
-                    .on_click(|_commands, _entity| {
-                        info!("Tonal button clicked!");
-                    })
-                    .spawn_child(row);
-
-                ButtonBuilder::outlined("Outlined")
-                    .on_click(|_commands, _entity| {
-                        info!("Outlined button clicked!");
-                    })
-                    .spawn_child(row);
-
-                ButtonBuilder::text("Text")
-                    .on_click(|_commands, _entity| {
-                        info!("Text button clicked!");
-                    })
-                    .spawn_child(row);
-
-                ButtonBuilder::filled("Disabled")
-                    .with_disabled(true)
-                    .spawn_child(row);
-            });
-    });
-
-    // 3. Typography Scale Gallery
-    commands.entity(root).with_children(|parent| {
-        parent
-            .spawn((
-                StackBuilder::new()
-                    .with_spacing(SpacingScale::Small)
-                    .build(),
-                BackgroundRole(ColorRole::SurfaceContainerLow),
-                RadiusToken(RadiusLevel::Medium),
-            ))
-            .with_children(|card| {
-                LabelBuilder::new("Typography Scale Showcase")
-                    .with_style(TypeScale::TitleLarge)
-                    .with_color(ColorRole::Primary)
-                    .spawn_child(card);
-
-                LabelBuilder::new("Headline Medium (28px)")
-                    .with_style(TypeScale::Headline)
-                    .spawn_child(card);
-
-                LabelBuilder::new(
-                    "Body Large — standard body text for route descriptions and timetables.",
-                )
-                .with_style(TypeScale::BodyLarge)
-                .with_color(ColorRole::OnSurface)
-                .spawn_child(card);
-
-                LabelBuilder::new("Label Small — badge or micro metadata tag")
-                    .with_style(TypeScale::Label)
-                    .with_color(ColorRole::OnSurfaceVariant)
-                    .spawn_child(card);
-            });
+        spawn_header_section(parent);
+        spawn_buttons_row(parent);
+        spawn_typography_showcase(parent);
     });
 }
 

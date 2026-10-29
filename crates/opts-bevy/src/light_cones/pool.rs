@@ -111,31 +111,67 @@ pub fn prepass_gate(depth_fade: bool, age_s: f32, frames: u32) -> f32 {
     ((age_s - PREPASS_READY_S) / CONE_FADE_IN_S).clamp(0.0, 1.0)
 }
 
-/// Chooses the visible cones every [`SELECT_INTERVAL_S`] (at once when the quality settings
-/// change), and keeps their brightness and visibility current every frame.
-#[allow(clippy::too_many_arguments)]
-pub fn light_cone_pool_system(
-    time: Res<Time<Real>>,
-    quality: Res<LightQuality>,
-    mut pool: ResMut<ConePool>,
-    mut stats: ResMut<ConeStats>,
-    cameras: Query<(&Camera, &GlobalTransform, Has<DepthPrepass>), With<crate::MainCamera>>,
-    scan: Query<(Entity, &LightCone, &GlobalTransform)>,
-    mut apply: Query<(&LightCone, &mut Visibility, &mut MeshTag)>,
-    glows: Query<&SceneryLight>,
-    spots: Query<(&SpotLight, &ScriptLight)>,
-) {
-    let cap = quality.cone_cap.min(MAX_CONE_CAP) as usize;
-    let key = (quality.lantern_cones, quality.headlight_cones, cap);
-    pool.since_select_s += time.delta_secs();
-    let camera = cameras
-        .iter()
-        .find(|(c, _, _)| c.is_active)
-        .map(|(_, t, p)| (t.translation(), t.forward().as_vec3(), p));
-    // The prepass gate: with the depth fade on, cones wait until the camera has had the prepass
-    // for a while, then fade in; with it off they are not gated.
+fn test_cone_candidate(
+    cone: &LightCone,
+    global: &GlobalTransform,
+    cam: Vec3,
+    fwd: Vec3,
+    quality: &LightQuality,
+    glows: &Query<&SceneryLight>,
+    spots: &Query<(&SpotLight, &ScriptLight)>,
+) -> Option<f32> {
+    if !cone.kind.allowed(quality) || level_of(cone.level, glows, spots) <= CONE_ON_LEVEL {
+        return None;
+    }
+    let m = global.affine().matrix3;
+    let axis = -Vec3::from(m.z_axis);
+    let length = axis.length();
+    let radius = Vec3::from(m.x_axis).length();
+    let apex = global.translation();
+    let centre = apex + axis * 0.5;
+    let bound = (length * 0.5).max(radius);
+    let to_centre = centre - cam;
+    if to_centre.length() - bound > cone.kind.max_distance_m() || to_centre.dot(fwd) < -bound {
+        return None;
+    }
+    Some(cone_coverage(length, radius, to_centre.length()))
+}
+
+/// System parameters for the light cone pooling system.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct LightConePoolParams<'w, 's> {
+    pub time: Res<'w, Time<Real>>,
+    pub quality: Res<'w, LightQuality>,
+    pub pool: ResMut<'w, ConePool>,
+    pub stats: ResMut<'w, ConeStats>,
+    pub cameras: Query<
+        'w,
+        's,
+        (&'static Camera, &'static GlobalTransform, Has<DepthPrepass>),
+        With<crate::MainCamera>,
+    >,
+    pub scan: Query<'w, 's, (Entity, &'static LightCone, &'static GlobalTransform)>,
+    pub apply: Query<
+        'w,
+        's,
+        (
+            &'static LightCone,
+            &'static mut Visibility,
+            &'static mut MeshTag,
+        ),
+    >,
+    pub glows: Query<'w, 's, &'static SceneryLight>,
+    pub spots: Query<'w, 's, (&'static SpotLight, &'static ScriptLight)>,
+}
+
+fn update_prepass_gate(
+    pool: &mut ConePool,
+    quality: &LightQuality,
+    camera: Option<(Vec3, Vec3, bool)>,
+    dt: f32,
+) -> f32 {
     if quality.cone_depth_fade && camera.is_some_and(|c| c.2) {
-        pool.prepass_age_s += time.delta_secs();
+        pool.prepass_age_s += dt;
         pool.prepass_frames += 1;
     } else {
         pool.prepass_age_s = 0.0;
@@ -146,68 +182,64 @@ pub fn light_cone_pool_system(
         pool.prepass_age_s,
         pool.prepass_frames,
     );
-    if pool.gate != gate {
-        pool.gate = gate;
-    }
-    if pool.since_select_s >= SELECT_INTERVAL_S || pool.key != Some(key) {
-        pool.since_select_s = 0.0;
-        pool.key = Some(key);
+    pool.gate = gate;
+    gate
+}
+
+/// Chooses the visible cones every [`SELECT_INTERVAL_S`] (at once when the quality settings
+/// change), and keeps their brightness and visibility current every frame.
+pub fn light_cone_pool_system(mut p: LightConePoolParams) {
+    let cap = p.quality.cone_cap.min(MAX_CONE_CAP) as usize;
+    let key = (p.quality.lantern_cones, p.quality.headlight_cones, cap);
+    p.pool.since_select_s += p.time.delta_secs();
+    let camera = p
+        .cameras
+        .iter()
+        .find(|(c, _, _)| c.is_active)
+        .map(|(_, t, pre)| (t.translation(), t.forward().as_vec3(), pre));
+    let gate = update_prepass_gate(&mut p.pool, &p.quality, camera, p.time.delta_secs());
+    if p.pool.since_select_s >= SELECT_INTERVAL_S || p.pool.key != Some(key) {
+        p.pool.since_select_s = 0.0;
+        p.pool.key = Some(key);
         let started = std::time::Instant::now();
         let mut candidates: Vec<(Entity, f32)> = Vec::new();
         let mut total = 0;
         if let Some((cam, fwd)) = camera.filter(|_| cap > 0).map(|c| (c.0, c.1)) {
-            for (e, cone, global) in &scan {
+            for (e, cone, global) in &p.scan {
                 total += 1;
-                if !cone.kind.allowed(&quality) {
-                    continue;
-                }
-                if level_of(cone.level, &glows, &spots) <= CONE_ON_LEVEL {
-                    continue;
-                }
-                let m = global.affine().matrix3;
-                // The axis vector including the lengths: -Z of the matrix.
-                let axis = -Vec3::from(m.z_axis);
-                let length = axis.length();
-                let radius = Vec3::from(m.x_axis).length();
-                let apex = global.translation();
-                let centre = apex + axis * 0.5;
-                let bound = (length * 0.5).max(radius);
-                let to_centre = centre - cam;
-                if to_centre.length() - bound > cone.kind.max_distance_m()
-                    || to_centre.dot(fwd) < -bound
+                if let Some(cov) =
+                    test_cone_candidate(cone, global, cam, fwd, &p.quality, &p.glows, &p.spots)
                 {
-                    continue;
+                    candidates.push((e, cov));
                 }
-                candidates.push((e, cone_coverage(length, radius, to_centre.length())));
             }
         } else {
-            total = scan.iter().count();
+            total = p.scan.iter().count();
         }
-        let chosen = select_cones(&candidates, &pool.active, cap, CONE_HYSTERESIS);
-        for e in pool.active.iter().filter(|e| !chosen.contains(e)) {
-            if let Ok((_, mut vis, _)) = apply.get_mut(*e) {
+        let chosen = select_cones(&candidates, &p.pool.active, cap, CONE_HYSTERESIS);
+        for e in p.pool.active.iter().filter(|e| !chosen.contains(e)) {
+            if let Ok((_, mut vis, _)) = p.apply.get_mut(*e) {
                 if *vis != Visibility::Hidden {
                     *vis = Visibility::Hidden;
                 }
             }
         }
-        *stats = ConeStats {
+        *p.stats = ConeStats {
             total,
             eligible: candidates.len(),
             active: chosen.len(),
             over_budget: candidates.len().saturating_sub(chosen.len()),
             select_us: started.elapsed().as_micros().min(u128::from(u32::MAX)) as u32,
         };
-        pool.active = chosen;
+        p.pool.active = chosen;
     }
-    // Every frame, for the few visible cones: brightness and the on/off state.
     let mut lit = 0;
-    pool.active.retain(|&e| {
-        let Ok((cone, mut vis, mut tag)) = apply.get_mut(e) else {
+    p.pool.active.retain(|&e| {
+        let Ok((cone, mut vis, mut tag)) = p.apply.get_mut(e) else {
             return false;
         };
-        let raw = if cone.kind.allowed(&quality) {
-            level_of(cone.level, &glows, &spots)
+        let raw = if cone.kind.allowed(&p.quality) {
+            level_of(cone.level, &p.glows, &p.spots)
         } else {
             0.0
         };
@@ -237,8 +269,8 @@ pub fn light_cone_pool_system(
         }
         true
     });
-    if stats.active != lit {
-        stats.active = lit;
+    if p.stats.active != lit {
+        p.stats.active = lit;
     }
 }
 

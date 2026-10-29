@@ -104,10 +104,123 @@ pub fn valid_code(code: &str) -> bool {
         && parts.all(|p| (2..=8).contains(&p.len()) && p.chars().all(|c| c.is_ascii_alphanumeric()))
 }
 
+const FILE: &str = "pack.json";
+
+fn fail_field(issues: &mut Vec<Issue>, field: &str, line: Option<usize>, why: &str) {
+    issues.push(Issue::new(
+        Severity::Error,
+        "pack-json",
+        FILE,
+        line,
+        None,
+        format!("`{field}`: {why}"),
+    ));
+}
+
+fn extract_text_field(
+    obj: &serde_json::Map<String, serde_json::Value>,
+    field: &str,
+    required: bool,
+    issues: &mut Vec<Issue>,
+    line: Option<usize>,
+) -> String {
+    match obj.get(field) {
+        Some(serde_json::Value::String(s)) if !s.trim().is_empty() => s.trim().to_string(),
+        Some(serde_json::Value::String(_)) | None if required => {
+            fail_field(issues, field, line, "required, a non-empty text");
+            String::new()
+        }
+        Some(serde_json::Value::String(s)) => s.clone(),
+        None => String::new(),
+        Some(_) => {
+            fail_field(issues, field, line, "must be text");
+            String::new()
+        }
+    }
+}
+
+fn parse_authors(
+    obj: &serde_json::Map<String, serde_json::Value>,
+    issues: &mut Vec<Issue>,
+    line: Option<usize>,
+) -> Vec<String> {
+    match obj.get("authors") {
+        Some(serde_json::Value::Array(a)) => a
+            .iter()
+            .filter_map(|x| x.as_str().map(|s| s.trim().to_string()))
+            .filter(|s| !s.is_empty())
+            .collect(),
+        None => Vec::new(),
+        Some(_) => {
+            fail_field(
+                issues,
+                "authors",
+                line,
+                "must be a list of names, for example [\"Jane Doe\"]",
+            );
+            Vec::new()
+        }
+    }
+}
+
+fn validate_code(code: &str, folder: &str, issues: &mut Vec<Issue>, line: Option<usize>) {
+    if code.is_empty() {
+        return;
+    }
+    if !valid_code(code) {
+        fail_field(
+            issues,
+            "code",
+            line,
+            "must look like `fr` or `pt-BR` (lower-case language, optional region)",
+        );
+    } else if code != folder {
+        fail_field(
+            issues,
+            "code",
+            line,
+            &format!("is `{code}` but the folder is `{folder}`; they must be equal"),
+        );
+    } else if code == "en-XA" || code.eq_ignore_ascii_case("en-xa") {
+        fail_field(
+            issues,
+            "code",
+            line,
+            "`en-XA` is the pseudo-locale of the tests and cannot be a pack",
+        );
+    }
+}
+
+fn check_meta_warnings(meta: &PackMeta, text: &str, issues: &mut Vec<Issue>) {
+    let line_of = |field: &str| interchange::line_of_json_key(text, field, 0);
+    if meta.authors.is_empty() {
+        issues.push(Issue::new(
+            Severity::Warning,
+            "pack-json",
+            FILE,
+            line_of("authors"),
+            None,
+            "`authors` is empty; name the people (or tools) behind the translation",
+        ));
+    }
+    if meta.license != EXPECTED_LICENSE {
+        issues.push(Issue::new(
+            Severity::Warning,
+            "licence",
+            FILE,
+            line_of("license"),
+            None,
+            format!(
+                "`license` is `{}`; contributed text is licensed as the project: `{EXPECTED_LICENSE}`",
+                meta.license
+            ),
+        ));
+    }
+}
+
 /// Reads `pack.json` text. Problems become issues; a pack with an error has no meta.
 #[must_use]
 pub fn parse_meta(text: &str, folder: &str) -> (Option<PackMeta>, Vec<Issue>) {
-    const FILE: &str = "pack.json";
     let mut issues = Vec::new();
     let value: serde_json::Value = match serde_json::from_str(text) {
         Ok(v) => v,
@@ -137,100 +250,41 @@ pub fn parse_meta(text: &str, folder: &str) -> (Option<PackMeta>, Vec<Issue>) {
         return (None, issues);
     };
     let line_of = |field: &str| interchange::line_of_json_key(text, field, 0);
-    let mut fail = |field: &str, why: &str| {
-        issues.push(Issue::new(
-            Severity::Error,
-            "pack-json",
-            FILE,
-            line_of(field),
-            None,
-            format!("`{field}`: {why}"),
-        ));
-    };
-    let mut text_field = |field: &str, required: bool| -> String {
-        match obj.get(field) {
-            Some(serde_json::Value::String(s)) if !s.trim().is_empty() => s.trim().to_string(),
-            Some(serde_json::Value::String(_)) | None if required => {
-                fail(field, "required, a non-empty text");
-                String::new()
-            }
-            Some(serde_json::Value::String(s)) => s.clone(),
-            None => String::new(),
-            Some(_) => {
-                fail(field, "must be text");
-                String::new()
-            }
-        }
-    };
-    let code = text_field("code", true);
-    let name = text_field("name", true);
-    let native_name = text_field("native_name", true);
-    let version = text_field("version", true);
-    let license = text_field("license", true);
-    let base_version = text_field("base_version", false);
+    let code = extract_text_field(obj, "code", true, &mut issues, line_of("code"));
+    let name = extract_text_field(obj, "name", true, &mut issues, line_of("name"));
+    let native_name = extract_text_field(
+        obj,
+        "native_name",
+        true,
+        &mut issues,
+        line_of("native_name"),
+    );
+    let version = extract_text_field(obj, "version", true, &mut issues, line_of("version"));
+    let license = extract_text_field(obj, "license", true, &mut issues, line_of("license"));
+    let base_version = extract_text_field(
+        obj,
+        "base_version",
+        false,
+        &mut issues,
+        line_of("base_version"),
+    );
     let direction = match obj.get("direction").and_then(|d| d.as_str()) {
         None | Some("ltr") => Direction::Ltr,
         Some("rtl") => Direction::Rtl,
         Some(_) => {
-            fail("direction", "must be \"ltr\" or \"rtl\"");
+            fail_field(
+                &mut issues,
+                "direction",
+                line_of("direction"),
+                "must be \"ltr\" or \"rtl\"",
+            );
             Direction::Ltr
         }
     };
-    let authors: Vec<String> = match obj.get("authors") {
-        Some(serde_json::Value::Array(a)) => a
-            .iter()
-            .filter_map(|x| x.as_str().map(|s| s.trim().to_string()))
-            .filter(|s| !s.is_empty())
-            .collect(),
-        None => Vec::new(),
-        Some(_) => {
-            fail(
-                "authors",
-                "must be a list of names, for example [\"Jane Doe\"]",
-            );
-            Vec::new()
-        }
-    };
-    if !code.is_empty() {
-        if !valid_code(&code) {
-            fail(
-                "code",
-                "must look like `fr` or `pt-BR` (lower-case language, optional region)",
-            );
-        } else if code != folder {
-            fail(
-                "code",
-                &format!("is `{code}` but the folder is `{folder}`; they must be equal"),
-            );
-        } else if code == "en-XA" || code.eq_ignore_ascii_case("en-xa") {
-            fail(
-                "code",
-                "`en-XA` is the pseudo-locale of the tests and cannot be a pack",
-            );
-        }
-    }
+    let authors = parse_authors(obj, &mut issues, line_of("authors"));
+    validate_code(&code, folder, &mut issues, line_of("code"));
     if issues.iter().any(|i| i.severity == Severity::Error) {
         return (None, issues);
-    }
-    if authors.is_empty() {
-        issues.push(Issue::new(
-            Severity::Warning,
-            "pack-json",
-            FILE,
-            line_of("authors"),
-            None,
-            "`authors` is empty; name the people (or tools) behind the translation",
-        ));
-    }
-    if license != EXPECTED_LICENSE {
-        issues.push(Issue::new(
-            Severity::Warning,
-            "licence",
-            FILE,
-            line_of("license"),
-            None,
-            format!("`license` is `{license}`; contributed text is licensed as the project: `{EXPECTED_LICENSE}`"),
-        ));
     }
     let meta = PackMeta {
         code,
@@ -242,6 +296,7 @@ pub fn parse_meta(text: &str, folder: &str) -> (Option<PackMeta>, Vec<Issue>) {
         license,
         base_version,
     };
+    check_meta_warnings(&meta, text, &mut issues);
     (Some(meta), issues)
 }
 

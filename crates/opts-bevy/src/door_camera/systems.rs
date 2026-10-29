@@ -2,6 +2,31 @@
 
 use super::*;
 
+fn leaf_open_door_group(
+    anim: &MeshAnimation,
+    tf: &GlobalTransform,
+    aabb: Option<&Aabb>,
+    door_world: &[Vec3],
+    doors: &[DoorPoint],
+) -> Option<usize> {
+    let step = anim
+        .steps
+        .iter()
+        .zip(&anim.shown)
+        .find(|(step, value)| is_door_variable(&step.variable) && value.abs() > OPEN_ABOVE)
+        .map(|(step, _)| step)?;
+    let pivot = step.frame.w_axis.truncate();
+    let local = if pivot.length() >= 0.01 {
+        Vec3::new(pivot.x, pivot.z, -pivot.y)
+    } else {
+        Vec3::from(aabb?.center)
+    };
+    let leaf = tf.transform_point(local);
+    let i = nearest_point(door_world, leaf)
+        .filter(|&i| (door_world[i].x - leaf.x).hypot(door_world[i].z - leaf.z) < LEAF_NEAR_M)?;
+    Some(door_group(doors, i))
+}
+
 /// Looks at the door leaves a few times a second and keeps the door that moves.
 pub fn detect_open_doors(
     time: Res<Time<Real>>,
@@ -28,7 +53,6 @@ pub fn detect_open_doors(
     };
     let mut found = None;
     let mut now_open = Vec::new();
-    // Every door in the world's frame: units have frames of their own.
     let door_world: Vec<Vec3> = doors
         .0
         .iter()
@@ -39,51 +63,18 @@ pub fn detect_open_doors(
         })
         .collect();
     for (anim, tf, aabb) in &animated {
-        // The animations of the vehicle's own engine and of the units with engines of their own
-        // (a car's door meshes may belong to another unit than its passenger cabin).
         let ours = anim.owner == vehicle
             || consist.is_some_and(|c| c.units.iter().any(|u| u.part == Some(anim.owner)));
         if !ours {
             continue;
         }
-        // The pivot of the first step that moves a door variable is where the leaf hangs (the
-        // mesh entity's own origin is its unit's); vehicle axes (x right, y forward, z up) to
-        // Bevy's (x right, y up, z backward).
-        let Some(step) = anim
-            .steps
-            .iter()
-            .zip(&anim.shown)
-            .find(|(step, value)| is_door_variable(&step.variable) && value.abs() > OPEN_ABOVE)
-            .map(|(step, _)| step)
-        else {
-            continue;
-        };
-        let pivot = step.frame.w_axis.truncate();
-        let local = if pivot.length() >= 0.01 {
-            Vec3::new(pivot.x, pivot.z, -pivot.y)
-        } else {
-            // A sliding leaf (the tram's plug doors) has no pivot: the centre of its mesh says
-            // where it is.
-            let Some(aabb) = aabb else {
-                continue;
-            };
-            Vec3::from(aabb.center)
-        };
-        let leaf = tf.transform_point(local);
-        // Only a leaf near a door point counts.
-        let near = nearest_point(&door_world, leaf);
-        let Some(i) = near
-            .filter(|&i| (door_world[i].x - leaf.x).hypot(door_world[i].z - leaf.z) < LEAF_NEAR_M)
-        else {
-            continue;
-        };
-        let d = door_group(&doors.0, i);
-        if !now_open.contains(&d) {
-            now_open.push(d);
+        if let Some(d) = leaf_open_door_group(anim, tf, aabb, &door_world, &doors.0) {
+            if !now_open.contains(&d) {
+                now_open.push(d);
+            }
+            found = found.or(Some(d));
         }
-        found = found.or(Some(d));
     }
-    // Doors keep the order they opened in.
     now_open.sort_by_key(|d| state.open.iter().position(|o| o == d).unwrap_or(usize::MAX));
     if state.open != now_open {
         state.open = now_open;
@@ -98,10 +89,61 @@ pub fn detect_open_doors(
     }
 }
 
+fn spawn_door_slot(
+    commands: &mut Commands,
+    images: &mut Assets<Image>,
+    vehicle: Entity,
+    point: &DoorPoint,
+    door: usize,
+    slot_idx: usize,
+) -> DoorSlot {
+    let mut image = Image::new_target_texture(
+        IMAGE_SIZE.x,
+        IMAGE_SIZE.y,
+        TextureFormat::Bgra8UnormSrgb,
+        None,
+    );
+    image.sampler = bevy::image::ImageSampler::linear();
+    let handle = images.add(image);
+    let camera = commands
+        .spawn((
+            Camera3d::default(),
+            Camera {
+                order: MIRROR_ORDER - 1 - slot_idx as isize,
+                is_active: false,
+                ..default()
+            },
+            RenderTarget::Image(handle.clone().into()),
+            Msaa::Off,
+            Hdr,
+            Tonemapping::None,
+            Projection::Perspective(PerspectiveProjection {
+                fov: 70f32.to_radians(),
+                near: 0.1,
+                aspect_ratio: IMAGE_SIZE.x as f32 / IMAGE_SIZE.y as f32,
+                ..default()
+            }),
+            door_pose(point),
+            DoorCameraMarker,
+            Name::new("Door_Camera"),
+        ))
+        .id();
+    commands
+        .entity(point.unit.unwrap_or(vehicle))
+        .add_child(camera);
+    DoorSlot {
+        door,
+        vehicle,
+        camera,
+        image: handle,
+        closed_since: None,
+        fade: 1.0,
+    }
+}
+
 /// Keeps the pictures: a slot (camera and image) is made when a door opens, its camera sits at
 /// the door and renders at [`RENDER_HZ`]; when the door closes the picture holds for
 /// [`FADE_DELAY_S`], fades for [`FADE_S`] and the slot is dropped. Slots of another vehicle go.
-#[allow(clippy::too_many_arguments)]
 pub fn drive_camera(
     time: Res<Time<Real>>,
     mut state: ResMut<DoorCamera>,
@@ -113,7 +155,6 @@ pub fn drive_camera(
     let now = time.elapsed_secs_f64();
     let vehicle = vehicles.iter().next();
     let wanted = state.wanted();
-    // Slots of another vehicle, or whose camera is gone, are dropped.
     let mut slots = std::mem::take(&mut state.slots);
     slots.retain(|slot| {
         let keep =
@@ -145,51 +186,16 @@ pub fn drive_camera(
             if slots.len() >= MAX_SLOTS || slots.iter().any(|s| s.door == door) {
                 continue;
             }
-            let Some(point) = doors.0.get(door) else {
-                continue;
-            };
-            let mut image = Image::new_target_texture(
-                IMAGE_SIZE.x,
-                IMAGE_SIZE.y,
-                TextureFormat::Bgra8UnormSrgb,
-                None,
-            );
-            image.sampler = bevy::image::ImageSampler::linear();
-            let handle = images.add(image);
-            let camera = commands
-                .spawn((
-                    Camera3d::default(),
-                    Camera {
-                        order: MIRROR_ORDER - 1 - slots.len() as isize,
-                        is_active: false,
-                        ..default()
-                    },
-                    RenderTarget::Image(handle.clone().into()),
-                    Msaa::Off,
-                    Hdr,
-                    Tonemapping::None,
-                    Projection::Perspective(PerspectiveProjection {
-                        fov: 70f32.to_radians(),
-                        near: 0.1,
-                        aspect_ratio: IMAGE_SIZE.x as f32 / IMAGE_SIZE.y as f32,
-                        ..default()
-                    }),
-                    door_pose(point),
-                    DoorCameraMarker,
-                    Name::new("Door_Camera"),
-                ))
-                .id();
-            commands
-                .entity(point.unit.unwrap_or(vehicle))
-                .add_child(camera);
-            slots.push(DoorSlot {
-                door,
-                vehicle,
-                camera,
-                image: handle,
-                closed_since: None,
-                fade: 1.0,
-            });
+            if let Some(point) = doors.0.get(door) {
+                slots.push(spawn_door_slot(
+                    &mut commands,
+                    &mut images,
+                    vehicle,
+                    point,
+                    door,
+                    slots.len(),
+                ));
+            }
         }
     }
     let due = now - state.last_render >= 1.0 / RENDER_HZ;

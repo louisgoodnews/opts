@@ -1,6 +1,7 @@
 //! Fixed-step physics integration, wheel stepping, and body suspension helpers for
 //! [`VehicleSimulation`].
 
+use super::drivetrain::DrivetrainForces;
 use super::*;
 
 /// The net force along the vehicle (N, forward positive). Moving, the brakes and the resistances
@@ -29,74 +30,49 @@ pub(super) fn longitudinal_force(
 }
 
 impl VehicleSimulation {
-    /// Steps the vehicle simulation by a fixed time delta `dt`.
-    pub fn step(&mut self, dt: f32) {
-        if dt <= 0.0 {
-            return;
-        }
-
-        let speed = self.chassis.forward_speed_m_s();
-        let first_wheel_radius = self
-            .axles
-            .first()
-            .map_or(0.49, |a| a.config.wheel_diameter_m * 0.5);
-
-        // 1. Steering kinematics: update all steered axles
-        let central_steer_rad = self.inputs.steering() * 0.82; // Max ~47 degrees lock
-        for axle in &mut self.axles {
-            axle.apply_steering(central_steer_rad, self.wheelbase_m);
-        }
-
-        // The wheel loads the tyres need exist from the first step on.
-        if self.body.is_none() {
-            self.rebuild_body();
-        }
-
-        // 2. Drivetrain & braking forces
-        let moving_mass_kg = self.consist_mass_kg();
-        let mut forces =
-            self.drivetrain
-                .step(&self.inputs, speed, first_wheel_radius, moving_mass_kg);
-        let mut wheel_forces = false;
-        let was_spinning = std::mem::replace(&mut self.wheels_spinning, false);
-        if let Some(d) = self.script_drive {
-            if speed.abs() > STANDSTILL_M_S {
-                // Moving: the scripts' torque and brakes act on the spinning wheels; the tyres
-                // turn them into the longitudinal force (never above the friction limit).
-                if !was_spinning {
-                    for axle in &mut self.axles {
-                        for w in [&mut axle.left_wheel, &mut axle.right_wheel] {
-                            w.angular_velocity_rad_s = speed / w.rolling_radius_m.max(0.1);
-                        }
-                    }
-                }
-                forces.tractive_force_n = self.step_wheels(d, speed, dt);
-                forces.braking_force_n = 0.0;
-                wheel_forces = true;
-                self.wheels_spinning = true;
-            } else {
-                // Standing: static hold against the scripts' torque, limited by the tyres.
-                let (driven_n, braked_n) = self.friction_loads_n();
-                let (drive_limit, brake_limit) =
-                    (ROAD_FRICTION * driven_n, ROAD_FRICTION * braked_n);
-                let driven_radius = self
-                    .axles
-                    .iter()
-                    .find(|a| a.config.is_driven)
-                    .map_or(first_wheel_radius, |a| a.config.wheel_diameter_m * 0.5)
-                    .max(0.1);
-                forces.tractive_force_n =
-                    (d.wheel_torque_nm / driven_radius).clamp(-drive_limit, drive_limit);
-                forces.braking_force_n = d.brake_force_n.clamp(0.0, brake_limit);
+    fn compute_script_forces(
+        &mut self,
+        d: ScriptDrive,
+        speed: f32,
+        first_wheel_radius: f32,
+        dt: f32,
+        was_spinning: bool,
+        forces: &mut DrivetrainForces,
+    ) -> bool {
+        if speed.abs() > STANDSTILL_M_S {
+            if !was_spinning {
                 for axle in &mut self.axles {
                     for w in [&mut axle.left_wheel, &mut axle.right_wheel] {
                         w.angular_velocity_rad_s = speed / w.rolling_radius_m.max(0.1);
                     }
                 }
             }
+            forces.tractive_force_n = self.step_wheels(d, speed, dt);
+            forces.braking_force_n = 0.0;
+            self.wheels_spinning = true;
+            true
+        } else {
+            let (driven_n, braked_n) = self.friction_loads_n();
+            let (drive_limit, brake_limit) = (ROAD_FRICTION * driven_n, ROAD_FRICTION * braked_n);
+            let driven_radius = self
+                .axles
+                .iter()
+                .find(|a| a.config.is_driven)
+                .map_or(first_wheel_radius, |a| a.config.wheel_diameter_m * 0.5)
+                .max(0.1);
+            forces.tractive_force_n =
+                (d.wheel_torque_nm / driven_radius).clamp(-drive_limit, drive_limit);
+            forces.braking_force_n = d.brake_force_n.clamp(0.0, brake_limit);
+            for axle in &mut self.axles {
+                for w in [&mut axle.left_wheel, &mut axle.right_wheel] {
+                    w.angular_velocity_rad_s = speed / w.rolling_radius_m.max(0.1);
+                }
+            }
+            false
         }
+    }
 
-        // The service brake: built-in drivetrain only (a script drive brings its own force).
+    fn apply_service_brakes(&mut self, dt: f32, forces: &mut DrivetrainForces) {
         if self.script_drive.is_none() {
             let (caps, limits) = self.brake_axles();
             self.brakes
@@ -107,35 +83,9 @@ impl VehicleSimulation {
         } else {
             self.brakes.pressure = 0.0;
         }
+    }
 
-        // Gravity along the road: the chassis pitch of the last ground sample, nose up positive.
-        let grade_n = -self.head_body.map_or(0.0, |b| b.pitch.sin()) * moving_mass_kg * GRAVITY;
-        let net_longitudinal_force = longitudinal_force(
-            speed,
-            forces.tractive_force_n,
-            grade_n,
-            forces.braking_force_n,
-            forces.drag_force_n,
-            forces.rolling_resistance_n,
-        );
-
-        // 3. Kinematic turning yaw rate: omega = (v / L) * tan(delta)
-        let yaw_rate = (speed / self.wheelbase_m) * central_steer_rad.tan();
-        let yaw_torque =
-            (yaw_rate - self.chassis.yaw_rate_rad_s) * self.chassis.yaw_inertia_kg_m2 * 10.0;
-
-        // 4. Integrate chassis dynamics
-        self.chassis.integrate_with_mass(
-            net_longitudinal_force,
-            yaw_torque,
-            // Under script drive the scripts' brakes count, not the pedal alone.
-            self.inputs.is_braking() || self.script_drive.is_some_and(|d| d.brake_force_n > 0.0),
-            dt,
-            moving_mass_kg,
-        );
-
-        // 5. Axle rotation and the body on its wheels: heave, pitch, roll and the load on every
-        // wheel from the accelerations and the ground under the wheels.
+    fn update_body_and_axles(&mut self, speed: f32, dt: f32, wheel_forces: bool) {
         if self.body.is_none() {
             self.rebuild_body();
         }
@@ -159,13 +109,80 @@ impl VehicleSimulation {
                 axle.update_rotation(self.chassis.forward_speed_m_s(), dt);
             }
         }
+    }
 
-        // 6. Consist kinematics: every unit follows the one ahead, starting with the chassis.
+    fn update_consist(&mut self, dt: f32) {
         let mut leader = self.chassis_pose();
         for unit in &mut self.consist {
             let st = unit.step(leader.0, leader.1, f64::from(dt));
             leader = (st.origin, st.heading);
         }
+    }
+
+    /// Steps the vehicle simulation by a fixed time delta `dt`.
+    pub fn step(&mut self, dt: f32) {
+        if dt <= 0.0 {
+            return;
+        }
+
+        let speed = self.chassis.forward_speed_m_s();
+        let first_wheel_radius = self
+            .axles
+            .first()
+            .map_or(0.49, |a| a.config.wheel_diameter_m * 0.5);
+
+        // 1. Steering kinematics: update all steered axles
+        let central_steer_rad = self.inputs.steering() * 0.82; // Max ~47 degrees lock
+        for axle in &mut self.axles {
+            axle.apply_steering(central_steer_rad, self.wheelbase_m);
+        }
+
+        if self.body.is_none() {
+            self.rebuild_body();
+        }
+
+        // 2. Drivetrain & braking forces
+        let moving_mass_kg = self.consist_mass_kg();
+        let mut forces =
+            self.drivetrain
+                .step(&self.inputs, speed, first_wheel_radius, moving_mass_kg);
+        let was_spinning = std::mem::replace(&mut self.wheels_spinning, false);
+        let wheel_forces = self.script_drive.is_some_and(|d| {
+            self.compute_script_forces(d, speed, first_wheel_radius, dt, was_spinning, &mut forces)
+        });
+
+        self.apply_service_brakes(dt, &mut forces);
+
+        // Gravity along the road: the chassis pitch of the last ground sample, nose up positive.
+        let grade_n = -self.head_body.map_or(0.0, |b| b.pitch.sin()) * moving_mass_kg * GRAVITY;
+        let net_longitudinal_force = longitudinal_force(
+            speed,
+            forces.tractive_force_n,
+            grade_n,
+            forces.braking_force_n,
+            forces.drag_force_n,
+            forces.rolling_resistance_n,
+        );
+
+        // 3. Kinematic turning yaw rate: omega = (v / L) * tan(delta)
+        let yaw_rate = (speed / self.wheelbase_m) * central_steer_rad.tan();
+        let yaw_torque =
+            (yaw_rate - self.chassis.yaw_rate_rad_s) * self.chassis.yaw_inertia_kg_m2 * 10.0;
+
+        // 4. Integrate chassis dynamics
+        self.chassis.integrate_with_mass(
+            net_longitudinal_force,
+            yaw_torque,
+            self.inputs.is_braking() || self.script_drive.is_some_and(|d| d.brake_force_n > 0.0),
+            dt,
+            moving_mass_kg,
+        );
+
+        // 5. Axle rotation and body suspension
+        self.update_body_and_axles(speed, dt, wheel_forces);
+
+        // 6. Consist kinematics
+        self.update_consist(dt);
     }
 
     /// Advances the wheels of the head's axles under the scripts' torque and brake force and

@@ -93,6 +93,122 @@ fn activation_reproduces_the_cached_timeline_masks() {
     }
 }
 
+fn build_chrono_creators(
+    set: &ChronoSet,
+    overlay_cache: &mut HashMap<PathBuf, TileOverlay>,
+) -> BTreeMap<((i32, i32), u64), Vec<usize>> {
+    let mut creators: BTreeMap<((i32, i32), u64), Vec<usize>> = BTreeMap::new();
+    for (i, e) in set.entries().iter().enumerate() {
+        for (key, path) in &e.tiles {
+            let ov = overlay_cache
+                .entry(path.clone())
+                .or_insert_with(|| TileOverlay::parse(&std::fs::read(path).unwrap_or_default()));
+            for op in &ov.ops {
+                if let OverlayOp::Add(t) = op {
+                    let ids = t
+                        .objects
+                        .iter()
+                        .map(|o| o.id_code)
+                        .chain(t.splines.iter().map(|s| s.id_code))
+                        .chain(t.attached_objects.iter().map(|a| a.id_code))
+                        .chain(t.spline_attachments.iter().map(|a| a.id_code));
+                    for id in ids {
+                        creators.entry((*key, id)).or_default().push(i);
+                    }
+                }
+            }
+        }
+    }
+    creators
+}
+
+fn check_selection_creator_order(
+    base: &MapTile,
+    ov: &TileOverlay,
+    key: (i32, i32),
+    i: usize,
+    creators: &BTreeMap<((i32, i32), u64), Vec<usize>>,
+    created_earlier: &mut usize,
+    created_later: &mut usize,
+) {
+    for op in &ov.ops {
+        let id = match op {
+            OverlayOp::SelectObject(id) | OverlayOp::SelectSpline(id) => *id,
+            _ => continue,
+        };
+        let in_base = base.objects.iter().any(|o| o.id_code == id)
+            || base.splines.iter().any(|s| s.id_code == id)
+            || base.attached_objects.iter().any(|a| a.id_code == id)
+            || base.spline_attachments.iter().any(|a| a.id_code == id);
+        if in_base {
+            continue;
+        }
+        if let Some(c) = creators.get(&(key, id)) {
+            if c.iter().any(|&c| c < i) {
+                *created_earlier += 1;
+            } else if !c.contains(&i) {
+                *created_later += 1;
+            }
+        }
+    }
+}
+
+struct ChronoCheckContext<'a> {
+    _set: &'a ChronoSet,
+    creators: &'a BTreeMap<((i32, i32), u64), Vec<usize>>,
+    base_files: &'a HashMap<String, PathBuf>,
+    base_cache: &'a mut HashMap<(i32, i32), MapTile>,
+    overlay_cache: &'a mut HashMap<PathBuf, TileOverlay>,
+    selections: &'a mut usize,
+    resolved: &'a mut usize,
+    created_earlier: &'a mut usize,
+    created_later: &'a mut usize,
+}
+
+fn check_chrono_entry_tile(
+    ctx: &mut ChronoCheckContext<'_>,
+    i: usize,
+    key: (i32, i32),
+    path: &Path,
+    plan: &opts_omsi::formats::chrono::ChronoPlan,
+) {
+    let base = ctx
+        .base_cache
+        .entry(key)
+        .or_insert_with(|| {
+            let name = format!("tile_{}_{}.map", key.0, key.1);
+            ctx.base_files
+                .get(&name)
+                .and_then(|p| std::fs::read(p).ok())
+                .and_then(|b| MapTile::parse(&b).ok())
+                .unwrap_or_default()
+        })
+        .clone();
+    let mut tile = base.clone();
+    for p in plan.overlays(key) {
+        let ov = ctx
+            .overlay_cache
+            .entry(p.to_path_buf())
+            .or_insert_with(|| TileOverlay::parse(&std::fs::read(p).unwrap_or_default()))
+            .clone();
+        let report = tile.apply_overlay(&ov);
+        if p == path {
+            *ctx.selections += report.selections;
+            *ctx.resolved += report.resolved;
+            check_selection_creator_order(
+                &base,
+                &ov,
+                key,
+                i,
+                ctx.creators,
+                ctx.created_earlier,
+                ctx.created_later,
+            );
+            break;
+        }
+    }
+}
+
 #[test]
 fn overlay_selections_resolve_in_application_order() {
     let Some(root) = std::env::var_os("OMSI_PATH").map(PathBuf::from) else {
@@ -114,32 +230,18 @@ fn overlay_selections_resolve_in_application_order() {
             .collect();
         let mut base_cache: HashMap<(i32, i32), MapTile> = HashMap::new();
         let mut overlay_cache: HashMap<PathBuf, TileOverlay> = HashMap::new();
-        let mut overlay = |p: &Path| -> TileOverlay {
-            overlay_cache
-                .entry(p.to_path_buf())
-                .or_insert_with(|| TileOverlay::parse(&std::fs::read(p).unwrap_or_default()))
-                .clone()
+        let creators = build_chrono_creators(&set, &mut overlay_cache);
+        let mut ctx = ChronoCheckContext {
+            _set: &set,
+            creators: &creators,
+            base_files: &base_files,
+            base_cache: &mut base_cache,
+            overlay_cache: &mut overlay_cache,
+            selections: &mut selections,
+            resolved: &mut resolved,
+            created_earlier: &mut created_earlier,
+            created_later: &mut created_later,
         };
-        // Who creates which ID on which tile: (tile, id) -> entry indices.
-        let mut creators: BTreeMap<((i32, i32), u64), Vec<usize>> = BTreeMap::new();
-        for (i, e) in set.entries().iter().enumerate() {
-            for (key, path) in &e.tiles {
-                for op in &overlay(path).ops {
-                    if let OverlayOp::Add(t) = op {
-                        let ids = t
-                            .objects
-                            .iter()
-                            .map(|o| o.id_code)
-                            .chain(t.splines.iter().map(|s| s.id_code))
-                            .chain(t.attached_objects.iter().map(|a| a.id_code))
-                            .chain(t.spline_attachments.iter().map(|a| a.id_code));
-                        for id in ids {
-                            creators.entry((*key, id)).or_default().push(i);
-                        }
-                    }
-                }
-            }
-        }
         for (i, e) in set.entries().iter().enumerate() {
             let date = e.start.unwrap_or_else(|| ChronoDate::from_ymd(0, 1, 1));
             let active = set.active(date);
@@ -150,49 +252,7 @@ fn overlay_selections_resolve_in_application_order() {
             let plan = set.plan(&active);
             for (key, path) in &e.tiles {
                 tiles += 1;
-                let base = base_cache
-                    .entry(*key)
-                    .or_insert_with(|| {
-                        let name = format!("tile_{}_{}.map", key.0, key.1);
-                        base_files
-                            .get(&name)
-                            .and_then(|p| std::fs::read(p).ok())
-                            .and_then(|b| MapTile::parse(&b).ok())
-                            .unwrap_or_default()
-                    })
-                    .clone();
-                let mut tile = base.clone();
-                for p in plan.overlays(*key) {
-                    let ov = overlay(p);
-                    let report = tile.apply_overlay(&ov);
-                    if p == path {
-                        selections += report.selections;
-                        resolved += report.resolved;
-                        // Selections of elements created by another entry: is the creator
-                        // applied before this one?
-                        for op in &ov.ops {
-                            let id = match op {
-                                OverlayOp::SelectObject(id) | OverlayOp::SelectSpline(id) => *id,
-                                _ => continue,
-                            };
-                            let in_base = base.objects.iter().any(|o| o.id_code == id)
-                                || base.splines.iter().any(|s| s.id_code == id)
-                                || base.attached_objects.iter().any(|a| a.id_code == id)
-                                || base.spline_attachments.iter().any(|a| a.id_code == id);
-                            if in_base {
-                                continue;
-                            }
-                            if let Some(c) = creators.get(&(*key, id)) {
-                                if c.iter().any(|&c| c < i) {
-                                    created_earlier += 1;
-                                } else if !c.contains(&i) {
-                                    created_later += 1;
-                                }
-                            }
-                        }
-                        break;
-                    }
-                }
+                check_chrono_entry_tile(&mut ctx, i, *key, path, &plan);
             }
         }
     }

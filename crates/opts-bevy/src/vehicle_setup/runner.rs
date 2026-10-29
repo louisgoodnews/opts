@@ -45,6 +45,45 @@ pub struct SetupRun {
 }
 
 impl SetupRun {
+    fn advance_held(&mut self, engine: &mut ScriptEngine, step: Step, now: f32, dt: f32) {
+        if step.drag_y != 0.0 {
+            let moving = now - self.since <= DRAG_S;
+            engine.set_system("mouse_x", 0.0);
+            engine.set_system(
+                "mouse_y",
+                if moving {
+                    step.drag_y * dt / DRAG_S
+                } else {
+                    0.0
+                },
+            );
+            if moving {
+                engine.trigger(&format!("{}_drag", step.trigger));
+            }
+        }
+        let done = if step.until_engine {
+            if engine.get("engine_on") > 0.5 && self.fired_at.is_none() {
+                self.fired_at = Some(now);
+            }
+            let running = self.fired_at.is_some_and(|t| {
+                engine.get("engine_n") >= SELF_SUSTAINING_RPM || now - t >= AFTER_FIRING_S
+            });
+            running || now - self.since >= step.hold_s
+        } else {
+            now - self.since >= step.hold_s
+        };
+        if done {
+            if step.drag_y != 0.0 {
+                engine.set_system("mouse_y", 0.0);
+            }
+            engine.trigger(&format!("{}_off", step.trigger));
+            self.fired_at = None;
+            self.phase = Phase::Idle;
+            self.step += 1;
+            self.since = now;
+        }
+    }
+
     /// Takes the next step when it is due. `now` is the vehicle's seconds since it appeared.
     /// Returns `true` once there is nothing more to do at this degree.
     pub fn advance(&mut self, engine: &mut ScriptEngine, setup: &VehicleSetup, now: f32) -> bool {
@@ -58,42 +97,7 @@ impl SetupRun {
         self.last = now;
         if self.phase == Phase::Held {
             let step = recipe.steps[self.step];
-            if step.drag_y != 0.0 {
-                let moving = now - self.since <= DRAG_S;
-                engine.set_system("mouse_x", 0.0);
-                engine.set_system(
-                    "mouse_y",
-                    if moving {
-                        step.drag_y * dt / DRAG_S
-                    } else {
-                        0.0
-                    },
-                );
-                if moving {
-                    engine.trigger(&format!("{}_drag", step.trigger));
-                }
-            }
-            let done = if step.until_engine {
-                if engine.get("engine_on") > 0.5 && self.fired_at.is_none() {
-                    self.fired_at = Some(now);
-                }
-                let running = self.fired_at.is_some_and(|t| {
-                    engine.get("engine_n") >= SELF_SUSTAINING_RPM || now - t >= AFTER_FIRING_S
-                });
-                running || now - self.since >= step.hold_s
-            } else {
-                now - self.since >= step.hold_s
-            };
-            if done {
-                if step.drag_y != 0.0 {
-                    engine.set_system("mouse_y", 0.0);
-                }
-                engine.trigger(&format!("{}_off", step.trigger));
-                self.fired_at = None;
-                self.phase = Phase::Idle;
-                self.step += 1;
-                self.since = now;
-            }
+            self.advance_held(engine, step, now, dt);
             return false;
         }
         // A vehicle whose scripts have no engine (a tram) has nothing to start: its start step

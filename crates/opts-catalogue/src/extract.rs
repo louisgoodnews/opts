@@ -108,10 +108,14 @@ pub(super) fn stem(name: &str) -> String {
     name.rsplit_once('.').map_or(name, |(s, _)| s).to_string()
 }
 
+mod files;
+mod maps;
 mod refs;
 mod vehicle;
-use refs::{scenery_refs, spline_refs, FILE_ENTITIES};
-use vehicle::{analyze_vehicle, classify_playable, VehicleFacts};
+
+use files::{detect_file_entities, detect_money};
+use maps::detect_maps;
+use vehicle::detect_vehicles;
 
 pub(super) fn friendly_name(bytes: &[u8]) -> Option<String> {
     let blocks = scan_blocks(&decode_bytes(bytes));
@@ -128,255 +132,13 @@ pub fn detect_entities(root: &Path, files: &[FileRec], dirs: &[DirRec]) -> Vec<E
     let read = |rel: &str| fs::read(root.join(rel)).ok();
     let mut out: Vec<EntityDraft> = Vec::new();
 
-    // --- Vehicles ---------------------------------------------------------------------
-    let vehicle_files: Vec<&FileRec> = files
-        .iter()
-        .filter(|f| {
-            !f.is_backup
-                && matches!(f.ext.as_str(), "bus" | "ovh")
-                && f.rel_path.starts_with("Vehicles/")
-        })
-        .collect();
-    let analysed: Vec<(&FileRec, VehicleFacts)> = vehicle_files
-        .par_iter()
-        .map(|f| {
-            let facts = read(&f.rel_path).map_or_else(
-                || analyze_vehicle(&[], &stem(&f.name)),
-                |b| analyze_vehicle(&b, &stem(&f.name)),
-            );
-            (*f, facts)
-        })
-        .collect();
+    out.extend(detect_vehicles(files, &by_rel, &read));
+    out.extend(detect_maps(files, &read));
+    out.extend(detect_money(files));
+    out.extend(detect_file_entities(files, &read));
 
-    // Inbound [couple_back] targets (R3).
-    let mut trailer_targets: HashSet<String> = HashSet::new();
-    for (f, facts) in &analysed {
-        if let Some(t) = &facts.couple_back {
-            trailer_targets.insert(under(&f.dir, t).to_lowercase());
-        }
-    }
-    // Driver workstation also needs `[drivpos]` in the passenger cabin.
-    let cabin_has_drivpos = |dir: &str, cabin: &Option<String>| -> bool {
-        cabin.as_ref().is_some_and(|c| {
-            // The path in the `.bus` rarely matches the on-disk case; resolve it via the index.
-            let wanted = under(dir, c).to_lowercase();
-            by_rel
-                .get(&wanted)
-                .and_then(|f| read(&f.rel_path))
-                .is_some_and(|b| {
-                    scan_blocks(&decode_bytes(&b))
-                        .iter()
-                        .any(|bl| bl.keyword.eq_ignore_ascii_case("drivpos"))
-                })
-        })
-    };
-
-    let mut primary_by_stem: HashMap<(String, String), String> = HashMap::new();
-    for (f, _) in &analysed {
-        if f.ext == "bus" {
-            primary_by_stem.insert(
-                (f.dir.to_lowercase(), stem(&f.name).to_lowercase()),
-                f.rel_path.clone(),
-            );
-        }
-    }
-    for (f, facts) in analysed {
-        let has_full_cab = facts.has_driver_cam && cabin_has_drivpos(&f.dir, &facts.cabin);
-        let is_playable = classify_playable(
-            &f.ext,
-            &f.rel_path,
-            facts.script_share,
-            trailer_targets.contains(&f.rel_path.to_lowercase()),
-            has_full_cab,
-            facts.silent_rail,
-        );
-        let alias_of_marker = (f.ext == "ovh")
-            .then(|| {
-                primary_by_stem
-                    .get(&(f.dir.to_lowercase(), stem(&f.name).to_lowercase()))
-                    .cloned()
-            })
-            .flatten();
-        let refs = facts
-            .refs
-            .iter()
-            .map(|(role, raw)| (*role, raw.clone(), vec![under(&f.dir, raw)]))
-            .collect();
-        out.push(EntityDraft {
-            category: "vehicle",
-            mode: "folder",
-            name: facts.name,
-            marker: f.rel_path.clone(),
-            dir: f.dir.clone(),
-            is_playable,
-            vehicle_class: facts.class,
-            alias_of_marker,
-            mtime: f.mtime,
-            info: facts.info,
-            refs,
-        });
-    }
-
-    // --- Maps ---------------------------------------------------------------------------
-    let map_markers: Vec<&FileRec> = files
-        .iter()
-        .filter(|f| {
-            f.name.eq_ignore_ascii_case("global.cfg")
-                && f.rel_path.matches('/').count() == 2
-                && f.rel_path.to_lowercase().starts_with("maps/")
-        })
-        .collect();
-    let maps: Vec<EntityDraft> = map_markers
-        .par_iter()
-        .map(|f| {
-            let folder = f.dir.rsplit('/').next().unwrap_or("").to_string();
-            let manifest = read(&f.rel_path).and_then(|b| MapManifest::parse(&b).ok());
-            let mut eps: Vec<String> = Vec::new();
-            let (name, info) = if let Some(m) = &manifest {
-                for e in &m.entry_points {
-                    if !eps.contains(&e.name) {
-                        eps.push(e.name.clone());
-                    }
-                }
-                let friendly = m.friendly_name.clone().unwrap_or_else(|| m.name.clone());
-                (
-                    if friendly.is_empty() {
-                        folder.clone()
-                    } else {
-                        friendly.clone()
-                    },
-                    Info::Map {
-                        friendly_name: if friendly.is_empty() {
-                            folder.clone()
-                        } else {
-                            friendly
-                        },
-                        description: m.description.join("\n"),
-                        tile_count: i64::try_from(m.tiles.len()).unwrap_or(0),
-                        standard_depot: m.standard_depot.clone().unwrap_or_default(),
-                        years: m
-                            .years
-                            .map(|(a, b)| format!("{a} – {b}"))
-                            .unwrap_or_default(),
-                        entry_points: eps.join("\n"),
-                    },
-                )
-            } else {
-                (
-                    folder.clone(),
-                    Info::Map {
-                        friendly_name: folder.clone(),
-                        description: String::new(),
-                        tile_count: 0,
-                        standard_depot: String::new(),
-                        years: String::new(),
-                        entry_points: String::new(),
-                    },
-                )
-            };
-            // Vehicles used by the map's AI lists.
-            let mut refs = Vec::new();
-            if let Some(b) = read(&under(&f.dir, "ailists.cfg")) {
-                for line in decode_bytes(&b).lines() {
-                    let first = line.split('\t').next().unwrap_or("").trim();
-                    let l = first.to_lowercase();
-                    if l.ends_with(".bus") || l.ends_with(".ovh") {
-                        refs.push(("ai_vehicle", first.to_string(), vec![norm(first)]));
-                    }
-                }
-            }
-            EntityDraft {
-                category: "map",
-                mode: "folder",
-                name,
-                marker: f.rel_path.clone(),
-                dir: f.dir.clone(),
-                is_playable: true,
-                vehicle_class: None,
-                alias_of_marker: None,
-                mtime: f.mtime,
-                info,
-                refs,
-            }
-        })
-        .collect();
-    out.extend(maps);
-
-    // --- Money packs (one per currency folder) --------------------------------------------
-    let mut seen_money: HashSet<String> = HashSet::new();
-    for f in files
-        .iter()
-        .filter(|f| !f.is_backup && f.ext == "cfg" && f.rel_path.starts_with("Money/"))
-    {
-        if f.rel_path.matches('/').count() == 2 && seen_money.insert(f.dir.clone()) {
-            out.push(simple(
-                "money",
-                "folder",
-                f,
-                f.dir.rsplit('/').next().unwrap_or("").to_string(),
-            ));
-        }
-    }
-
-    // --- File entities ------------------------------------------------------------------------
-    let file_entities: Vec<EntityDraft> = files
-        .par_iter()
-        .filter(|f| !f.is_backup)
-        .filter_map(|f| {
-            let top = f.rel_path.split('/').next()?;
-            let (_, _, cat) = FILE_ENTITIES.iter().find(|(root_dir, exts, _)| {
-                top.eq_ignore_ascii_case(root_dir) && exts.contains(&f.ext.as_str())
-            })?;
-            let bytes = if matches!(*cat, "sceneryobject" | "spline" | "human") {
-                read(&f.rel_path)
-            } else {
-                None
-            };
-            let mut refs = Vec::new();
-            let name = match (*cat, &bytes) {
-                ("sceneryobject", Some(b)) => match SceneryObject::parse(b) {
-                    Ok(sco) => {
-                        refs = scenery_refs(&f.dir, &sco);
-                        sco.friendly_name
-                            .clone()
-                            .filter(|n| !n.trim().is_empty())
-                            .unwrap_or_else(|| stem(&f.name))
-                    }
-                    Err(_) => stem(&f.name),
-                },
-                ("spline", Some(b)) => {
-                    if let Ok(sli) = SplineProfile::parse(b) {
-                        refs = spline_refs(&f.dir, &sli);
-                    }
-                    stem(&f.name)
-                }
-                ("human", Some(b)) => friendly_name(b).unwrap_or_else(|| stem(&f.name)),
-                _ => stem(&f.name),
-            };
-            let mut draft = simple(cat, "file", f, name);
-            draft.refs = refs;
-            Some(draft)
-        })
-        .collect();
-    out.extend(file_entities);
-    let _ = (by_rel, dirs);
+    let _ = dirs;
     out
-}
-
-fn simple(category: &'static str, mode: &'static str, f: &FileRec, name: String) -> EntityDraft {
-    EntityDraft {
-        category,
-        mode,
-        name,
-        marker: f.rel_path.clone(),
-        dir: f.dir.clone(),
-        is_playable: true,
-        vehicle_class: None,
-        alias_of_marker: None,
-        mtime: f.mtime,
-        info: Info::None,
-        refs: Vec::new(),
-    }
 }
 
 #[cfg(test)]

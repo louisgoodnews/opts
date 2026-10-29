@@ -1,5 +1,6 @@
 //! Keeps the master list drawn: rows model, windowed row entities, scroll bar, chips, notice.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use crate::components::button::ButtonBuilder;
@@ -13,7 +14,7 @@ use crate::patterns::master_detail::{
     rows_of, MasterChipButton, MasterClearButton, MasterDetail, MasterDetailSelected,
     MasterDetailView, Rendered,
 };
-use crate::patterns::master_detail_rows::spawn_rows;
+use crate::patterns::master_detail_rows::{spawn_rows, SpawnRowsContext};
 use crate::theme::{color::ColorRole, spacing::LayoutClass};
 use crate::tokens::components::ForegroundRole;
 use crate::ui_id::{slug, UiId};
@@ -66,20 +67,22 @@ fn viewport_height(computed: &Query<&ComputedNode>, list: Entity) -> f32 {
         .unwrap_or(FALLBACK_VIEWPORT)
 }
 
+/// Parameters for [`render`].
+#[derive(SystemParam)]
+pub(super) struct MasterDetailRenderParams<'w, 's> {
+    pub roots: Query<'w, 's, (Entity, &'static MasterDetail, &'static mut MasterDetailView)>,
+    pub computed: Query<'w, 's, &'static ComputedNode>,
+    pub nodes: Query<'w, 's, &'static mut Node>,
+    pub texts: Query<'w, 's, (&'static mut L10nKey, &'static mut L10nArgs)>,
+    pub loc: Res<'w, Localization>,
+    pub text_fields: Query<'w, 's, &'static mut M3TextField>,
+}
+
 /// Draws the visible window of rows, the scroll bar, the notice, the chips and the placeholder.
-#[allow(clippy::too_many_arguments)]
-pub(super) fn render(
-    mut commands: Commands,
-    mut roots: Query<(Entity, &MasterDetail, &mut MasterDetailView)>,
-    computed: Query<&ComputedNode>,
-    mut nodes: Query<&mut Node>,
-    mut texts: Query<(&mut L10nKey, &mut L10nArgs)>,
-    loc: Res<Localization>,
-    mut text_fields: Query<&mut M3TextField>,
-) {
-    for (root, model, mut view) in &mut roots {
+pub(super) fn render(mut commands: Commands, mut params: MasterDetailRenderParams) {
+    for (root, model, mut view) in &mut params.roots {
         let parts = view.parts;
-        let height = viewport_height(&computed, parts.list);
+        let height = viewport_height(&params.computed, parts.list);
         if (height - view.viewport).abs() > 0.5 {
             view.viewport = height;
         }
@@ -92,14 +95,13 @@ pub(super) fn render(
             view.reveal_pending = false;
         }
         let range = view.layout.visible_range(view.scroll, height);
-        let list_w = computed
+        let list_w = params
+            .computed
             .get(parts.list)
             .map(|c| c.size().x * c.inverse_scale_factor)
             .ok()
             .filter(|w| *w > 40.0)
             .unwrap_or(320.0);
-        // Row chrome: marker, thumbnail, star, gaps and padding take about 190 px; a title
-        // character is about 9 px wide.
         let chars = (((list_w - 190.0) / 9.0).floor() as usize).max(8);
         let sig = Rendered {
             chars,
@@ -115,22 +117,21 @@ pub(super) fn render(
             let rows = view.rows.clone();
             let layout = view.layout.clone();
             let prefix = view.config.prefix;
-            view.row_entities = spawn_rows(
-                &mut commands,
+            let ctx = SpawnRowsContext {
                 root,
                 prefix,
                 model,
-                &rows,
-                &layout,
-                range,
-                parts.content,
-                chars,
-            );
+                rows: &rows,
+                layout: &layout,
+                content: parts.content,
+                max_chars: chars,
+            };
+            view.row_entities = spawn_rows(&mut commands, &ctx, range);
             view.rendered = Some(sig);
         }
-        place_content(&mut nodes, &view, parts, height);
-        update_notice(&mut nodes, &mut texts, model, &view);
-        update_placeholder(&loc, &view, model, &mut text_fields);
+        place_content(&mut params.nodes, &view, parts, height);
+        update_notice(&mut params.nodes, &mut params.texts, model, &view);
+        update_placeholder(&params.loc, &view, model, &mut params.text_fields);
         render_chips(&mut commands, root, &mut view, model);
     }
 }

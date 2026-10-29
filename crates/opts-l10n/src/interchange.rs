@@ -117,6 +117,84 @@ fn plural_pattern(
     }])
 }
 
+fn extract_structured<'a>(
+    top: &'a serde_json::Map<String, serde_json::Value>,
+    text: &str,
+    out: &mut Imported,
+) -> Option<(&'a serde_json::Map<String, serde_json::Value>, usize)> {
+    let structured = top.contains_key("messages") || top.contains_key("format");
+    if !structured {
+        return Some((top, 0));
+    }
+    out.language = top
+        .get("language")
+        .and_then(|v| v.as_str())
+        .map(str::to_string);
+    out.base_version = top
+        .get("base_version")
+        .and_then(|v| v.as_str())
+        .map(str::to_string);
+    out.pack = top.get("pack").cloned();
+    if let Some(f) = top.get("format").and_then(|v| v.as_str()) {
+        if f != FORMAT {
+            push_diag(
+                &mut out.table,
+                line_of_json_key(text, "format", 0).unwrap_or(1),
+                None,
+                format!("unknown format `{f}`; this version reads `{FORMAT}`"),
+            );
+        }
+    }
+    let Some(m) = top.get("messages").and_then(|m| m.as_object()) else {
+        push_diag(
+            &mut out.table,
+            1,
+            None,
+            "`messages` must be an object of key to entry",
+        );
+        return None;
+    };
+    Some((m, text.find("\"messages\"").unwrap_or(0)))
+}
+
+fn parse_object_entry(
+    o: &serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    out: &mut Imported,
+) -> Result<Option<Pattern>, String> {
+    if let Some(f) = o.get("file").and_then(|v| v.as_str()) {
+        out.file_of.insert(key.to_string(), f.to_string());
+    }
+    if let Some(forms) = o.get("forms").and_then(|f| f.as_object()) {
+        match o.get("variable").and_then(|v| v.as_str()) {
+            Some(var) => match plural_pattern(var.trim_start_matches('$'), forms) {
+                Ok(p) => Ok(Some(p)),
+                Err(m) if m.is_empty() => Ok(None),
+                Err(m) => Err(m),
+            },
+            None => Err("`forms` needs a `variable` (the name of the number, without `$`)".into()),
+        }
+    } else {
+        match o.get("text") {
+            Some(serde_json::Value::String(t)) => text_pattern(t),
+            None => Ok(None),
+            Some(_) => Err("`text` must be text".into()),
+        }
+    }
+}
+
+fn parse_entry_value(
+    entry: &serde_json::Value,
+    key: &str,
+    out: &mut Imported,
+) -> Result<Option<Pattern>, String> {
+    match entry {
+        serde_json::Value::String(t) => text_pattern(t),
+        serde_json::Value::Object(o) => parse_object_entry(o, key, out),
+        _ => Err("an entry must be text or an object with `text` or `forms`".into()),
+    }
+}
+
 /// Reads an interchange file. Problems are recorded in the table's diagnostics, never returned
 /// as failures; entries that cannot be read are left out.
 #[must_use]
@@ -143,75 +221,16 @@ pub fn parse_json(text: &str) -> Imported {
         );
         return out;
     };
-    let structured = top.contains_key("messages") || top.contains_key("format");
-    let (messages, base) = if structured {
-        out.language = top
-            .get("language")
-            .and_then(|v| v.as_str())
-            .map(str::to_string);
-        out.base_version = top
-            .get("base_version")
-            .and_then(|v| v.as_str())
-            .map(str::to_string);
-        out.pack = top.get("pack").cloned();
-        if let Some(f) = top.get("format").and_then(|v| v.as_str()) {
-            if f != FORMAT {
-                push_diag(
-                    &mut out.table,
-                    line_of_json_key(text, "format", 0).unwrap_or(1),
-                    None,
-                    format!("unknown format `{f}`; this version reads `{FORMAT}`"),
-                );
-            }
-        }
-        let Some(m) = top.get("messages").and_then(|m| m.as_object()) else {
-            push_diag(
-                &mut out.table,
-                1,
-                None,
-                "`messages` must be an object of key to entry",
-            );
-            return out;
-        };
-        (m, text.find("\"messages\"").unwrap_or(0))
-    } else {
-        (top, 0)
+    let Some((messages, base)) = extract_structured(top, text, &mut out) else {
+        return out;
     };
     for (key, entry) in messages {
         let line = line_of_json_key(text, key, base).unwrap_or(1);
-        let result: Result<Option<Pattern>, String> = match entry {
-            serde_json::Value::String(t) => text_pattern(t),
-            serde_json::Value::Object(o) => {
-                if let Some(f) = o.get("file").and_then(|v| v.as_str()) {
-                    out.file_of.insert(key.clone(), f.to_string());
-                }
-                if let Some(forms) = o.get("forms").and_then(|f| f.as_object()) {
-                    match o.get("variable").and_then(|v| v.as_str()) {
-                        Some(var) => match plural_pattern(var.trim_start_matches('$'), forms) {
-                            Ok(p) => Ok(Some(p)),
-                            Err(m) if m.is_empty() => Ok(None),
-                            Err(m) => Err(m),
-                        },
-                        None => Err(
-                            "`forms` needs a `variable` (the name of the number, without `$`)"
-                                .into(),
-                        ),
-                    }
-                } else {
-                    match o.get("text") {
-                        Some(serde_json::Value::String(t)) => text_pattern(t),
-                        None => Ok(None),
-                        Some(_) => Err("`text` must be text".into()),
-                    }
-                }
-            }
-            _ => Err("an entry must be text or an object with `text` or `forms`".into()),
-        };
-        match result {
+        match parse_entry_value(entry, key, &mut out) {
             Ok(Some(p)) => {
-                out.table.messages.insert(key.clone(), p);
-                out.table.order.push(key.clone());
-                out.table.lines.insert(key.clone(), line);
+                out.table.messages.insert(key.to_string(), p);
+                out.table.order.push(key.to_string());
+                out.table.lines.insert(key.to_string(), line);
             }
             Ok(None) => {}
             Err(m) => push_diag(&mut out.table, line, Some(key), m),

@@ -151,25 +151,15 @@ impl TreeviewBuilder {
         root
     }
 
-    fn spawn_node_hierarchy(
+    fn spawn_tree_row(
         parent: &mut ChildSpawnerCommands,
         tree_entity: Entity,
         parent_id: Option<String>,
         node: &TreeNode,
         depth: usize,
-    ) {
+        chevron_symbol: &'static str,
+    ) -> Entity {
         let has_children = !node.children.is_empty();
-        let chevron_symbol = if !has_children {
-            " "
-        } else if node.is_expanded {
-            "▼"
-        } else {
-            "▶"
-        };
-
-        let node_id = node.id.clone();
-
-        // Node row button
         let mut row_cmd = parent.spawn((
             (
                 Button,
@@ -191,7 +181,7 @@ impl TreeviewBuilder {
             ),
             M3TreeNode {
                 tree_entity,
-                node_id: node_id.clone(),
+                node_id: node.id.clone(),
                 parent_id,
                 has_children,
                 is_expanded: node.is_expanded,
@@ -232,6 +222,28 @@ impl TreeviewBuilder {
                 TypeStyleToken(TypeScale::BodyMedium),
             ));
         });
+
+        row_entity
+    }
+
+    fn spawn_node_hierarchy(
+        parent: &mut ChildSpawnerCommands,
+        tree_entity: Entity,
+        parent_id: Option<String>,
+        node: &TreeNode,
+        depth: usize,
+    ) {
+        let has_children = !node.children.is_empty();
+        let chevron_symbol = if !has_children {
+            " "
+        } else if node.is_expanded {
+            "▼"
+        } else {
+            "▶"
+        };
+
+        let node_id = node.id.clone();
+        let _ = Self::spawn_tree_row(parent, tree_entity, parent_id, node, depth, chevron_symbol);
 
         // Recursively spawn children
         for child in &node.children {

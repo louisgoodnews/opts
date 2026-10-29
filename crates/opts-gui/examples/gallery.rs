@@ -10,6 +10,7 @@
 //! Keys: Tab / arrows move focus, Enter or Space activate, Esc goes back, F2 toggles light/dark.
 //! The pinned hover/focus/pressed rows are display aids (`ForcedState`); everything else is live.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use opts_gui::prelude::*;
@@ -86,43 +87,44 @@ fn theme_hotkey(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn status_line(
-    mut clicks: MessageReader<ButtonClicked>,
-    mut checks: MessageReader<CheckboxToggled>,
-    mut switches: MessageReader<SwitchToggled>,
-    mut radios: MessageReader<RadioSelected>,
-    mut combos: MessageReader<ComboboxSelected>,
-    mut trees: MessageReader<TreeNodeSelected>,
-    mut texts: MessageReader<TextChanged>,
-    mut label: Query<&mut Text, With<StatusLabel>>,
-) {
+#[derive(SystemParam)]
+struct StatusEvents<'w, 's> {
+    clicks: MessageReader<'w, 's, ButtonClicked>,
+    checks: MessageReader<'w, 's, CheckboxToggled>,
+    switches: MessageReader<'w, 's, SwitchToggled>,
+    radios: MessageReader<'w, 's, RadioSelected>,
+    combos: MessageReader<'w, 's, ComboboxSelected>,
+    trees: MessageReader<'w, 's, TreeNodeSelected>,
+    texts: MessageReader<'w, 's, TextChanged>,
+}
+
+fn status_line(mut events: StatusEvents, mut label: Query<&mut Text, With<StatusLabel>>) {
     let Ok(mut text) = label.single_mut() else {
         return;
     };
-    if let Some(e) = clicks.read().last() {
+    if let Some(e) = events.clicks.read().last() {
         text.0 = format!("Button {:?} activated", e.0);
     }
-    if let Some(e) = checks.read().last() {
+    if let Some(e) = events.checks.read().last() {
         text.0 = format!("Check box {:?} is now {:?}", e.entity, e.state);
     }
-    if let Some(e) = switches.read().last() {
+    if let Some(e) = events.switches.read().last() {
         text.0 = format!(
             "Switch {:?} is now {}",
             e.entity,
             if e.is_on { "on" } else { "off" }
         );
     }
-    if let Some(e) = radios.read().last() {
+    if let Some(e) = events.radios.read().last() {
         text.0 = format!("Radio {:?} selected", e.entity);
     }
-    if let Some(e) = combos.read().last() {
+    if let Some(e) = events.combos.read().last() {
         text.0 = format!("Combo box chose {}", e.selected_value);
     }
-    if let Some(e) = trees.read().last() {
+    if let Some(e) = events.trees.read().last() {
         text.0 = format!("Tree row {} selected", e.node_id);
     }
-    if let Some(e) = texts.read().last() {
+    if let Some(e) = events.texts.read().last() {
         text.0 = format!("Text is now {:?}", e.text);
     }
 }

@@ -31,11 +31,79 @@ fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
     Some(cur)
 }
 
+#[derive(Default)]
+struct Counts {
+    total: usize,
+    no_script: usize,
+    dead: usize,
+    follows: usize,
+    deviates: usize,
+}
+
+fn evaluate_vehicle(
+    vehicle_name: &str,
+    bus: &BusManifest,
+    path: &Path,
+    root: &Path,
+    show: bool,
+    counts: &mut Counts,
+) {
+    counts.total += 1;
+    if bus.scripts.is_empty() {
+        counts.no_script += 1;
+        return;
+    }
+    let dir = path.parent().unwrap_or(root).to_path_buf();
+    let (mut engine, _) =
+        load_vehicle_scripts(bus, |rel| find_ci(&dir, rel).or_else(|| find_ci(root, rel)));
+    let r = measure_ai_response(&mut engine);
+    if !r.is_live() {
+        counts.dead += 1;
+        if show {
+            println!("DEAD      {vehicle_name}");
+        }
+        return;
+    }
+    let c = |n: &str| {
+        let mut e2 = engine_const(bus, &dir, root, n);
+        e2.take()
+    };
+    let (gas, reach, brems) = (
+        c("AI_M_gas_max"),
+        c("AI_v_max_erreich"),
+        c("AI_F_brems_max"),
+    );
+    let law = |v: f32| match (gas, reach) {
+        (Some(g), Some(rch)) => Some(g * (1.0 - v / rch)),
+        _ => None,
+    };
+    let close = |a: f32, b: f32| (a - b).abs() <= 0.05 * b.abs().max(1.0);
+    let ok = law(0.0).is_some_and(|l| close(r.torque_at(0.0), l))
+        && law(50.0).is_some_and(|l| close(r.torque_at(50.0), l))
+        && brems.is_some_and(|b| close(r.brake_force, b));
+    if ok {
+        counts.follows += 1;
+    } else {
+        counts.deviates += 1;
+        if show {
+            println!(
+                "DEVIATES  {vehicle_name} | torque 0/50/100 km/h {:.0}/{:.0}/{:.0} (law {:?}), brake {:.0} (const {:?})",
+                r.torque_at(0.0),
+                r.torque_at(50.0),
+                r.torque_at(100.0),
+                law(0.0),
+                r.brake_force,
+                brems
+            );
+        }
+    }
+}
+
 fn main() {
     let root = PathBuf::from(std::env::args().nth(1).expect("OMSI directory"));
     let show = std::env::var_os("SHOW").is_some();
     let mut seen = std::collections::BTreeSet::new();
-    let (mut total, mut no_script, mut dead, mut follows, mut deviates) = (0, 0, 0, 0, 0);
+    let mut counts = Counts::default();
     for map in std::fs::read_dir(root.join("maps"))
         .into_iter()
         .flatten()
@@ -57,64 +125,14 @@ fn main() {
                     continue;
                 };
                 let Ok(bus) = bus else { continue };
-                total += 1;
-                if bus.scripts.is_empty() {
-                    no_script += 1;
-                    continue;
-                }
-                let dir = path.parent().unwrap_or(&root).to_path_buf();
-                let (mut engine, _) = load_vehicle_scripts(&bus, |rel| {
-                    find_ci(&dir, rel).or_else(|| find_ci(&root, rel))
-                });
-                let r = measure_ai_response(&mut engine);
-                if !r.is_live() {
-                    dead += 1;
-                    if show {
-                        println!("DEAD      {}", entry.vehicle);
-                    }
-                    continue;
-                }
-                // The shared law from the vehicle's own constants.
-                let c = |n: &str| {
-                    let mut e2 = engine_const(&bus, &dir, &root, n);
-                    e2.take()
-                };
-                let (gas, reach, brems) = (
-                    c("AI_M_gas_max"),
-                    c("AI_v_max_erreich"),
-                    c("AI_F_brems_max"),
-                );
-                let law = |v: f32| match (gas, reach) {
-                    (Some(g), Some(rch)) => Some(g * (1.0 - v / rch)),
-                    _ => None,
-                };
-                let close = |a: f32, b: f32| (a - b).abs() <= 0.05 * b.abs().max(1.0);
-                let ok = law(0.0).is_some_and(|l| close(r.torque_at(0.0), l))
-                    && law(50.0).is_some_and(|l| close(r.torque_at(50.0), l))
-                    && brems.is_some_and(|b| close(r.brake_force, b));
-                if ok {
-                    follows += 1;
-                } else {
-                    deviates += 1;
-                    if show {
-                        println!(
-                            "DEVIATES  {} | torque 0/50/100 km/h {:.0}/{:.0}/{:.0} (law {:?}), brake {:.0} (const {:?})",
-                            entry.vehicle,
-                            r.torque_at(0.0),
-                            r.torque_at(50.0),
-                            r.torque_at(100.0),
-                            law(0.0),
-                            r.brake_force,
-                            brems
-                        );
-                    }
-                }
+                evaluate_vehicle(&entry.vehicle, &bus, &path, &root, show, &mut counts);
             }
         }
     }
     println!(
-        "{total} vehicles: {no_script} without scripts, {dead} whose script gives no torque or brake force, \
-         {follows} follow the shared law, {deviates} deviate"
+        "{} vehicles: {} without scripts, {} whose script gives no torque or brake force, \
+         {} follow the shared law, {} deviate",
+        counts.total, counts.no_script, counts.dead, counts.follows, counts.deviates
     );
 }
 

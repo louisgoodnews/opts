@@ -96,20 +96,12 @@ fn resolved_background(
     )
 }
 
-/// WCAG contrast of every visible, enabled text against the colour behind it, and of every
-/// visible control border (`BorderColor` on a focusable element) against its own surroundings.
-///
-/// `scheme` is the colour scheme under test: its `Surface` is the window behind the whole tree
-/// and its kind selects the thresholds ([`crate::theme::accent::text_min`],
-/// [`crate::theme::accent::control_min`]). Borders in `OutlineVariant` are decorative (design
-/// language section 4) and exempt. Text of 24 px and
-/// above counts as large text and needs 3:1 (4.5:1 in high contrast, where `text_min` is 7).
-pub fn text_contrast(world: &mut World, scheme: &crate::theme::ColorScheme) -> ContrastReport {
-    let root = scheme.get(crate::theme::ColorRole::Surface);
-    let text_min = crate::theme::accent::text_min(scheme.kind);
-    let control_min = crate::theme::accent::control_min(scheme.kind);
-    let decorative = scheme.get(crate::theme::ColorRole::OutlineVariant);
-    let mut report = ContrastReport::default();
+fn check_texts_contrast(
+    world: &mut World,
+    root: Color,
+    text_min: f32,
+    report: &mut ContrastReport,
+) {
     let mut q = world.query::<(Entity, &Text, &TextColor, &TextFont)>();
     let texts: Vec<(Entity, String, Color, f32)> = q
         .iter(world)
@@ -153,6 +145,15 @@ pub fn text_contrast(world: &mut World, scheme: &crate::theme::ColorScheme) -> C
             ));
         }
     }
+}
+
+fn check_borders_contrast(
+    world: &mut World,
+    root: Color,
+    control_min: f32,
+    decorative: Color,
+    report: &mut ContrastReport,
+) {
     let mut q = world.query::<(
         Entity,
         &BorderColor,
@@ -187,5 +188,23 @@ pub fn text_contrast(world: &mut World, scheme: &crate::theme::ColorScheme) -> C
             ));
         }
     }
+}
+
+/// WCAG contrast of every visible, enabled text against the colour behind it, and of every
+/// visible control border (`BorderColor` on a focusable element) against its own surroundings.
+///
+/// `scheme` is the colour scheme under test: its `Surface` is the window behind the whole tree
+/// and its kind selects the thresholds ([`crate::theme::accent::text_min`],
+/// [`crate::theme::accent::control_min`]). Borders in `OutlineVariant` are decorative (design
+/// language section 4) and exempt. Text of 24 px and
+/// above counts as large text and needs 3:1 (4.5:1 in high contrast, where `text_min` is 7).
+pub fn text_contrast(world: &mut World, scheme: &crate::theme::ColorScheme) -> ContrastReport {
+    let root = scheme.get(crate::theme::ColorRole::Surface);
+    let text_min = crate::theme::accent::text_min(scheme.kind);
+    let control_min = crate::theme::accent::control_min(scheme.kind);
+    let decorative = scheme.get(crate::theme::ColorRole::OutlineVariant);
+    let mut report = ContrastReport::default();
+    check_texts_contrast(world, root, text_min, &mut report);
+    check_borders_contrast(world, root, control_min, decorative, &mut report);
     report
 }

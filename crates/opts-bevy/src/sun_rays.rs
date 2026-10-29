@@ -195,52 +195,22 @@ pub fn pick_carrier(
     })
 }
 
-/// Adds and removes the volumetric components (see the module docs).
-#[allow(clippy::type_complexity)]
-pub fn sync_light_shafts(
-    quality: Res<LightQuality>,
-    style: Option<Res<ShaftStyle>>,
-    env: Option<Res<SessionEnvironment>>,
-    mut commands: Commands,
-    mut cameras: Query<
-        (
-            Entity,
-            &GlobalTransform,
-            Option<&mut VolumetricFog>,
-            Has<Hdr>,
-            Option<&Camera>,
-        ),
-        With<MainCamera>,
-    >,
-    lights: Query<(Entity, &LightRole, &DirectionalLight, Has<VolumetricLight>)>,
-    mut volumes: Query<(Entity, &mut Transform, &mut FogVolume), With<ShaftFogVolume>>,
+type CameraRayItem<'a> = (
+    Entity,
+    &'a GlobalTransform,
+    Option<&'a mut VolumetricFog>,
+    Has<Hdr>,
+    Option<&'a Camera>,
+);
+
+fn sync_camera_volumetric_fog(
+    cameras: &mut Query<CameraRayItem<'_>, With<MainCamera>>,
+    active: bool,
+    quality: &LightQuality,
+    style: &ShaftStyle,
+    commands: &mut Commands,
 ) {
-    let style = style.as_deref().copied().unwrap_or_default();
-    let list: Vec<_> = lights.iter().collect();
-    let carrier = pick_carrier(
-        quality.shafts,
-        quality.night_shafts,
-        list.iter()
-            .map(|(_, role, light, _)| (**role, light.shadow_maps_enabled, light.illuminance)),
-    );
-    // The camera the volume follows: the first active one.
-    let follow = cameras
-        .iter()
-        .find(|c| c.4.is_none_or(|cam| cam.is_active))
-        .or_else(|| cameras.iter().next())
-        .map(|c| (c.1.translation(), c.3));
-    let active = carrier.is_some() && follow.is_some();
-
-    for (i, (entity, _, _, has)) in list.iter().enumerate() {
-        let want = active && carrier == Some(i);
-        if want && !has {
-            commands.entity(*entity).insert(VolumetricLight);
-        } else if !want && *has {
-            commands.entity(*entity).remove::<VolumetricLight>();
-        }
-    }
-
-    for (entity, _, fog, _, _) in &mut cameras {
+    for (entity, _, fog, _, _) in cameras.iter_mut() {
         match (active, fog) {
             (true, None) => {
                 commands.entity(entity).insert(VolumetricFog {
@@ -264,31 +234,18 @@ pub fn sync_light_shafts(
             (false, None) => {}
         }
     }
+}
 
-    let (Some((cam_pos, hdr)), true) = (follow, active) else {
-        for (entity, _, _) in &volumes {
-            commands.entity(entity).despawn();
-        }
-        return;
-    };
-    let role = carrier.map_or(LightRole::Sun, |i| *list[i].1);
-    let (density, shafts_att) = env.as_ref().map_or_else(
-        || {
-            (
-                haze_density(crate::weather::FOG_MAX_VISIBILITY_M, &style),
-                1.0,
-            )
-        },
-        |e| {
-            (
-                haze_density(e.conditions().fog_visibility_m, &style),
-                e.light_attenuation().shafts,
-            )
-        },
-    );
-    let intensity = shaft_intensity(role, shafts_att, hdr, &style);
+fn sync_fog_volume_entities(
+    volumes: &mut Query<(Entity, &mut Transform, &mut FogVolume), With<ShaftFogVolume>>,
+    cam_pos: Vec3,
+    density: f32,
+    intensity: f32,
+    style: &ShaftStyle,
+    commands: &mut Commands,
+) {
     let mut seen = false;
-    for (entity, mut t, mut volume) in &mut volumes {
+    for (entity, mut t, mut volume) in volumes.iter_mut() {
         if seen {
             commands.entity(entity).despawn();
             continue;
@@ -328,6 +285,74 @@ pub fn sync_light_shafts(
             Name::new("Light_Shaft_Volume"),
         ));
     }
+}
+
+/// Adds and removes the volumetric components (see the module docs).
+pub fn sync_light_shafts(
+    quality: Res<LightQuality>,
+    style: Option<Res<ShaftStyle>>,
+    env: Option<Res<SessionEnvironment>>,
+    mut commands: Commands,
+    mut cameras: Query<CameraRayItem<'_>, With<MainCamera>>,
+    lights: Query<(Entity, &LightRole, &DirectionalLight, Has<VolumetricLight>)>,
+    mut volumes: Query<(Entity, &mut Transform, &mut FogVolume), With<ShaftFogVolume>>,
+) {
+    let style = style.as_deref().copied().unwrap_or_default();
+    let list: Vec<_> = lights.iter().collect();
+    let carrier = pick_carrier(
+        quality.shafts,
+        quality.night_shafts,
+        list.iter()
+            .map(|(_, role, light, _)| (**role, light.shadow_maps_enabled, light.illuminance)),
+    );
+    let follow = cameras
+        .iter()
+        .find(|c| c.4.is_none_or(|cam| cam.is_active))
+        .or_else(|| cameras.iter().next())
+        .map(|c| (c.1.translation(), c.3));
+    let active = carrier.is_some() && follow.is_some();
+
+    for (i, (entity, _, _, has)) in list.iter().enumerate() {
+        let want = active && carrier == Some(i);
+        if want && !has {
+            commands.entity(*entity).insert(VolumetricLight);
+        } else if !want && *has {
+            commands.entity(*entity).remove::<VolumetricLight>();
+        }
+    }
+
+    sync_camera_volumetric_fog(&mut cameras, active, &quality, &style, &mut commands);
+
+    let (Some((cam_pos, hdr)), true) = (follow, active) else {
+        for (entity, _, _) in &volumes {
+            commands.entity(entity).despawn();
+        }
+        return;
+    };
+    let role = carrier.map_or(LightRole::Sun, |i| *list[i].1);
+    let (density, shafts_att) = env.as_ref().map_or_else(
+        || {
+            (
+                haze_density(crate::weather::FOG_MAX_VISIBILITY_M, &style),
+                1.0,
+            )
+        },
+        |e| {
+            (
+                haze_density(e.conditions().fog_visibility_m, &style),
+                e.light_attenuation().shafts,
+            )
+        },
+    );
+    let intensity = shaft_intensity(role, shafts_att, hdr, &style);
+    sync_fog_volume_entities(
+        &mut volumes,
+        cam_pos,
+        density,
+        intensity,
+        &style,
+        &mut commands,
+    );
 }
 
 /// Registers [`sync_light_shafts`].

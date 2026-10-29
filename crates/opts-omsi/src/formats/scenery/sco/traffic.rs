@@ -2,8 +2,7 @@
 
 use super::*;
 
-/// Applies the block if its keyword is one of this module's; says whether it was.
-pub(super) fn apply(
+fn handle_traffic_light(
     obj: &mut SceneryObject,
     st: &mut ParseState,
     block: &OmsiBlock,
@@ -60,7 +59,6 @@ pub(super) fn apply(
         "approachdist" => {
             if let Some(val) = block.parameters.first() {
                 let dist = parse_f32(val, "approachdist", block.line_number)?;
-                // 20,598 of 20,625 uses sit right after the phases of a light program.
                 let program = if st.seen_path {
                     None
                 } else {
@@ -74,36 +72,109 @@ pub(super) fn apply(
                 }
             }
         }
-        "path" | "path_2" => {
-            if block.parameters.len() >= 11 {
-                let x = parse_f32(&block.parameters[0], "path x", block.line_number)?;
-                let y = parse_f32(&block.parameters[1], "path y", block.line_number)?;
-                let z = parse_f32(&block.parameters[2], "path z", block.line_number)?;
-                let rot = parse_f32(&block.parameters[3], "path rot", block.line_number)?;
-                let rad = parse_f32(&block.parameters[4], "path radius", block.line_number)?;
-                let len = parse_f32(&block.parameters[5], "path length", block.line_number)?;
-                let s0 = parse_f32(&block.parameters[6], "path slope0", block.line_number)?;
-                let s1 = parse_f32(&block.parameters[7], "path slope1", block.line_number)?;
-                let ptype = parse_u32(&block.parameters[8], "path type", block.line_number)?;
-                let width = parse_f32(&block.parameters[9], "path width", block.line_number)?;
-                let dir = parse_u32(&block.parameters[10], "path dir", block.line_number)?;
-                let extra = block.parameters.get(11).and_then(|s| s.parse::<u32>().ok());
+        _ => return Ok(false),
+    }
+    Ok(true)
+}
 
-                obj.paths.push(ScoPath {
-                    start: Vec3::new(x, y, z),
-                    heading_deg: rot,
-                    radius_m: rad,
-                    length_m: len,
-                    slope_start: s0,
-                    slope_end: s1,
-                    path_type: ptype,
-                    width_m: width,
-                    direction: dir,
-                    extra,
-                    traffic_light_index: st.active_traffic_light.take(),
-                    approach_distance_m: st.active_approach_dist,
-                    switch_position: st.switch_position,
-                });
+fn parse_sco_path(
+    params: &[String],
+    line_number: usize,
+    st: &mut ParseState,
+) -> Result<Option<ScoPath>, SceneryParseError> {
+    if params.len() < 11 {
+        return Ok(None);
+    }
+    let x = parse_f32(&params[0], "path x", line_number)?;
+    let y = parse_f32(&params[1], "path y", line_number)?;
+    let z = parse_f32(&params[2], "path z", line_number)?;
+    let rot = parse_f32(&params[3], "path rot", line_number)?;
+    let rad = parse_f32(&params[4], "path radius", line_number)?;
+    let len = parse_f32(&params[5], "path length", line_number)?;
+    let s0 = parse_f32(&params[6], "path slope0", line_number)?;
+    let s1 = parse_f32(&params[7], "path slope1", line_number)?;
+    let ptype = parse_u32(&params[8], "path type", line_number)?;
+    let width = parse_f32(&params[9], "path width", line_number)?;
+    let dir = parse_u32(&params[10], "path dir", line_number)?;
+    let extra = params.get(11).and_then(|s| s.parse::<u32>().ok());
+
+    Ok(Some(ScoPath {
+        start: Vec3::new(x, y, z),
+        heading_deg: rot,
+        radius_m: rad,
+        length_m: len,
+        slope_start: s0,
+        slope_end: s1,
+        path_type: ptype,
+        width_m: width,
+        direction: dir,
+        extra,
+        traffic_light_index: st.active_traffic_light.take(),
+        approach_distance_m: st.active_approach_dist,
+        switch_position: st.switch_position,
+    }))
+}
+
+fn parse_sco_maplight(
+    params: &[String],
+    line_number: usize,
+) -> Result<Option<ScoMapLight>, SceneryParseError> {
+    if params.len() < 7 {
+        return Ok(None);
+    }
+    let x = parse_f32(&params[0], "maplight x", line_number)?;
+    let y = parse_f32(&params[1], "maplight y", line_number)?;
+    let z = parse_f32(&params[2], "maplight z", line_number)?;
+    let r = parse_f32(&params[3], "maplight r", line_number)?;
+    let g = parse_f32(&params[4], "maplight g", line_number)?;
+    let b = parse_f32(&params[5], "maplight b", line_number)?;
+    let rad = parse_f32(&params[6], "maplight radius", line_number)?;
+    Ok(Some(ScoMapLight {
+        position: Vec3::new(x, y, z),
+        color: Vec3::new(r, g, b),
+        radius: rad,
+    }))
+}
+
+fn parse_sco_splinehelper(
+    params: &[String],
+    line_number: usize,
+) -> Result<Option<ScoSplineHelper>, SceneryParseError> {
+    if params.len() < 5 {
+        return Ok(None);
+    }
+    let file = params[0].clone();
+    let x = parse_f32(&params[1], "splinehelper x", line_number)?;
+    let z = parse_f32(&params[2], "splinehelper z", line_number)?;
+    let y = parse_f32(&params[3], "splinehelper y", line_number)?;
+    let rot = parse_f32(&params[4], "splinehelper rot", line_number)?;
+    let mut extra = Vec::new();
+    for p in &params[5..] {
+        if let Ok(v) = parse_float(p) {
+            extra.push(v);
+        }
+    }
+    Ok(Some(ScoSplineHelper {
+        profile_file: file,
+        position: Vec3::new(x, y, z),
+        rotation_deg: rot,
+        extra,
+    }))
+}
+
+/// Applies the block if its keyword is one of this module's; says whether it was.
+pub(super) fn apply(
+    obj: &mut SceneryObject,
+    st: &mut ParseState,
+    block: &OmsiBlock,
+) -> Result<bool, SceneryParseError> {
+    if handle_traffic_light(obj, st, block)? {
+        return Ok(true);
+    }
+    match block.keyword.as_str() {
+        "path" | "path_2" => {
+            if let Some(path) = parse_sco_path(&block.parameters, block.line_number, st)? {
+                obj.paths.push(path);
                 st.seen_path = true;
             }
         }
@@ -116,42 +187,13 @@ pub(super) fn apply(
             st.switch_position = block.parameters.first().and_then(|s| s.parse::<u32>().ok());
         }
         "maplight" => {
-            if block.parameters.len() >= 7 {
-                let x = parse_f32(&block.parameters[0], "maplight x", block.line_number)?;
-                let y = parse_f32(&block.parameters[1], "maplight y", block.line_number)?;
-                let z = parse_f32(&block.parameters[2], "maplight z", block.line_number)?;
-                let r = parse_f32(&block.parameters[3], "maplight r", block.line_number)?;
-                let g = parse_f32(&block.parameters[4], "maplight g", block.line_number)?;
-                let b = parse_f32(&block.parameters[5], "maplight b", block.line_number)?;
-                let rad = parse_f32(&block.parameters[6], "maplight radius", block.line_number)?;
-                obj.map_lights.push(ScoMapLight {
-                    position: Vec3::new(x, y, z),
-                    color: Vec3::new(r, g, b),
-                    radius: rad,
-                });
+            if let Some(light) = parse_sco_maplight(&block.parameters, block.line_number)? {
+                obj.map_lights.push(light);
             }
         }
         "splinehelper" => {
-            if block.parameters.len() >= 5 {
-                let file = block.parameters[0].clone();
-                let x = parse_f32(&block.parameters[1], "splinehelper x", block.line_number)?;
-                // Line order is x, height, y (verified on 2,274 helpers of X10 Berlin and
-                // 509 of Bad Hügelsdorf: arms then meet the spline ends in plan and height).
-                let z = parse_f32(&block.parameters[2], "splinehelper z", block.line_number)?;
-                let y = parse_f32(&block.parameters[3], "splinehelper y", block.line_number)?;
-                let rot = parse_f32(&block.parameters[4], "splinehelper rot", block.line_number)?;
-                let mut extra = Vec::new();
-                for p in &block.parameters[5..] {
-                    if let Ok(v) = parse_float(p) {
-                        extra.push(v);
-                    }
-                }
-                obj.spline_helpers.push(ScoSplineHelper {
-                    profile_file: file,
-                    position: Vec3::new(x, y, z),
-                    rotation_deg: rot,
-                    extra,
-                });
+            if let Some(helper) = parse_sco_splinehelper(&block.parameters, block.line_number)? {
+                obj.spline_helpers.push(helper);
             }
         }
         _ => return Ok(false),

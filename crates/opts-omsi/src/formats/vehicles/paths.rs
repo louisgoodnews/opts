@@ -66,6 +66,97 @@ pub struct PassengerPaths {
     pub next_roomheight: Option<f32>,
 }
 
+fn parse_stepsoundpack(
+    block: &crate::formats::text::OmsiBlock,
+) -> Result<StepSoundPack, PathsParseError> {
+    if block.parameters.is_empty() {
+        return Err(PathsParseError::MissingParameters {
+            keyword: "stepsoundpack".to_string(),
+            line: block.line_number,
+            expected: 1,
+            found: 0,
+        });
+    }
+    let count =
+        block.parameters[0]
+            .parse::<usize>()
+            .map_err(|_| PathsParseError::InvalidNumber {
+                line: block.line_number,
+                value: block.parameters[0].clone(),
+            })?;
+    let sounds = block.parameters[1..].iter().take(count).cloned().collect();
+    Ok(StepSoundPack { sounds })
+}
+
+fn parse_pathpoint(
+    block: &crate::formats::text::OmsiBlock,
+    index: usize,
+) -> Result<PathPoint, PathsParseError> {
+    if block.parameters.len() < 3 {
+        return Err(PathsParseError::MissingParameters {
+            keyword: block.keyword.clone(),
+            line: block.line_number,
+            expected: 3,
+            found: block.parameters.len(),
+        });
+    }
+    let x = parse_float(&block.parameters[0]).map_err(|_| PathsParseError::InvalidNumber {
+        line: block.line_number,
+        value: block.parameters[0].clone(),
+    })?;
+    let y = parse_float(&block.parameters[1]).map_err(|_| PathsParseError::InvalidNumber {
+        line: block.line_number,
+        value: block.parameters[1].clone(),
+    })?;
+    let z = parse_float(&block.parameters[2]).map_err(|_| PathsParseError::InvalidNumber {
+        line: block.line_number,
+        value: block.parameters[2].clone(),
+    })?;
+    Ok(PathPoint {
+        index,
+        position: Vec3::new(x, y, z),
+    })
+}
+
+fn parse_pathlink(block: &crate::formats::text::OmsiBlock) -> Result<PathLink, PathsParseError> {
+    if block.parameters.len() < 2 {
+        return Err(PathsParseError::MissingParameters {
+            keyword: block.keyword.clone(),
+            line: block.line_number,
+            expected: 2,
+            found: block.parameters.len(),
+        });
+    }
+    let from =
+        block.parameters[0]
+            .parse::<usize>()
+            .map_err(|_| PathsParseError::InvalidNumber {
+                line: block.line_number,
+                value: block.parameters[0].clone(),
+            })?;
+    let to = block.parameters[1]
+        .parse::<usize>()
+        .map_err(|_| PathsParseError::InvalidNumber {
+            line: block.line_number,
+            value: block.parameters[1].clone(),
+        })?;
+    Ok(PathLink {
+        from,
+        to,
+        one_way: block.keyword == "pathlink_oneway",
+    })
+}
+
+fn parse_door_binding(block: &crate::formats::text::OmsiBlock) -> Option<DoorBinding> {
+    if block.parameters.len() >= 2 {
+        let pathpoint = block.parameters[0].parse::<usize>().unwrap_or(0);
+        let door_id = block.parameters[1].parse::<usize>().unwrap_or(0);
+        Some(DoorBinding { pathpoint, door_id })
+    } else {
+        None
+    }
+}
+
 impl PassengerPaths {
     /// Parses a `paths.cfg` document from a string.
     ///
@@ -84,96 +175,20 @@ impl PassengerPaths {
 
         for block in blocks {
             match block.keyword.as_str() {
-                "stepsoundpack" => {
-                    if block.parameters.is_empty() {
-                        return Err(PathsParseError::MissingParameters {
-                            keyword: "stepsoundpack".to_string(),
-                            line: block.line_number,
-                            expected: 1,
-                            found: 0,
-                        });
-                    }
-                    let count = block.parameters[0].parse::<usize>().map_err(|_| {
-                        PathsParseError::InvalidNumber {
-                            line: block.line_number,
-                            value: block.parameters[0].clone(),
-                        }
-                    })?;
-                    let sounds = block.parameters[1..].iter().take(count).cloned().collect();
-                    sound_packs.push(StepSoundPack { sounds });
-                }
+                "stepsoundpack" => sound_packs.push(parse_stepsoundpack(&block)?),
                 "pathpnt" | "pathpoint" => {
-                    if block.parameters.len() < 3 {
-                        return Err(PathsParseError::MissingParameters {
-                            keyword: block.keyword,
-                            line: block.line_number,
-                            expected: 3,
-                            found: block.parameters.len(),
-                        });
-                    }
-                    let x = parse_float(&block.parameters[0]).map_err(|_| {
-                        PathsParseError::InvalidNumber {
-                            line: block.line_number,
-                            value: block.parameters[0].clone(),
-                        }
-                    })?;
-                    let y = parse_float(&block.parameters[1]).map_err(|_| {
-                        PathsParseError::InvalidNumber {
-                            line: block.line_number,
-                            value: block.parameters[1].clone(),
-                        }
-                    })?;
-                    let z = parse_float(&block.parameters[2]).map_err(|_| {
-                        PathsParseError::InvalidNumber {
-                            line: block.line_number,
-                            value: block.parameters[2].clone(),
-                        }
-                    })?;
-                    let index = points.len();
-                    points.push(PathPoint {
-                        index,
-                        position: Vec3::new(x, y, z),
-                    });
+                    let point = parse_pathpoint(&block, points.len())?;
+                    points.push(point);
                 }
-                "pathlink" | "pathlink_oneway" => {
-                    if block.parameters.len() < 2 {
-                        return Err(PathsParseError::MissingParameters {
-                            keyword: block.keyword.clone(),
-                            line: block.line_number,
-                            expected: 2,
-                            found: block.parameters.len(),
-                        });
-                    }
-                    let from = block.parameters[0].parse::<usize>().map_err(|_| {
-                        PathsParseError::InvalidNumber {
-                            line: block.line_number,
-                            value: block.parameters[0].clone(),
-                        }
-                    })?;
-                    let to = block.parameters[1].parse::<usize>().map_err(|_| {
-                        PathsParseError::InvalidNumber {
-                            line: block.line_number,
-                            value: block.parameters[1].clone(),
-                        }
-                    })?;
-                    links.push(PathLink {
-                        from,
-                        to,
-                        one_way: block.keyword == "pathlink_oneway",
-                    });
-                }
+                "pathlink" | "pathlink_oneway" => links.push(parse_pathlink(&block)?),
                 "entry" => {
-                    if block.parameters.len() >= 2 {
-                        let pathpoint = block.parameters[0].parse::<usize>().unwrap_or(0);
-                        let door_id = block.parameters[1].parse::<usize>().unwrap_or(0);
-                        entries.push(DoorBinding { pathpoint, door_id });
+                    if let Some(binding) = parse_door_binding(&block) {
+                        entries.push(binding);
                     }
                 }
                 "exit" => {
-                    if block.parameters.len() >= 2 {
-                        let pathpoint = block.parameters[0].parse::<usize>().unwrap_or(0);
-                        let door_id = block.parameters[1].parse::<usize>().unwrap_or(0);
-                        exits.push(DoorBinding { pathpoint, door_id });
+                    if let Some(binding) = parse_door_binding(&block) {
+                        exits.push(binding);
                     }
                 }
                 "next_stepsound" => {
@@ -240,83 +255,4 @@ pub fn parse_paths(text: &str) -> Result<PassengerPaths, PathsParseError> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_sample_paths() {
-        let sample = r#"
-[stepsoundpack]
-2
-step1.wav
-step2.wav
-
-0 (Tür VV)
-[pathpnt]
-0.85
-4.12
-0.35
-
-1 (Kasse)
-[pathpnt]
-0.10
-3.50
-0.40
-
-[pathlink]
-0
-1
-
-[next_stepsound]
-0
-
-[next_roomheight]
-2.15
-"#;
-        let paths = parse_paths(sample).unwrap();
-        assert_eq!(paths.sound_packs.len(), 1);
-        assert_eq!(paths.sound_packs[0].sounds.len(), 2);
-        assert_eq!(paths.points.len(), 2);
-        assert_eq!(paths.points[0].index, 0);
-        assert_eq!(paths.points[0].position, Vec3::new(0.85, 4.12, 0.35));
-        assert_eq!(paths.points[1].index, 1);
-        assert_eq!(paths.links.len(), 1);
-        assert_eq!(
-            paths.links[0],
-            PathLink {
-                from: 0,
-                to: 1,
-                one_way: false
-            }
-        );
-        assert_eq!(paths.next_stepsound, Some(0));
-        assert_eq!(paths.next_roomheight, Some(2.15));
-    }
-
-    #[test]
-    fn a_oneway_link_is_marked_and_keeps_its_place_in_the_list() {
-        let paths = parse_paths(
-            "[pathpnt]\n0\n0\n0\n[pathpnt]\n0\n1\n0\n[pathpnt]\n0\n2\n0\n[pathlink_oneway]\n1\n0\n[pathlink]\n1\n2\n",
-        )
-        .unwrap();
-        let one_way: Vec<_> = paths
-            .links
-            .iter()
-            .map(|l| (l.from, l.to, l.one_way))
-            .collect();
-        assert_eq!(one_way, vec![(1, 0, true), (1, 2, false)]);
-    }
-
-    #[test]
-    fn test_insufficient_coords_fails() {
-        let sample = r#"
-[pathpnt]
-0.5
-1.0
-"#;
-        assert!(matches!(
-            parse_paths(sample),
-            Err(PathsParseError::MissingParameters { .. })
-        ));
-    }
-}
+mod tests;

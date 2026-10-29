@@ -11,8 +11,13 @@ use opts_core::formats::oft::OftFont;
 pub(crate) use opts_core::formats::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
 use opts_sim::script::{ExternalHandler, Stacks};
 
+mod route_callbacks;
 mod script_texture;
+mod services;
+
+use route_callbacks::{handle_route_callback, handle_timetable_callback};
 use script_texture::handle_script_texture_callback;
+use services::handle_service_callback;
 
 /// How many people stand on each place and walk on each path link of a vehicle (what the scripts'
 /// `GetHumanCountOnSeat` and `GetHumanCountOnPathLink` ask), kept by the passenger system.
@@ -80,285 +85,23 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
         if let Some(handled) = handle_script_texture_callback(&ctx, name, st) {
             return handled;
         }
-        match name {
-            // 1. Randomness
-            // `n (M.V.NrSpecRandom)` -> r in [0, 1) fixed per vehicle and n.
-            "nrspecrandom" => {
-                let n = st.numbers.pop().unwrap_or(0.0);
-                let bits = mix(ctx.seed ^ mix(u64::from(n.round() as i64 as u64 as u32)));
-                st.numbers.push((bits >> 40) as f32 / 16_777_216.0);
-                true
-            }
+        if let Some(handled) = handle_route_callback(&ctx, name, st) {
+            return handled;
+        }
+        if let Some(handled) = handle_timetable_callback(&ctx, name, st) {
+            return handled;
+        }
+        if let Some(handled) = handle_service_callback(&ctx, name, st) {
+            return handled;
+        }
 
-            // 2. Terminus Callbacks (.hof)
-            // `code (M.V.GetTerminusIndex)` -> idx (0-based row index in terminus table, or -1)
-            "getterminusindex" => {
-                let code = st.numbers.pop().unwrap_or(0.0).round() as i32;
-                let idx = ctx
-                    .route
-                    .with(|r| r.hof.as_ref()?.find_terminus_by_code(code).map(|(i, _)| i));
-                st.numbers.push(idx.map_or(-1.0, |i| i as f32));
-                true
-            }
-
-            // `termIdx col (M.V.GetTerminusString)` -> string on string stack
-            "getterminusstring" => {
-                let col = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let term_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let text = ctx.route.with(|r| {
-                    r.hof
-                        .as_ref()
-                        .and_then(|h| h.terminus_string(term_idx, col))
-                        .unwrap_or("")
-                        .to_string()
-                });
-                st.strings.push(text);
-                true
-            }
-
-            // `termIdx (M.V.GetTerminusCode)` -> code
-            "getterminuscode" => {
-                let term_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let code = ctx
-                    .route
-                    .with(|r| r.hof.as_ref()?.terminus(term_idx).map(|t| t.code));
-                st.numbers.push(code.map_or(-1.0, |c| c as f32));
-                true
-            }
-
-            // 3. Route Callbacks (.hof)
-            // `routeCode (M.V.GetRouteIndex)` -> routeIdx (or -1)
-            "getrouteindex" => {
-                let route_code = st.numbers.pop().unwrap_or(0.0).round() as i32;
-                let idx = ctx.route.with(|r| {
-                    r.hof
-                        .as_ref()?
-                        .find_route_by_code(route_code)
-                        .map(|(i, _)| i)
-                });
-                st.numbers.push(idx.map_or(-1.0, |i| i as f32));
-                true
-            }
-
-            // `routeIdx stopNo (M.V.GetRouteBusstopIdent)` -> ident string
-            "getroutebusstopident" => {
-                let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let route_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let ident = ctx.route.with(|r| {
-                    r.hof
-                        .as_ref()
-                        .and_then(|h| h.route(route_idx))
-                        .and_then(|rt| rt.busstops.get(stop_no))
-                        .cloned()
-                        .unwrap_or_default()
-                });
-                st.strings.push(ident);
-                true
-            }
-
-            // `routeIdx (M.V.GetRouteTerminusIndex)` -> terminus row index of the route
-            "getrouteterminusindex" => {
-                let route_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let term_idx = ctx.route.with(|r| {
-                    let h = r.hof.as_ref()?;
-                    let route = h.route(route_idx)?;
-                    h.find_terminus_by_code(route.terminus_code).map(|(i, _)| i)
-                });
-                st.numbers.push(term_idx.map_or(-1.0, |i| i as f32));
-                true
-            }
-
-            // `routeIdx (M.V.GetBusstopCount)` -> stop count of route
-            "getbusstopcount" => {
-                let route_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let count = ctx.route.with(|r| {
-                    r.hof
-                        .as_ref()
-                        .and_then(|h| h.route(route_idx))
-                        .map_or(0, |rt| rt.busstops.len())
-                });
-                st.numbers.push(count as f32);
-                true
-            }
-
-            // 4. Bus Stop Callbacks (.hof)
-            // `ident:str (M.V.GetBusstopIndex)` -> busstopIdx (or -1)
-            "getbusstopindex" => {
-                let ident = st.strings.pop().unwrap_or_default();
-                let idx = ctx.route.with(|r| {
-                    r.hof
-                        .as_ref()?
-                        .find_busstop_by_ident(&ident)
-                        .map(|(i, _)| i)
-                });
-                st.numbers.push(idx.map_or(-1.0, |i| i as f32));
-                true
-            }
-
-            // `busstopIdx col (M.V.GetBusstopString)` -> string
-            "getbusstopstring" => {
-                let col = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let stop_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let text = ctx.route.with(|r| {
-                    r.hof
-                        .as_ref()
-                        .and_then(|h| h.busstop_string(stop_idx, col))
-                        .unwrap_or("")
-                        .to_string()
-                });
-                st.strings.push(text);
-                true
-            }
-
-            // 5. Depot Global Strings
-            // `slot (M.V.GetDepotStringGlobal)` -> string
-            "getdepotstringglobal" => {
-                let slot = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let text = ctx.route.with(|r| {
-                    r.hof
-                        .as_ref()
-                        .and_then(|h| h.global_string(slot))
-                        .unwrap_or("")
-                        .to_string()
-                });
-                st.strings.push(text);
-                true
-            }
-
-            // 6. Timetable Callbacks: the active timetable is the selected route; free driving
-            // (nothing selected) answers with neutral values, never garbage.
-            // `(M.V.GetTTLineString)` -> string
-            "getttlinestring" => {
-                st.strings.push(ctx.route.with(|r| r.tt_line_text()));
-                true
-            }
-
-            // `(M.V.GetTTTerminusIndex)` -> terminus index
-            "getttterminusindex" => {
-                let term_idx = ctx.route.with(|r| r.tt_terminus_index());
-                st.numbers.push(term_idx.map_or(-1.0, |i| i as f32));
-                true
-            }
-
-            // `(M.V.GetTTBusstopCount)` -> count of stops on active schedule
-            "getttbusstopcount" => {
-                st.numbers
-                    .push(ctx.route.with(|r| r.tt_stop_count()) as f32);
-                true
-            }
-
-            // `(M.V.GetTTBusstopIndex)` -> current stop index (0-based)
-            "getttbusstopindex" => {
-                st.numbers.push(ctx.route.with(|r| r.stop_index) as f32);
-                true
-            }
-
-            // `stopNo (M.V.GetTTBusstopName)` -> stop name/ident string
-            "getttbusstopname" => {
-                let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                st.strings.push(ctx.route.with(|r| r.tt_stop_name(stop_no)));
-                true
-            }
-
-            // `(M.V.GetTTDelay)` -> delay in seconds
-            "getttdelay" => {
-                st.numbers.push(ctx.route.with(|r| r.delay_s));
-                true
-            }
-
-            // `stopNo (M.V.GetTTBusstopDep)` -> departure time in seconds of day
-            "getttbusstopdep" => {
-                let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                st.numbers
-                    .push(ctx.route.with(|r| r.tt_departure_s(stop_no)));
-                true
-            }
-
-            // `stopNo (M.V.GetTTBusstopArr)` -> arrival time in seconds of day
-            "getttbusstoparr" => {
-                let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                st.numbers.push(ctx.route.with(|r| r.tt_arrival_s(stop_no)));
-                true
-            }
-
-            // 7. Tickets & Money
-            // `ticketIdx (M.V.GetTicketName)` -> string
-            "getticketname" => {
-                let idx = st.numbers.pop().unwrap_or(0.0).round() as i64;
-                let name = usize::try_from(idx)
-                    .ok()
-                    .and_then(|i| ctx.tickets.tickets.get(i))
-                    .map_or_else(
-                        || "Normalfahrschein".to_string(),
-                        |t| t.display.replace('@', " "),
-                    );
-                st.strings.push(name);
-                true
-            }
-
-            // `ticketIdx (M.V.GetTicketValue)` -> price
-            "getticketvalue" => {
-                let idx = st.numbers.pop().unwrap_or(0.0).round() as i64;
-                let price = usize::try_from(idx)
-                    .ok()
-                    .and_then(|i| ctx.tickets.price(i))
-                    .unwrap_or(2.50);
-                st.numbers.push(price);
-                true
-            }
-
-            // `coinIdx (M.V.GiveChangeCoin)` -> void
-            "givechangecoin" => {
-                let idx = st.numbers.pop().unwrap_or(0.0).round() as i64;
-                let value = usize::try_from(idx)
-                    .ok()
-                    .and_then(|i| ctx.coins.get(i))
-                    .copied();
-                if let (Some(v), Ok(mut log)) = (value, ctx.change_given.write()) {
-                    if log.len() < 64 {
-                        log.push(v);
-                    }
-                }
-                true
-            }
-
-            // 8. Passengers & Geometry
-            // `seatIdx (M.V.GetHumanCountOnSeat)` -> count
-            "gethumancountonseat" => {
-                let seat = st.numbers.pop().unwrap_or(0.0).round() as i64;
-                let n = usize::try_from(seat).ok().and_then(|i| {
-                    ctx.passengers
-                        .read()
-                        .ok()
-                        .and_then(|c| c.on_place.get(i).copied())
-                });
-                st.numbers.push(n.unwrap_or(0) as f32);
-                true
-            }
-
-            // `linkIdx (M.V.GetHumanCountOnPathLink)` -> count
-            "gethumancountonpathlink" => {
-                let link = st.numbers.pop().unwrap_or(0.0).round() as i64;
-                let n = usize::try_from(link).ok().and_then(|i| {
-                    ctx.passengers
-                        .read()
-                        .ok()
-                        .and_then(|c| c.on_link.get(i).copied())
-                });
-                st.numbers.push(n.unwrap_or(0) as f32);
-                true
-            }
-
-            // `x y z (M.V.GetHeightAbovePoint)` -> ground/kerb height
-            "getheightabovepoint" => {
-                let _z = st.numbers.pop();
-                let _y = st.numbers.pop();
-                let _x = st.numbers.pop();
-                st.numbers.push(0.0);
-                true
-            }
-
-            _ => false,
+        if name == "nrspecrandom" {
+            let n = st.numbers.pop().unwrap_or(0.0);
+            let bits = mix(ctx.seed ^ mix(u64::from(n.round() as i64 as u64 as u32)));
+            st.numbers.push((bits >> 40) as f32 / 16_777_216.0);
+            true
+        } else {
+            false
         }
     })
 }

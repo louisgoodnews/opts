@@ -179,6 +179,76 @@ impl DrivetrainModel {
         Self::default()
     }
 
+    fn resolve_gear_ratio(&mut self, gear: GearPosition) -> (f32, u8) {
+        match gear {
+            GearPosition::Neutral => (0.0, 0),
+            GearPosition::Reverse => (
+                -self.transmission.reverse_ratio * self.transmission.final_drive_ratio,
+                255,
+            ),
+            GearPosition::Forward(gear) => {
+                let idx = (gear as usize)
+                    .saturating_sub(1)
+                    .min(self.transmission.forward_ratios.len().saturating_sub(1));
+                self.current_gear = idx + 1;
+                (
+                    self.transmission.forward_ratios[idx] * self.transmission.final_drive_ratio,
+                    self.current_gear as u8,
+                )
+            }
+            GearPosition::Drive => {
+                if self.current_rpm > self.transmission.upshift_rpm
+                    && self.current_gear < self.transmission.forward_ratios.len()
+                {
+                    self.current_gear += 1;
+                } else if self.current_rpm < self.transmission.downshift_rpm
+                    && self.current_gear > 1
+                {
+                    self.current_gear -= 1;
+                }
+                let idx = self
+                    .current_gear
+                    .saturating_sub(1)
+                    .min(self.transmission.forward_ratios.len() - 1);
+                (
+                    self.transmission.forward_ratios[idx] * self.transmission.final_drive_ratio,
+                    self.current_gear as u8,
+                )
+            }
+        }
+    }
+
+    fn compute_tractive_force(&self, throttle: f32, ratio: f32, wheel_radius: f32) -> f32 {
+        let engine_torque = self.engine.compute_torque(self.current_rpm, throttle);
+        if ratio != 0.0 {
+            let sign = if ratio > 0.0 { 1.0 } else { -1.0 };
+            (engine_torque * ratio.abs() * self.transmission.efficiency / wheel_radius) * sign
+        } else {
+            0.0
+        }
+    }
+
+    fn compute_braking_force(
+        &self,
+        inputs: &VehicleInputs,
+        abs_speed: f32,
+        wheel_radius: f32,
+        vehicle_mass_kg: f32,
+    ) -> f32 {
+        let g = 9.81;
+        let retarder_torque_nm = (inputs.retarder_stage() as f32) * 500.0;
+        let retarder_brake_n = (retarder_torque_nm * self.transmission.final_drive_ratio
+            / wheel_radius)
+            * (abs_speed / 2.0).min(1.0);
+
+        let parking_brake_n = if inputs.is_parking_brake_engaged() {
+            0.5 * vehicle_mass_kg * g
+        } else {
+            0.0
+        };
+        retarder_brake_n + parking_brake_n
+    }
+
     /// Evaluates drivetrain propulsion, braking, and motion resistances for one simulation step.
     ///
     /// # Arguments
@@ -199,45 +269,10 @@ impl DrivetrainModel {
     ) -> DrivetrainForces {
         let abs_speed = speed_m_s.abs();
         let wheel_radius = wheel_radius_m.max(0.1);
+        let g = 9.81;
 
         // 1. Determine active gear and overall drive ratio
-        let (ratio, active_gear_tag) = match inputs.gear() {
-            GearPosition::Neutral => (0.0, 0),
-            GearPosition::Reverse => (
-                -self.transmission.reverse_ratio * self.transmission.final_drive_ratio,
-                255,
-            ),
-            GearPosition::Forward(gear) => {
-                let idx = (gear as usize)
-                    .saturating_sub(1)
-                    .min(self.transmission.forward_ratios.len().saturating_sub(1));
-                self.current_gear = idx + 1;
-                (
-                    self.transmission.forward_ratios[idx] * self.transmission.final_drive_ratio,
-                    self.current_gear as u8,
-                )
-            }
-            GearPosition::Drive => {
-                // Automatic gear shifting logic
-                if self.current_rpm > self.transmission.upshift_rpm
-                    && self.current_gear < self.transmission.forward_ratios.len()
-                {
-                    self.current_gear += 1;
-                } else if self.current_rpm < self.transmission.downshift_rpm
-                    && self.current_gear > 1
-                {
-                    self.current_gear -= 1;
-                }
-                let idx = self
-                    .current_gear
-                    .saturating_sub(1)
-                    .min(self.transmission.forward_ratios.len() - 1);
-                (
-                    self.transmission.forward_ratios[idx] * self.transmission.final_drive_ratio,
-                    self.current_gear as u8,
-                )
-            }
-        };
+        let (ratio, active_gear_tag) = self.resolve_gear_ratio(inputs.gear());
 
         // 2. Compute engine RPM from wheel speed and ratio
         let wheel_rad_s = abs_speed / wheel_radius;
@@ -248,40 +283,19 @@ impl DrivetrainModel {
             .min(self.engine.max_rpm);
 
         // 3. Engine torque and tractive force
-        let engine_torque = self
-            .engine
-            .compute_torque(self.current_rpm, inputs.throttle());
-        let tractive_force = if ratio != 0.0 {
-            let sign = if ratio > 0.0 { 1.0 } else { -1.0 };
-            (engine_torque * ratio.abs() * self.transmission.efficiency / wheel_radius) * sign
-        } else {
-            0.0
-        };
+        let tractive_force_n = self.compute_tractive_force(inputs.throttle(), ratio, wheel_radius);
 
-        // 4. Braking forces (Retarder + Parking; the service brake is the vehicle's own
-        // `BrakeSystem`, added by the simulation)
-        let g = 9.81;
-
-        let retarder_torque_nm = (inputs.retarder_stage() as f32) * 500.0;
-        let retarder_brake_n = (retarder_torque_nm * self.transmission.final_drive_ratio
-            / wheel_radius)
-            * (abs_speed / 2.0).min(1.0); // Retarder torque fades out below 2 m/s
-
-        let parking_brake_n = if inputs.is_parking_brake_engaged() {
-            0.5 * vehicle_mass_kg * g
-        } else {
-            0.0
-        };
-
-        let total_brake_n = retarder_brake_n + parking_brake_n;
+        // 4. Braking forces (Retarder + Parking)
+        let braking_force_n =
+            self.compute_braking_force(inputs, abs_speed, wheel_radius, vehicle_mass_kg);
 
         // 5. Resistances
         let drag_force_n = self.aero.compute_drag_force(abs_speed);
         let rolling_resistance_n = self.rolling_coefficient * vehicle_mass_kg * g;
 
         DrivetrainForces {
-            tractive_force_n: tractive_force,
-            braking_force_n: total_brake_n,
+            tractive_force_n,
+            braking_force_n,
             drag_force_n,
             rolling_resistance_n,
             engine_rpm: self.current_rpm,
@@ -291,50 +305,4 @@ impl DrivetrainModel {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_engine_torque_curve() {
-        let engine = EngineSpec::default();
-        // At 0 throttle, torque must be 0
-        assert_eq!(engine.compute_torque(1200.0, 0.0), 0.0);
-
-        // At full throttle at peak RPM (1200), torque should approach peak torque (1100 Nm)
-        let peak = engine.compute_torque(1200.0, 1.0);
-        assert!((peak - 1100.0).abs() < 10.0);
-
-        // At redline, torque drops
-        let redline = engine.compute_torque(2200.0, 1.0);
-        assert!(redline < peak);
-    }
-
-    #[test]
-    fn test_aerodynamic_drag_scaling() {
-        let aero = AerodynamicSpec::default();
-        let drag_10 = aero.compute_drag_force(10.0);
-        let drag_20 = aero.compute_drag_force(20.0);
-
-        // Drag is proportional to v^2; doubling speed quadruples drag force
-        let ratio = drag_20 / drag_10;
-        assert!((ratio - 4.0).abs() < 1e-3);
-    }
-
-    #[test]
-    fn test_drivetrain_neutral_and_drive() {
-        let mut model = DrivetrainModel::new();
-        let mut inputs = VehicleInputs::new();
-        inputs.set_parking_brake(false);
-        inputs.set_throttle(1.0);
-        inputs.set_gear(GearPosition::Neutral);
-
-        // In Neutral, tractive force must be 0
-        let forces = model.step(&inputs, 0.0, 0.49, 11500.0);
-        assert_eq!(forces.tractive_force_n, 0.0);
-
-        // In Drive, forward tractive force must be positive
-        inputs.set_gear(GearPosition::Drive);
-        let forces_drive = model.step(&inputs, 0.0, 0.49, 11500.0);
-        assert!(forces_drive.tractive_force_n > 5000.0);
-    }
-}
+mod tests;

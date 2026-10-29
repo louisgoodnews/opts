@@ -57,6 +57,36 @@ type ToastData<'a> = (
     Has<ToastQueued>,
 );
 
+fn merge_duplicate_toasts(
+    commands: &mut Commands,
+    toasts: &mut Query<ToastData>,
+    order: &[(u64, Entity)],
+) -> Vec<Entity> {
+    let mut keepers: Vec<(String, Entity)> = Vec::new();
+    let mut alive = Vec::new();
+    for (_, entity) in order {
+        let key = toasts
+            .get(*entity)
+            .ok()
+            .and_then(|t| t.2.map(|d| d.0.clone()));
+        if let Some(key) = key {
+            if let Some((_, keeper)) = keepers.iter().find(|(k, _)| *k == key) {
+                if let Ok(mut k) = toasts.get_mut(*keeper) {
+                    k.3 .0 += 1;
+                    if let Some(timer) = k.4.timer.as_mut() {
+                        timer.reset();
+                    }
+                }
+                commands.entity(*entity).despawn();
+                continue;
+            }
+            keepers.push((key, *entity));
+        }
+        alive.push(*entity);
+    }
+    alive
+}
+
 /// Orders, merges and positions the toasts.
 pub fn stack_toasts(
     mut commands: Commands,
@@ -69,29 +99,7 @@ pub fn stack_toasts(
     let mut order: Vec<_> = toasts.iter().map(|t| (t.1 .0, t.0)).collect();
     order.sort_unstable();
 
-    // Merge duplicates into the oldest live toast: it stays, restarts its timer and counts.
-    let mut keepers: Vec<(String, Entity)> = Vec::new();
-    let mut alive = Vec::new();
-    for (_, entity) in order {
-        let key = toasts
-            .get(entity)
-            .ok()
-            .and_then(|t| t.2.map(|d| d.0.clone()));
-        if let Some(key) = key {
-            if let Some((_, keeper)) = keepers.iter().find(|(k, _)| *k == key) {
-                if let Ok(mut k) = toasts.get_mut(*keeper) {
-                    k.3 .0 += 1;
-                    if let Some(timer) = k.4.timer.as_mut() {
-                        timer.reset();
-                    }
-                }
-                commands.entity(entity).despawn();
-                continue;
-            }
-            keepers.push((key, entity));
-        }
-        alive.push(entity);
-    }
+    let alive = merge_duplicate_toasts(&mut commands, &mut toasts, &order);
 
     let heights: Vec<f32> = alive
         .iter()

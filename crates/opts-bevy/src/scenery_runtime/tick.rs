@@ -125,17 +125,20 @@ fn tick_one(
     }
 }
 
-/// Ticks the objects in `objects`. `force` ticks every object regardless of distance and
-/// budget (the benchmark's deterministic step).
-#[allow(clippy::too_many_arguments)]
-fn tick_objects(
+struct TickContext<'a> {
     dt: f32,
     force: bool,
     paused: bool,
     camera: Option<Vec3>,
-    settings: &SceneryRuntimeSettings,
-    host: &HostValues,
-    overrides: &SceneryVariableOverrides,
+    settings: &'a SceneryRuntimeSettings,
+    host: &'a HostValues,
+    overrides: &'a SceneryVariableOverrides,
+}
+
+/// Ticks the objects in `objects`. `force` ticks every object regardless of distance and
+/// budget (the benchmark's deterministic step).
+fn tick_objects(
+    ctx: &TickContext<'_>,
     stats: &mut SceneryRuntimeStats,
     objects: &mut ObjectQuery,
     targets: &mut EffectTargets,
@@ -150,28 +153,35 @@ fn tick_objects(
             if (pass == 0) != (i >= start) {
                 continue;
             }
-            rt.pending_s += dt;
+            rt.pending_s += ctx.dt;
             if scripts.is_some() {
                 scripted += 1;
             }
-            let interval = match camera {
-                _ if force => 0.0,
-                None => settings.mid_interval_s,
+            let interval = match ctx.camera {
+                _ if ctx.force => 0.0,
+                None => ctx.settings.mid_interval_s,
                 Some(cam) => {
                     let d = transform.translation().distance(cam);
-                    if d <= settings.near_m {
+                    if d <= ctx.settings.near_m {
                         0.0
-                    } else if d <= settings.mid_m {
-                        settings.mid_interval_s
+                    } else if d <= ctx.settings.mid_m {
+                        ctx.settings.mid_interval_s
                     } else {
-                        settings.far_interval_s
+                        ctx.settings.far_interval_s
                     }
                 }
             };
-            if !due(&rt, scripts.is_some(), host, interval, force, paused) {
+            if !due(
+                &rt,
+                scripts.is_some(),
+                ctx.host,
+                interval,
+                ctx.force,
+                ctx.paused,
+            ) {
                 continue;
             }
-            if !force && ticks >= settings.max_ticks_per_frame {
+            if !ctx.force && ticks >= ctx.settings.max_ticks_per_frame {
                 continue;
             }
             ticks += 1;
@@ -179,15 +189,15 @@ fn tick_objects(
             let ran = tick_one(
                 &mut rt,
                 scripts.map(Mut::into_inner),
-                host,
-                overrides,
+                ctx.host,
+                ctx.overrides,
                 targets,
                 stats,
             );
             script_ticks += usize::from(ran);
         }
     }
-    stats.cursor = if ticks >= settings.max_ticks_per_frame {
+    stats.cursor = if ticks >= ctx.settings.max_ticks_per_frame {
         last
     } else {
         0
@@ -199,42 +209,45 @@ fn tick_objects(
     stats.tick_time_us = started.elapsed().as_secs_f32() * 1e6;
 }
 
+/// System parameters for [`scenery_script_system`].
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct SceneryScriptParams<'w, 's> {
+    pub time: Res<'w, Time>,
+    pub settings: Res<'w, SceneryRuntimeSettings>,
+    pub clock: Res<'w, SceneryClock>,
+    pub overrides: Res<'w, SceneryVariableOverrides>,
+    pub stats: ResMut<'w, SceneryRuntimeStats>,
+    pub cameras:
+        Query<'w, 's, (&'static Camera, &'static GlobalTransform), With<crate::MainCamera>>,
+    pub objects: ObjectQuery<'w, 's>,
+    pub targets: EffectTargets<'w, 's>,
+}
+
 /// `Update` system: ticks scenery objects by distance from the active 3D camera.
-#[allow(clippy::too_many_arguments)]
-pub fn scenery_script_system(
-    time: Res<Time>,
-    settings: Res<SceneryRuntimeSettings>,
-    clock: Res<SceneryClock>,
-    overrides: Res<SceneryVariableOverrides>,
-    mut stats: ResMut<SceneryRuntimeStats>,
-    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
-    mut objects: ObjectQuery,
-    mut targets: EffectTargets,
-) {
-    if !settings.automatic {
+pub fn scenery_script_system(mut p: SceneryScriptParams) {
+    if !p.settings.automatic {
         return;
     }
     // A paused clock (dt = 0) still evaluates objects whose host values changed (night switch):
     // `tick_objects` then advances no script time.
-    let dt = time.delta_secs();
+    let dt = p.time.delta_secs();
     let paused = dt <= 0.0;
-    let camera = cameras
+    let camera = p
+        .cameras
         .iter()
         .find(|(c, _)| c.is_active)
         .map(|(_, t)| t.translation());
-    let host = HostValues::of(&clock);
-    tick_objects(
+    let host = HostValues::of(&p.clock);
+    let ctx = TickContext {
         dt,
-        false,
+        force: false,
         paused,
         camera,
-        &settings,
-        &host,
-        &overrides,
-        &mut stats,
-        &mut objects,
-        &mut targets,
-    );
+        settings: &p.settings,
+        host: &host,
+        overrides: &p.overrides,
+    };
+    tick_objects(&ctx, &mut p.stats, &mut p.objects, &mut p.targets);
 }
 
 /// System parameters of [`advance_scenery`].
@@ -265,17 +278,15 @@ pub fn advance_scenery(world: &mut World, dt_s: f32) {
         return;
     };
     let host = HostValues::of(&clock);
-    tick_objects(
-        dt_s,
-        true,
-        false,
-        None,
-        &settings,
-        &host,
-        &overrides,
-        &mut stats,
-        &mut objects,
-        &mut targets,
-    );
+    let ctx = TickContext {
+        dt: dt_s,
+        force: true,
+        paused: false,
+        camera: None,
+        settings: &settings,
+        host: &host,
+        overrides: &overrides,
+    };
+    tick_objects(&ctx, &mut stats, &mut objects, &mut targets);
     state.apply(world);
 }

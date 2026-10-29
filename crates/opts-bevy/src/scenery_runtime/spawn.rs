@@ -122,20 +122,21 @@ fn bounds(parts: &[Vec<ModelPart>], meshes: &Assets<Mesh>) -> (Vec3, f32) {
     ((lo + hi) * 0.5, ((hi - lo) * 0.5).length().max(0.1))
 }
 
-/// Builds the mesh entities of `[mesh]` number `i` under `parent`; returns the rule entity.
-#[allow(clippy::too_many_arguments)]
-fn build_mesh(
-    commands: &mut Commands,
+struct MeshBuildArgs<'a, 'w, 's> {
+    commands: &'a mut Commands<'w, 's>,
     root: Entity,
     parent: Entity,
-    sco: &SceneryObject,
-    i: usize,
-    parts: &[ModelPart],
-    mut engine: Option<&mut ScriptEngine>,
-    rt: &mut SceneryObjectRuntime,
-) {
-    let def = &sco.meshes[i];
-    let pivot = parts.iter().find_map(|p| p.pivot).map(to_omsi);
+    sco: &'a SceneryObject,
+    index: usize,
+    parts: &'a [ModelPart],
+    engine: Option<&'a mut ScriptEngine>,
+    rt: &'a mut SceneryObjectRuntime,
+}
+
+/// Builds the mesh entities of `[mesh]` number `i` under `parent`; returns the rule entity.
+fn build_mesh(mut args: MeshBuildArgs<'_, '_, '_>) {
+    let def = &args.sco.meshes[args.index];
+    let pivot = args.parts.iter().find_map(|p| p.pivot).map(to_omsi);
     let steps: Vec<_> = def
         .animations
         .iter()
@@ -143,46 +144,47 @@ fn build_mesh(
         .collect();
     let visible: Vec<(String, f32)> = def.visible.iter().cloned().collect();
     let holder = if steps.is_empty() && visible.is_empty() {
-        parent
+        args.parent
     } else {
         let vars = steps
             .iter()
             .map(|s| s.variable.as_str())
             .chain(visible.iter().map(|v| v.0.as_str()))
-            .map(|n| resolve(n, engine.as_deref_mut()))
+            .map(|n| resolve(n, args.engine.as_deref_mut()))
             .collect();
         let rule = SceneryMeshRule {
             anim: MeshAnimation {
-                owner: root,
+                owner: args.root,
                 steps,
                 visible,
                 shown: Vec::new(),
             },
             vars,
         };
-        let e = commands
+        let e = args
+            .commands
             .spawn((
                 Transform::default(),
                 Visibility::Inherited,
                 rule,
-                Name::new(format!("Mesh_{i}")),
+                Name::new(format!("Mesh_{}", args.index)),
             ))
             .id();
-        commands.entity(parent).add_child(e);
-        rt.meshes.push(e);
+        args.commands.entity(args.parent).add_child(e);
+        args.rt.meshes.push(e);
         e
     };
-    let spawned = attach_model_parts(commands, holder, parts, &def.file);
-    super::bind_alpha_scale(commands, &spawned, parts);
-    for (e, part) in spawned.into_iter().zip(parts) {
+    let spawned = attach_model_parts(args.commands, holder, args.parts, &def.file);
+    super::bind_alpha_scale(args.commands, &spawned, args.parts);
+    for (e, part) in spawned.into_iter().zip(args.parts) {
         if let Some(var) = &part.light_variable {
             let in_place = var.eq_ignore_ascii_case(NIGHT_VARIABLE);
-            commands.entity(e).insert(SceneryLightMap {
-                var: resolve(var, engine.as_deref_mut()),
+            args.commands.entity(e).insert(SceneryLightMap {
+                var: resolve(var, args.engine.as_deref_mut()),
                 in_place,
                 applied: f32::NAN,
             });
-            rt.light_maps.push(e);
+            args.rt.light_maps.push(e);
         }
     }
 }
@@ -260,16 +262,16 @@ pub fn build_scenery_object(
             continue;
         }
         let parent = parent_of(sco.meshes[i].lod_threshold);
-        build_mesh(
+        build_mesh(MeshBuildArgs {
             commands,
             root,
             parent,
             sco,
-            i,
+            index: i,
             parts,
-            engine.as_deref_mut(),
-            &mut rt,
-        );
+            engine: engine.as_deref_mut(),
+            rt: &mut rt,
+        });
         count += parts.len();
     }
     for light in &sco.lights {

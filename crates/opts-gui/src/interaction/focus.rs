@@ -4,6 +4,7 @@
 //! use it); the [`Focused`] marker mirrors it so queries stay simple, and either side may write:
 //! [`sync_input_focus`] reconciles them every frame. Move focus with [`FocusEvent`].
 
+use bevy::ecs::system::SystemParam;
 use bevy::input_focus::{tab_navigation::TabIndex, FocusCause, InputFocus, InputFocusVisible};
 use bevy::prelude::*;
 
@@ -76,22 +77,27 @@ fn current(focused: &Query<Entity, With<Focused>>) -> Option<Entity> {
     focused.iter().next()
 }
 
+/// Parameters for [`focus_event_handler_system`].
+#[derive(SystemParam)]
+pub struct FocusEventHandlerParams<'w, 's> {
+    pub events: MessageReader<'w, 's, FocusEvent>,
+    pub actions: MessageReader<'w, 's, UiAction>,
+    pub focused: Query<'w, 's, Entity, With<Focused>>,
+    pub owners: Query<'w, 's, ArrowOwners>,
+    pub visible: Option<ResMut<'w, InputFocusVisible>>,
+    pub input: Option<ResMut<'w, InputFocus>>,
+}
+
 /// Applies [`FocusEvent`]s and focus-moving [`UiAction`]s.
-#[allow(clippy::too_many_arguments)]
 pub fn focus_event_handler_system(
-    mut events: MessageReader<FocusEvent>,
-    mut actions: MessageReader<UiAction>,
+    mut params: FocusEventHandlerParams,
     graph: FocusGraph,
-    focused: Query<Entity, With<Focused>>,
-    owners: Query<ArrowOwners>,
-    mut visible: Option<ResMut<InputFocusVisible>>,
-    mut input: Option<ResMut<InputFocus>>,
     mut commands: Commands,
 ) {
     let mut target: Option<Option<Entity>> = None;
-    let mut cur = current(&focused);
+    let mut cur = current(&params.focused);
     let mut keyboard = false;
-    for event in events.read() {
+    for event in params.events.read() {
         let to = match event {
             FocusEvent::Next => next_linear(&graph.candidates(), cur, false),
             FocusEvent::Previous => next_linear(&graph.candidates(), cur, true),
@@ -101,7 +107,7 @@ pub fn focus_event_handler_system(
         target = Some(to);
         cur = to;
     }
-    for action in actions.read() {
+    for action in params.actions.read() {
         let candidates = graph.candidates();
         let to = match action {
             UiAction::NextRegion => next_region(&candidates, cur, false),
@@ -109,7 +115,7 @@ pub fn focus_event_handler_system(
             UiAction::FocusNext => next_linear(&candidates, cur, false),
             UiAction::FocusPrevious => next_linear(&candidates, cur, true),
             UiAction::Navigate(dir) => {
-                if control_owns_arrow(cur.and_then(|c| owners.get(c).ok()), *dir) {
+                if control_owns_arrow(cur.and_then(|c| params.owners.get(c).ok()), *dir) {
                     continue;
                 }
                 move_focus(&candidates, cur, *dir)
@@ -124,11 +130,11 @@ pub fn focus_event_handler_system(
     }
     let Some(to) = target else { return };
     if keyboard {
-        if let Some(v) = visible.as_mut() {
+        if let Some(v) = params.visible.as_mut() {
             v.0 = true;
         }
     }
-    for entity in &focused {
+    for entity in &params.focused {
         if Some(entity) != to {
             commands.entity(entity).try_remove::<Focused>();
         }
@@ -136,12 +142,12 @@ pub fn focus_event_handler_system(
     match to {
         Some(e) => {
             commands.entity(e).try_insert(Focused);
-            if let Some(i) = input.as_mut() {
+            if let Some(i) = params.input.as_mut() {
                 i.set(e, FocusCause::Navigated);
             }
         }
         None => {
-            if let Some(i) = input.as_mut() {
+            if let Some(i) = params.input.as_mut() {
                 i.clear();
             }
         }

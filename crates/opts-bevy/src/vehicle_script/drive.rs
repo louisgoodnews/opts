@@ -53,6 +53,65 @@ type DriveBody = (
     Has<crate::rail_controls::RailControls>,
 );
 
+fn apply_spring_factors(sim: &mut opts_sim::VehicleSimulation, engine: &ScriptEngine) {
+    for i in 0..sim.axles.len().min(8) {
+        for (side, tag) in ["l", "r"].into_iter().enumerate() {
+            let name = format!("axle_springfactor_{i}_{tag}");
+            if engine.writes(&name) {
+                sim.set_spring_factor(i * 2 + side, engine.get(&name));
+            }
+        }
+    }
+}
+
+fn accumulate_rail_drive(
+    drive: &mut opts_sim::vehicle::ScriptDrive,
+    consist: Option<&crate::consist_scripts::ScriptConsist>,
+    parts: &Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
+) {
+    for u in consist.iter().flat_map(|c| c.units.iter()) {
+        let Some(part) = u.part.filter(|_| !u.head) else {
+            continue;
+        };
+        let Ok(scripts) = parts.get(part) else {
+            continue;
+        };
+        let Ok(unit_engine) = scripts.engine.lock() else {
+            continue;
+        };
+        if let Some(d) = script_outputs(&unit_engine) {
+            let sign = if u.turned { -1.0 } else { 1.0 };
+            drive.wheel_torque_nm += sign * d.wheel_torque_nm;
+            drive.brake_force_n += d.brake_force_n;
+        }
+    }
+}
+
+fn update_drive_watch(
+    w: &mut DriveWatch,
+    drive: &opts_sim::vehicle::ScriptDrive,
+    engine: &ScriptEngine,
+    throttle: f32,
+    delta_s: f32,
+) -> bool {
+    if drive.wheel_torque_nm.abs() > 1.0 || engine.get("bremse_feststell") >= 0.5 {
+        w.idle_s = 0.0;
+        w.fallback = false;
+    } else if throttle > 0.2
+        && engine.get("engine_on") > 0.5
+        && engine.get("bremse_feststell") < 0.5
+    {
+        w.idle_s += delta_s;
+        if w.idle_s > NO_TORQUE_FALLBACK_S && !w.fallback {
+            w.fallback = true;
+            tracing::info!(
+                "the scripts of a vehicle hand no torque to the wheels under throttle: the const file's torque curve drives it"
+            );
+        }
+    }
+    w.fallback
+}
+
 /// Hands the scripts' torque and brake force to the physics for the next step (only when
 /// [`ScriptDriveEnabled`] and the scripts write `M_Wheel`).
 pub fn script_drive_system(
@@ -64,9 +123,6 @@ pub fn script_drive_system(
     parts: Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
 ) {
     for (entity, mut controller, scripts, consist, rail) in &mut query {
-        // The pedals are the player's: the feed hands them to the scripts every frame, also where
-        // a script writes `Throttle` or `Brake` for a corner case (copying the script's value back
-        // into the pedal made a zero stick: the HH109 1992 never got its throttle).
         if !enabled.0 {
             controller.sim.script_drive = None;
             continue;
@@ -74,17 +130,8 @@ pub fn script_drive_system(
         let Ok(engine) = scripts.engine.lock() else {
             continue;
         };
-        // The scripts' spring factors, wheel by wheel.
-        for i in 0..controller.sim.axles.len().min(8) {
-            for (side, tag) in ["l", "r"].into_iter().enumerate() {
-                let name = format!("axle_springfactor_{i}_{tag}");
-                if engine.writes(&name) {
-                    controller
-                        .sim
-                        .set_spring_factor(i * 2 + side, engine.get(&name));
-                }
-            }
-        }
+        apply_spring_factors(&mut controller.sim, &engine);
+
         let w = watch.entry(entity).or_default();
         let Some(mut drive) = script_outputs(&engine) else {
             if !w.warned {
@@ -96,51 +143,22 @@ pub fn script_drive_system(
             controller.sim.script_drive = None;
             continue;
         };
-        // A rail consist: every unit with scripts of its own drives and brakes its own wheels (the
-        // motor cars of a traction pull with their own scripts); a unit that hangs backwards
-        // writes its torque in its own frame.
+
         if rail {
-            for u in consist.iter().flat_map(|c| c.units.iter()) {
-                let Some(part) = u.part.filter(|_| !u.head) else {
-                    continue;
-                };
-                let Ok(scripts) = parts.get(part) else {
-                    continue;
-                };
-                let Ok(unit_engine) = scripts.engine.lock() else {
-                    continue;
-                };
-                if let Some(d) = script_outputs(&unit_engine) {
-                    let sign = if u.turned { -1.0 } else { 1.0 };
-                    drive.wheel_torque_nm += sign * d.wheel_torque_nm;
-                    drive.brake_force_n += d.brake_force_n;
-                }
-            }
+            accumulate_rail_drive(&mut drive, consist, &parts);
         }
-        // Three ways to drive: a script that hands torque to the wheels; one that never does
-        // while the driver holds the pedal (const file's torque curve, one INFO); none at all
-        // (built-in constants, one WARN, above).
-        if drive.wheel_torque_nm.abs() > 1.0 || engine.get("bremse_feststell") >= 0.5 {
-            w.idle_s = 0.0;
-            w.fallback = false;
-        } else if controller.inputs().throttle() > 0.2
-            && engine.get("engine_on") > 0.5
-            // A parking brake the script holds (the Urbino's spring brake until its air is up)
-            // is why it hands no torque: the built-in drivetrain must not drive through it.
-            && engine.get("bremse_feststell") < 0.5
-        {
-            w.idle_s += time.delta_secs();
-            if w.idle_s > NO_TORQUE_FALLBACK_S && !w.fallback {
-                w.fallback = true;
-                tracing::info!(
-                    "the scripts of a vehicle hand no torque to the wheels under throttle: the const file's torque curve drives it"
-                );
-            }
-        }
-        if w.fallback {
+
+        if update_drive_watch(
+            w,
+            &drive,
+            &engine,
+            controller.inputs().throttle(),
+            time.delta_secs(),
+        ) {
             controller.sim.script_drive = None;
             continue;
         }
+
         *ticks = ticks.wrapping_add(1);
         if (*ticks).is_multiple_of(64) {
             tracing::debug!(

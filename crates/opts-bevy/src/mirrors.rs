@@ -40,9 +40,8 @@
 use std::collections::HashMap;
 
 use bevy::camera::{Hdr, RenderTarget};
-use bevy::pbr::{DistanceFog, StandardMaterial};
+use bevy::pbr::StandardMaterial;
 use bevy::prelude::*;
-use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::Tonemapping;
 
 use opts_core::formats::vehicles::BusMirrorCamera;

@@ -42,9 +42,7 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::Escape,
 ];
 
-/// The physical key of a DirectInput scan code (the numbering of `keyboard.cfg` and `.kyb`).
-#[must_use]
-pub fn dik_to_keycode(code: u16) -> Option<KeyCode> {
+fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
     use KeyCode as K;
     const LETTERS_Q: [KeyCode; 10] = [
         K::KeyQ,
@@ -149,6 +147,13 @@ pub fn dik_to_keycode(code: u16) -> Option<KeyCode> {
         86 => K::IntlBackslash,
         87 => K::F11,
         88 => K::F12,
+        _ => return None,
+    })
+}
+
+fn dik_to_keycode_ext(code: u16) -> Option<KeyCode> {
+    use KeyCode as K;
+    Some(match code {
         156 => K::NumpadEnter,
         157 => K::ControlRight,
         181 => K::NumpadDivide,
@@ -170,6 +175,12 @@ pub fn dik_to_keycode(code: u16) -> Option<KeyCode> {
         221 => K::ContextMenu,
         _ => return None,
     })
+}
+
+/// The physical key of a DirectInput scan code (the numbering of `keyboard.cfg` and `.kyb`).
+#[must_use]
+pub fn dik_to_keycode(code: u16) -> Option<KeyCode> {
+    dik_to_keycode_base(code).or_else(|| dik_to_keycode_ext(code))
 }
 
 /// A key that raises a script trigger.

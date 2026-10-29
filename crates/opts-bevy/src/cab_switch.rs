@@ -130,23 +130,21 @@ fn is_cab_engine(scripts: &VehicleScripts) -> bool {
         .is_ok_and(|e| e.has_trigger("automatic_d") || e.has_trigger("kw_s_n"))
 }
 
+type PlayerCabQueryItem<'a> = (
+    Entity,
+    &'a BusVehicle,
+    &'a VehicleScripts,
+    Option<&'a ActiveCab>,
+    &'a mut RailControls,
+);
+
 /// The cab switch key: moves the controls and the cockpit camera to the next cab.
-#[allow(clippy::type_complexity)]
 pub fn cab_switch_system(
     keys: Res<ButtonInput<KeyCode>>,
     action_keys: Option<Res<ActionKeys>>,
     mut state: Option<ResMut<CameraState>>,
     mut commands: Commands,
-    mut players: Query<
-        (
-            Entity,
-            &BusVehicle,
-            &VehicleScripts,
-            Option<&ActiveCab>,
-            &mut RailControls,
-        ),
-        With<PlayerVehicle>,
-    >,
+    mut players: Query<PlayerCabQueryItem, With<PlayerVehicle>>,
     parts: Query<&VehicleScripts, With<ScriptPart>>,
     names: Query<&Name>,
 ) {

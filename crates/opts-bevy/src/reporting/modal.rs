@@ -50,6 +50,51 @@ pub(super) fn tr(loc: Option<&Localization>, key: (&str, &str), args: &[(&str, S
 /// z-index above the modal so failure toasts stay visible.
 const TOAST_Z: i32 = 2000;
 
+fn spawn_preview_frame(p: &mut ChildSpawnerCommands, preview: Option<Handle<Image>>, aspect: f32) {
+    p.spawn(Node {
+        height: Val::Vh(25.0),
+        width: Val::Percent(100.0),
+        justify_content: JustifyContent::Center,
+        align_items: AlignItems::Center,
+        flex_shrink: 0.0,
+        ..default()
+    })
+    .with_children(|frame| {
+        if let Some(handle) = preview {
+            frame.spawn((
+                ImageNode::new(handle),
+                Node {
+                    height: Val::Vh(25.0),
+                    width: Val::Vh(25.0 * aspect),
+                    max_width: Val::Percent(100.0),
+                    ..default()
+                },
+            ));
+        }
+    });
+}
+
+fn spawn_dialog_buttons(p: &mut ChildSpawnerCommands, loc: Option<&Localization>) {
+    p.spawn(Node {
+        column_gap: Val::Px(12.0),
+        justify_content: JustifyContent::FlexEnd,
+        flex_shrink: 0.0,
+        ..default()
+    })
+    .with_children(|row| {
+        let report = ButtonBuilder::filled(tr(loc, keys::SAVE, &[]))
+            .with_key(keys::SAVE.0)
+            .spawn_child(row);
+        let cancel = ButtonBuilder::outlined(tr(loc, keys::CANCEL, &[]))
+            .with_key(keys::CANCEL.0)
+            .spawn_child(row);
+        row.commands().queue(move |world: &mut World| {
+            world.entity_mut(report).insert(ReportButton);
+            world.entity_mut(cancel).insert(CancelButton);
+        });
+    });
+}
+
 /// Spawns the modal: screenshot preview, label, text area, Report/Cancel.
 pub fn spawn_modal(
     mut commands: Commands,
@@ -75,30 +120,7 @@ pub fn spawn_modal(
             TypeStyleToken(TypeScale::TitleLarge),
             ForegroundRole(ColorRole::OnSurface),
         ));
-        // Preview: top 25 % of the viewport, aspect preserved, letterboxed.
-        p.spawn(Node {
-            height: Val::Vh(25.0),
-            width: Val::Percent(100.0),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            flex_shrink: 0.0,
-            ..default()
-        })
-        .with_children(|frame| {
-            if let Some(handle) = preview {
-                frame.spawn((
-                    ImageNode::new(handle),
-                    // Explicit sizes (not an aspect ratio): the picture keeps its proportions, is
-                    // 25 % of the viewport high and shrinks to the dialog's width.
-                    Node {
-                        height: Val::Vh(25.0),
-                        width: Val::Vh(25.0 * aspect),
-                        max_width: Val::Percent(100.0),
-                        ..default()
-                    },
-                ));
-            }
-        });
+        spawn_preview_frame(p, preview, aspect);
         p.spawn((
             Text::new(tr(loc, keys::PREVIEW, &[])),
             L10nKey(keys::PREVIEW.0),
@@ -124,24 +146,7 @@ pub fn spawn_modal(
             ForegroundRole(ColorRole::Error),
             ReportErrorText,
         ));
-        p.spawn(Node {
-            column_gap: Val::Px(12.0),
-            justify_content: JustifyContent::FlexEnd,
-            flex_shrink: 0.0,
-            ..default()
-        })
-        .with_children(|row| {
-            let report = ButtonBuilder::filled(tr(loc, keys::SAVE, &[]))
-                .with_key(keys::SAVE.0)
-                .spawn_child(row);
-            let cancel = ButtonBuilder::outlined(tr(loc, keys::CANCEL, &[]))
-                .with_key(keys::CANCEL.0)
-                .spawn_child(row);
-            row.commands().queue(move |world: &mut World| {
-                world.entity_mut(report).insert(ReportButton);
-                world.entity_mut(cancel).insert(CancelButton);
-            });
-        });
+        spawn_dialog_buttons(p, loc);
     });
     // Focus the text area so the user can type immediately (clears focus elsewhere).
     commands.queue(move |world: &mut World| {
@@ -163,57 +168,60 @@ pub fn sync_text(mut events: MessageReader<TextAreaChanged>, mut data: ResMut<Re
     }
 }
 
+/// System parameters for modal report actions.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct ReportModalActionParams<'w, 's> {
+    pub clicks: MessageReader<'w, 's, ButtonClicked>,
+    pub cancels: MessageReader<'w, 's, ModalEvent>,
+    pub report: Query<'w, 's, (), With<ReportButton>>,
+    pub cancel: Query<'w, 's, (), With<CancelButton>>,
+    pub area: Query<'w, 's, &'static TextArea>,
+    pub data: ResMut<'w, ReportModalData>,
+    pub loc: Option<Res<'w, Localization>>,
+    pub ctx: Res<'w, ReportContext>,
+    pub dir: Res<'w, ReportsDir>,
+    pub task: ResMut<'w, SaveTask>,
+    pub next: ResMut<'w, NextState<ReportModalState>>,
+}
+
 /// Handles the Report and Cancel buttons and Escape.
-#[allow(clippy::too_many_arguments)]
-pub fn handle_modal_actions(
-    mut clicks: MessageReader<ButtonClicked>,
-    mut cancels: MessageReader<ModalEvent>,
-    report: Query<(), With<ReportButton>>,
-    cancel: Query<(), With<CancelButton>>,
-    area: Query<&TextArea>,
-    mut data: ResMut<ReportModalData>,
-    loc: Option<Res<Localization>>,
-    mut commands: Commands,
-    ctx: Res<ReportContext>,
-    dir: Res<ReportsDir>,
-    mut task: ResMut<SaveTask>,
-    mut next: ResMut<NextState<ReportModalState>>,
-) {
-    let saving = task.0.is_some();
-    let mut want_cancel = cancels.read().count() > 0;
+pub fn handle_modal_actions(mut p: ReportModalActionParams, mut commands: Commands) {
+    let saving = p.task.0.is_some();
+    let mut want_cancel = p.cancels.read().count() > 0;
     let mut want_report = false;
-    for ButtonClicked(e) in clicks.read() {
-        want_report |= report.contains(*e);
-        want_cancel |= cancel.contains(*e);
+    for ButtonClicked(e) in p.clicks.read() {
+        want_report |= p.report.contains(*e);
+        want_cancel |= p.cancel.contains(*e);
     }
     if saving {
         return;
     }
     if want_cancel {
         tracing::debug!("Report cancelled");
-        next.set(ReportModalState::Inactive);
+        p.next.set(ReportModalState::Inactive);
         return;
     }
     if !want_report {
         return;
     }
-    let (Some(dir), Some(png)) = (dir.0.clone(), data.png.clone()) else {
+    let (Some(dir), Some(png)) = (p.dir.0.clone(), p.data.png.clone()) else {
         tracing::warn!("report cannot be saved: no reports directory or screenshot");
         fail(
             &mut commands,
-            &mut data,
-            tr(loc.as_deref(), keys::NO_TARGET, &[]),
+            &mut p.data,
+            tr(p.loc.as_deref(), keys::NO_TARGET, &[]),
         );
         return;
     };
-    let text = area
+    let text = p
+        .area
         .iter()
         .next()
-        .map_or_else(|| data.text.clone(), |a| a.value().to_owned());
+        .map_or_else(|| p.data.text.clone(), |a| a.value().to_owned());
     let (stem, timestamp) = now_stamp();
-    let meta = ReportMeta::from_context(&ctx, timestamp, Some("TextArea"));
+    let meta = ReportMeta::from_context(&p.ctx, timestamp, Some("TextArea"));
     let body = format_report(&meta, &text);
-    task.0 = Some(
+    p.task.0 = Some(
         AsyncComputeTaskPool::get().spawn(async move { save_report(&dir, &stem, &png, &body) }),
     );
 }
