@@ -215,7 +215,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](phase-4/M-0046.md); F-009).
 - [~] **🗺️ Tile Loading Controls** — [M-0080](phase-4/M-0080.md)
   - [~] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — both settings, live streaming and `scene.tiles` done 2026-10-18; wizard summary switch, memory guard and "Automatic (currently N)" open.
-- [~] **🎥 Viewpoint Editor** — [M-0084](phase-4/M-0084.md)
+- [x] **🎥 Viewpoint Editor** — [M-0084](phase-4/M-0084.md) — ✅ done 2026-10-29
   - [x] Shift + Tab (Tab until 2026-10-22) opens an editor in the driver's view (height, X/Y/Z, FOV), saved per vehicle or per model; `graphics.default_fov`; Shift + Space resets each view (R-26, R-33). Export/import open.
 - [x] **🌀 Tile Streaming Performance** — [M-0089](phase-4/M-0089.md)
   - [x] Measure where the frame time goes at tile borders, rank and implement the improvements (R-32, R-36). (complete 2026-10-18: no frame above 50 ms, worst 36.9 ms on Berlin-Spandau)

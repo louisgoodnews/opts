@@ -4,3 +4,4 @@
 R02 M-0022: the umbrella entry "Vehicle Physics & Control" stays open while its sub-task on articulated buses (M-0053) is open; M-0022 itself is complete.
 R02 M-0023: same umbrella entry as M-0022; it is ticked when the articulated-bus sub-task is done.
 F01 field-report-2026-10-13.md:R-19: a process item (agents keep their own worktrees) done by working practice, not by a milestone.
+B02 M-0084: the open board item is the camera addendum "driver view from the `.bus` preset" (Review since 2026-10-19), which waits for the project lead's look in the running game; no work on it remains and it is not part of the export/import that completes M-0084.

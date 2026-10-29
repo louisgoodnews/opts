@@ -25,7 +25,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0049 — AI Road Traffic (`opts-traffic`, `opts-bevy`)](M-0049.md) — 🟡 Running in game (lights, right of way, lane changes); debug tooling, speed limits, scheduled AI open
 - [M-0050 — Pedestrians](M-0050.md) — 🟡 Walking pedestrians done; crossings, stops and boarding open
 - [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — 🟡 core delivered 2026-10-18 (settings, live streaming, `scene.tiles`); wizard switch, memory guard and page label open (R-20, R-21)
-- [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — 🟡 Core done (R-26)
+- [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — ✅ Done (R-26)
 - [M-0089 — Tile Streaming Performance: Investigation and Improvements](M-0089.md) — 🟢 Complete 2026-10-18 (worst frame 36.9 ms), 🔴 high (R-32)
 - [M-0093 — Host Callbacks — Timetable, Termini, Bus Stops, Tickets (IBIS)](M-0093.md) — 🟢 Complete (2026-10-14)
 - [M-0094 — Script Textures](M-0094.md) — 🟢 Complete (2026-10-14)
@@ -96,7 +96,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](M-0046.md); F-009).
 - [~] **🗺️ Tile Loading Controls** — [M-0080](M-0080.md)
   - [~] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — both settings, live streaming and `scene.tiles` done 2026-10-18; wizard summary switch, memory guard and "Automatic (currently N)" open.
-- [~] **🎥 Viewpoint Editor** — [M-0084](M-0084.md)
+- [x] **🎥 Viewpoint Editor** — [M-0084](M-0084.md) — ✅ done 2026-10-29
   - [x] Shift + Tab (Tab until 2026-10-22) opens an editor in the driver's view (height, X/Y/Z, FOV), saved per vehicle or per model; `graphics.default_fov`; Shift + Space resets each view (R-26, R-33). Export/import open.
 - [x] **🌀 Tile Streaming Performance** — [M-0089](M-0089.md)
   - [x] Measure where the frame time goes at tile borders, rank and implement the improvements (R-32, R-36). (complete 2026-10-18: no frame above 50 ms, worst 36.9 ms on Berlin-Spandau)

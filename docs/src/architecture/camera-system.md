@@ -91,9 +91,11 @@ The camera applies `vehicle rotation × (x, y, −z)` to the eye and the FOV in 
 
 The key is the vehicle's catalogue identity (the `.bus` file stem, lower case, stored on the spawned vehicle as `ViewpointKey`), so repaints share it; the camera index is the driver preset. Loading happens when the vehicle spawns, when the sub camera changes and when the view is entered (the file is re-read), never while the editor is open; a vehicle without an entry shows its own view. Reading is tolerant: a missing file is empty, an unusable one is moved to `viewpoints.json.bad`, a newer `version` is ignored, an invalid entry (bad key or camera index, non-finite or out-of-range value) is dropped with a warning and its neighbours stay. Saving merges into the file's current content and writes through a temporary file. A viewpoint equal to the vehicle's own removes its entry (*Vehicle default* then *Save*).
 
-**Control protocol.** `camera.viewpoint.get`, `.set {x?, y?, z?, fov_deg?}`, `.save`, `.reset` (see the [reference](../reference/control-protocol.md)); out-of-range values answer `-32602` rather than being clamped.
+**Control protocol.** `camera.viewpoint.get`, `.set {x?, y?, z?, fov_deg?}`, `.save`, `.reset`, `.export {path}` and `.import {path}` (see the [reference](../reference/control-protocol.md)); out-of-range values answer `-32602` rather than being clamped.
 
-**Not done yet:** applying one viewpoint to all vehicles of a model with a per-vehicle override, export/import for sharing, a default-FOV setting, and the passenger and ego views (the structure is per camera index, the editor is wired to view 2 only).
+**Sharing.** `camera.viewpoint.export` writes the stored viewpoints (every vehicle and model entry) to a file of the same format as `viewpoints.json`; offsets are measured from the vehicle's own driver camera, so the file works on any installation that has the vehicle. `camera.viewpoint.import` reads such a file with the same care as the store (invalid entries are dropped and listed, a file that cannot be used is refused and left where it is) and merges it: an entry of the file wins over a stored one for the same vehicle (or model) and camera, everything else stays, and the vehicle in the driver's seat shows an imported value from the next frame. Both follow the control server's path policy; an import is refused while the editor is open. Code: `opts-game` `viewpoints/share.rs`.
+
+**Not done yet:** the passenger and ego views (the structure is per camera index, the editor is wired to view 2 only), and an in-game way to export and import (today it is the control protocol).
 
 ## Articulated vehicles
 
