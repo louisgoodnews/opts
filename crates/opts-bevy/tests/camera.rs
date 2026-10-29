@@ -294,5 +294,7 @@ fn shift_space_in_the_walking_view_looks_forward_again() {
     assert_eq!((s.ego_yaw, s.ego_pitch), (0.0, 0.0));
 }
 
+#[path = "camera/drive.rs"]
+mod drive;
 #[path = "camera/sync.rs"]
 mod sync;
