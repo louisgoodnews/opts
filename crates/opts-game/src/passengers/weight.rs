@@ -28,13 +28,10 @@ pub fn clear_override(mut forced: ResMut<PassengerCountOverride>) {
     forced.0 = None;
 }
 
-/// Writes the passengers' mass into the player's vehicle simulation.
-pub fn apply_passenger_mass(
-    settings: Option<Res<GameSettings>>,
-    forced: Option<Res<PassengerCountOverride>>,
-    mut vehicles: Query<(&PassengerRig, &mut VehicleController), With<PlayerVehicle>>,
-) {
-    let (on, average) = settings.as_ref().map_or((true, DEFAULT_MASS_KG), |s| {
+/// What the settings say about the passengers' mass: whether it counts at all (on unless the
+/// setting is `false`) and one person's mass in kg (the default when it is missing or unreadable).
+pub(super) fn mass_settings(settings: Option<&GameSettings>) -> (bool, f32) {
+    settings.map_or((true, DEFAULT_MASS_KG), |s| {
         (
             s.raw(SETTING)
                 .is_none_or(|v| !v.trim().eq_ignore_ascii_case("false")),
@@ -42,17 +39,31 @@ pub fn apply_passenger_mass(
                 .and_then(|v| v.trim().parse::<f32>().ok())
                 .unwrap_or(DEFAULT_MASS_KG),
         )
-    });
+    })
+}
+
+/// The mass (kg) the dynamics carry for `count` people: none while the setting is off.
+fn carried_mass_kg(on: bool, average_kg: f32, count: usize) -> f32 {
+    if on {
+        dynamic_mass_kg(0.0, count, average_kg)
+    } else {
+        0.0
+    }
+}
+
+/// Writes the passengers' mass into the player's vehicle simulation.
+pub fn apply_passenger_mass(
+    settings: Option<Res<GameSettings>>,
+    forced: Option<Res<PassengerCountOverride>>,
+    mut vehicles: Query<(&PassengerRig, &mut VehicleController), With<PlayerVehicle>>,
+) {
+    let (on, average) = mass_settings(settings.as_deref());
     for (rig, mut controller) in &mut vehicles {
-        let kg = if on {
-            let count = forced
-                .as_ref()
-                .and_then(|f| f.0)
-                .unwrap_or_else(|| rig.sim.humans_inside());
-            dynamic_mass_kg(0.0, count, average)
-        } else {
-            0.0
-        };
+        let count = forced
+            .as_ref()
+            .and_then(|f| f.0)
+            .unwrap_or_else(|| rig.sim.humans_inside());
+        let kg = carried_mass_kg(on, average, count);
         if controller.sim.passenger_mass_kg != kg {
             controller.sim.passenger_mass_kg = kg;
         }
