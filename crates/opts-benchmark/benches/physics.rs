@@ -3,7 +3,9 @@
 //!
 //! Run with `cargo bench -p opts-benchmark --features physics --bench physics`.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+
+use criterion::{criterion_group, criterion_main, Criterion};
 use opts_sim::vehicle::inputs::GearPosition;
 use opts_sim::vehicle::VehicleSimulation;
 

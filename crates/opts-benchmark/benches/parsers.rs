@@ -8,7 +8,9 @@
 //! The generators are checked once per run: a generator that stops producing what the parser reads
 //! would otherwise give a fast, meaningless number.
 
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion, Throughput};
+use std::hint::black_box;
+
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion, Throughput};
 use opts_core::formats::map::MapTile;
 use opts_core::formats::scenery::SceneryObject;
 use opts_core::formats::vehicles::BusManifest;
