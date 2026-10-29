@@ -386,6 +386,7 @@
 - [Structure Audit (2026-10-19)](meta/structure-audit-2026-10-19.md)
 - [Structure Refactoring, Cycle 1 (2026-10-19)](meta/structure-refactoring-2026-10-19.md)
 - [Critical Review (2026-10-11)](meta/critical-review-2026-10-11.md)
+- [Which Draft Format Specs Could Be Promoted (2026-10-29)](meta/spec-promotion-readiness-2026-10-29.md)
 - [Gap Analysis for a Complete Public-Transport Simulator (2026-10-29)](meta/gap-analysis-2026-10-29.md)
 - [Control Protocol & Hot Reload Report (2026-10-10)](meta/control-protocol-2026-10-10.md)
 - [Screen Capture Report (2026-10-14)](meta/screen-capture-2026-10-14.md)

@@ -611,3 +611,4 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0028: Criterion bench of the `.o3d` parser on plain v1 meshes (`agent/bench-mesh`), with a caveat that it is the plain path only.
 - `2026-10-29` — M-0050 separation by lane position done (`agent/walker-lanes`): walkers keep to the right of their lane.
 - `2026-10-29` — Review checklist written (`agent/review-checklist`): one page with the steps and expected results for what waits for a look in the running game (M-0074 verification debt).
+- `2026-10-29` — M-0004: report on which Draft format specs could be promoted (`agent/spec-readiness`): 9 ready for review, 6 blocked by OMSI experiments; nothing promoted.
