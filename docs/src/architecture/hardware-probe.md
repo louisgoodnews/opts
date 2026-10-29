@@ -81,3 +81,5 @@ Pure functions, tested over a table of synthetic profiles (`recommend.rs`):
 * `opts-tools hardware report [--json] [--bench]` prints the profile in the terminal.
 * Control protocol `hardware.profile` returns the profile (and the stored-profile state).
 * *Settings → Advanced → Hardware*: the profile, *Re-detect*, *Delete stored profile*, *Allow including the profile in reports* (default off); strings in `messages_{en,de}.ftl`, rows through the [settings registry](settings-registry.md).
+* *Plan a drive → Review*: the *Load the whole map* switch shows `estimate_load_all` for the chosen map (tile count from the catalogue, the default `MapStats`), a red warning with *Use the tile radius* when the verdict is `TooLarge`, and nothing but the estimate when it is `Unknown` (M-0080).
+* *Settings → Gameplay → Tile radius*: a value of 0 reads "Automatic (currently N)", N from `recommended_tile_radius` for a typical map (M-0080).

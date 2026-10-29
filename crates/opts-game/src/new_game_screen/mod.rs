@@ -15,6 +15,7 @@ pub mod options;
 pub mod planner;
 pub mod repaints;
 pub mod setvars_discovery;
+pub mod step_load;
 pub mod step_review;
 pub mod step_what;
 pub mod step_when;
@@ -86,6 +87,7 @@ impl Plugin for NewGameMenuPlugin {
         if !app.world().contains_resource::<configs::ConfigLibrary>() {
             app.init_resource::<configs::ConfigLibrary>();
         }
+        step_load::register(app);
         let active = in_state(AppState::VehicleSelection);
         app.add_systems(OnEnter(AppState::VehicleSelection), enter_wizard)
             .add_systems(OnExit(AppState::VehicleSelection), cleanup_wizard)

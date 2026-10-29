@@ -205,7 +205,9 @@ fn note(c: &mut Commands, parent: Entity, key: &'static str, args: Args, role: C
 
 mod language;
 
+mod auto;
 mod controls;
+pub use auto::shown_value;
 pub use controls::spawn_control;
 
 /// Spawns the row of `d` below `parent`.

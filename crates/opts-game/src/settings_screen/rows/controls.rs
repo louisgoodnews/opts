@@ -75,7 +75,7 @@ pub fn spawn_control(
                 },
                 &u,
             );
-            value_text(c, group, d.key, cur.to_string());
+            super::auto::value_text(c, group, ctx, d, cur);
             button(
                 c,
                 group,

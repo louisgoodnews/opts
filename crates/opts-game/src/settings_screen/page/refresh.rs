@@ -70,6 +70,7 @@ pub fn refresh_rows(
         Has<opts_gui::interaction::state::Disabled>,
     )>,
     mut now: Query<&mut L10nArgs, With<ThemeNowText>>,
+    hardware: Option<Res<crate::hardware::HardwareState>>,
 ) {
     let keys: Vec<String> = changes.read().map(|c| c.key.clone()).collect();
     let text = |k: &str| registry.text(&settings, k).unwrap_or_default();
@@ -100,7 +101,8 @@ pub fn refresh_rows(
     }
     for (v, mut t) in &mut values {
         if keys.iter().any(|k| k == v.0) {
-            t.0 = text(v.0);
+            let profile = hardware.as_ref().and_then(|h| h.profile.as_ref());
+            t.0 = super::super::rows::shown_value(&loc, profile, v.0, &text(v.0));
         }
     }
     for (e, op, disabled) in &resets {
