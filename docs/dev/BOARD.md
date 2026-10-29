@@ -305,7 +305,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Define the `SurfaceGrip` model and its inputs from the weather state** (M-0117) — [Weather Effects on Driving and Exhaust](../src/roadmap/phase-11/M-0117.md)
 - [x] 🟡 **Add the timetable reader API for non-player vehicles (M-0099 is done: `opts_core::formats::timetable::Timetables`)** (M-0112) — [Scheduled AI Traffic](../src/roadmap/phase-11/M-0112.md)
 - [x] 🟡 **Census of switch definitions in the installed maps' tiles** (M-0113) — [Track Switch Interaction](../src/roadmap/phase-11/M-0113.md) — census done 2026-10-24 (`02d7a627`); first slice: points hint, `rail.switch`, points as shared state (`b107c9e7`, `58a0e72c`).
-- [ ] 🟡 **Track switches: scenario verification; the player clicks a tongue to set the points** (M-0113)
+- [~] 🟡 **Track switches: scenario verification; the player clicks a tongue to set the points** (M-0113) — scenario verification done 2026-10-29 on `agent/rail-points-scenario` (both intents, held points: the train takes the open way); the tongue click is open
 
 #### M-0120–M-0124 — Phase 12: Visual Fidelity & Advanced Physics (proposed 2026-10-18, approved 2026-10-20)
 - [ ] 🟡 **Audit what renders today for overlays and light maps on MAN NG272 (screenshots at day and night)** (M-0120) — [Material Overlays and Light Maps](../src/roadmap/phase-12/M-0120.md)
@@ -594,3 +594,4 @@ The agent should check these during P-001 audits:
 - `2026-10-28` — Phase 15: M-0147 (ratchet gates, with `cargo-deny` for M-0042), M-0148 (inline-test extraction) and M-0149 (file splits) done.
 - `2026-10-29` — M-0150 first batch: work left uncommitted in the main checkout was moved to `agent/m0150-functions`, checked and merged; functions over 80 lines 249 → 172, signature allows 145 → 112. Board, Recently Done and `priority-list.md` re-synced with master.
 - `2026-10-29` — M-0124 save field done (`agent/pax-mass-save`): `passenger_load` save section for the passenger-count override; a drive starts without an override.
+- `2026-10-29` — M-0113 scenario verification done (`agent/rail-points-scenario`): tests drive a train through the points with both intents and with held points; the click on the tongue stays open.
