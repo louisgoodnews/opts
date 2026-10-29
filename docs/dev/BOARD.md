@@ -613,3 +613,4 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — Review checklist written (`agent/review-checklist`): one page with the steps and expected results for what waits for a look in the running game (M-0074 verification debt).
 - `2026-10-29` — M-0004: report on which Draft format specs could be promoted (`agent/spec-readiness`): 9 ready for review, 6 blocked by OMSI experiments; nothing promoted.
 - `2026-10-29` — M-0080 first slice (`agent/tile-controls`): `estimate_load_all` in `opts-hardware` for the wizard's load-all estimate and the memory guard; the UI is next.
+- `2026-10-29` — M-0080: plan for the three open UI items written into the milestone (`agent/tile-controls`); not built.
