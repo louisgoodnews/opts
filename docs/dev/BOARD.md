@@ -311,7 +311,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Audit what renders today for overlays and light maps on MAN NG272 (screenshots at day and night)** (M-0120) — [Material Overlays and Light Maps](../src/roadmap/phase-12/M-0120.md)
 - [ ] 🟡 **Count `[moisture]` and `[puddles]` over the installed textures and parse them per texture** (M-0121) — [Wetness and Snow on Vehicles and Scenery](../src/roadmap/phase-12/M-0121.md)
 - [~] 🟡 **Specify the passenger-count source and the dynamic-mass input of the M-0073 mass model** (M-0124) — [Passenger Load Physics](../src/roadmap/phase-12/M-0124.md) — first slice 2026-10-24: passengers' mass moved by the player's vehicle, `gameplay.passenger_weight` / `passenger_mass_kg`, `vehicle.passengers mass_count` override, axle loads and ride height (`0be322cb`, `3b5a9adc`, `e2714c7d`); open: a save field of its own.
-- [ ] 🟡 **Passenger load: a save field of its own** (M-0124)
+- [~] 🟡 **Passenger load: a save field of its own** (M-0124) — started 2026-10-29 on `agent/pax-mass-save`: a `passenger_load` save section for the `vehicle.passengers mass_count` override
 - [ ] 🟡 **Resolve the ❓ in M-0123: tank content unit, state-of-charge variable, who raises `veh_tank`** (M-0123) — [Fuel and Battery State](../src/roadmap/phase-12/M-0123.md)
 - [ ] 🟡 **Decide the anti-aliasing path (MSAA vs SMAA vs TAA) against M-0059 foliage coverage** (M-0122) — [Graphics Overhaul](../src/roadmap/phase-12/M-0122.md)
 
