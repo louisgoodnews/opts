@@ -92,6 +92,59 @@ pub fn path_between(graph: &LaneGraph, stops: &[RouteStop]) -> Vec<MapRoad> {
     out
 }
 
+/// The stop index and station ids of the player's schedule, if it has one.
+fn scheduled_stops(
+    player: &Query<&VehicleRoute, With<PlayerVehicle>>,
+) -> Option<(usize, Vec<u32>)> {
+    player.iter().find_map(|r| {
+        r.handle.with(|s| {
+            s.schedule.as_ref().map(|sc| {
+                let ids: Vec<u32> = sc.stops.iter().map(|x| x.station_id).collect();
+                (s.stop_index, ids)
+            })
+        })
+    })
+}
+
+/// The stop markers in the world give the exact position and heading of their stops.
+fn remember_markers(
+    path: &mut PlayerRoutePath,
+    markers: &Query<(&BusStopMarker, &GlobalTransform)>,
+) {
+    for (m, gt) in markers {
+        let t = gt.translation();
+        let f = gt.rotation() * Vec3::NEG_Z;
+        path.known.insert(
+            m.id_code,
+            (
+                DVec2::new(f64::from(t.x), -f64::from(t.z)),
+                f64::from(f.x).atan2(-f64::from(f.z)),
+            ),
+        );
+    }
+}
+
+/// The known stops among `ahead`, each with its place on the lane graph.
+fn route_stops(
+    path: &PlayerRoutePath,
+    ahead: &[&u32],
+    graph: Option<&opts_traffic::LaneGraph>,
+) -> Vec<RouteStop> {
+    ahead
+        .iter()
+        .filter_map(|id| path.known.get(&u64::from(**id)))
+        .map(|&(pos, heading)| RouteStop {
+            pos,
+            place: graph.and_then(|g| {
+                g.nearest_place(pos, heading, LANE_HEADING_TOL, LANE_REACH_M, |l| {
+                    l.kind == LaneKind::Road && l.length() > 4.0
+                })
+                .map(|(lane, s, _)| (lane, s))
+            }),
+        })
+        .collect()
+}
+
 #[allow(clippy::type_complexity)]
 fn update_route_path(
     time: Res<Time<Real>>,
@@ -107,14 +160,7 @@ fn update_route_path(
         return;
     }
     path.since = 0.0;
-    let schedule = player.iter().find_map(|r| {
-        r.handle.with(|s| {
-            s.schedule.as_ref().map(|sc| {
-                let ids: Vec<u32> = sc.stops.iter().map(|x| x.station_id).collect();
-                (s.stop_index, ids)
-            })
-        })
-    });
+    let schedule = scheduled_stops(&player);
     let Some((index, ids)) = schedule else {
         if path.active() {
             path.roads.clear();
@@ -135,32 +181,10 @@ fn update_route_path(
             path.known.entry(u64::from(*id)).or_insert(found);
         }
     }
-    for (m, gt) in &markers {
-        let t = gt.translation();
-        let f = gt.rotation() * Vec3::NEG_Z;
-        path.known.insert(
-            m.id_code,
-            (
-                DVec2::new(f64::from(t.x), -f64::from(t.z)),
-                f64::from(f.x).atan2(-f64::from(f.z)),
-            ),
-        );
-    }
+    remember_markers(&mut path, &markers);
     let graph = traffic.as_ref().map(|t| t.lane_graph());
     let ahead: Vec<&u32> = ids.iter().skip(index).take(STOPS_AHEAD).collect();
-    let stops: Vec<RouteStop> = ahead
-        .iter()
-        .filter_map(|id| path.known.get(&u64::from(**id)))
-        .map(|&(pos, heading)| RouteStop {
-            pos,
-            place: graph.and_then(|g| {
-                g.nearest_place(pos, heading, LANE_HEADING_TOL, LANE_REACH_M, |l| {
-                    l.kind == LaneKind::Road && l.length() > 4.0
-                })
-                .map(|(lane, s, _)| (lane, s))
-            }),
-        })
-        .collect();
+    let stops = route_stops(&path, &ahead, graph);
     let roads = graph.map_or_else(Vec::new, |g| path_between(g, &stops));
     let first_known = ahead
         .first()

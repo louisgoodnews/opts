@@ -7,7 +7,7 @@
 //! the viewpoint editor, which owns that edge.
 
 use bevy::prelude::*;
-use opts_bevy::door_camera::{DoorCamera, DoorPoints, Zone};
+use opts_bevy::door_camera::{DoorCamera, DoorPoints, DoorSlot, Zone};
 use opts_bevy::PlayerVehicle;
 use opts_gui::l10n::fluent::Arg;
 use opts_gui::l10n::Localization;
@@ -154,6 +154,64 @@ fn caption(loc: &Localization, doors: &DoorPoints, door: usize) -> String {
     )
 }
 
+type Images<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static DoorOverlayImage,
+        &'static mut Node,
+        &'static mut ImageNode,
+    ),
+    Without<DoorOverlay>,
+>;
+type Captions<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static DoorOverlayCaption,
+        &'static mut Text,
+        &'static mut InstrumentFade,
+    ),
+    Without<DoorOverlay>,
+>;
+
+/// Every picture takes the common width and the fade of its slot.
+fn fit_images(images: &mut Images, slots: &[DoorSlot], width: f32) {
+    for (marker, mut node, mut image) in images {
+        let w = Val::Px(width);
+        if node.width != w {
+            node.width = w;
+        }
+        if let Some(slot) = slots.iter().find(|s| s.door == marker.0) {
+            let color = image.color.with_alpha(slot.fade);
+            if image.color != color {
+                image.color = color;
+            }
+        }
+    }
+}
+
+/// Every caption names its door and fades with its slot.
+fn fit_captions(
+    captions: &mut Captions,
+    slots: &[DoorSlot],
+    doors: Option<&DoorPoints>,
+    loc: &Localization,
+) {
+    for (marker, mut text, mut fade) in captions {
+        let Some(slot) = slots.iter().find(|s| s.door == marker.0) else {
+            continue;
+        };
+        let words = doors.map_or_else(String::new, |d| caption(loc, d, marker.0));
+        if text.0 != words {
+            text.0 = words;
+        }
+        if fade.0 != slot.fade {
+            fade.0 = slot.fade;
+        }
+    }
+}
+
 /// Keeps one panel per slot: made when a door's picture appears, stacked in slot order, gliding
 /// up when one above it goes, faded with the slot, removed with it.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
@@ -168,11 +226,8 @@ pub fn update_overlay(
     editor: Option<Res<opts_bevy::ViewpointState>>,
     vehicles: Query<&DoorPoints, With<PlayerVehicle>>,
     mut roots: Query<(Entity, &mut DoorOverlay, &mut Node, &mut InstrumentFade)>,
-    mut images: Query<(&DoorOverlayImage, &mut Node, &mut ImageNode), Without<DoorOverlay>>,
-    mut captions: Query<
-        (&DoorOverlayCaption, &mut Text, &mut InstrumentFade),
-        Without<DoorOverlay>,
-    >,
+    mut images: Images,
+    mut captions: Captions,
 ) {
     let hidden = editor.is_some_and(|e| e.editing);
     let slots: &[_] = if hidden { &[] } else { &cam.slots };
@@ -220,29 +275,6 @@ pub fn update_overlay(
             fade.0 = slot.fade;
         }
     }
-    for (marker, mut node, mut image) in &mut images {
-        let w = Val::Px(width);
-        if node.width != w {
-            node.width = w;
-        }
-        if let Some(slot) = slots.iter().find(|s| s.door == marker.0) {
-            let color = image.color.with_alpha(slot.fade);
-            if image.color != color {
-                image.color = color;
-            }
-        }
-    }
-    let doors = vehicles.iter().next();
-    for (marker, mut text, mut fade) in &mut captions {
-        let Some(slot) = slots.iter().find(|s| s.door == marker.0) else {
-            continue;
-        };
-        let words = doors.map_or_else(String::new, |d| caption(&loc, d, marker.0));
-        if text.0 != words {
-            text.0 = words;
-        }
-        if fade.0 != slot.fade {
-            fade.0 = slot.fade;
-        }
-    }
+    fit_images(&mut images, slots, width);
+    fit_captions(&mut captions, slots, vehicles.iter().next(), &loc);
 }
