@@ -98,6 +98,8 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
+> 👀 The steps and the expected result for every item in this column, and for the recent changes that have only been checked headlessly, are in the [review checklist](review-checklist.md).
+
 - `[ ]` 🟡 **Articulated trailers follow kinematically; joint angle to scripts; bellows skinned** (M-0022 addendum, code) — `f20ff5f` + parts of `7f24124`; spec [articulation.md](../src/architecture/articulation.md). Needs an in-game look at an articulated bus; follow-ups in M-0053 (its physics part merged 2026-10-14, `ecafeb49`).
 - `[ ]` 🟡 **Repaints applied in game, `--livery`** (M-0032, code) — `7f24124`; needs a review against [repaints.md](../src/formats/text/repaints.md) Q-RP01/Q-RP02. Since then AI, parked and depot repaints shipped (`0c71c549`, `27112b8f`).
 - [ ] 🔴 **DXT mip chains with the derived cache** (M-0058 phase C, code) — **done 2026-10-25 on `agent/texture-mips`**: `texpresso` range fit, cache `~/.cache/opts/textures/` (checksummed, atomic, 4 GiB LRU); Köln +4 s on the first load, 0.2 s from the cache, far view as phase A's option 1; time and VRAM budgets dropped as unneeded. Needs the project lead's look while driving (shimmer).
@@ -608,3 +610,4 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0150 second slice (`agent/registry-split`): the five settings-registry builders split, 171 → 166 functions over 80 lines, checked by a before/after dump of every descriptor.
 - `2026-10-29` — M-0028: Criterion bench of the `.o3d` parser on plain v1 meshes (`agent/bench-mesh`), with a caveat that it is the plain path only.
 - `2026-10-29` — M-0050 separation by lane position done (`agent/walker-lanes`): walkers keep to the right of their lane.
+- `2026-10-29` — Review checklist written (`agent/review-checklist`): one page with the steps and expected results for what waits for a look in the running game (M-0074 verification debt).
