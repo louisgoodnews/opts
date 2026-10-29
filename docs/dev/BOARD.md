@@ -616,3 +616,4 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0080: plan for the three open UI items written into the milestone (`agent/tile-controls`).
 - `2026-10-29` — M-0080 done (`agent/tile-controls`): Review-step *Load the whole map* switch with the estimate, the memory warning, and "Automatic (currently N)" for the tile radius.
 - `2026-10-29` — M-0028: Criterion benches of `global.cfg` and `model.cfg` (`agent/bench-configs`).
+- `2026-10-29` — M-0150 third slice (`agent/fn-ratchet-3`): six dev-only functions (three example mains, three corpus tests) split, 166 → 160 functions over 80 lines; not run against an OMSI installation.

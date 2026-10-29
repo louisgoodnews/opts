@@ -64,20 +64,12 @@ impl PathSource for Files {
     }
 }
 
-fn main() {
-    let map_dir = PathBuf::from(std::env::args().nth(1).expect("map dir"));
-    let root = map_dir
-        .parent()
-        .and_then(Path::parent)
-        .expect("OMSI root")
-        .to_path_buf();
-    let mut files = Files {
-        root,
-        sli: HashMap::new(),
-        sco: HashMap::new(),
-    };
-    let mut tiles: Vec<((i32, i32), MapTile)> = Vec::new();
-    for e in std::fs::read_dir(&map_dir).expect("map dir").flatten() {
+type Programs = HashMap<opts_traffic::SignalKey, opts_traffic::SignalProgram>;
+
+/// The tiles of the map folder (`tile_<x>_<y>.map`).
+fn read_tiles(map_dir: &Path) -> Vec<((i32, i32), MapTile)> {
+    let mut tiles = Vec::new();
+    for e in std::fs::read_dir(map_dir).expect("map dir").flatten() {
         let name = e.file_name().to_string_lossy().into_owned();
         let Some(rest) = name
             .strip_prefix("tile_")
@@ -100,26 +92,47 @@ fn main() {
         };
         tiles.push(((x, y), tile));
     }
-    // The tiles' grid: 300 m, or the Mercator rows of a `[worldcoordinates]` map.
-    let world_coordinates = find_ci(&map_dir, "global.cfg")
-        .and_then(|p| std::fs::read(p).ok())
-        .and_then(|b| MapManifest::parse(&b).ok())
-        .is_some_and(|m| m.world_coordinates);
-    let sample: Vec<_> = tiles.iter().map(|(k, t)| (*k, t.splines.clone())).collect();
-    let (grid, _) = TileGrid::measure(&sample, world_coordinates);
-    println!("tile grid {grid:?}");
-    let mut segments = Vec::new();
-    let mut programs = HashMap::new();
-    for ((x, y), tile) in &tiles {
-        let origin = tile_origin(&grid, *x, *y);
-        segments.extend(segments_from_tile(tile, origin, &mut files));
-        programs.extend(signals_from_tile(tile, &mut files));
+    tiles
+}
+
+fn find(p: &mut [usize], x: usize) -> usize {
+    let mut r = x;
+    while p[r] != r {
+        r = p[r];
     }
-    segments.retain(|s| s.kind == LaneKind::Road);
-    let params = ConnectParams::default();
-    let t = std::time::Instant::now();
-    let graph = LaneGraph::build(&segments, &params);
-    let ms = t.elapsed().as_millis();
+    let mut c = x;
+    while p[c] != r {
+        let next = p[c];
+        p[c] = r;
+        c = next;
+    }
+    r
+}
+
+/// Sizes of the weakly connected components, largest first.
+fn component_sizes(graph: &LaneGraph) -> Vec<usize> {
+    let n = graph.len();
+    let mut parent: Vec<usize> = (0..n).collect();
+    for l in graph.lane_ids() {
+        for s in graph.successors(l) {
+            let (a, b) = (
+                find(&mut parent, l.0 as usize),
+                find(&mut parent, s.0 as usize),
+            );
+            parent[a] = b;
+        }
+    }
+    let mut sizes: HashMap<usize, usize> = HashMap::new();
+    for i in 0..n {
+        *sizes.entry(find(&mut parent, i)).or_default() += 1;
+    }
+    let mut sizes: Vec<usize> = sizes.into_values().collect();
+    sizes.sort_unstable_by(|a, b| b.cmp(a));
+    sizes
+}
+
+/// Connectivity of the lanes and the size of the graph.
+fn print_connectivity(graph: &LaneGraph, segments: usize, ms: u128) {
     let n = graph.len();
     let with_succ = graph
         .lane_ids()
@@ -136,44 +149,13 @@ fn main() {
         .lane_ids()
         .filter(|&l| graph.successors(l).len() > 1)
         .count();
-    // Weakly connected components.
-    let mut parent: Vec<usize> = (0..n).collect();
-    fn find(p: &mut [usize], x: usize) -> usize {
-        let mut r = x;
-        while p[r] != r {
-            r = p[r];
-        }
-        let mut c = x;
-        while p[c] != r {
-            let next = p[c];
-            p[c] = r;
-            c = next;
-        }
-        r
-    }
-    for l in graph.lane_ids() {
-        for s in graph.successors(l) {
-            let (a, b) = (
-                find(&mut parent, l.0 as usize),
-                find(&mut parent, s.0 as usize),
-            );
-            parent[a] = b;
-        }
-    }
-    let mut sizes: HashMap<usize, usize> = HashMap::new();
-    for i in 0..n {
-        *sizes.entry(find(&mut parent, i)).or_default() += 1;
-    }
-    let mut sizes: Vec<usize> = sizes.into_values().collect();
-    sizes.sort_unstable_by(|a, b| b.cmp(a));
     let total_len: f64 = graph
         .lane_ids()
         .filter_map(|l| graph.lane(l))
         .map(|l| l.length())
         .sum();
     println!(
-        "road segments: {}  directed lanes: {n}  total length: {:.1} km  build: {ms} ms",
-        segments.len(),
+        "road segments: {segments}  directed lanes: {n}  total length: {:.1} km  build: {ms} ms",
         total_len / 1000.0
     );
     println!(
@@ -181,6 +163,11 @@ fn main() {
         100.0 * with_succ as f64 / n.max(1) as f64,
         100.0 * with_pred as f64 / n.max(1) as f64
     );
+}
+
+/// Conflict zones per lane and the time to compute them.
+fn print_conflicts(graph: &LaneGraph) {
+    let n = graph.len();
     let t = std::time::Instant::now();
     let conflicts: Vec<usize> = graph.lane_ids().map(|l| graph.conflicts(l).len()).collect();
     println!(
@@ -191,6 +178,10 @@ fn main() {
         conflicts.iter().max().unwrap_or(&0),
         t.elapsed().as_millis()
     );
+}
+
+/// Lanes governed by lights and the share of each aspect over all programs' cycles.
+fn print_lights(graph: &LaneGraph, programs: &Programs) {
     let signalled = graph
         .lane_ids()
         .filter_map(|l| graph.lane(l))
@@ -222,6 +213,11 @@ fn main() {
         100.0 * aspects[2] as f64 / total as f64,
         100.0 * aspects[3] as f64 / total as f64,
     );
+}
+
+/// Neighbour lanes and the rules found on the lanes.
+fn print_neighbours_and_rules(graph: &LaneGraph) {
+    let n = graph.len();
     let t = std::time::Instant::now();
     let neighbours: Vec<usize> = graph
         .lane_ids()
@@ -244,6 +240,46 @@ fn main() {
         lanes().filter(|l| l.rules.no_cars).count(),
         lanes().filter(|l| l.rules.no_overtaking).count(),
     );
+}
+
+fn main() {
+    let map_dir = PathBuf::from(std::env::args().nth(1).expect("map dir"));
+    let root = map_dir
+        .parent()
+        .and_then(Path::parent)
+        .expect("OMSI root")
+        .to_path_buf();
+    let mut files = Files {
+        root,
+        sli: HashMap::new(),
+        sco: HashMap::new(),
+    };
+    let tiles = read_tiles(&map_dir);
+    // The tiles' grid: 300 m, or the Mercator rows of a `[worldcoordinates]` map.
+    let world_coordinates = find_ci(&map_dir, "global.cfg")
+        .and_then(|p| std::fs::read(p).ok())
+        .and_then(|b| MapManifest::parse(&b).ok())
+        .is_some_and(|m| m.world_coordinates);
+    let sample: Vec<_> = tiles.iter().map(|(k, t)| (*k, t.splines.clone())).collect();
+    let (grid, _) = TileGrid::measure(&sample, world_coordinates);
+    println!("tile grid {grid:?}");
+    let mut segments = Vec::new();
+    let mut programs = HashMap::new();
+    for ((x, y), tile) in &tiles {
+        let origin = tile_origin(&grid, *x, *y);
+        segments.extend(segments_from_tile(tile, origin, &mut files));
+        programs.extend(signals_from_tile(tile, &mut files));
+    }
+    segments.retain(|s| s.kind == LaneKind::Road);
+    let params = ConnectParams::default();
+    let t = std::time::Instant::now();
+    let graph = LaneGraph::build(&segments, &params);
+    let ms = t.elapsed().as_millis();
+    let sizes = component_sizes(&graph);
+    print_connectivity(&graph, segments.len(), ms);
+    print_conflicts(&graph);
+    print_lights(&graph, &programs);
+    print_neighbours_and_rules(&graph);
     println!(
         "components: {}  largest: {:?}",
         sizes.len(),
