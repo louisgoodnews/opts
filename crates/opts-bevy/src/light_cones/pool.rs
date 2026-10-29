@@ -186,53 +186,45 @@ fn update_prepass_gate(
     gate
 }
 
-/// Chooses the visible cones every [`SELECT_INTERVAL_S`] (at once when the quality settings
-/// change), and keeps their brightness and visibility current every frame.
-pub fn light_cone_pool_system(mut p: LightConePoolParams) {
-    let cap = p.quality.cone_cap.min(MAX_CONE_CAP) as usize;
-    let key = (p.quality.lantern_cones, p.quality.headlight_cones, cap);
-    p.pool.since_select_s += p.time.delta_secs();
-    let camera = p
-        .cameras
-        .iter()
-        .find(|(c, _, _)| c.is_active)
-        .map(|(_, t, pre)| (t.translation(), t.forward().as_vec3(), pre));
-    let gate = update_prepass_gate(&mut p.pool, &p.quality, camera, p.time.delta_secs());
-    if p.pool.since_select_s >= SELECT_INTERVAL_S || p.pool.key != Some(key) {
-        p.pool.since_select_s = 0.0;
-        p.pool.key = Some(key);
-        let started = std::time::Instant::now();
-        let mut candidates: Vec<(Entity, f32)> = Vec::new();
-        let mut total = 0;
-        if let Some((cam, fwd)) = camera.filter(|_| cap > 0).map(|c| (c.0, c.1)) {
-            for (e, cone, global) in &p.scan {
-                total += 1;
-                if let Some(cov) =
-                    test_cone_candidate(cone, global, cam, fwd, &p.quality, &p.glows, &p.spots)
-                {
-                    candidates.push((e, cov));
-                }
-            }
-        } else {
-            total = p.scan.iter().count();
-        }
-        let chosen = select_cones(&candidates, &p.pool.active, cap, CONE_HYSTERESIS);
-        for e in p.pool.active.iter().filter(|e| !chosen.contains(e)) {
-            if let Ok((_, mut vis, _)) = p.apply.get_mut(*e) {
-                if *vis != Visibility::Hidden {
-                    *vis = Visibility::Hidden;
-                }
+/// Picks the cones that shine now (the nearest within the budget, with hysteresis), hides the
+/// ones that dropped out and records the statistics.
+fn reselect(p: &mut LightConePoolParams, camera: Option<(Vec3, Vec3)>, cap: usize) {
+    let started = std::time::Instant::now();
+    let mut candidates: Vec<(Entity, f32)> = Vec::new();
+    let mut total = 0;
+    if let Some((cam, fwd)) = camera.filter(|_| cap > 0) {
+        for (e, cone, global) in &p.scan {
+            total += 1;
+            if let Some(cov) =
+                test_cone_candidate(cone, global, cam, fwd, &p.quality, &p.glows, &p.spots)
+            {
+                candidates.push((e, cov));
             }
         }
-        *p.stats = ConeStats {
-            total,
-            eligible: candidates.len(),
-            active: chosen.len(),
-            over_budget: candidates.len().saturating_sub(chosen.len()),
-            select_us: started.elapsed().as_micros().min(u128::from(u32::MAX)) as u32,
-        };
-        p.pool.active = chosen;
+    } else {
+        total = p.scan.iter().count();
     }
+    let chosen = select_cones(&candidates, &p.pool.active, cap, CONE_HYSTERESIS);
+    for e in p.pool.active.iter().filter(|e| !chosen.contains(e)) {
+        if let Ok((_, mut vis, _)) = p.apply.get_mut(*e) {
+            if *vis != Visibility::Hidden {
+                *vis = Visibility::Hidden;
+            }
+        }
+    }
+    *p.stats = ConeStats {
+        total,
+        eligible: candidates.len(),
+        active: chosen.len(),
+        over_budget: candidates.len().saturating_sub(chosen.len()),
+        select_us: started.elapsed().as_micros().min(u128::from(u32::MAX)) as u32,
+    };
+    p.pool.active = chosen;
+}
+
+/// Sets visibility and tag of the active cones for the current light levels; returns how many are
+/// lit.
+fn apply_levels(p: &mut LightConePoolParams, gate: f32) -> usize {
     let mut lit = 0;
     p.pool.active.retain(|&e| {
         let Ok((cone, mut vis, mut tag)) = p.apply.get_mut(e) else {
@@ -269,6 +261,27 @@ pub fn light_cone_pool_system(mut p: LightConePoolParams) {
         }
         true
     });
+    lit
+}
+
+/// Chooses the visible cones every [`SELECT_INTERVAL_S`] (at once when the quality settings
+/// change), and keeps their brightness and visibility current every frame.
+pub fn light_cone_pool_system(mut p: LightConePoolParams) {
+    let cap = p.quality.cone_cap.min(MAX_CONE_CAP) as usize;
+    let key = (p.quality.lantern_cones, p.quality.headlight_cones, cap);
+    p.pool.since_select_s += p.time.delta_secs();
+    let camera = p
+        .cameras
+        .iter()
+        .find(|(c, _, _)| c.is_active)
+        .map(|(_, t, pre)| (t.translation(), t.forward().as_vec3(), pre));
+    let gate = update_prepass_gate(&mut p.pool, &p.quality, camera, p.time.delta_secs());
+    if p.pool.since_select_s >= SELECT_INTERVAL_S || p.pool.key != Some(key) {
+        p.pool.since_select_s = 0.0;
+        p.pool.key = Some(key);
+        reselect(&mut p, camera.map(|c| (c.0, c.1)), cap);
+    }
+    let lit = apply_levels(&mut p, gate);
     if p.stats.active != lit {
         p.stats.active = lit;
     }
