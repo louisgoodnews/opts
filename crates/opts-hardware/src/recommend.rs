@@ -239,5 +239,8 @@ pub fn is_virtualised(p: &HardwareProfile) -> bool {
     )
 }
 
+mod load_all;
+pub use load_all::{estimate_load_all, LoadAllEstimate, MemoryVerdict, SECONDS_PER_TILE};
+
 #[cfg(test)]
 mod tests;

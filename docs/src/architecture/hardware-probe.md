@@ -70,6 +70,7 @@ Pure functions, tested over a table of synthetic profiles (`recommend.rs`):
 | :--- | :--- | :--- |
 | `gpu_tier` | GPU device class, vendor, VRAM, software flag | `Low`, `Mid`, `High`, `Unknown` |
 | `recommended_tile_radius(profile, map)` | available RAM, GPU tier, logical cores, storage class, map size | integer ≥ 1 (≤ largest useful radius of the map) |
+| `estimate_load_all(profile, tiles, map)` (M-0080) | available RAM, storage class, tile count and tile size | memory (MiB), loading time as a range (s), `Fits` / `TooLarge` / `Unknown` against `safe_resident_mib` (60 % of the available RAM), whether the times were measured on this kind of storage |
 | `recommended_texture_filtering` | GPU tier | `off`, `4`, `8`, `16` |
 | `recommended_look` | GPU tier, HDR | `vivid`, `natural`, `bevy` |
 | `recommended_ui_scale` | display scale factor, resolution | percent in steps of 25 (75..200) |
