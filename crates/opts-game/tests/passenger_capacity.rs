@@ -41,6 +41,31 @@ fn paths_of(cabin: &Path) -> Option<PathBuf> {
         })
 }
 
+/// The spread of bus-sized cabins (20+ seats): what a full load is, for the passenger mass
+/// (M-0124 audit).
+fn print_bus_spread(rows: &[(usize, usize, usize, usize, String)]) {
+    let sized: Vec<&(usize, usize, usize, usize, String)> =
+        rows.iter().filter(|r| r.0 >= 20).collect();
+    let pick = |mut v: Vec<usize>, q: f64| {
+        v.sort_unstable();
+        v[((v.len() - 1) as f64 * q).round() as usize]
+    };
+    for (name, column) in [("capacity", 3usize), ("seats", 0)] {
+        let values: Vec<usize> = sized
+            .iter()
+            .map(|r| if column == 3 { r.3 } else { r.0 })
+            .collect();
+        eprintln!(
+            "bus-sized cabins ({}): {name} p10 {}, median {}, p90 {}, max {}",
+            sized.len(),
+            pick(values.clone(), 0.1),
+            pick(values.clone(), 0.5),
+            pick(values.clone(), 0.9),
+            pick(values, 1.0)
+        );
+    }
+}
+
 #[test]
 fn every_cabin_holds_all_its_seats_and_a_standing_crowd() {
     let Some(root) = std::env::var_os("OMSI_PATH").map(PathBuf::from) else {
@@ -91,6 +116,7 @@ fn every_cabin_holds_all_its_seats_and_a_standing_crowd() {
     rows.iter().rev().take(5).for_each(|r| tail(&r));
     eprintln!("--- median");
     tail(&&rows[n / 2]);
+    print_bus_spread(&rows);
     eprintln!("--- bus-sized cabins (20+ seats) with the least room");
     let mut buses: Vec<_> = rows.iter().filter(|r| r.0 >= 20).collect();
     buses.sort_by_key(|r| r.3 - r.0);

@@ -161,6 +161,20 @@ player's vehicle to `humans_inside × average mass` (`dynamic_mass_kg`); setting
 `gameplay.passenger_weight` (default on) and `gameplay.passenger_mass_kg` (default 75 kg, 40–120).
 The weight also loads the body: it is shared over the head's axles as a load in the middle of the axle span (`BodySuspension::set_payload`), pulls the body down at the wheels (the springs carry it: the body sinks by weight ÷ spring rate, and the axle and brake-limit loads rise), and adds mass and inertia to the body model. The curb-weight equilibrium (`rebuild_body`) is unchanged. Following units of a consist and AI vehicles carry no passenger mass. `vehicle.passengers` with `mass_count` stands in for the people (testing). Tests: `crates/opts-sim/tests/passenger_mass.rs`.
 
+### Corpus range (audit 2026-10-29, M-0124)
+
+From the reference installation (947 drivable vehicles in the catalogue, 211 bus-sized cabins with 20 or more seats; `opts-game` test `passenger_capacity` prints the cabin figures):
+
+| | p10 | median | p90 | max |
+| :--- | ---: | ---: | ---: | ---: |
+| Curb mass, `[mass]` of the `.bus` (t; range 6.4 to 16.0) | 8.55 | 10.78 | 15.0 | 16.0 |
+| Seats of a bus-sized cabin | 22 | 30 | 47 | 88 |
+| Capacity of a bus-sized cabin (seats plus the standing room OPTS adds) | 45 | 66 | 94 | 145 |
+
+At the default 75 kg, a full cabin at the median capacity (66 people) adds 4.95 t, **46 %** of the median curb mass; at the p90 capacity (94 people) 7.05 t (65 %); seats alone at the median (30) 2.25 t (21 %). The largest cabin (145 people) would add 10.9 t. A loaded bus therefore differs from an empty one by far more than the 15 % tolerances of the M-0124 tests.
+
+Limits of the figures: the mass and the capacity are two distributions, not paired per vehicle (the catalogue holds the mass, the cabin files the places). The capacity is OPTS's own estimate (`add_standing_room`), not a rated capacity: no vendor figure exists in the data ❓. The default of 75 kg and the range of 40 to 120 kg are project choices; the data holds no OMSI value for the mass of a person ❓.
+
 ## ⚖️ Consist Mass
 
 A vehicle with following units (`[couple_back]`, road consists) accelerates, rolls and brakes with the **sum** of the units' masses; each unit states its `[mass]` (a unit without one takes the mass of the unit in front: the installed consists have a median trailer/head ratio of 0.90, `consist_census`). The head's own axle loads (load transfer, suspension) use the head's mass only. Drive force from the scripts is limited by $\mu \cdot g \cdot m_{\text{driven}}$, where $m_{\text{driven}}$ is the static load on the driven axles of all units (each unit's weight distributed over its own axles by the suspension model's static rule, with the centre of gravity at the middle of the axle span; a head with no axle marked driven counts as driven on all of them); braking is limited by $\mu \cdot g \cdot \sum m$. The hitch force and the units' own load transfer are not modelled ([Articulation Physics](../architecture/articulation.md)). Rail consists have their own dynamics.
