@@ -255,5 +255,3 @@ crates/opts-game/tests/vehicle_start/census.rs::census_engine_sounds 86  # plann
 crates/opts-game/tests/vehicle_start_sweep.rs::sweep_setup_starts_every_bus 82  # planned: M-0150 batch 3 (decompose function > 80 LOC into <= 40-line helpers)
 crates/opts-game/tests/wizard_tests/equipment.rs::the_equipment_dialog_offers_a_control_that_fits_each_option_and_writes_the_choices 114  # planned: M-0150 batch 3 (decompose function > 80 LOC into <= 40-line helpers)
 crates/opts-gui/src/components/notebook.rs::populate_notebook_children 123  # planned: M-0150 batch 3 (decompose function > 80 LOC into <= 40-line helpers)
-crates/opts-gui/src/patterns/master_detail_input.rs::@allow 1  # planned: M-0150 batch 3 (bundle system parameters into #[derive(SystemParam)])
-crates/opts-gui/src/patterns/master_detail_input.rs::on_keys 82  # planned: M-0150 batch 3 (decompose function > 80 LOC into <= 40-line helpers)

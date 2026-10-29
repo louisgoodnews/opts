@@ -161,16 +161,88 @@ fn step(md: &mut MasterDetail, view: &mut MasterDetailView, delta: isize) {
     }
 }
 
+/// What the keyboard handling writes.
+#[derive(SystemParam)]
+pub(super) struct KeyOut<'w> {
+    activated: MessageWriter<'w, Activated>,
+    fav: MessageWriter<'w, MasterDetailFavourite>,
+}
+
+/// One keyboard action on the focused list: move, jump, scroll or choose.
+fn apply_action(
+    action: &UiAction,
+    (md, view): (&mut MasterDetail, &mut MasterDetailView),
+    list_entity: Entity,
+    activated: &mut MessageWriter<Activated>,
+) {
+    let page = ((view.viewport / ITEM_HEIGHT).floor() as isize - 1).max(1);
+    match action {
+        UiAction::Navigate(crate::actions::Direction::Down) => step(md, view, 1),
+        UiAction::Navigate(crate::actions::Direction::Up) => step(md, view, -1),
+        UiAction::Scroll(ScrollStep::Page(n)) => step(md, view, isize::from(*n) * page),
+        UiAction::Scroll(ScrollStep::Home) => {
+            if let Some(r) = first_item(&view.rows) {
+                select_row(md, view, r);
+            }
+        }
+        UiAction::Scroll(ScrollStep::End) => {
+            if let Some(r) = last_item(&view.rows) {
+                select_row(md, view, r);
+            }
+        }
+        UiAction::Scroll(ScrollStep::Line(n)) => {
+            view.scroll += f32::from(*n) * ITEM_HEIGHT;
+        }
+        UiAction::Confirm => {
+            activated.write(Activated(list_entity));
+        }
+        _ => {}
+    }
+}
+
+/// One typed character: Ctrl+D stars the selection, other text selects by type-ahead.
+fn apply_character(
+    text: &str,
+    ctrl: bool,
+    now: f32,
+    (md, view): (&mut MasterDetail, &mut MasterDetailView),
+    (root, fav): (Entity, &mut MessageWriter<MasterDetailFavourite>),
+) {
+    if ctrl {
+        if text.eq_ignore_ascii_case("d") {
+            if let Some(id) = md.selected.clone() {
+                let on = toggle_favourite(md, &id);
+                fav.write(MasterDetailFavourite {
+                    root,
+                    id,
+                    favourite: on,
+                });
+            }
+        }
+        return;
+    }
+    if text.trim().is_empty() {
+        return;
+    }
+    if now - view.typed_at > TYPE_AHEAD_RESET {
+        view.typed.clear();
+    }
+    view.typed.push_str(text);
+    view.typed_at = now;
+    let typed = view.typed.clone();
+    if let Some(row) = type_ahead(&md.entries, &view.rows, view.cursor, &typed) {
+        select_row(md, view, row);
+    }
+}
+
 /// Keyboard model of a focused list: arrows, paging, Home/End, type-ahead, Enter, Ctrl+D.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn on_keys(
     mut actions: MessageReader<UiAction>,
     mut keys: MessageReader<KeyboardInput>,
     focused: Query<(Entity, &MasterList), With<Focused>>,
     mut roots: Roots,
     modifiers: Option<Res<ButtonInput<KeyCode>>>,
-    mut activated: MessageWriter<Activated>,
-    mut fav: MessageWriter<MasterDetailFavourite>,
+    mut out: KeyOut,
     time: Res<Time>,
 ) {
     let Some((list_entity, list)) = focused.iter().next() else {
@@ -181,32 +253,13 @@ pub(super) fn on_keys(
     let Ok((mut md, mut view)) = roots.get_mut(list.0) else {
         return;
     };
-    let page = ((view.viewport / ITEM_HEIGHT).floor() as isize - 1).max(1);
     for action in actions.read() {
-        match action {
-            UiAction::Navigate(crate::actions::Direction::Down) => step(&mut md, &mut view, 1),
-            UiAction::Navigate(crate::actions::Direction::Up) => step(&mut md, &mut view, -1),
-            UiAction::Scroll(ScrollStep::Page(n)) => {
-                step(&mut md, &mut view, isize::from(*n) * page);
-            }
-            UiAction::Scroll(ScrollStep::Home) => {
-                if let Some(r) = first_item(&view.rows) {
-                    select_row(&mut md, &mut view, r);
-                }
-            }
-            UiAction::Scroll(ScrollStep::End) => {
-                if let Some(r) = last_item(&view.rows) {
-                    select_row(&mut md, &mut view, r);
-                }
-            }
-            UiAction::Scroll(ScrollStep::Line(n)) => {
-                view.scroll += f32::from(*n) * ITEM_HEIGHT;
-            }
-            UiAction::Confirm => {
-                activated.write(Activated(list_entity));
-            }
-            _ => {}
-        }
+        apply_action(
+            action,
+            (&mut md, &mut view),
+            list_entity,
+            &mut out.activated,
+        );
     }
     let ctrl = modifiers
         .is_some_and(|m| m.pressed(KeyCode::ControlLeft) || m.pressed(KeyCode::ControlRight));
@@ -218,31 +271,13 @@ pub(super) fn on_keys(
         let Key::Character(text) = &key.logical_key else {
             continue;
         };
-        if ctrl {
-            if text.eq_ignore_ascii_case("d") {
-                if let Some(id) = md.selected.clone() {
-                    let on = toggle_favourite(&mut md, &id);
-                    fav.write(MasterDetailFavourite {
-                        root: list.0,
-                        id,
-                        favourite: on,
-                    });
-                }
-            }
-            continue;
-        }
-        if text.trim().is_empty() {
-            continue;
-        }
-        if now - view.typed_at > TYPE_AHEAD_RESET {
-            view.typed.clear();
-        }
-        view.typed.push_str(text);
-        view.typed_at = now;
-        let typed = view.typed.clone();
-        if let Some(row) = type_ahead(&md.entries, &view.rows, view.cursor, &typed) {
-            select_row(&mut md, &mut view, row);
-        }
+        apply_character(
+            text,
+            ctrl,
+            now,
+            (&mut md, &mut view),
+            (list.0, &mut out.fav),
+        );
     }
 }
 
