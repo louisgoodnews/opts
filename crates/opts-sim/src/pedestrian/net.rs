@@ -388,7 +388,7 @@ impl Walker {
     /// World position and heading (radians, clockwise from north, in the walking direction).
     ///
     /// The position is beside the lane's centre line, on the right of the walking direction by
-    /// [`Walker::lateral`] times half the lane width (at most [`MAX_OFFSET_M`]), so walkers in
+    /// [`Walker::lateral`] times half the lane width (at most 1.5 m), so walkers in
     /// opposite directions pass on different sides. Walkers do not react to each other: two
     /// walking the same way at the same place and offset still overlap.
     #[must_use]
