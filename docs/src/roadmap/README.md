@@ -216,7 +216,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [~] **🗺️ Tile Loading Controls** — [M-0080](phase-4/M-0080.md)
   - [~] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — both settings, live streaming and `scene.tiles` done 2026-10-18; wizard summary switch, memory guard and "Automatic (currently N)" open.
 - [x] **🎥 Viewpoint Editor** — [M-0084](phase-4/M-0084.md) — ✅ done 2026-10-29
-  - [x] Shift + Tab (Tab until 2026-10-22) opens an editor in the driver's view (height, X/Y/Z, FOV), saved per vehicle or per model; `graphics.default_fov`; Shift + Space resets each view (R-26, R-33). Export/import open.
+  - [x] Shift + Tab (Tab until 2026-10-22) opens an editor in the driver's view (height, X/Y/Z, FOV), saved per vehicle or per model; `graphics.default_fov`; Shift + Space resets each view (R-26, R-33). Export and import of viewpoints through `camera.viewpoint.export` / `.import` (2026-10-29).
 - [x] **🌀 Tile Streaming Performance** — [M-0089](phase-4/M-0089.md)
   - [x] Measure where the frame time goes at tile borders, rank and implement the improvements (R-32, R-36). (complete 2026-10-18: no frame above 50 ms, worst 36.9 ms on Berlin-Spandau)
 - [x] **🚌 Script rig and callback safety net** — [M-0096](phase-4/M-0096.md)
@@ -415,7 +415,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Prompt P-1010, CONTRIBUTING note, workflow reference and cadence (process).
 - [x] **🧰 QoL Suite** — [M-0109](phase-11/M-0109.md) — ✅ done 2026-10-29: UI scale presets, font settings, door camera; smooth driver view measured (1.9 mm of 2 mm), no smoothing needed
   - [x] Door camera (done 2026-10-20).
-  - [ ] Smooth driver view (open, waits for the jitter branch).
+  - [x] Smooth driver view (done 2026-10-29: measured, 1.9 mm of 2 mm, no smoothing needed).
   - [x] UI scale presets 100/125/150/200 %, UI font and base font size.
 - [x] **🗺️ Full-Size In-Game Map and Map Switching** — [M-0108](phase-11/M-0108.md) — ✅ done 2026-10-19
   - [x] Full-size map on F6 (pan, zoom, the whole map, position and heading); builds on the mini map (M-0071).
