@@ -21,6 +21,47 @@ pub fn register(registry: &mut ControlRegistry) {
     registry.register("vehicle.script_textures", script_textures);
 }
 
+/// The canvases of one loaded unit.
+type CanvasSet =
+    std::sync::Arc<std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>>;
+
+/// The canvases of every loaded unit (the CPU side: what the scripts drew, also on slots no mesh
+/// shows), once per set.
+fn canvas_sets(world: &mut World) -> Vec<CanvasSet> {
+    let mut q = world.query::<&VehicleScriptTexture>();
+    let mut seen: Vec<CanvasSet> = Vec::new();
+    for t in q.iter(world) {
+        if !seen.iter().any(|c| std::sync::Arc::ptr_eq(c, &t.canvases)) {
+            seen.push(t.canvases.clone());
+        }
+    }
+    seen
+}
+
+/// What reached the images of the meshes (the GPU side): per slot, whether any pixel has alpha.
+fn mesh_images(world: &mut World) -> Vec<Value> {
+    let mut q = world.query::<&VehicleScriptTexture>();
+    let targets: Vec<(usize, Option<[u8; 3]>, Handle<Image>)> = q
+        .iter(world)
+        .map(|t| (t.index, t.tint, t.image.clone()))
+        .collect();
+    let images = world.resource::<Assets<Image>>();
+    targets
+        .iter()
+        .map(|(index, tint, image)| {
+            let lit = images
+                .get(image)
+                .and_then(|i| i.data.as_ref())
+                .map(|d| d.chunks(4).filter(|p| p[3] != 0).count());
+            let sample = images
+                .get(image)
+                .and_then(|i| i.data.as_ref())
+                .and_then(|d| d.chunks(4).find(|p| p[3] > 100).map(|p| [p[0], p[1], p[2], p[3]]));
+            json!({ "slot": index, "tint": tint, "pixels_with_alpha": lit, "a_max": images.get(image).and_then(|i| i.data.as_ref()).map(|d| d.chunks(4).map(|p| p[3]).max().unwrap_or(0)), "a_pixel": sample, "image": format!("{:?}", image.id()) })
+        })
+        .collect()
+}
+
 /// `vehicle.script_textures {prefix?}`: one PNG per canvas, named `<prefix>-<unit>-<slot>.png`
 /// (default prefix `canvas`): the canvases of each loaded unit, what the scripts drew on every slot
 /// of the model's `[scripttexture]` list, shown on a mesh or not.
@@ -41,22 +82,7 @@ fn script_textures(world: &mut World, params: &Value) -> Outcome {
             ))
         }
     };
-    // The canvases of every loaded unit (the CPU side: what the scripts drew, also on slots no
-    // mesh shows), once per set.
-    let sets: Vec<
-        std::sync::Arc<
-            std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>,
-        >,
-    > = {
-        let mut q = world.query::<&VehicleScriptTexture>();
-        let mut seen: Vec<std::sync::Arc<std::sync::RwLock<Vec<_>>>> = Vec::new();
-        for t in q.iter(world) {
-            if !seen.iter().any(|c| std::sync::Arc::ptr_eq(c, &t.canvases)) {
-                seen.push(t.canvases.clone());
-            }
-        }
-        seen
-    };
+    let sets = canvas_sets(world);
     let mut files = Vec::new();
     'sets: for (unit, set) in sets.iter().enumerate() {
         let Ok(canvases) = set.read() else {
@@ -86,26 +112,6 @@ fn script_textures(world: &mut World, params: &Value) -> Outcome {
             files.push(json!({ "unit": unit, "slot": slot, "path": path, "width": w, "height": h, "drawn": drawn }));
         }
     }
-    // What reached the images of the meshes (the GPU side): per slot, whether any pixel has alpha.
-    let mut q = world.query::<&VehicleScriptTexture>();
-    let targets: Vec<(usize, Option<[u8; 3]>, Handle<Image>)> = q
-        .iter(world)
-        .map(|t| (t.index, t.tint, t.image.clone()))
-        .collect();
-    let images = world.resource::<Assets<Image>>();
-    let on_meshes: Vec<Value> = targets
-        .iter()
-        .map(|(index, tint, image)| {
-            let lit = images
-                .get(image)
-                .and_then(|i| i.data.as_ref())
-                .map(|d| d.chunks(4).filter(|p| p[3] != 0).count());
-            let sample = images
-                .get(image)
-                .and_then(|i| i.data.as_ref())
-                .and_then(|d| d.chunks(4).find(|p| p[3] > 100).map(|p| [p[0], p[1], p[2], p[3]]));
-            json!({ "slot": index, "tint": tint, "pixels_with_alpha": lit, "a_max": images.get(image).and_then(|i| i.data.as_ref()).map(|d| d.chunks(4).map(|p| p[3]).max().unwrap_or(0)), "a_pixel": sample, "image": format!("{:?}", image.id()) })
-        })
-        .collect();
+    let on_meshes = mesh_images(world);
     Outcome::ok(json!({ "count": files.len(), "files": files, "on_meshes": on_meshes }))
 }
