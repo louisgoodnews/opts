@@ -146,7 +146,7 @@ fn help_and_commands_describe_the_schema() {
     assert_eq!(h["args"][0]["name"], "control");
     assert_eq!(h["args"][1]["name"], "value");
     let all = call(&mut app, "commands", json!({"group": "drive"})).expect("commands");
-    assert_eq!(all["protocol_version"], "1.29.0");
+    assert_eq!(all["protocol_version"], "1.30.0");
     let names: Vec<&str> = all["commands"]
         .as_array()
         .unwrap()
@@ -173,6 +173,7 @@ mod observe;
 mod triggers;
 
 mod camera;
+mod viewpoint_share;
 
 // ---- session vehicles ----------------------------------------------------------------------------
 

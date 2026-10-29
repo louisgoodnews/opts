@@ -25,7 +25,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0049 — AI Road Traffic (`opts-traffic`, `opts-bevy`)](M-0049.md) — 🟡 Running in game (lights, right of way, lane changes); debug tooling, speed limits, scheduled AI open
 - [M-0050 — Pedestrians](M-0050.md) — 🟡 Walking pedestrians done; crossings, stops and boarding open
 - [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — 🟡 core delivered 2026-10-18 (settings, live streaming, `scene.tiles`); wizard switch, memory guard and page label open (R-20, R-21)
-- [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — 🟡 Core done (R-26)
+- [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — ✅ Done (R-26)
 - [M-0089 — Tile Streaming Performance: Investigation and Improvements](M-0089.md) — 🟢 Complete 2026-10-18 (worst frame 36.9 ms), 🔴 high (R-32)
 - [M-0093 — Host Callbacks — Timetable, Termini, Bus Stops, Tickets (IBIS)](M-0093.md) — 🟢 Complete (2026-10-14)
 - [M-0094 — Script Textures](M-0094.md) — 🟢 Complete (2026-10-14)
@@ -66,7 +66,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [ ] **🎛️ Vehicle Controls and Systems** — [M-0141](M-0141.md) — requested 2026-10-20
   - [~] The driver's workplace works: electrics, engine start procedure per vehicle, lights, doors, heating, wipers and every dashboard control with a function; a start-procedure test per reference vehicle (Citybus 530, MAN NL/SD200/NG272 and BRT C2 start from cold since 2026-10-20, the Luzern VBL Citybus, Valiant 7000 and MB C2 BVG families since 2026-10-25, then the TH Überlandbus, Studio Polygon Lite, Citybus S31x and others; all 948 installed buses reach drive readiness (the last, the MB O530 GDH serial hybrid, since 2026-10-25); dashboard displays: printers, VDV display and the HH109 EFAD LCD work since 2026-10-25, NG272/HH109 destination boards open).
   - [~] Articulated buses — trailing segments follow the leader kinematically, the joint angle reaches the scripts, bellows are skinned ([spec](../../architecture/articulation.md), M-0022 addendum 2026-10-11); one serialisable consist state, consist mass and β/γ in the fixed step done 2026-10-14 (M-0053 Parts 1–3), AI trailer chains done; β limits, `[couple_front]` and parked trailers open — [M-0053](M-0053.md) (critical review 2026-10-11 F-002, F-003).
-- [~] **🚶 Pedestrians** — [M-0050](M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](../../simulation/pedestrians.md)); `[trafficdensity_passenger]` applied; stops and boarding through M-0101 (first slice 2026-10-21); crossings/signals, holidays, separation and LOD open.
+- [~] **🚶 Pedestrians** — [M-0050](M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](../../simulation/pedestrians.md)); `[trafficdensity_passenger]` applied; stops and boarding through M-0101 (first slice 2026-10-21); crossings/signals, holidays and LOD open; walkers keep to the right of their lane since 2026-10-29, a reaction between walkers is open.
 - [~] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [x] Document the passenger simulation model in `docs/src/simulation/passengers.md` (written 2026-10-21 with M-0101) — prerequisite for M-0050's stop/boarding items (critical review 2026-10-11 F-023).
   - [~] Implement bus stop logic and passenger boarding/alighting — first slice [M-0101](M-0101.md) 2026-10-21: `[busstop]` objects, boarding through the scripts' doors, tickets, articulated buses and trams; cash desk open. *Requirement from rail operation (2026-10-12): a stop evaluates the leading head's direction of travel and door side, so a tram arriving B-head first is recognised without a mirrored second stop cube ([rail-vehicles §8–9](../../simulation/rail-vehicles.md)).*
@@ -96,8 +96,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](M-0046.md); F-009).
 - [~] **🗺️ Tile Loading Controls** — [M-0080](M-0080.md)
   - [~] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — both settings, live streaming and `scene.tiles` done 2026-10-18; wizard summary switch, memory guard and "Automatic (currently N)" open.
-- [~] **🎥 Viewpoint Editor** — [M-0084](M-0084.md)
-  - [x] Shift + Tab (Tab until 2026-10-22) opens an editor in the driver's view (height, X/Y/Z, FOV), saved per vehicle or per model; `graphics.default_fov`; Shift + Space resets each view (R-26, R-33). Export/import open.
+- [x] **🎥 Viewpoint Editor** — [M-0084](M-0084.md) — ✅ done 2026-10-29
+  - [x] Shift + Tab (Tab until 2026-10-22) opens an editor in the driver's view (height, X/Y/Z, FOV), saved per vehicle or per model; `graphics.default_fov`; Shift + Space resets each view (R-26, R-33). Export and import of viewpoints through `camera.viewpoint.export` / `.import` (2026-10-29).
 - [x] **🌀 Tile Streaming Performance** — [M-0089](M-0089.md)
   - [x] Measure where the frame time goes at tile borders, rank and implement the improvements (R-32, R-36). (complete 2026-10-18: no frame above 50 ms, worst 36.9 ms on Berlin-Spandau)
 - [x] **🚌 Script rig and callback safety net** — [M-0096](M-0096.md)

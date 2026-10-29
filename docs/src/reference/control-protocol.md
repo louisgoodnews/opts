@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.29.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.30.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -328,10 +328,6 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`camera.reset`](#camerareset) | - | 1.2 | Reset the current camera view to its default, like Shift+Space |
 | [`camera.look`](#cameralook) | `yaw?` (number)<br>`pitch?` (number)<br>`dx?` (number)<br>`dy?` (number) | 1.1 | Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external) |
 | [`camera.move`](#cameramove) | `forward?` (number)<br>`right?` (number)<br>`up?` (number)<br>`duration_ms?` (integer) | 1.1 | Move the free camera forward/right/up for a duration, like the movement keys |
-| [`camera.viewpoint.get`](#cameraviewpointget) | - | 1.2 | The driver's-view viewpoint: offsets, field of view, stored value, editor state |
-| [`camera.viewpoint.set`](#cameraviewpointset) | `x?` (number)<br>`y?` (number)<br>`z?` (number)<br>`fov_deg?` (number) | 1.2 | Change the driver's-view viewpoint live (opens the editor; not stored until saved) |
-| [`camera.viewpoint.save`](#cameraviewpointsave) | `scope?` (string = vehicle \| model) | 1.2 | Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor |
-| [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
 | [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`zoom_mode?` (string = speed \| fixed)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), zoom mode, orientation, on/off |
 | [`hud.fullmap`](#hudfullmap) | `open?` (boolean)<br>`span?` (number)<br>`x?` (number)<br>`y?` (number)<br>`follow?` (boolean)<br>`fit?` (boolean) | 1.15 | Read or drive the full-size map: open or close, zoom span, centre, follow |
 | [`camera.door`](#cameradoor) | `door?` (integer) | 1.17 | Read the door camera or choose the door it shows |
@@ -347,6 +343,12 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`formation.list`](#formationlist) | - | 1.6 | List the saved train formations, newest first |
 | [`formation.delete`](#formationdelete) | `id` (string) | 1.6 | Delete a saved train formation |
 | [`session.save`](#sessionsave) | `name` (string)<br>`overwrite?` (boolean) | 1.3 | Save the running drive under a name |
+| [`camera.viewpoint.get`](#cameraviewpointget) | - | 1.2 | The driver's-view viewpoint: offsets, field of view, stored value, editor state |
+| [`camera.viewpoint.set`](#cameraviewpointset) | `x?` (number)<br>`y?` (number)<br>`z?` (number)<br>`fov_deg?` (number) | 1.2 | Change the driver's-view viewpoint live (opens the editor; not stored until saved) |
+| [`camera.viewpoint.save`](#cameraviewpointsave) | `scope?` (string = vehicle \| model) | 1.2 | Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor |
+| [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
+| [`camera.viewpoint.export`](#cameraviewpointexport) | `path` (string) | 1.30 | Write the stored viewpoints (all vehicles and models) to a file to share |
+| [`camera.viewpoint.import`](#cameraviewpointimport) | `path` (string) | 1.30 | Merge the viewpoints of a shared file into the stored ones |
 | [`session.load`](#sessionload) | `name` (string) | 1.3 | Restore a save (leaves the running drive); poll `session.saves` for the progress |
 | [`session.delete_save`](#sessiondelete_save) | `name` (string) | 1.3 | Delete a save and its backup (no confirmation) |
 | [`session.rename_save`](#sessionrename_save) | `name` (string)<br>`new_name` (string) | 1.3 | Change the name of a save (the file keeps its id) |
@@ -426,38 +428,6 @@ Move the free camera forward/right/up for a duration, like the movement keys.
 **Result:** `{ok, mode, duration_ms}`
 
 Switches nothing: answers `1001` unless the camera is in free roam (use `camera.set_mode free`). Positive values move forward, right and up; the movement keys are held for `duration_ms` (default 500) and released, so speed follows `free_roam_speed`.
-
-### `camera.viewpoint.get`
-
-The driver's-view viewpoint: offsets, field of view, stored value, editor state.
-
-**Result:** `{editing, dirty, row, vehicle, camera, cameras, viewpoint:{x,y,z,fov_deg}, stored:{x,y,z,fov_deg}, fov_deg, default_fov_deg, limits, file}`
-
-Offsets are metres from the vehicle's own `[add_camera_driver]` eye: `x` right, `y` up, `z` forward (limit +-0.6). `fov_deg` in the viewpoint is `null` while the vehicle's own field of view is used; the top-level `fov_deg` is the one shown. `vehicle` is the catalogue identity (the `.bus` file stem, lower case) the viewpoint is stored under, `camera` the driver camera index.
-
-### `camera.viewpoint.set`
-
-Change the driver's-view viewpoint live (opens the editor; not stored until saved).
-
-**Result:** the `camera.viewpoint.get` result
-
-Only the given values change. Out-of-range values answer `-32602` (offsets +-0.6 m, `fov_deg` 30..120) instead of being clamped. Answers `1001` unless the driver's view (`camera.set_mode cockpit`) is active and `1009` while a dialog or menu is open. Equivalent to the editor panel: the camera shows the change at once; `camera.viewpoint.save` stores it, leaving the view or changing the sub camera cancels it.
-
-### `camera.viewpoint.save`
-
-Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor.
-
-**Result:** the `camera.viewpoint.get` result
-
-Writes `viewpoints.json` (next to `drive_history.json`) before it answers. `scope` `model` (default `vehicle`) applies the viewpoint to every vehicle of the same model (the folder of its `.bus` file) and drops this vehicle's own override; other vehicles' own entries keep winning. A viewpoint equal to the vehicle's own removes the stored entry (or keeps an explicit default when the model has one). Answers `1001` unless the driver's view is active.
-
-### `camera.viewpoint.reset`
-
-Back to the vehicle's own viewpoint and remove the stored one.
-
-**Result:** the `camera.viewpoint.get` result
-
-Resets offsets and field of view, stores the default (which removes the entry) and closes the editor. Answers `1001` unless the driver's view is active.
 
 ### `hud.minimap`
 
@@ -578,6 +548,54 @@ Save the running drive under a name.
 **Result:** `{ok, id, name, overwritten}`
 
 Writes a session save (see the session-save page): every registered section is captured and the file is written atomically. Answers `1001` without a loaded drive, `1008` with `data.kind = "exists"` when a save of that name exists and `overwrite` is not set. The save is the same one the pause overlay's *Save game* writes.
+
+### `camera.viewpoint.get`
+
+The driver's-view viewpoint: offsets, field of view, stored value, editor state.
+
+**Result:** `{editing, dirty, row, vehicle, camera, cameras, viewpoint:{x,y,z,fov_deg}, stored:{x,y,z,fov_deg}, fov_deg, default_fov_deg, limits, file}`
+
+Offsets are metres from the vehicle's own `[add_camera_driver]` eye: `x` right, `y` up, `z` forward (limit +-0.6). `fov_deg` in the viewpoint is `null` while the vehicle's own field of view is used; the top-level `fov_deg` is the one shown. `vehicle` is the catalogue identity (the `.bus` file stem, lower case) the viewpoint is stored under, `camera` the driver camera index.
+
+### `camera.viewpoint.set`
+
+Change the driver's-view viewpoint live (opens the editor; not stored until saved).
+
+**Result:** the `camera.viewpoint.get` result
+
+Only the given values change. Out-of-range values answer `-32602` (offsets +-0.6 m, `fov_deg` 30..120) instead of being clamped. Answers `1001` unless the driver's view (`camera.set_mode cockpit`) is active and `1009` while a dialog or menu is open. Equivalent to the editor panel: the camera shows the change at once; `camera.viewpoint.save` stores it, leaving the view or changing the sub camera cancels it.
+
+### `camera.viewpoint.save`
+
+Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor.
+
+**Result:** the `camera.viewpoint.get` result
+
+Writes `viewpoints.json` (next to `drive_history.json`) before it answers. `scope` `model` (default `vehicle`) applies the viewpoint to every vehicle of the same model (the folder of its `.bus` file) and drops this vehicle's own override; other vehicles' own entries keep winning. A viewpoint equal to the vehicle's own removes the stored entry (or keeps an explicit default when the model has one). Answers `1001` unless the driver's view is active.
+
+### `camera.viewpoint.reset`
+
+Back to the vehicle's own viewpoint and remove the stored one.
+
+**Result:** the `camera.viewpoint.get` result
+
+Resets offsets and field of view, stores the default (which removes the entry) and closes the editor. Answers `1001` unless the driver's view is active.
+
+### `camera.viewpoint.export`
+
+Write the stored viewpoints (all vehicles and models) to a file to share.
+
+**Result:** `{file, vehicles, models}`: the file written and how many vehicle and model entries it holds
+
+The file has the format of `viewpoints.json` (offsets from the vehicle's own driver camera, so it works on any installation that has the vehicle). `path` must be below the reports directory or an allowed directory (`1002` otherwise) and its directory must exist (`1004`). Writes through a temporary file. Works in any view: it exports what is stored, not the open editor.
+
+### `camera.viewpoint.import`
+
+Merge the viewpoints of a shared file into the stored ones.
+
+**Result:** `{file, vehicles, models, replaced, problems}`: entries taken, entries that replaced a different stored value, and the entries of the file that were dropped (with the reason)
+
+Reads the format `camera.viewpoint.export` writes. The entry of the file wins over a stored one for the same vehicle (or model) and camera; everything else stays. The store file is written before the answer and the vehicle in the driver's seat shows an imported value from the next frame. Invalid entries are dropped and listed in `problems`; a file that cannot be used at all answers `-32602` and is left where it is. `path` must be below the OMSI root or an allowed directory (`1002`), and exist (`1004`). Answers `1009` while the viewpoint editor is open.
 
 ### `session.load`
 

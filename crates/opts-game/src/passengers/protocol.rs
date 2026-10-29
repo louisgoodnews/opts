@@ -80,9 +80,7 @@ pub fn command(
         "mass": {
             "source": if forced.is_some() { "override" } else { "passengers" },
             "count": forced.unwrap_or_else(|| sim.humans_inside()),
-            "on": world.get_resource::<crate::settings::GameSettings>().is_none_or(|s| {
-                s.raw(super::weight::SETTING).is_none_or(|v| !v.trim().eq_ignore_ascii_case("false"))
-            }),
+            "on": super::weight::mass_settings(world.get_resource::<crate::settings::GameSettings>()).0,
         },
         "approaching": rig.approaching.len(),
         "leaving": rig.leaving.len(),

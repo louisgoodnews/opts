@@ -6,7 +6,14 @@ mod gameplay;
 
 /// Part 2: interface and gameplay.
 pub(super) fn interface() -> Vec<D> {
-    let mut out = vec![
+    let mut out = [theme(), scale_and_fonts(), language_and_units()].concat();
+    out.extend(gameplay::gameplay());
+    out
+}
+
+/// Theme mode, automatic switching, contrast and the theme file.
+fn theme() -> Vec<D> {
+    vec![
         D::new(
             "theme_mode",
             K::Enum(THEME_MODES),
@@ -67,6 +74,12 @@ pub(super) fn interface() -> Vec<D> {
             "set-theme-file-desc",
         )
         .keywords(&["theme", "custom", "colours"]),
+    ]
+}
+
+/// UI scale, fonts, density and reduced motion.
+fn scale_and_fonts() -> Vec<D> {
+    vec![
         D::new(
             "ui_scale",
             K::Int {
@@ -133,6 +146,12 @@ pub(super) fn interface() -> Vec<D> {
             "set-reduced-motion-desc",
         )
         .keywords(&["animation", "accessibility", "transitions"]),
+    ]
+}
+
+/// Language, units and the HUD hints.
+fn language_and_units() -> Vec<D> {
+    vec![
         D::new(
             "interface.language",
             K::Text,
@@ -177,7 +196,5 @@ pub(super) fn interface() -> Vec<D> {
         )
         .keywords(&["tips", "help", "hud"])
         .since("0.2"),
-    ];
-    out.extend(gameplay::gameplay());
-    out
+    ]
 }

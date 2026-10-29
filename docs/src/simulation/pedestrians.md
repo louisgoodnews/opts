@@ -9,7 +9,7 @@
 
 ## 1. Model
 
-Pedestrians are **kinematic walkers on a footpath network**; they have no physics and do not collide (with each other, with vehicles, or with the player) yet.
+Pedestrians are **kinematic walkers on a footpath network**; they have no physics and do not collide (with each other, with vehicles, or with the player) yet; they only keep to the right of their lane (*Separation between walkers*, below).
 
 **Footpaths.** OMSI marks walkable lines with `[path]` records of type `1`:
 * in spline profiles (`.sli`): `offsetX` (right of the centre line is positive), `offsetZ`, `width`, `reverse` (`0` forward, `1` backward, `2` both ways). 3,725 of 15,291 installed profiles have such a path (sidewalks, paths);
@@ -38,7 +38,7 @@ Unit tests: lane geometry (right of travel, arc length, object rotation), networ
 | :--- | :--- |
 | Crossings and traffic lights | Pedestrian paths of a junction are walkable, but no signal phases are consulted (`[use_traffic_light]`) and AI traffic does not yield. Needs the AI-traffic session's signal model. |
 | Bus stops and boarding | First slice done: see [Passengers](passengers.md) (stops, boarding at the scripts' doors, tickets, places, alighting). Open there: the callbacks for seat and link counts, the cash desk, trams and articulated buses, voices. |
-| Collision avoidance | Walkers pass through each other; `width` of the lane is read but unused. |
+| Separation between walkers | Since 2026-10-29 each walker keeps a stable lateral offset to the **right of its walking direction**, 15 to 85 % of half the lane width (at most 1.5 m), applied in `Walker::pose`; walkers in opposite directions therefore pass on different sides and none walks on the centre line. Walkers do **not** react to each other: nobody slows down or waits, and two walking the same way at the same place and offset still overlap. Vehicles and the player are not avoided either. |
 | Density schedule | Apply `[trafficdensity_passenger]`; time-of-day, holidays. |
 | Idle behaviour | Standing groups, benches, phone — OMSI's scenery uses static `people_standing*.x` objects. |
 | LOD | Each pedestrian is 13 joints + skinned meshes; beyond ~60 m a billboard or frozen pose would be cheaper. |

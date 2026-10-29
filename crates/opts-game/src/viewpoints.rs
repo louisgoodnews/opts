@@ -293,6 +293,7 @@ pub use plugin::{
 };
 
 pub mod protocol;
+pub mod share;
 
 #[cfg(test)]
 mod tests;

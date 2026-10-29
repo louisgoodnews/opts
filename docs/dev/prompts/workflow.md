@@ -38,6 +38,10 @@
 
 ## 🧭 Usage Notes
 
+### Intake comes first
+
+Nothing enters step 5 (P-002) or step 9 (P-005) without a milestone. A new request, field-report item or defect is first written down and attached to a milestone (or becomes one), as the **Intake** section of [`CONTRIBUTING.md`](../../../CONTRIBUTING.md#-intake-every-piece-of-work-starts-at-a-milestone) lays out.
+
 ### Running a Full Cycle
 
 1. Open a fresh agent session.

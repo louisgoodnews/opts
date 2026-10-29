@@ -7,11 +7,13 @@ mod basics;
 mod drive_and_session;
 mod scene_and_trace;
 mod ui_and_capture;
+mod viewpoint;
 
 const PARTS: &[&[CommandSpec]] = &[
     basics::PART,
     ui_and_capture::PART,
     scene_and_trace::PART,
+    viewpoint::PART,
     drive_and_session::PART,
 ];
 
