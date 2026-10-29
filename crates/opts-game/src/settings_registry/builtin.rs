@@ -107,6 +107,11 @@ use interface::interface;
 
 /// Part 3: content and advanced.
 fn content() -> Vec<D> {
+    [files(), advanced(), streaming()].concat()
+}
+
+/// The OMSI folder, the catalogue interval and the recent map.
+fn files() -> Vec<D> {
     vec![
         D::new(
             "omsi_path",
@@ -154,6 +159,12 @@ fn content() -> Vec<D> {
             "set-recent-map-desc",
         )
         .hidden(),
+    ]
+}
+
+/// The developer panel, the log level and the scene trace.
+fn advanced() -> Vec<D> {
+    vec![
         D::new(
             "advanced.developer_panel",
             K::Bool,
@@ -206,30 +217,34 @@ fn content() -> Vec<D> {
         )
         .keywords(&["developer", "debug", "boxes", "overlay", "trace"])
         .since("0.3"),
-        D::new(
-            "advanced.streaming_budget_ms",
-            K::Int {
-                min: 0,
-                max: 50,
-                step: 1,
-            },
-            "8",
-            C::Advanced,
-            80,
-            "set-streaming-budget",
-            "set-streaming-budget-desc",
-        )
-        .keywords(&[
-            "map",
-            "tiles",
-            "streaming",
-            "stutter",
-            "freeze",
-            "frame",
-            "performance",
-        ])
-        .since("0.3"),
     ]
+}
+
+/// The tile build budget while streaming.
+fn streaming() -> Vec<D> {
+    vec![D::new(
+        "advanced.streaming_budget_ms",
+        K::Int {
+            min: 0,
+            max: 50,
+            step: 1,
+        },
+        "8",
+        C::Advanced,
+        80,
+        "set-streaming-budget",
+        "set-streaming-budget-desc",
+    )
+    .keywords(&[
+        "map",
+        "tiles",
+        "streaming",
+        "stutter",
+        "freeze",
+        "frame",
+        "performance",
+    ])
+    .since("0.3")]
 }
 
 /// The on/off switches of the HUD widgets (`hud.<name>`), one per widget of the HUD registry

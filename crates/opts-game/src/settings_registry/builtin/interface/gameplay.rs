@@ -3,6 +3,11 @@
 use super::*;
 
 pub(super) fn gameplay() -> Vec<D> {
+    [density(), session(), tiles()].concat()
+}
+
+/// Traffic, parked cars, pedestrians and passengers.
+fn density() -> Vec<D> {
     vec![
         D::new(
             "gameplay.traffic",
@@ -75,6 +80,12 @@ pub(super) fn gameplay() -> Vec<D> {
         )
         .keywords(&["people", "boarding", "bus stop", "crowd", "load", "full"])
         .since("0.5"),
+    ]
+}
+
+/// Time scale, autosave, the door overlay and the passengers' weight.
+fn session() -> Vec<D> {
+    vec![
         D::new(
             "gameplay.time_scale",
             K::Float {
@@ -148,6 +159,12 @@ pub(super) fn gameplay() -> Vec<D> {
         )
         .keywords(&["passengers", "mass", "weight", "kilogram"])
         .since("0.3"),
+    ]
+}
+
+/// Which tiles stay loaded.
+fn tiles() -> Vec<D> {
+    vec![
         D::new(
             "gameplay.load_all_tiles",
             K::Bool,
