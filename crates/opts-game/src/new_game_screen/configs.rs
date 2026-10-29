@@ -122,37 +122,14 @@ fn problem_text(p: &Problem) -> (&'static str, String) {
     }
 }
 
-/// Builds the section: title, name field with *Save*, then the list.
-pub fn spawn_configs_section(
+/// The name field and the *Save* button.
+fn name_row(
     commands: &mut Commands,
     loc: &Localization,
     library: &ConfigLibrary,
-    catalogue: &GameCatalogue,
     setup: &NewGameSetup,
     vehicle: &VehicleItem,
-    repaints: Option<&VehicleRepaints>,
 ) -> Entity {
-    let section = commands.spawn(column(8.0)).id();
-    let mut kids = vec![commands
-        .spawn(keyed(
-            "wiz-configs-title",
-            TypeScale::TitleMedium,
-            ColorRole::OnSurface,
-        ))
-        .id()];
-    if let Some(problem) = &library.problem {
-        kids.push(
-            commands
-                .spawn(keyed_args(
-                    "wiz-configs-file-problem",
-                    L10nArgs::one("reason", problem.to_string()),
-                    TypeScale::BodyMedium,
-                    ColorRole::Warning,
-                ))
-                .id(),
-        );
-    }
-    // Name and Save.
     let name_row = commands
         .spawn(Node {
             flex_wrap: FlexWrap::Wrap,
@@ -185,6 +162,40 @@ pub fn spawn_configs_section(
         "wizard.what.configs.save".to_owned(),
     );
     commands.entity(name_row).add_children(&[field, save]);
+    name_row
+}
+
+/// Builds the section: title, name field with *Save*, then the list.
+pub fn spawn_configs_section(
+    commands: &mut Commands,
+    loc: &Localization,
+    library: &ConfigLibrary,
+    catalogue: &GameCatalogue,
+    setup: &NewGameSetup,
+    vehicle: &VehicleItem,
+    repaints: Option<&VehicleRepaints>,
+) -> Entity {
+    let section = commands.spawn(column(8.0)).id();
+    let mut kids = vec![commands
+        .spawn(keyed(
+            "wiz-configs-title",
+            TypeScale::TitleMedium,
+            ColorRole::OnSurface,
+        ))
+        .id()];
+    if let Some(problem) = &library.problem {
+        kids.push(
+            commands
+                .spawn(keyed_args(
+                    "wiz-configs-file-problem",
+                    L10nArgs::one("reason", problem.to_string()),
+                    TypeScale::BodyMedium,
+                    ColorRole::Warning,
+                ))
+                .id(),
+        );
+    }
+    let name_row = name_row(commands, loc, library, setup, vehicle);
     kids.push(name_row);
 
     if library.store.configurations.is_empty() {
