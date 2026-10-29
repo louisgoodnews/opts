@@ -2,8 +2,23 @@
 
 use super::*;
 
+mod audio_controls;
+
 /// Part 1: graphics, audio, controls.
 pub(super) fn graphics() -> Vec<D> {
+    [
+        display(),
+        distances(),
+        world(),
+        weather_strength(),
+        audio_controls::audio(),
+        audio_controls::controls(),
+    ]
+    .concat()
+}
+
+/// Window, texture filtering, look and HDR.
+fn display() -> Vec<D> {
     vec![
         D::new(
             "graphics.window_mode",
@@ -71,6 +86,12 @@ pub(super) fn graphics() -> Vec<D> {
         )
         .keywords(&["tonemapping", "bloom", "high dynamic range", "16 bit"])
         .since("0.3"),
+    ]
+}
+
+/// Field of view and the view, shadow, light and detail distances.
+fn distances() -> Vec<D> {
+    vec![
         D::new(
             "graphics.default_fov",
             K::Int {
@@ -146,6 +167,12 @@ pub(super) fn graphics() -> Vec<D> {
         )
         .keywords(&["lod", "detail", "scenery", "objects", "distance"])
         .since("0.5"),
+    ]
+}
+
+/// Water and the weather effects.
+fn world() -> Vec<D> {
+    vec![
         D::new(
             "graphics.water",
             K::Bool,
@@ -202,6 +229,12 @@ pub(super) fn graphics() -> Vec<D> {
         )
         .keywords(&["weather", "wet", "puddles", "snow cover", "road"])
         .since("0.3"),
+    ]
+}
+
+/// Rain and snow intensity and the wind in the trees.
+fn weather_strength() -> Vec<D> {
+    vec![
         D::new(
             "graphics.rain_intensity",
             K::Int {
@@ -243,91 +276,5 @@ pub(super) fn graphics() -> Vec<D> {
         )
         .keywords(&["trees", "wind", "sway", "vegetation", "animation"])
         .since("0.5"),
-        D::new(
-            "audio.master",
-            K::Int {
-                min: 0,
-                max: 100,
-                step: 5,
-            },
-            "80",
-            C::Audio,
-            10,
-            "set-audio-master",
-            "set-audio-master-desc",
-        )
-        .keywords(&["volume", "sound"])
-        .since("0.4"),
-        D::new(
-            "audio.engine",
-            K::Int {
-                min: 0,
-                max: 100,
-                step: 5,
-            },
-            "80",
-            C::Audio,
-            20,
-            "set-audio-engine",
-            "set-audio-engine-desc",
-        )
-        .keywords(&["volume", "sound"])
-        .since("0.4"),
-        D::new(
-            "audio.effects",
-            K::Int {
-                min: 0,
-                max: 100,
-                step: 5,
-            },
-            "80",
-            C::Audio,
-            25,
-            "set-audio-effects",
-            "set-audio-effects-desc",
-        )
-        .keywords(&["volume", "sound", "doors", "horn", "switches"])
-        .since("0.4"),
-        D::new(
-            "audio.ambience",
-            K::Int {
-                min: 0,
-                max: 100,
-                step: 5,
-            },
-            "60",
-            C::Audio,
-            30,
-            "set-audio-ambience",
-            "set-audio-ambience-desc",
-        )
-        .keywords(&["volume", "sound"])
-        .since("0.4"),
-        D::new(
-            "audio.interface",
-            K::Int {
-                min: 0,
-                max: 100,
-                step: 5,
-            },
-            "60",
-            C::Audio,
-            40,
-            "set-audio-interface",
-            "set-audio-interface-desc",
-        )
-        .keywords(&["volume", "sound", "clicks"])
-        .since("0.4"),
-        D::new(
-            "controls.rebind",
-            K::Action,
-            "",
-            C::Controls,
-            20,
-            "set-rebind",
-            "set-rebind-desc",
-        )
-        .keywords(&["keys", "keyboard", "gamepad", "wheel", "binding"])
-        .not_yet(&SETTINGS_REBIND),
     ]
 }
