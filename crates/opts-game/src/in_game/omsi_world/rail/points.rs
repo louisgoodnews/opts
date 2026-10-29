@@ -149,6 +149,82 @@ mod tests {
         assert_eq!(world.resource::<RailNetwork>().0.switch_position(KEY), 0);
     }
 
+    /// Drives the train 5 m at a time with the points system running before each step; returns
+    /// the lane it ends on.
+    fn drive(world: &mut World, train: Entity, metres: f32) -> opts_sim::pedestrian::LaneId {
+        for _ in 0..(metres / 5.0) as usize {
+            run(world);
+            world.resource_scope(|world, net: Mut<RailNetwork>| {
+                let mut player = world.get_mut::<RailPlayer>(train).expect("player");
+                player.train.as_mut().expect("train").advance(5.0, &net.0);
+            });
+        }
+        world
+            .get::<RailPlayer>(train)
+            .unwrap()
+            .train()
+            .unwrap()
+            .lane
+    }
+
+    #[test]
+    fn a_train_reaches_the_branch_it_wants_whichever_way_the_points_stood() {
+        for (branch, start, lane) in [
+            (Branch::Right, 0, 2),
+            (Branch::Straight, 1, 1),
+            (Branch::Right, 1, 2),
+            (Branch::Straight, 0, 1),
+        ] {
+            let mut world = World::new();
+            let mut rail = net();
+            rail.0.set_switch_position(KEY, start);
+            world.insert_resource(rail);
+            let train = world.spawn(player(0, 20.0, branch)).id();
+            assert_eq!(
+                drive(&mut world, train, 120.0),
+                lane,
+                "{branch:?} from position {start}"
+            );
+            let position = world.resource::<RailNetwork>().0.switch_position(KEY);
+            assert_eq!(
+                position,
+                u8::from(lane == 2),
+                "the points stand as the train needed"
+            );
+        }
+    }
+
+    #[test]
+    fn a_train_that_finds_the_points_held_against_it_takes_the_open_way() {
+        let mut world = World::new();
+        world.insert_resource(net());
+        // Another train stands on the straight lane of the points and holds them at position 0.
+        world.spawn(player(1, 20.0, Branch::Straight));
+        let train = world.spawn(player(0, 20.0, Branch::Right)).id();
+        assert_eq!(
+            drive(&mut world, train, 120.0),
+            1,
+            "it stays on the rails, on the open way"
+        );
+        assert_eq!(
+            world.resource::<RailNetwork>().0.switch_position(KEY),
+            0,
+            "never changed under a train"
+        );
+        // Once both trains have left the points, they follow the next train that asks.
+        let trains: Vec<Entity> = world
+            .query::<(Entity, &RailPlayer)>()
+            .iter(&world)
+            .map(|(e, _)| e)
+            .collect();
+        for e in trains {
+            world.despawn(e);
+        }
+        let again = world.spawn(player(0, 20.0, Branch::Right)).id();
+        assert_eq!(drive(&mut world, again, 120.0), 2);
+        assert_eq!(world.resource::<RailNetwork>().0.switch_position(KEY), 1);
+    }
+
     #[test]
     fn the_nearer_train_wins_when_two_want_different_ways() {
         let mut world = World::new();
