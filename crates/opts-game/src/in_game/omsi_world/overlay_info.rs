@@ -57,10 +57,37 @@ fn rules_text(r: &LaneRules) -> String {
     }
 }
 
-/// The lines of the compact page.
-#[must_use]
-pub fn lines(f: &PanelFacts) -> String {
-    let mut out = Vec::new();
+/// The lane under the vehicle: position on it, height, grade, speed limit and rules.
+fn road_line(t: &TrafficState, session: [f32; 2], (height, heading): (f32, f32)) -> Option<String> {
+    let graph = t.lane_graph();
+    let here = bevy::math::DVec2::new(f64::from(session[0]), f64::from(session[1]));
+    let Some((id, s, d)) = graph.nearest_place(
+        here,
+        f64::from(heading.to_radians()),
+        std::f64::consts::PI,
+        30.0,
+        |l| l.kind == LaneKind::Road,
+    ) else {
+        return Some("road: no lane within 30 m".to_owned());
+    };
+    let lane = graph.lane(id)?;
+    let grade = (lane.z_at((s + 2.0).min(lane.length())) - lane.z_at((s - 2.0).max(0.0)))
+        / (((s + 2.0).min(lane.length())) - (s - 2.0).max(0.0)).max(0.5)
+        * 100.0;
+    Some(format!(
+        "road: lane {} at {s:.0}/{:.0} m ({d:.1} m away) | height {:.1} (vehicle {:+.2}) | grade {grade:+.1} % | limit {} | rules {}",
+        id.0,
+        lane.length(),
+        lane.z_at(s),
+        f64::from(height) - lane.z_at(s),
+        lane.speed_limit
+            .map_or_else(|| "-".to_owned(), |v| format!("{:.0} km/h", v * 3.6)),
+        rules_text(&lane.rules),
+    ))
+}
+
+/// Frames per second and clock, when there is either.
+fn head_line(f: &PanelFacts) -> Option<String> {
     let mut head = String::new();
     if let Some((fps, worst)) = f.fps {
         head.push_str(&format!("{fps:.0} fps (worst frame {worst:.0} ms)"));
@@ -71,9 +98,14 @@ pub fn lines(f: &PanelFacts) -> String {
         }
         head.push_str(&format!("clock {c}"));
     }
-    if !head.is_empty() {
-        out.push(head);
-    }
+    (!head.is_empty()).then_some(head)
+}
+
+/// The lines of the compact page.
+#[must_use]
+pub fn lines(f: &PanelFacts) -> String {
+    let mut out = Vec::new();
+    out.extend(head_line(f));
     let Some((abs, height, heading, speed)) = f.vehicle else {
         out.push("vehicle: none".to_owned());
         return out.join("\n");
@@ -84,34 +116,7 @@ pub fn lines(f: &PanelFacts) -> String {
     ));
     let session = f.session.unwrap_or([abs[0] as f32, abs[1] as f32]);
     if let Some(t) = f.traffic {
-        let graph = t.lane_graph();
-        let here = bevy::math::DVec2::new(f64::from(session[0]), f64::from(session[1]));
-        if let Some((id, s, d)) = graph.nearest_place(
-            here,
-            f64::from(heading.to_radians()),
-            std::f64::consts::PI,
-            30.0,
-            |l| l.kind == LaneKind::Road,
-        ) {
-            if let Some(lane) = graph.lane(id) {
-                let grade = (lane.z_at((s + 2.0).min(lane.length()))
-                    - lane.z_at((s - 2.0).max(0.0)))
-                    / (((s + 2.0).min(lane.length())) - (s - 2.0).max(0.0)).max(0.5)
-                    * 100.0;
-                out.push(format!(
-                    "road: lane {} at {s:.0}/{:.0} m ({d:.1} m away) | height {:.1} (vehicle {:+.2}) | grade {grade:+.1} % | limit {} | rules {}",
-                    id.0,
-                    lane.length(),
-                    lane.z_at(s),
-                    f64::from(height) - lane.z_at(s),
-                    lane.speed_limit
-                        .map_or_else(|| "-".to_owned(), |v| format!("{:.0} km/h", v * 3.6)),
-                    rules_text(&lane.rules),
-                ));
-            }
-        } else {
-            out.push("road: no lane within 30 m".to_owned());
-        }
+        out.extend(road_line(t, session, (height, heading)));
     }
     if let Some((id, d)) = f
         .stops

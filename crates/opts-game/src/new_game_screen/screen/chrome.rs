@@ -16,42 +16,38 @@ pub fn step_invalid(
     }
 }
 
-/// Keeps summary, stepper and footer current.
-#[allow(clippy::too_many_arguments)]
-pub fn refresh_chrome(
-    state: Res<PlannerState>,
-    setup: Res<NewGameSetup>,
-    catalogue: Res<GameCatalogue>,
-    weather: Res<opts_bevy::WeatherCatalogue>,
-    loc: Res<Localization>,
-    mut summary: Query<(&SummaryPart, &mut Text)>,
-    steppers: Query<(Entity, &StepperButton, Has<Selected>)>,
-    footers: Query<(Entity, &FooterButton, Has<Disabled>)>,
-    mut nodes: Query<&mut Node>,
-    mut texts: Query<&mut Text, Without<SummaryPart>>,
-    mut commands: Commands,
-    added: Query<(), Added<StepperButton>>,
+/// The summary line of each step.
+fn refresh_summary(
+    summary: &mut Query<(&SummaryPart, &mut Text)>,
+    loc: &Localization,
+    (catalogue, weather): (&GameCatalogue, &opts_bevy::WeatherCatalogue),
+    setup: &NewGameSetup,
 ) {
-    if !state.is_changed()
-        && !setup.is_changed()
-        && !catalogue.is_changed()
-        && !weather.is_changed()
-        && added.is_empty()
-    {
-        return;
-    }
-    for (part, mut text) in &mut summary {
+    for (part, mut text) in summary {
         let new = match part.0 {
-            PlannerStep::Where => where_text(&setup),
-            PlannerStep::What => what_text(&loc, &catalogue, &setup),
-            _ => when_text(&loc, &weather, &setup),
+            PlannerStep::Where => where_text(setup),
+            PlannerStep::What => what_text(loc, catalogue, setup),
+            _ => when_text(loc, weather, setup),
         };
         if text.0 != new {
             text.0 = new;
         }
     }
+}
+
+/// The step buttons: shown or hidden, numbered, selected, and the check mark of reached steps.
+fn refresh_steppers(
+    state: &PlannerState,
+    steppers: &Query<(Entity, &StepperButton, Has<Selected>)>,
+    (nodes, texts): (
+        &mut Query<&mut Node>,
+        &mut Query<&mut Text, Without<SummaryPart>>,
+    ),
+    commands: &mut Commands,
+    added: bool,
+) {
     let shown = state.shown_steps();
-    for (entity, s, selected) in &steppers {
+    for (entity, s, selected) in steppers {
         // *Trip* only when the plan has runs; the numbers count the steps shown.
         let position = shown.iter().position(|x| *x == s.step);
         if let Ok(mut n) = nodes.get_mut(entity) {
@@ -71,7 +67,7 @@ pub fn refresh_chrome(
             }
         }
         let now = s.step == state.step;
-        if now != selected || !added.is_empty() {
+        if now != selected || added {
             let mut e = commands.entity(entity);
             if now {
                 e.insert((Selected, BackgroundRole(ColorRole::SecondaryContainer)));
@@ -96,6 +92,40 @@ pub fn refresh_chrome(
             };
         }
     }
+}
+
+/// Keeps summary, stepper and footer current.
+#[allow(clippy::too_many_arguments)]
+pub fn refresh_chrome(
+    state: Res<PlannerState>,
+    setup: Res<NewGameSetup>,
+    catalogue: Res<GameCatalogue>,
+    weather: Res<opts_bevy::WeatherCatalogue>,
+    loc: Res<Localization>,
+    mut summary: Query<(&SummaryPart, &mut Text)>,
+    steppers: Query<(Entity, &StepperButton, Has<Selected>)>,
+    footers: Query<(Entity, &FooterButton, Has<Disabled>)>,
+    mut nodes: Query<&mut Node>,
+    mut texts: Query<&mut Text, Without<SummaryPart>>,
+    mut commands: Commands,
+    added: Query<(), Added<StepperButton>>,
+) {
+    if !state.is_changed()
+        && !setup.is_changed()
+        && !catalogue.is_changed()
+        && !weather.is_changed()
+        && added.is_empty()
+    {
+        return;
+    }
+    refresh_summary(&mut summary, &loc, (&catalogue, &weather), &setup);
+    refresh_steppers(
+        &state,
+        &steppers,
+        (&mut nodes, &mut texts),
+        &mut commands,
+        !added.is_empty(),
+    );
     refresh_footer(
         &state,
         &setup,
