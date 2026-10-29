@@ -85,6 +85,61 @@ fn hot_spot_names(
     names
 }
 
+/// The keys the player's kind of vehicle has (a tram's layout is its own), as they are set now.
+fn action_rows(
+    p: &mut ChildSpawnerCommands,
+    settings: &GameSettings,
+    registry: &SettingsRegistry,
+    tram: bool,
+) {
+    for a in ACTIONS.iter().filter(|a| a.scope.applies(tram)) {
+        let text = registry
+            .text(settings, a.setting_for(tram))
+            .unwrap_or_default();
+        let shown = KeyChord::parse(&text)
+            .ok()
+            .flatten()
+            .and_then(display)
+            .unwrap_or_else(|| "none".to_owned());
+        p.spawn(Node {
+            column_gap: Val::Px(16.0),
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|row| {
+            chip(row, &shown, 120.0);
+            row.spawn((
+                Text::new(a.label_key),
+                L10nKey(a.label_key),
+                TextColor::default(),
+                TypeStyleToken(TypeScale::BodyMedium),
+                ForegroundRole(ColorRole::OnSurfaceVariant),
+            ));
+        });
+    }
+}
+
+/// The cockpit group: the names of the vehicle's mouse hot spots, or that it has none.
+fn cockpit_spots(p: &mut ChildSpawnerCommands, names: &[String]) {
+    heading(p, keys::HELP_GROUP_COCKPIT);
+    if names.is_empty() {
+        note(p, keys::HELP_COCKPIT_NONE);
+        return;
+    }
+    note(p, keys::HELP_COCKPIT_NOTE);
+    p.spawn(Node {
+        flex_wrap: FlexWrap::Wrap,
+        column_gap: Val::Px(6.0),
+        row_gap: Val::Px(6.0),
+        ..default()
+    })
+    .with_children(|wrap| {
+        for name in names {
+            chip(wrap, name, 0.0);
+        }
+    });
+}
+
 /// Builds the lists the first time and again when a setting or the vehicle's controls change.
 #[allow(clippy::too_many_arguments)]
 pub fn fill_vehicle_controls(
@@ -125,50 +180,8 @@ pub fn fill_vehicle_controls(
             commands.entity(*child).despawn();
         }
         commands.entity(list).with_children(|p| {
-            // The keys the player's kind of vehicle has: a tram's layout is its own.
-            let tram = !rail.is_empty();
-            for a in ACTIONS.iter().filter(|a| a.scope.applies(tram)) {
-                let text = registry
-                    .text(&settings, a.setting_for(tram))
-                    .unwrap_or_default();
-                let shown = KeyChord::parse(&text)
-                    .ok()
-                    .flatten()
-                    .and_then(display)
-                    .unwrap_or_else(|| "none".to_owned());
-                p.spawn(Node {
-                    column_gap: Val::Px(16.0),
-                    align_items: AlignItems::Center,
-                    ..default()
-                })
-                .with_children(|row| {
-                    chip(row, &shown, 120.0);
-                    row.spawn((
-                        Text::new(a.label_key),
-                        L10nKey(a.label_key),
-                        TextColor::default(),
-                        TypeStyleToken(TypeScale::BodyMedium),
-                        ForegroundRole(ColorRole::OnSurfaceVariant),
-                    ));
-                });
-            }
-            heading(p, keys::HELP_GROUP_COCKPIT);
-            if names.is_empty() {
-                note(p, keys::HELP_COCKPIT_NONE);
-            } else {
-                note(p, keys::HELP_COCKPIT_NOTE);
-                p.spawn(Node {
-                    flex_wrap: FlexWrap::Wrap,
-                    column_gap: Val::Px(6.0),
-                    row_gap: Val::Px(6.0),
-                    ..default()
-                })
-                .with_children(|wrap| {
-                    for name in &names {
-                        chip(wrap, name, 0.0);
-                    }
-                });
-            }
+            action_rows(p, &settings, registry, !rail.is_empty());
+            cockpit_spots(p, &names);
         });
     }
 }

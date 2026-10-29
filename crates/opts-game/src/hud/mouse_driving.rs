@@ -19,6 +19,69 @@ pub struct MouseDrivingCue {
     freed: bool,
 }
 
+/// The two thin lines through the middle of the screen (the mouse drives).
+fn crosshair(root: &mut ChildSpawnerCommands, line: Color) {
+    root.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(0.0),
+            right: Val::Px(0.0),
+            top: Val::Percent(50.0),
+            height: Val::Px(1.0),
+            ..default()
+        },
+        BackgroundColor(line),
+        Pickable::IGNORE,
+    ));
+    root.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0),
+            bottom: Val::Px(0.0),
+            left: Val::Percent(50.0),
+            width: Val::Px(1.0),
+            ..default()
+        },
+        BackgroundColor(line),
+        Pickable::IGNORE,
+    ));
+}
+
+/// The reminder panel near the bottom edge.
+fn hint(root: &mut ChildSpawnerCommands, key: &'static str, palette: &InstrumentPalette) {
+    root.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(0.0),
+            right: Val::Px(0.0),
+            bottom: Val::Px(150.0),
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        Pickable::IGNORE,
+    ))
+    .with_children(|row| {
+        row.spawn((
+            panel(
+                Node {
+                    padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                    border: UiRect::all(Val::Px(1.0)),
+                    ..default()
+                },
+                RadiusLevel::Large,
+                palette,
+            ),
+            Pickable::IGNORE,
+        ))
+        .with_children(|p| {
+            p.spawn((
+                texts(key, TypeScale::BodyMedium, InstrumentInk::Text, palette),
+                L10nKey(key),
+            ));
+        });
+    });
+}
+
 fn spawn_cue(commands: &mut Commands, freed: bool, palette: &InstrumentPalette) {
     let line = palette.text_dim.with_alpha(0.4);
     let key = if freed {
@@ -44,62 +107,9 @@ fn spawn_cue(commands: &mut Commands, freed: bool, palette: &InstrumentPalette) 
         ))
         .with_children(|root| {
             if !freed {
-                root.spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(0.0),
-                        right: Val::Px(0.0),
-                        top: Val::Percent(50.0),
-                        height: Val::Px(1.0),
-                        ..default()
-                    },
-                    BackgroundColor(line),
-                    Pickable::IGNORE,
-                ));
-                root.spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        top: Val::Px(0.0),
-                        bottom: Val::Px(0.0),
-                        left: Val::Percent(50.0),
-                        width: Val::Px(1.0),
-                        ..default()
-                    },
-                    BackgroundColor(line),
-                    Pickable::IGNORE,
-                ));
+                crosshair(root, line);
             }
-            root.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    right: Val::Px(0.0),
-                    bottom: Val::Px(150.0),
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                Pickable::IGNORE,
-            ))
-            .with_children(|row| {
-                row.spawn((
-                    panel(
-                        Node {
-                            padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
-                            border: UiRect::all(Val::Px(1.0)),
-                            ..default()
-                        },
-                        RadiusLevel::Large,
-                        palette,
-                    ),
-                    Pickable::IGNORE,
-                ))
-                .with_children(|p| {
-                    p.spawn((
-                        texts(key, TypeScale::BodyMedium, InstrumentInk::Text, palette),
-                        L10nKey(key),
-                    ));
-                });
-            });
+            hint(root, key, palette);
         });
 }
 

@@ -618,3 +618,4 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0028: Criterion benches of `global.cfg` and `model.cfg` (`agent/bench-configs`).
 - `2026-10-29` — M-0150 third slice (`agent/fn-ratchet-3`): six dev-only functions (three example mains, three corpus tests) split, 166 → 160 functions over 80 lines; not run against an OMSI installation.
 - `2026-10-29` — M-0150 fourth slice (`agent/fn-ratchet-4`): `master_detail_input::on_keys` split and its writers bundled; 159 functions over 80 lines, 111 signature allows.
+- `2026-10-29` — M-0150 fifth slice (`agent/fn-ratchet-5`): four UI builders (help controls, mouse-driving cue, vehicle controls list, home screen) split; 155 functions over 80 lines.
