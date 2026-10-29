@@ -229,8 +229,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## ⚡ Phase 5: Tooling, Performance & Optimization
 *Goal: Profile, benchmark, and optimize engine throughput, and provide developer CLI inspection utilities.*
 
-- [ ] **⚡ Performance & Optimization** — [M-0028](docs/src/roadmap/phase-5/README.md) & [M-0029](docs/src/roadmap/phase-5/M-0029.md)
-  - [ ] Implement Criterion microbenchmark suite in `opts-benchmark` for format parsers and vehicle physics step (M-0028 — traces to F-021).
+- [ ] **⚡ Performance & Optimization** — [M-0028](docs/src/roadmap/phase-5/M-0028.md) & [M-0029](docs/src/roadmap/phase-5/M-0029.md)
+  - [~] Implement Criterion microbenchmark suite in `opts-benchmark` for format parsers and vehicle physics step ([M-0028](docs/src/roadmap/phase-5/M-0028.md); text parsers and the physics step done 2026-10-29, the binary mesh parsers open).
   - [ ] Document LOD (Level of Detail), frustum culling, and occlusion strategies in `docs/src/architecture/lod-culling.md`.
   - [~] Implement distance-based dynamic LOD mesh switching and shadow culling in `opts-bevy` (M-0029). *Scenery `[LOD]` bands, view, shadow, light and detail distance settings live (2026-10-20/24); tile mesh LOD open.*
   - [~] Implement async background asset streaming to prevent frame drops during tile boundary crossings. (time-budgeted, resumable tile build, [M-0089](docs/src/roadmap/phase-4/M-0089.md) steps 1–2, 2026-10-18).
