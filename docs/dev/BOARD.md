@@ -592,4 +592,4 @@ The agent should check these during P-001 audits:
 - `2026-10-26` — M-0141/M-0100 sixth round started (`agent/boards`): destination boards, printer screens.
 - `2026-10-28` — Mirrors (M-0085), seated passengers (M-0101), hot-spot child meshes (M-0141) and bellows under an `animparent` (M-0053) fixed and merged.
 - `2026-10-28` — Phase 15: M-0147 (ratchet gates, with `cargo-deny` for M-0042), M-0148 (inline-test extraction) and M-0149 (file splits) done.
-- `2026-10-29` — M-0150 first batch: work left uncommitted in the main checkout was moved to `agent/m0150-functions`, checked and merged; functions over 80 lines 249 → 156, signature allows 145 → 111. Board, Recently Done and `priority-list.md` re-synced with master.
+- `2026-10-29` — M-0150 first batch: work left uncommitted in the main checkout was moved to `agent/m0150-functions`, checked and merged; functions over 80 lines 249 → 172, signature allows 145 → 112. Board, Recently Done and `priority-list.md` re-synced with master.
