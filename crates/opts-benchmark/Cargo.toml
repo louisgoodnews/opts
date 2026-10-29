@@ -28,6 +28,11 @@ name = "parsers"
 harness = false
 
 [[bench]]
+# M-0028: Criterion benchmarks of the global.cfg and model.cfg parsers (synthetic).
+name = "configs"
+harness = false
+
+[[bench]]
 # M-0028: Criterion benchmark of the .o3d mesh parser (plain version-1 layout, synthetic).
 name = "meshes"
 harness = false
