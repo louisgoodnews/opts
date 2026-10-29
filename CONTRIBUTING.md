@@ -119,6 +119,25 @@ scripts/agent-worktree.sh <topic> [base-branch]   # creates ../opts-wt-<topic> o
 
 Background: on 2026-10-11 two sessions shared one working tree, and one of them committed the other's unfinished hunks, which did not compile (`7f24124`). See the [critical review 2026-10-11](docs/src/meta/critical-review-2026-10-11.md) (F-001) and [M-0052](docs/src/roadmap/phase-5/M-0052.md).
 
+### 📥 Intake: Every Piece of Work Starts at a Milestone
+
+Nothing is implemented before it has a place on the roadmap. This holds for people and for agents, for a feature request, a field-report item and a defect an agent finds on the way.
+
+1. **Write it down as a numbered item.** A request from the project lead or a tester becomes a row in the current field report (`docs/src/quality/`, `R-nn`); a GitHub issue keeps its number; a defect found during other work is a task in the milestone it was found in. A rough idea is not an item until it is written with what is wanted and how it will be checked.
+2. **Give it a milestone.** Either it is a task (or an addendum) of an existing milestone file, or it gets a new milestone: the file under `docs/src/roadmap/phase-N/`, a line in that phase's README, a checklist entry in `ROADMAP.md` (then `python3 scripts/gen_roadmap_copy.py`), and a board entry. `scripts/roadmap_audit.py --check` fails when a field-report row names no milestone (`F01`) or a milestone is missing from its phase page or `ROADMAP.md`.
+3. **Put it on the board** (`docs/dev/BOARD.md`) in the same change, and move it to *In Progress* when work starts (the [board rules](docs/dev/BOARD.md)).
+4. **Name it in the commit.** A commit that changes behaviour, a format, a spec or the roadmap names its milestone (`M-0123`) in the subject or the body; a fix for a field-report row may name the row (`R-26`) as well. Exempt are formatting-only commits (`style:`), merge commits and commits that only update the board. An agent task that comes from a `P-nnnn` prompt names the milestone the prompt works on.
+5. **No milestone, no start.** An agent that is asked for something that fits no milestone first writes the item and the milestone (steps 1 and 2) and says so; it does not implement first and file afterwards. The only exception is a defect that stops the current work: fix it, then file it in the same branch.
+
+To see how well this holds, count the commits that name a milestone:
+
+```sh
+git log --no-merges --since=<date> --format=%s | grep -cE 'M-[0-9]{4}'    # named
+git log --no-merges --since=<date> --format=%s | wc -l                     # all
+```
+
+On 2026-10-18 only 19 of the last 200 non-merge commits on `master` named a milestone ([drift audit](docs/dev/roadmap-audit-2026-10-18.md)); on 2026-10-29 it is 107 of 200. The remaining ones are mostly formatting, board bookkeeping and fixes of reported defects.
+
 ### 🔭 Roadmap Review
 
 The dev agent periodically runs a roadmap review (see [`docs/dev/prompts/process/P-1010-roadmap-review.md`](docs/dev/prompts/process/P-1010-roadmap-review.md)) that reconciles the roadmap with the project's current state and suggests new features or improvements. It runs after each phase closes, after every 10 merged milestones, or on request. Suggestions are proposed via checkpoint for maintainer approval before being added to the roadmap, so the roadmap stays a living document.
