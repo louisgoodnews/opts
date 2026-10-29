@@ -249,7 +249,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟡 **State-chain research on the twin corpus; record negatives in o3d.md** (M-0038, research) — F-001. Done 2026-10-16 (`c3d10946`, [report](../src/meta/scramble-chain-2026-10-16.md), o3d.md Addendum 14).
 
 #### M-0028 — Performance Benchmark Suite (Criterion)
-- [~] 🟡 **Criterion benches of the text parsers and the vehicle physics step, with a recorded baseline** (M-0028, test) — [M-0028](../src/roadmap/phase-5/M-0028.md); done 2026-10-29 on `agent/criterion-bench` (`opts-benchmark/benches/parsers.rs` and `physics.rs`, synthetic input, no OMSI asset); `.o3d` plain v1 mesh bench done 2026-10-29 on `agent/bench-mesh`; open: newer and keyed mesh versions and `.x`, the map parsers beyond the tile, and a regression-compare script (no CI gate: shared runners are too noisy).
+- [~] 🟡 **Criterion benches of the text parsers and the vehicle physics step, with a recorded baseline** (M-0028, test) — [M-0028](../src/roadmap/phase-5/M-0028.md); done 2026-10-29 on `agent/criterion-bench` (`opts-benchmark/benches/parsers.rs` and `physics.rs`, synthetic input, no OMSI asset); `.o3d` plain v1 mesh bench done 2026-10-29 on `agent/bench-mesh`; `global.cfg` and `model.cfg` benches done 2026-10-29 on `agent/bench-configs`; open: splines, newer and keyed mesh versions and `.x`, and a regression-compare script (no CI gate: shared runners are too noisy).
 
 #### M-0040 — Code-Quality Debt
 - [x] 🟠 **Fail CI on new size violations (baseline file)** (M-0040, chore) — critical review F-005. The M-0125/M-0147 ratchets (`structure_audit.py check` and `omsi_uses.py --check`) run in `local-ci.sh`, `scripts/pre-commit`, and `.github/workflows/ci.yml` (`docs-links` job, 2026-10-28).
@@ -615,3 +615,4 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0080 first slice (`agent/tile-controls`): `estimate_load_all` in `opts-hardware` for the wizard's load-all estimate and the memory guard; the UI is next.
 - `2026-10-29` — M-0080: plan for the three open UI items written into the milestone (`agent/tile-controls`).
 - `2026-10-29` — M-0080 done (`agent/tile-controls`): Review-step *Load the whole map* switch with the estimate, the memory warning, and "Automatic (currently N)" for the tile radius.
+- `2026-10-29` — M-0028: Criterion benches of `global.cfg` and `model.cfg` (`agent/bench-configs`).
