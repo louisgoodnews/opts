@@ -18,6 +18,38 @@ struct SubmeshBuilder<'a> {
 }
 
 impl<'a> SubmeshBuilder<'a> {
+    /// The mesh of one material from the collected vertices: the file's normals with a winding
+    /// check, or smooth normals recomputed; skinning weights are attached when the model has them.
+    fn finish_submesh(
+        &self,
+        positions: Vec<[f32; 3]>,
+        normals: Vec<[f32; 3]>,
+        uvs: Vec<[f32; 2]>,
+        mut indices: Vec<u32>,
+        (joint_idx, joint_w): (Vec<[u16; 4]>, Vec<[f32; 4]>),
+    ) -> Mesh {
+        if self.recompute {
+            let mut mesh = smooth_normal_mesh(positions, uvs, indices);
+            if self.skin.is_some() {
+                insert_joints(&mut mesh, joint_idx, joint_w);
+            }
+            return mesh;
+        }
+        align_winding(&positions, &normals, &mut indices);
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+        if self.skin.is_some() {
+            insert_joints(&mut mesh, joint_idx, joint_w);
+        }
+        mesh.insert_indices(Indices::U32(indices));
+        mesh
+    }
+
     fn build_submesh(&self, slot: usize, tris: &[[u32; 3]]) -> Option<Mesh> {
         let mut joint_idx: Vec<[u16; 4]> = Vec::new();
         let mut joint_w: Vec<[f32; 4]> = Vec::new();
@@ -75,36 +107,17 @@ impl<'a> SubmeshBuilder<'a> {
             return None;
         }
 
-        if !self.recompute {
-            align_winding(&positions, &normals, &mut indices);
-            let mut mesh = Mesh::new(
-                PrimitiveTopology::TriangleList,
-                RenderAssetUsages::default(),
-            );
-            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-            if self.skin.is_some() {
-                mesh.insert_attribute(
-                    Mesh::ATTRIBUTE_JOINT_INDEX,
-                    bevy::mesh::VertexAttributeValues::Uint16x4(joint_idx),
-                );
-                mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_w);
-            }
-            mesh.insert_indices(Indices::U32(indices));
-            Some(mesh)
-        } else {
-            let mut mesh = smooth_normal_mesh(positions, uvs, indices);
-            if self.skin.is_some() {
-                mesh.insert_attribute(
-                    Mesh::ATTRIBUTE_JOINT_INDEX,
-                    bevy::mesh::VertexAttributeValues::Uint16x4(joint_idx),
-                );
-                mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_w);
-            }
-            Some(mesh)
-        }
+        Some(self.finish_submesh(positions, normals, uvs, indices, (joint_idx, joint_w)))
     }
+}
+
+/// Attaches the joint indices and weights of a skinned model.
+fn insert_joints(mesh: &mut Mesh, idx: Vec<[u16; 4]>, weights: Vec<[f32; 4]>) {
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_JOINT_INDEX,
+        bevy::mesh::VertexAttributeValues::Uint16x4(idx),
+    );
+    mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, weights);
 }
 
 fn align_winding(positions: &[[f32; 3]], normals: &[[f32; 3]], indices: &mut [u32]) {
