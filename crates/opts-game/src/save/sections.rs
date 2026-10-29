@@ -10,6 +10,7 @@
 //! | `active_vehicle` | which vehicle the driver is in | when all vehicles exist |
 //! | `camera` | mode, sub-camera, free camera pose, orbit and look offsets | when all vehicles exist |
 //! | `counters` | driven distance, session duration and top speed | when all vehicles exist |
+//! | `passenger_load` | the test count of people the vehicle's dynamics carry, if one is set | when all vehicles exist |
 //! | `simulation` | paused, time scale | last |
 
 use std::path::Path;
@@ -375,32 +376,6 @@ pub fn register(app: &mut App) {
         apply: Some(active_apply),
         about: "which vehicle the driver is in",
         ..base
-    })
-    .register_save_section(SaveSection {
-        id: "camera",
-        stage: Stage::Settled,
-        order: 10,
-        capture: runtime::camera_capture,
-        apply: Some(runtime::camera_apply),
-        about: "camera mode, sub-camera, free camera pose, orbit and look offsets",
-        ..base
-    })
-    .register_save_section(SaveSection {
-        id: "counters",
-        stage: Stage::Settled,
-        order: 20,
-        capture: runtime::counters_capture,
-        apply: Some(runtime::counters_apply),
-        about: "driven distance, session duration, top speed",
-        ..base
-    })
-    .register_save_section(SaveSection {
-        id: "simulation",
-        stage: Stage::Settled,
-        order: 100,
-        capture: runtime::simulation_capture,
-        apply: Some(runtime::simulation_apply),
-        about: "paused state and time scale",
-        ..base
     });
+    runtime::register(app, base);
 }

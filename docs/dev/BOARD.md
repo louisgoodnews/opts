@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-29 by Agent (status sync: the 2026-10-28 fixes and Phase 15 batches M-0147–M-0149 recorded; M-0150 first batch)_
+_Last updated: 2026-10-29 by Agent (M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -310,8 +310,8 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### M-0120–M-0124 — Phase 12: Visual Fidelity & Advanced Physics (proposed 2026-10-18, approved 2026-10-20)
 - [ ] 🟡 **Audit what renders today for overlays and light maps on MAN NG272 (screenshots at day and night)** (M-0120) — [Material Overlays and Light Maps](../src/roadmap/phase-12/M-0120.md)
 - [ ] 🟡 **Count `[moisture]` and `[puddles]` over the installed textures and parse them per texture** (M-0121) — [Wetness and Snow on Vehicles and Scenery](../src/roadmap/phase-12/M-0121.md)
-- [~] 🟡 **Specify the passenger-count source and the dynamic-mass input of the M-0073 mass model** (M-0124) — [Passenger Load Physics](../src/roadmap/phase-12/M-0124.md) — first slice 2026-10-24: passengers' mass moved by the player's vehicle, `gameplay.passenger_weight` / `passenger_mass_kg`, `vehicle.passengers mass_count` override, axle loads and ride height (`0be322cb`, `3b5a9adc`, `e2714c7d`); open: a save field of its own.
-- [ ] 🟡 **Passenger load: a save field of its own** (M-0124)
+- [~] 🟡 **Specify the passenger-count source and the dynamic-mass input of the M-0073 mass model** (M-0124) — [Passenger Load Physics](../src/roadmap/phase-12/M-0124.md) — first slice 2026-10-24: passengers' mass moved by the player's vehicle, `gameplay.passenger_weight` / `passenger_mass_kg`, `vehicle.passengers mass_count` override, axle loads and ride height (`0be322cb`, `3b5a9adc`, `e2714c7d`); save field done 2026-10-29; open: corpus audit, per-unit load for consists, debug-panel source display, setting-Off test.
+- [x] 🟡 **Passenger load: a save field of its own** (M-0124) — done 2026-10-29 on `agent/pax-mass-save`: save section `passenger_load` for the `vehicle.passengers mass_count` override; a drive starts without an override, so old saves restore with the real passengers
 - [ ] 🟡 **Resolve the ❓ in M-0123: tank content unit, state-of-charge variable, who raises `veh_tank`** (M-0123) — [Fuel and Battery State](../src/roadmap/phase-12/M-0123.md)
 - [ ] 🟡 **Decide the anti-aliasing path (MSAA vs SMAA vs TAA) against M-0059 foliage coverage** (M-0122) — [Graphics Overhaul](../src/roadmap/phase-12/M-0122.md)
 
@@ -593,3 +593,4 @@ The agent should check these during P-001 audits:
 - `2026-10-28` — Mirrors (M-0085), seated passengers (M-0101), hot-spot child meshes (M-0141) and bellows under an `animparent` (M-0053) fixed and merged.
 - `2026-10-28` — Phase 15: M-0147 (ratchet gates, with `cargo-deny` for M-0042), M-0148 (inline-test extraction) and M-0149 (file splits) done.
 - `2026-10-29` — M-0150 first batch: work left uncommitted in the main checkout was moved to `agent/m0150-functions`, checked and merged; functions over 80 lines 249 → 172, signature allows 145 → 112. Board, Recently Done and `priority-list.md` re-synced with master.
+- `2026-10-29` — M-0124 save field done (`agent/pax-mass-save`): `passenger_load` save section for the passenger-count override; a drive starts without an override.
