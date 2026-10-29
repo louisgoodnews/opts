@@ -3,7 +3,7 @@
 
 use super::*;
 
-/// The descriptors; registered by [`super::builtin::all`].
+/// The descriptors; registered by [`builtin::all`](crate::settings_registry::builtin::all).
 #[must_use]
 pub fn descriptors() -> Vec<D> {
     [quality(), light_cones(), mirrors_glass_bloom(), governor()].concat()
