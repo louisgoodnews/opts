@@ -82,6 +82,7 @@ A write: (1) full text to `.tmp`, `fsync`; (2) old main file to `.bak`; (3) `.tm
 | `active_vehicle` | which vehicle the driver is in | `Vehicles` stage: `ops::switch_to`, before any state is applied (activating a vehicle parks the previous one) |
 | `camera` | mode, previous mode, sub-camera, free camera pose (absolute), orbit and look offsets | `Settled` (falls back to the free camera when the saved mode is not offered) |
 | `counters` | odometer, session duration, distance, top speed | `Settled`; the odometer continues across the activation restart (`RemoteControls::pending_odometer`) |
+| `passenger_load` (v1) | the test count of people the vehicle's dynamics carry (`vehicle.passengers` with `mass_count`, 0 to 400), only when one is set; without it the section is left out and the real passengers count | `Settled` (`apply` puts the count back; a drive starts without any, so a save without the section restores with the real passengers) |
 | `simulation` | paused, time scale | `Settled`, last. The pause overlay's own pause is not counted as the player's pause |
 
 A record of a train (M-0106) also carries `formation` (the `TrainFormation`: cars, orientations, `powered` overrides, template): the spawner rebuilds the whole train from it, the first car is the vehicle whose state is restored. The field is optional (`serde(default)`), so saves without it and without trains load unchanged and the section version stays 2.
@@ -92,7 +93,7 @@ Version history: `session_vehicles` v1 held the registry only; v2 adds `saved_st
 
 * **AI traffic, parked cars, pedestrians and trams** are not saved. They are re-seeded from the restored map and clock (they start anew at the saved place and time, so the cars around the player differ from before the save).
 * **Trailer and articulation internals** are not saved: the trailer chain re-seeds behind the restored towing vehicle.
-* **Audio, passengers, timetable progress, announcements** do not exist yet.
+* **Audio, passengers, timetable progress, announcements** are not saved. The people on board are not (the vehicle is rebuilt with an empty cabin), only the test count of the dynamics (`passenger_load`).
 * **Script state beyond variables** (a script's internal random generator, the elapsed-time counter) restarts; scripts that keep their state in variables (all of the OMSI scripts examined so far) continue.
 * **Held keys and remote controls** are released.
 

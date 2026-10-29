@@ -22,6 +22,12 @@ pub const DEFAULT_MASS_KG: f32 = 75.0;
 #[derive(Resource, Debug, Clone, Copy, Default)]
 pub struct PassengerCountOverride(pub Option<usize>);
 
+/// Starts a drive without a test count: the override belongs to the session that set it, and a
+/// saved one comes back with the `passenger_load` save section.
+pub fn clear_override(mut forced: ResMut<PassengerCountOverride>) {
+    forced.0 = None;
+}
+
 /// Writes the passengers' mass into the player's vehicle simulation.
 pub fn apply_passenger_mass(
     settings: Option<Res<GameSettings>>,
@@ -52,3 +58,6 @@ pub fn apply_passenger_mass(
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

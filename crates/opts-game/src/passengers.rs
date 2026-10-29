@@ -64,6 +64,10 @@ impl Plugin for PassengersPlugin {
                 .chain()
                 .run_if(in_state(crate::app_state::AppState::InGame)),
         )
+        .add_systems(
+            OnEnter(crate::app_state::AppState::InGame),
+            weight::clear_override,
+        )
         .init_resource::<StopCrowds>()
         .init_resource::<weight::PassengerCountOverride>();
     }

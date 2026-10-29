@@ -7,7 +7,9 @@ use opts_bevy::{CameraAvailability, CameraMode, CameraState};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use super::registry::{SaveAppExt, SaveSection, Stage};
 use super::sections::{parse, to_value};
+use crate::passengers::PassengerCountOverride;
 use crate::pause::{Pause, SessionStats};
 use crate::session_vehicles::ops;
 
@@ -193,3 +195,77 @@ pub(super) fn simulation_apply(world: &mut World, data: &Value) -> Result<(), St
     }
     Ok(())
 }
+
+// ---- passenger load --------------------------------------------------------------------------
+
+/// Data of the `passenger_load` section (M-0124).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PassengerLoadData {
+    /// People the player's vehicle carries for its dynamics instead of the real ones
+    /// (`vehicle.passengers` with `mass_count`).
+    pub count_override: usize,
+}
+
+/// The most people the override takes, as `vehicle.passengers` limits it.
+const MAX_OVERRIDE: usize = 400;
+
+pub(super) fn passenger_load_capture(world: &mut World) -> Result<Option<Value>, String> {
+    let forced = world
+        .get_resource::<PassengerCountOverride>()
+        .and_then(|o| o.0);
+    // Without an override the real passengers count, and they are not saved: leave the section out.
+    forced.map_or(Ok(None), |count_override| {
+        to_value(&PassengerLoadData { count_override })
+    })
+}
+
+pub(super) fn passenger_load_apply(world: &mut World, data: &Value) -> Result<(), String> {
+    let d: PassengerLoadData = parse(data, "passenger_load")?;
+    world.insert_resource(PassengerCountOverride(Some(
+        d.count_override.min(MAX_OVERRIDE),
+    )));
+    Ok(())
+}
+
+/// Registers the sections of this file; `base` is the defaults every section starts from.
+pub(super) fn register(app: &mut App, base: SaveSection) {
+    app.register_save_section(SaveSection {
+        id: "camera",
+        stage: Stage::Settled,
+        order: 10,
+        capture: camera_capture,
+        apply: Some(camera_apply),
+        about: "camera mode, sub-camera, free camera pose, orbit and look offsets",
+        ..base
+    })
+    .register_save_section(SaveSection {
+        id: "counters",
+        stage: Stage::Settled,
+        order: 20,
+        capture: counters_capture,
+        apply: Some(counters_apply),
+        about: "driven distance, session duration, top speed",
+        ..base
+    })
+    .register_save_section(SaveSection {
+        id: "passenger_load",
+        stage: Stage::Settled,
+        order: 30,
+        capture: passenger_load_capture,
+        apply: Some(passenger_load_apply),
+        about: "the passenger count the vehicle's dynamics carry instead of the real ones",
+        ..base
+    })
+    .register_save_section(SaveSection {
+        id: "simulation",
+        stage: Stage::Settled,
+        order: 100,
+        capture: simulation_capture,
+        apply: Some(simulation_apply),
+        about: "paused state and time scale",
+        ..base
+    });
+}
+
+#[cfg(test)]
+mod tests;
