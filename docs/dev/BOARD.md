@@ -621,3 +621,4 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0150 fifth slice (`agent/fn-ratchet-5`): four UI builders (help controls, mouse-driving cue, vehicle controls list, home screen) split; 155 functions over 80 lines.
 - `2026-10-29` — M-0150 sixth slice (`agent/fn-ratchet-6`): route path, script textures and door overlay systems split; 152 functions over 80 lines.
 - `2026-10-29` — M-0150 seventh slice (`agent/fn-ratchet-7`): light cone pool, capture worker and by-material submesh builder split; 149 functions over 80 lines.
+- `2026-10-29` — Priority list synced: M-0080 done, M-0150 counts (`agent/prio-sync`).
