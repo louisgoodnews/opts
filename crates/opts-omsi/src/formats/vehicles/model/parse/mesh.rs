@@ -85,32 +85,14 @@ pub(super) fn handle_material_block(
     Ok(())
 }
 
-fn apply_material_modifier(
-    mat: &mut ModelMaterial,
-    block: &OmsiBlock,
-) -> Result<(), ModelParseError> {
+fn apply_map_modifier(mat: &mut ModelMaterial, block: &OmsiBlock) -> Result<bool, ModelParseError> {
     match block.keyword.as_str() {
-        "matl_alpha" => {
-            let params = require_params(block, 1)?;
-            mat.alpha_mode = Some(parse_number::<u32>(&params[0], block.line_number)?);
-        }
-        "matl_change" => {
-            let params = require_params(block, 2)?;
-            let idx = parse_number::<u32>(&params[1], block.line_number)?;
-            mat.texture_changes.push(TextureChange {
-                texture: params[0].clone(),
-                index: idx,
-                variable: params.get(2).cloned().unwrap_or_default(),
-            });
-        }
         "matl_nightmap" => {
             if let Some(texture) = block.parameters.first() {
                 mat.night_map = Some(texture.clone());
             }
         }
         "matl_lightmap" => {
-            // The variable is optional in the wild (e.g. Citybus 530); without one the lightmap
-            // has no switch. If parameters are empty, ignore gracefully.
             if let Some(texture) = block.parameters.first() {
                 mat.light_map = Some(LightMap {
                     texture: texture.clone(),
@@ -159,6 +141,32 @@ fn apply_material_modifier(
             mat.free_tex = Some(FreeTex {
                 texture: params[0].clone(),
                 variable: params[1].clone(),
+            });
+        }
+        _ => return Ok(false),
+    }
+    Ok(true)
+}
+
+fn apply_material_modifier(
+    mat: &mut ModelMaterial,
+    block: &OmsiBlock,
+) -> Result<(), ModelParseError> {
+    if apply_map_modifier(mat, block)? {
+        return Ok(());
+    }
+    match block.keyword.as_str() {
+        "matl_alpha" => {
+            let params = require_params(block, 1)?;
+            mat.alpha_mode = Some(parse_number::<u32>(&params[0], block.line_number)?);
+        }
+        "matl_change" => {
+            let params = require_params(block, 2)?;
+            let idx = parse_number::<u32>(&params[1], block.line_number)?;
+            mat.texture_changes.push(TextureChange {
+                texture: params[0].clone(),
+                index: idx,
+                variable: params.get(2).cloned().unwrap_or_default(),
             });
         }
         "matl_nozwrite" => mat.no_z_write = true,

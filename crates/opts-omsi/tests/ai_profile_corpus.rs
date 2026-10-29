@@ -36,6 +36,57 @@ fn find(base: &Path, rel: &str) -> Option<PathBuf> {
     Some(cur)
 }
 
+#[derive(Default)]
+struct ProfileStats {
+    total: usize,
+    missing: usize,
+    broken: usize,
+    fallbacks: BTreeMap<&'static str, usize>,
+    rail: usize,
+    air: usize,
+    notes: usize,
+    chains: usize,
+    kinds: BTreeMap<String, usize>,
+}
+
+impl ProfileStats {
+    fn process_vehicle(&mut self, root: &Path, vehicle: &str) {
+        let Some(path) = find(root, vehicle) else {
+            self.missing += 1;
+            return;
+        };
+        let Ok(manifest) = std::fs::read(&path).map(|b| BusManifest::parse_bytes(&b)) else {
+            self.broken += 1;
+            return;
+        };
+        let Ok(manifest) = manifest else {
+            self.broken += 1;
+            return;
+        };
+        let dir = path.parent().unwrap_or(root).to_path_buf();
+        let consts: Vec<ConstFile> = manifest
+            .constfiles
+            .iter()
+            .filter_map(|c| find(&dir, c))
+            .filter_map(|p| std::fs::read(p).ok())
+            .map(|b| ConstFile::parse(&b))
+            .collect();
+        let p = AiProfile::from_manifest(&manifest, &consts);
+        self.total += 1;
+        for f in &p.fallbacks {
+            *self.fallbacks.entry(f).or_default() += 1;
+        }
+        self.rail += usize::from(p.domain == VehicleDomain::Rail);
+        self.air += usize::from(p.domain == VehicleDomain::Air);
+        self.notes += p.notes.len();
+        self.chains += usize::from(p.couple_back.is_some());
+        *self
+            .kinds
+            .entry(p.kind.map_or("none".into(), |k: AiKind| format!("{k:?}")))
+            .or_default() += 1;
+    }
+}
+
 #[test]
 fn every_ai_group_vehicle_yields_a_profile() {
     let Some(root) = std::env::var_os("OMSI_PATH").map(PathBuf::from) else {
@@ -43,11 +94,7 @@ fn every_ai_group_vehicle_yields_a_profile() {
         return;
     };
     let mut seen = BTreeSet::new();
-    let (mut missing, mut broken) = (0, 0);
-    let mut fallbacks: BTreeMap<&str, usize> = BTreeMap::new();
-    let (mut rail, mut air, mut notes, mut chains) = (0, 0, 0, 0);
-    let mut kinds: BTreeMap<String, usize> = BTreeMap::new();
-    let mut total = 0;
+    let mut stats = ProfileStats::default();
     for map in std::fs::read_dir(root.join("maps"))
         .into_iter()
         .flatten()
@@ -58,7 +105,6 @@ fn every_ai_group_vehicle_yields_a_profile() {
         };
         for group in AiLists::parse(&bytes).groups {
             for entry in group.entries {
-                // Train consists (`.zug`) are not road vehicles; the spawner skips them as well.
                 let lower = entry.vehicle.to_lowercase();
                 if !(lower.ends_with(".bus") || lower.ends_with(".ovh")) {
                     continue;
@@ -66,45 +112,22 @@ fn every_ai_group_vehicle_yields_a_profile() {
                 if !seen.insert(entry.vehicle.to_lowercase()) {
                     continue;
                 }
-                let Some(path) = find(&root, &entry.vehicle) else {
-                    missing += 1;
-                    continue;
-                };
-                let Ok(manifest) = std::fs::read(&path).map(|b| BusManifest::parse_bytes(&b))
-                else {
-                    broken += 1;
-                    continue;
-                };
-                let Ok(manifest) = manifest else {
-                    broken += 1;
-                    continue;
-                };
-                let dir = path.parent().unwrap_or(&root).to_path_buf();
-                let consts: Vec<ConstFile> = manifest
-                    .constfiles
-                    .iter()
-                    .filter_map(|c| find(&dir, c))
-                    .filter_map(|p| std::fs::read(p).ok())
-                    .map(|b| ConstFile::parse(&b))
-                    .collect();
-                let p = AiProfile::from_manifest(&manifest, &consts);
-                total += 1;
-                for f in &p.fallbacks {
-                    *fallbacks.entry(f).or_default() += 1;
-                }
-                rail += usize::from(p.domain == VehicleDomain::Rail);
-                air += usize::from(p.domain == VehicleDomain::Air);
-                notes += p.notes.len();
-                chains += usize::from(p.couple_back.is_some());
-                *kinds
-                    .entry(p.kind.map_or("none".into(), |k: AiKind| format!("{k:?}")))
-                    .or_default() += 1;
+                stats.process_vehicle(&root, &entry.vehicle);
             }
         }
     }
+    let total = stats.total;
+    let broken = stats.broken;
     eprintln!(
-        "{total} vehicles, {missing} files missing, {broken} unparsable; fallbacks {fallbacks:?}; \
-         rail {rail}, air {air}, notes {notes}, with trailer {chains}; kinds {kinds:?}"
+        "{total} vehicles, {} files missing, {broken} unparsable; fallbacks {:?}; \
+         rail {}, air {}, notes {}, with trailer {}; kinds {:?}",
+        stats.missing,
+        stats.fallbacks,
+        stats.rail,
+        stats.air,
+        stats.notes,
+        stats.chains,
+        stats.kinds
     );
     assert!(
         total > 300,
@@ -114,16 +137,27 @@ fn every_ai_group_vehicle_yields_a_profile() {
         broken * 100 < total,
         "{broken} of {total} vehicle files do not parse"
     );
-    let share = |f: &str| fallbacks.get(f).copied().unwrap_or(0) * 100 / total;
-    // The mapping can run on defaults for a field only when few vehicles lack it (measured on
-    // 426 vehicles: mass 6, brake 33, drive 60, top speed 109, wheel radius 0).
-    assert!(share("mass") <= 2, "mass fallbacks: {fallbacks:?}");
+    let share = |f: &str| stats.fallbacks.get(f).copied().unwrap_or(0) * 100 / total;
+    assert!(share("mass") <= 2, "mass fallbacks: {:?}", stats.fallbacks);
     assert!(
         share("top_speed") <= 30,
-        "top speed fallbacks: {fallbacks:?}"
+        "top speed fallbacks: {:?}",
+        stats.fallbacks
     );
-    assert!(share("gas_max") <= 15, "drive fallbacks: {fallbacks:?}");
-    assert!(share("brake_max") <= 10, "brake fallbacks: {fallbacks:?}");
-    assert!(share("wheel_radius") <= 5, "wheel fallbacks: {fallbacks:?}");
-    assert!(chains > 0, "trailers are declared in the AI groups");
+    assert!(
+        share("gas_max") <= 15,
+        "drive fallbacks: {:?}",
+        stats.fallbacks
+    );
+    assert!(
+        share("brake_max") <= 10,
+        "brake fallbacks: {:?}",
+        stats.fallbacks
+    );
+    assert!(
+        share("wheel_radius") <= 5,
+        "wheel fallbacks: {:?}",
+        stats.fallbacks
+    );
+    assert!(stats.chains > 0, "trailers are declared in the AI groups");
 }

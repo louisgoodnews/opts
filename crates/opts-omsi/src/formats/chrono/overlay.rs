@@ -96,6 +96,89 @@ fn keyword(line: &str) -> Option<String> {
         .then(|| t[1..t.len() - 1].to_ascii_lowercase())
 }
 
+fn scan_overlay_blocks<'a>(lines: &'a [&'a str]) -> Vec<(String, usize, &'a [&'a str])> {
+    let mut blocks = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        if let Some(kw) = keyword(lines[i]) {
+            let start = i + 1;
+            let mut j = start;
+            while j < lines.len() && keyword(lines[j]).is_none() {
+                j += 1;
+            }
+            blocks.push((kw, i + 1, &lines[start..j]));
+            i = j;
+        } else {
+            i += 1;
+        }
+    }
+    blocks
+}
+
+fn flush_added_elements(added: &mut String, out: &mut TileOverlay) {
+    if added.is_empty() {
+        return;
+    }
+    let version = out.version.unwrap_or(14);
+    match MapTile::from_text(&format!("[version]\n{version}\n\n{added}")) {
+        Ok(t) => out.ops.push(OverlayOp::Add(t)),
+        Err(e) => out.warnings.push(format!("added records skipped: {e}")),
+    }
+    added.clear();
+}
+
+fn parse_rule_op(kw: &str, line: usize, values: &[&str], out: &mut TileOverlay) {
+    let path_index = values.first().and_then(|v| v.parse::<usize>().ok());
+    let rule_type = values.get(1).map(|v| (*v).to_string());
+    match (path_index, rule_type) {
+        (Some(path_index), Some(rule_type)) if kw == "kill_rule" => {
+            out.ops.push(OverlayOp::KillRule {
+                path_index,
+                rule_type,
+            });
+        }
+        (Some(path_index), Some(rule_type)) => {
+            let value = values.get(2).and_then(|v| parse_float(v).ok());
+            let flag = values
+                .get(3)
+                .and_then(|v| v.parse::<u32>().ok())
+                .unwrap_or(0);
+            match value {
+                Some(value) => out.ops.push(OverlayOp::Rule(RuleEdit {
+                    path_index,
+                    rule_type,
+                    value,
+                    flag,
+                })),
+                None => out
+                    .warnings
+                    .push(format!("line {line}: [rule] without a value")),
+            }
+        }
+        _ => out.warnings.push(format!("line {line}: [{kw}] damaged")),
+    }
+}
+
+fn parse_relabel_op(line: usize, body: &[&str], out: &mut TileOverlay) {
+    let mut rest = body.iter().skip_while(|l| l.trim().is_empty());
+    let n = rest.next().and_then(|l| l.trim().parse::<usize>().ok());
+    match n {
+        Some(n) => {
+            let strings: Vec<String> = rest.take(n).map(|l| l.trim().to_string()).collect();
+            if strings.len() < n {
+                out.warnings.push(format!(
+                    "line {line}: [relabel] has {} of {n} lines",
+                    strings.len()
+                ));
+            }
+            out.ops.push(OverlayOp::Relabel(strings));
+        }
+        None => out
+            .warnings
+            .push(format!("line {line}: [relabel] without a count")),
+    }
+}
+
 impl TileOverlay {
     /// Parses an overlay tile from its bytes (UTF-16 or 8-bit, like base tiles).
     #[must_use]
@@ -108,36 +191,10 @@ impl TileOverlay {
     #[must_use]
     pub fn from_text(text: &str) -> Self {
         let lines: Vec<&str> = text.lines().map(|l| l.trim_end_matches('\r')).collect();
-        // Blocks: (keyword, line number, body lines up to the next keyword).
-        let mut blocks: Vec<(String, usize, &[&str])> = Vec::new();
-        let mut i = 0;
-        while i < lines.len() {
-            if let Some(kw) = keyword(lines[i]) {
-                let start = i + 1;
-                let mut j = start;
-                while j < lines.len() && keyword(lines[j]).is_none() {
-                    j += 1;
-                }
-                blocks.push((kw, i + 1, &lines[start..j]));
-                i = j;
-            } else {
-                i += 1;
-            }
-        }
+        let blocks = scan_overlay_blocks(&lines);
         let mut out = Self::default();
         let mut added = String::new();
         let mut selected = false;
-        let flush = |added: &mut String, out: &mut TileOverlay| {
-            if added.is_empty() {
-                return;
-            }
-            let version = out.version.unwrap_or(14);
-            match MapTile::from_text(&format!("[version]\n{version}\n\n{added}")) {
-                Ok(t) => out.ops.push(OverlayOp::Add(t)),
-                Err(e) => out.warnings.push(format!("added records skipped: {e}")),
-            }
-            added.clear();
-        };
         for (kw, line, body) in blocks {
             let values: Vec<&str> = body
                 .iter()
@@ -152,79 +209,32 @@ impl TileOverlay {
                     }
                 }
                 "selobject" | "selspline" => {
-                    flush(&mut added, &mut out);
+                    flush_added_elements(&mut added, &mut out);
                     match first.parse::<u64>() {
                         Ok(id) if kw == "selobject" => out.ops.push(OverlayOp::SelectObject(id)),
                         Ok(id) => out.ops.push(OverlayOp::SelectSpline(id)),
                         Err(_) => {
                             out.warnings
                                 .push(format!("line {line}: [{kw}] without an ID"));
-                            // Edits that follow have no element.
                             out.ops.push(OverlayOp::SelectObject(0));
                         }
                     }
                     selected = true;
                 }
                 "rule" | "kill_rule" if selected => {
-                    flush(&mut added, &mut out);
-                    let path_index = values.first().and_then(|v| v.parse::<usize>().ok());
-                    let rule_type = values.get(1).map(|v| (*v).to_string());
-                    match (path_index, rule_type) {
-                        (Some(path_index), Some(rule_type)) if kw == "kill_rule" => {
-                            out.ops.push(OverlayOp::KillRule {
-                                path_index,
-                                rule_type,
-                            });
-                        }
-                        (Some(path_index), Some(rule_type)) => {
-                            let value = values.get(2).and_then(|v| parse_float(v).ok());
-                            let flag = values
-                                .get(3)
-                                .and_then(|v| v.parse::<u32>().ok())
-                                .unwrap_or(0);
-                            match value {
-                                Some(value) => out.ops.push(OverlayOp::Rule(RuleEdit {
-                                    path_index,
-                                    rule_type,
-                                    value,
-                                    flag,
-                                })),
-                                None => out
-                                    .warnings
-                                    .push(format!("line {line}: [rule] without a value")),
-                            }
-                        }
-                        _ => out.warnings.push(format!("line {line}: [{kw}] damaged")),
-                    }
+                    flush_added_elements(&mut added, &mut out);
+                    parse_rule_op(&kw, line, &values, &mut out);
                 }
                 "relabel" | "typ" | "delete" | "kill_rule" if !selected => {
                     out.warnings
                         .push(format!("line {line}: [{kw}] without a selection: skipped"));
                 }
                 "relabel" => {
-                    flush(&mut added, &mut out);
-                    // `n`, then exactly `n` lines; blank lines are values.
-                    let mut rest = body.iter().skip_while(|l| l.trim().is_empty());
-                    let n = rest.next().and_then(|l| l.trim().parse::<usize>().ok());
-                    match n {
-                        Some(n) => {
-                            let strings: Vec<String> =
-                                rest.take(n).map(|l| l.trim().to_string()).collect();
-                            if strings.len() < n {
-                                out.warnings.push(format!(
-                                    "line {line}: [relabel] has {} of {n} lines",
-                                    strings.len()
-                                ));
-                            }
-                            out.ops.push(OverlayOp::Relabel(strings));
-                        }
-                        None => out
-                            .warnings
-                            .push(format!("line {line}: [relabel] without a count")),
-                    }
+                    flush_added_elements(&mut added, &mut out);
+                    parse_relabel_op(line, body, &mut out);
                 }
                 "typ" => {
-                    flush(&mut added, &mut out);
+                    flush_added_elements(&mut added, &mut out);
                     if first.is_empty() {
                         out.warnings
                             .push(format!("line {line}: [typ] without a file"));
@@ -233,7 +243,7 @@ impl TileOverlay {
                     }
                 }
                 "delete" => {
-                    flush(&mut added, &mut out);
+                    flush_added_elements(&mut added, &mut out);
                     out.ops.push(OverlayOp::Delete);
                 }
                 k if ADDED.contains(&k) => {
@@ -248,11 +258,10 @@ impl TileOverlay {
                         added.push('\n');
                     }
                 }
-                // Terrain/water markers, banners and unknown keywords: overlays never change them.
                 _ => {}
             }
         }
-        flush(&mut added, &mut out);
+        flush_added_elements(&mut added, &mut out);
         out
     }
 }

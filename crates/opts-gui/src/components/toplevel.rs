@@ -139,6 +139,64 @@ impl ToplevelBuilder {
     }
 }
 
+fn spawn_window_header(window_parent: &mut ChildSpawnerCommands, root: Entity, title: &str) {
+    window_parent
+        .spawn(Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::Center,
+            width: Val::Percent(100.0),
+            ..default()
+        })
+        .with_children(|header_parent| {
+            header_parent.spawn((
+                (
+                    Text::new(title.to_string()),
+                    TextFont {
+                        font_size: FontSize::Px(20.0),
+                        ..default()
+                    },
+                    TextColor::default(),
+                ),
+                ForegroundRole(ColorRole::OnSurface),
+                TypeStyleToken(TypeScale::TitleMedium),
+            ));
+
+            // Close Button
+            header_parent
+                .spawn((
+                    (
+                        Button,
+                        Node {
+                            width: Val::Px(32.0),
+                            height: Val::Px(32.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(Color::NONE),
+                    ),
+                    ToplevelCloseButton(root),
+                    RadiusToken(RadiusLevel::Full),
+                ))
+                .with_children(|close_parent| {
+                    close_parent.spawn((
+                        (
+                            Text::new("✕"),
+                            TextFont {
+                                font_size: FontSize::Px(16.0),
+                                ..default()
+                            },
+                            TextColor::default(),
+                        ),
+                        ForegroundRole(ColorRole::OnSurfaceVariant),
+                        TypeStyleToken(TypeScale::BodyMedium),
+                    ));
+                });
+        });
+}
+
 fn populate_toplevel_children(
     scrim_parent: &mut ChildSpawnerCommands,
     root: Entity,
@@ -163,62 +221,7 @@ fn populate_toplevel_children(
             ElevationToken(ElevationLevel::Level3),
         ))
         .with_children(|window_parent| {
-            // Header Bar (Title + Close Button)
-            window_parent
-                .spawn(Node {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    width: Val::Percent(100.0),
-                    ..default()
-                })
-                .with_children(|header_parent| {
-                    header_parent.spawn((
-                        (
-                            Text::new(title.to_string()),
-                            TextFont {
-                                font_size: FontSize::Px(20.0),
-                                ..default()
-                            },
-                            TextColor::default(),
-                        ),
-                        ForegroundRole(ColorRole::OnSurface),
-                        TypeStyleToken(TypeScale::TitleMedium),
-                    ));
-
-                    // Close Button
-                    header_parent
-                        .spawn((
-                            (
-                                Button,
-                                Node {
-                                    width: Val::Px(32.0),
-                                    height: Val::Px(32.0),
-                                    justify_content: JustifyContent::Center,
-                                    align_items: AlignItems::Center,
-                                    ..default()
-                                },
-                                BackgroundColor(Color::NONE),
-                            ),
-                            ToplevelCloseButton(root),
-                            RadiusToken(RadiusLevel::Full),
-                        ))
-                        .with_children(|close_parent| {
-                            close_parent.spawn((
-                                (
-                                    Text::new("✕"),
-                                    TextFont {
-                                        font_size: FontSize::Px(16.0),
-                                        ..default()
-                                    },
-                                    TextColor::default(),
-                                ),
-                                ForegroundRole(ColorRole::OnSurfaceVariant),
-                                TypeStyleToken(TypeScale::BodyMedium),
-                            ));
-                        });
-                });
+            spawn_window_header(window_parent, root, title);
 
             // Inner body container for custom contents
             window_parent.spawn((

@@ -161,15 +161,12 @@ impl ComboboxBuilder {
     }
 }
 
-fn populate_combobox_children(
+fn spawn_header(
     parent: &mut ChildSpawnerCommands,
     root: Entity,
     display_text: &str,
-    options: &[String],
     disabled: bool,
-    search: bool,
 ) {
-    // Header button
     let mut header = parent.spawn((
         (
             Button,
@@ -221,8 +218,87 @@ fn populate_combobox_children(
             crate::ui_tree::A11yHidden,
         ));
     });
+}
 
-    // Dropdown menu (initially hidden): [search field] + scrolling list [+ "no match" row].
+fn spawn_menu_items(list: &mut ChildSpawnerCommands, root: Entity, options: &[String]) {
+    for (i, opt) in options.iter().enumerate() {
+        list.spawn((
+            (
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(12.0), Val::Px(10.0)),
+                    width: Val::Percent(100.0),
+                    flex_shrink: 0.0,
+                    display: Display::Flex,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                BackgroundColor(Color::NONE),
+            ),
+            ComboboxMenuItem {
+                combobox_entity: root,
+                index: i,
+            },
+            BackgroundRole(ColorRole::SurfaceContainerHigh),
+            RadiusToken(RadiusLevel::ExtraSmall),
+        ))
+        .with_children(|item_parent| {
+            item_parent.spawn((
+                (
+                    Text::new(opt.clone()),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
+                        ..default()
+                    },
+                    TextColor::default(),
+                ),
+                ForegroundRole(ColorRole::OnSurface),
+                TypeStyleToken(TypeScale::BodyMedium),
+            ));
+        });
+    }
+}
+
+fn spawn_search_field(menu_parent: &mut ChildSpawnerCommands, root: Entity) {
+    let field = TextFieldBuilder::outlined("")
+        .compact()
+        .full_width()
+        .spawn_child(menu_parent);
+    let mut field = menu_parent.commands_mut().entity(field);
+    field.insert((
+        ComboboxSearch(root),
+        crate::l10n::L10nKey(crate::l10n::keys::COMBOBOX_SEARCH_LABEL),
+    ));
+}
+
+fn spawn_no_match(menu_parent: &mut ChildSpawnerCommands, root: Entity) {
+    menu_parent.spawn((
+        (
+            Node {
+                display: Display::None,
+                padding: UiRect::axes(Val::Px(12.0), Val::Px(10.0)),
+                ..default()
+            },
+            Text::new(""),
+            TextFont {
+                font_size: FontSize::Px(14.0),
+                ..default()
+            },
+            TextColor::default(),
+        ),
+        crate::l10n::L10nKey(crate::l10n::keys::COMBOBOX_NO_MATCH),
+        ComboboxNoMatch(root),
+        ForegroundRole(ColorRole::OnSurfaceVariant),
+        TypeStyleToken(TypeScale::BodyMedium),
+    ));
+}
+
+fn spawn_dropdown_menu(
+    parent: &mut ChildSpawnerCommands,
+    root: Entity,
+    options: &[String],
+    search: bool,
+) {
     parent
         .spawn((
             (
@@ -239,8 +315,6 @@ fn populate_combobox_children(
                     row_gap: Val::Px(4.0),
                     ..default()
                 },
-                // Above a modal (1000) whose content holds the box, and not clipped by the scroll
-                // area it sits in (the wizard's equipment dialog): the list is a popup.
                 GlobalZIndex(MENU_Z),
                 OverrideClip,
             ),
@@ -253,15 +327,7 @@ fn populate_combobox_children(
         .observe(menu_wheel_scroll)
         .with_children(|menu_parent| {
             if search {
-                let field = TextFieldBuilder::outlined("")
-                    .compact()
-                    .full_width()
-                    .spawn_child(menu_parent);
-                let mut field = menu_parent.commands_mut().entity(field);
-                field.insert((
-                    ComboboxSearch(root),
-                    crate::l10n::L10nKey(crate::l10n::keys::COMBOBOX_SEARCH_LABEL),
-                ));
+                spawn_search_field(menu_parent, root);
             }
             menu_parent
                 .spawn((
@@ -270,8 +336,6 @@ fn populate_combobox_children(
                         flex_direction: FlexDirection::Column,
                         flex_shrink: 1.0,
                         min_height: Val::Px(0.0),
-                        // Long lists (a map with 16 start points) scroll with the wheel; the
-                        // focused item is kept in view by `scroll_into_view`.
                         overflow: Overflow::scroll_y(),
                         ..default()
                     },
@@ -279,63 +343,22 @@ fn populate_combobox_children(
                     ComboboxList(root),
                 ))
                 .with_children(|list| {
-                    for (i, opt) in options.iter().enumerate() {
-                        list.spawn((
-                            (
-                                Button,
-                                Node {
-                                    padding: UiRect::axes(Val::Px(12.0), Val::Px(10.0)),
-                                    width: Val::Percent(100.0),
-                                    flex_shrink: 0.0,
-                                    display: Display::Flex,
-                                    align_items: AlignItems::Center,
-                                    ..default()
-                                },
-                                BackgroundColor(Color::NONE),
-                            ),
-                            ComboboxMenuItem {
-                                combobox_entity: root,
-                                index: i,
-                            },
-                            BackgroundRole(ColorRole::SurfaceContainerHigh),
-                            RadiusToken(RadiusLevel::ExtraSmall),
-                        ))
-                        .with_children(|item_parent| {
-                            item_parent.spawn((
-                                (
-                                    Text::new(opt.clone()),
-                                    TextFont {
-                                        font_size: FontSize::Px(14.0),
-                                        ..default()
-                                    },
-                                    TextColor::default(),
-                                ),
-                                ForegroundRole(ColorRole::OnSurface),
-                                TypeStyleToken(TypeScale::BodyMedium),
-                            ));
-                        });
-                    }
+                    spawn_menu_items(list, root, options);
                 });
             if search {
-                menu_parent.spawn((
-                    (
-                        Node {
-                            display: Display::None,
-                            padding: UiRect::axes(Val::Px(12.0), Val::Px(10.0)),
-                            ..default()
-                        },
-                        Text::new(""),
-                        TextFont {
-                            font_size: FontSize::Px(14.0),
-                            ..default()
-                        },
-                        TextColor::default(),
-                    ),
-                    crate::l10n::L10nKey(crate::l10n::keys::COMBOBOX_NO_MATCH),
-                    ComboboxNoMatch(root),
-                    ForegroundRole(ColorRole::OnSurfaceVariant),
-                    TypeStyleToken(TypeScale::BodyMedium),
-                ));
+                spawn_no_match(menu_parent, root);
             }
         });
+}
+
+fn populate_combobox_children(
+    parent: &mut ChildSpawnerCommands,
+    root: Entity,
+    display_text: &str,
+    options: &[String],
+    disabled: bool,
+    search: bool,
+) {
+    spawn_header(parent, root, display_text, disabled);
+    spawn_dropdown_menu(parent, root, options, search);
 }

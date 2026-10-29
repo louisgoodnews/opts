@@ -160,6 +160,99 @@ impl TextFieldBuilder {
         root
     }
 
+    fn spawn_input_entity(&self, commands: &mut Commands, root: Entity, input: Entity) {
+        commands.entity(input).insert((
+            Node {
+                flex_grow: 1.0,
+                min_width: Val::Px(40.0),
+                overflow: Overflow::clip(),
+                ..default()
+            },
+            TextInput,
+            EditableText {
+                max_characters: self.max_characters,
+                ..EditableText::new(&self.initial_text)
+            },
+            TextLayout {
+                linebreak: LineBreak::NoWrap,
+                ..default()
+            },
+            TextColor::default(),
+            ForegroundRole(ColorRole::OnSurface),
+            TypeStyleToken(TypeScale::BodyMedium),
+            TextCursorStyle::default(),
+            EntityCursor::System(SystemCursorIcon::Text),
+            Focusable::default(),
+            TabIndex(0),
+            TextFieldInput(root),
+            Name::new("TextFieldInput"),
+        ));
+    }
+
+    fn spawn_placeholder_entity(
+        &self,
+        commands: &mut Commands,
+        root: Entity,
+        placeholder: Entity,
+        has_text: bool,
+    ) {
+        commands.entity(placeholder).insert((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(if self.compact { 10.0 } else { 16.0 }),
+                display: if has_text {
+                    Display::None
+                } else {
+                    Display::Flex
+                },
+                ..default()
+            },
+            Text::new(self.placeholder.clone()),
+            TextColor::default(),
+            ForegroundRole(ColorRole::OnSurfaceVariant),
+            TypeStyleToken(TypeScale::BodyMedium),
+            Pickable::IGNORE,
+            TextFieldPlaceholder(root),
+        ));
+    }
+
+    fn spawn_clear_button(
+        &self,
+        commands: &mut Commands,
+        root: Entity,
+        clear: Entity,
+        has_text: bool,
+        bg_role: ColorRole,
+    ) {
+        commands.entity(clear).insert((
+            Button,
+            Node {
+                display: if has_text {
+                    Display::Flex
+                } else {
+                    Display::None
+                },
+                min_width: Val::Px(32.0),
+                min_height: Val::Px(32.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            BackgroundRole(bg_role),
+            RadiusToken(RadiusLevel::Full),
+            Tooltip::new(""),
+            L10nTooltip(crate::l10n::keys::CLEAR),
+            TextFieldClear(root),
+            Name::new("TextFieldClear"),
+        ));
+        commands.entity(clear).with_children(|p| {
+            p.spawn((
+                icons::icon_text(icons::CLOSE, 16.0, TextColor::default().0),
+                ForegroundRole(ColorRole::OnSurfaceVariant),
+            ));
+        });
+    }
+
     fn populate(self, commands: &mut Commands, root: Entity) {
         let (bg_role, border_role) = match self.variant {
             TextFieldVariant::Outlined => (ColorRole::Surface, ColorRole::Outline),
@@ -188,78 +281,9 @@ impl TextFieldBuilder {
             FocusProxy(input),
             Name::new(format!("TextField {}", self.label)),
         ));
-        commands.entity(input).insert((
-            Node {
-                flex_grow: 1.0,
-                min_width: Val::Px(40.0),
-                overflow: Overflow::clip(),
-                ..default()
-            },
-            TextInput,
-            EditableText {
-                max_characters: self.max_characters,
-                ..EditableText::new(&self.initial_text)
-            },
-            TextLayout {
-                linebreak: LineBreak::NoWrap,
-                ..default()
-            },
-            TextColor::default(),
-            ForegroundRole(ColorRole::OnSurface),
-            TypeStyleToken(TypeScale::BodyMedium),
-            TextCursorStyle::default(),
-            EntityCursor::System(SystemCursorIcon::Text),
-            Focusable::default(),
-            TabIndex(0),
-            TextFieldInput(root),
-            Name::new("TextFieldInput"),
-        ));
-        commands.entity(placeholder).insert((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(if self.compact { 10.0 } else { 16.0 }),
-                display: if has_text {
-                    Display::None
-                } else {
-                    Display::Flex
-                },
-                ..default()
-            },
-            Text::new(self.placeholder),
-            TextColor::default(),
-            ForegroundRole(ColorRole::OnSurfaceVariant),
-            TypeStyleToken(TypeScale::BodyMedium),
-            Pickable::IGNORE,
-            TextFieldPlaceholder(root),
-        ));
-        commands.entity(clear).insert((
-            Button,
-            Node {
-                display: if has_text {
-                    Display::Flex
-                } else {
-                    Display::None
-                },
-                min_width: Val::Px(32.0),
-                min_height: Val::Px(32.0),
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-            BackgroundRole(bg_role),
-            RadiusToken(RadiusLevel::Full),
-            Tooltip::new(""),
-            L10nTooltip(crate::l10n::keys::CLEAR),
-            TextFieldClear(root),
-            Name::new("TextFieldClear"),
-        ));
-        commands.entity(clear).with_children(|p| {
-            p.spawn((
-                icons::icon_text(icons::CLOSE, 16.0, TextColor::default().0),
-                ForegroundRole(ColorRole::OnSurfaceVariant),
-            ));
-        });
-        // Order: input, (placeholder overlays it), clear.
+        self.spawn_input_entity(commands, root, input);
+        self.spawn_placeholder_entity(commands, root, placeholder, has_text);
+        self.spawn_clear_button(commands, root, clear, has_text, bg_role);
         commands
             .entity(root)
             .add_children(&[input, placeholder, clear]);

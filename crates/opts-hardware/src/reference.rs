@@ -112,6 +112,12 @@ pub fn render() -> String {
             x.path, x.value, x.used_for, x.source
         );
     }
+    render_sets(&mut s);
+    render_reasons_and_allowlists(&mut s);
+    s
+}
+
+fn render_sets(s: &mut String) {
     let _ = writeln!(s, "\n## Closed value sets\n");
     let sets: [(&str, String); 11] = [
         ("os.family", keys(OsFamily::ALL, OsFamily::key)),
@@ -151,6 +157,9 @@ pub fn render() -> String {
             .collect::<Vec<_>>()
             .join(", ")
     );
+}
+
+fn render_reasons_and_allowlists(s: &mut String) {
     let _ = writeln!(
         s,
         "\n## Reasons for unknown values\n\n| Reason | Meaning |\n| :--- | :--- |"
@@ -180,7 +189,6 @@ pub fn render() -> String {
             .collect::<Vec<_>>()
             .join(", ")
     );
-    s
 }
 
 #[cfg(test)]

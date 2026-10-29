@@ -4,6 +4,7 @@
 //! text entry outside a modal - drops focus (first press) so a second press can leave the screen.
 //! Everything else is up to the screen, which reads [`UiAction::Back`] itself.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::text::EditableText;
 
@@ -22,30 +23,32 @@ use crate::interaction::{
 /// A text entry (single-line field, text area or Bevy text input).
 pub type TextEntry = Or<(With<M3TextField>, With<TextArea>, With<EditableText>)>;
 
+/// Parameters for [`back_system`].
+#[derive(SystemParam)]
+pub struct BackSystemParams<'w, 's> {
+    pub actions: MessageReader<'w, 's, UiAction>,
+    pub combos: Query<'w, 's, (Entity, &'static mut M3Combobox)>,
+    pub searches: Query<'w, 's, (&'static ComboboxSearch, &'static mut M3TextField)>,
+    pub headers: Query<'w, 's, (Entity, &'static ComboboxHeader)>,
+    pub focused_toast: Query<'w, 's, &'static ToastActionButton, With<Focused>>,
+    pub focused_text: Query<'w, 's, (), (With<Focused>, TextEntry)>,
+    pub modals: Query<'w, 's, (), With<ModalRoot>>,
+    pub focus: MessageWriter<'w, FocusEvent>,
+    pub dismissed: MessageWriter<'w, ToastDismissed>,
+}
+
 /// Handles [`UiAction::Back`].
-#[allow(clippy::too_many_arguments)]
-pub fn back_system(
-    mut actions: MessageReader<UiAction>,
-    mut combos: Query<(Entity, &mut M3Combobox)>,
-    mut searches: Query<(&ComboboxSearch, &mut M3TextField)>,
-    headers: Query<(Entity, &ComboboxHeader)>,
-    focused_toast: Query<&ToastActionButton, With<Focused>>,
-    focused_text: Query<(), (With<Focused>, TextEntry)>,
-    modals: Query<(), With<ModalRoot>>,
-    mut focus: MessageWriter<FocusEvent>,
-    mut dismissed: MessageWriter<ToastDismissed>,
-    mut commands: Commands,
-) {
-    for action in actions.read() {
+pub fn back_system(mut params: BackSystemParams, mut commands: Commands) {
+    for action in params.actions.read() {
         if *action != UiAction::Back {
             continue;
         }
         let mut handled = false;
-        for (combo, mut state) in &mut combos {
+        for (combo, mut state) in &mut params.combos {
             if state.is_open {
                 // A search in progress goes first: Esc clears it, the next Esc closes the list.
                 let mut cleared = false;
-                for (search, mut field) in &mut searches {
+                for (search, mut field) in &mut params.searches {
                     if search.0 == combo && !field.text.is_empty() {
                         field.text.clear();
                         cleared = true;
@@ -56,8 +59,8 @@ pub fn back_system(
                     continue;
                 }
                 state.is_open = false;
-                if let Some((header, _)) = headers.iter().find(|(_, h)| h.0 == combo) {
-                    focus.write(FocusEvent::Set(header));
+                if let Some((header, _)) = params.headers.iter().find(|(_, h)| h.0 == combo) {
+                    params.focus.write(FocusEvent::Set(header));
                 }
                 handled = true;
             }
@@ -65,11 +68,11 @@ pub fn back_system(
         if handled {
             continue;
         }
-        if let Some(toast) = focused_toast.iter().next() {
-            dismissed.write(ToastDismissed { entity: toast.0 });
+        if let Some(toast) = params.focused_toast.iter().next() {
+            params.dismissed.write(ToastDismissed { entity: toast.0 });
             commands.entity(toast.0).try_despawn();
-        } else if modals.is_empty() && !focused_text.is_empty() {
-            focus.write(FocusEvent::Clear);
+        } else if params.modals.is_empty() && !params.focused_text.is_empty() {
+            params.focus.write(FocusEvent::Clear);
         }
     }
 }

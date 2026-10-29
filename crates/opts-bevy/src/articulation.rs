@@ -208,6 +208,60 @@ fn seed_consist(
     }
 }
 
+fn detect_position_jump(
+    sim: &mut opts_sim::VehicleSimulation,
+    root: Entity,
+    last_leader: &mut std::collections::HashMap<Entity, (Vec2, u32)>,
+    dt: f64,
+) -> bool {
+    let chassis = &sim.chassis;
+    let seen = last_leader.insert(root, (chassis.position, sim.teleports));
+    let announced = seen.is_none_or(|(_, n)| n != sim.teleports);
+    let unannounced = seen.is_some_and(|(prev, _)| {
+        let moved = (chassis.position - prev).length();
+        moved > (chassis.forward_speed_m_s().abs() * dt as f32 * 2.0).max(JUMP_THRESHOLD_M)
+    });
+    if unannounced && !announced {
+        tracing::debug!(
+            ?root,
+            "unannounced position jump of a chain leader; consist re-seeded"
+        );
+        sim.reseed_consist();
+    }
+    announced || unannounced
+}
+
+fn apply_articulation_scripts(
+    scripts: &VehicleScripts,
+    joints: &[(usize, f32, f32)],
+    alphas: &[f64],
+    wheel_vars: &[(usize, f32, Vec<SegmentWheel>)],
+    rest: f32,
+) {
+    if let Ok(mut engine) = scripts.engine.lock() {
+        for (k, beta, gamma) in joints {
+            engine.set(&format!("articulation_{k}_beta"), *beta);
+            engine.set(&format!("articulation_{k}_gamma"), *gamma);
+        }
+        for (k, a) in alphas.iter().enumerate() {
+            engine.set(&format!("articulation_{k}_alpha"), *a as f32);
+        }
+        for (first, speed, wheels) in wheel_vars {
+            for (j, w) in wheels.iter().enumerate() {
+                let i = first + j;
+                let rpm = speed / w.radius * 60.0 / std::f32::consts::TAU;
+                for side in ["L", "R"] {
+                    engine.set(&format!("wheel_rotation_{i}_{side}"), w.rotation_rad);
+                    engine.set(&format!("axle_steering_{i}_{side}"), 0.0);
+                    engine.set(&format!("axle_suspension_{i}_{side}"), rest);
+                }
+                engine.set(&format!("wheel_rotationspeed_{i}_l"), rpm);
+                engine.set(&format!("wheel_rotationspeed_{i}_r"), rpm);
+            }
+        }
+    }
+}
+
 /// Reads the consist of every chain after the physics step: copies the poses to the segments,
 /// rolls their wheels and writes the joint variables into the scripts. The state itself is the
 /// simulation's ([`opts_sim::VehicleSimulation::consist`]).
@@ -232,26 +286,7 @@ pub fn articulation_system(
         if sim.consist.len() != chain.segments.len() {
             seed_consist(sim, &chain.segments, &segments);
         }
-        let chassis = &sim.chassis;
-        // An explicit `teleport` (spawn, respawn, reset) re-seeded the consist already. A position
-        // change the speed cannot explain without one is a jump the caller did not announce
-        // (collision push-out, a direct write to the chassis): the consist is re-seeded behind the
-        // leader here and the segments' wheels keep their last speed
-        // (`docs/src/architecture/chain-assembly.md`).
-        let seen = last_leader.insert(root, (chassis.position, sim.teleports));
-        let announced = seen.is_none_or(|(_, n)| n != sim.teleports);
-        let unannounced = seen.is_some_and(|(prev, _)| {
-            let moved = (chassis.position - prev).length();
-            moved > (chassis.forward_speed_m_s().abs() * dt as f32 * 2.0).max(JUMP_THRESHOLD_M)
-        });
-        if unannounced && !announced {
-            tracing::debug!(
-                ?root,
-                "unannounced position jump of a chain leader; consist re-seeded"
-            );
-            sim.reseed_consist();
-        }
-        let jumped = announced || unannounced;
+        let jumped = detect_position_jump(sim, root, &mut last_leader, dt);
         let mut alphas = Vec::with_capacity(chain.segments.len());
         let mut joints: Vec<(usize, f32, f32)> = Vec::new();
         let mut wheel_vars: Vec<(usize, f32, Vec<SegmentWheel>)> = Vec::new();
@@ -301,31 +336,7 @@ pub fn articulation_system(
         // The trailers' axles have no body model: they rest at the head's mean travel.
         let rest = sim.body.as_ref().map_or(0.0, |b| b.rest_travel_m());
         if let Some(scripts) = scripts {
-            if let Ok(mut engine) = scripts.engine.lock() {
-                // `beta` (pitch) and `gamma` (roll) come from the simulation's fixed-step ground
-                // following (the game hands it the sampled heights); without samples they stay 0.
-                for (k, beta, gamma) in &joints {
-                    engine.set(&format!("articulation_{k}_beta"), *beta);
-                    engine.set(&format!("articulation_{k}_gamma"), *gamma);
-                }
-                for (k, a) in alphas.iter().enumerate() {
-                    engine.set(&format!("articulation_{k}_alpha"), *a as f32);
-                }
-                // The trailers' wheel variables under the consist-wide axle numbers.
-                for (first, speed, wheels) in &wheel_vars {
-                    for (j, w) in wheels.iter().enumerate() {
-                        let i = first + j;
-                        let rpm = speed / w.radius * 60.0 / std::f32::consts::TAU;
-                        for side in ["L", "R"] {
-                            engine.set(&format!("wheel_rotation_{i}_{side}"), w.rotation_rad);
-                            engine.set(&format!("axle_steering_{i}_{side}"), 0.0);
-                            engine.set(&format!("axle_suspension_{i}_{side}"), rest);
-                        }
-                        engine.set(&format!("wheel_rotationspeed_{i}_l"), rpm);
-                        engine.set(&format!("wheel_rotationspeed_{i}_r"), rpm);
-                    }
-                }
-            }
+            apply_articulation_scripts(scripts, &joints, &alphas, &wheel_vars, rest);
         }
     }
 }

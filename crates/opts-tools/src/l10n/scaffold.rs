@@ -64,6 +64,66 @@ pub(super) fn new_cmd(args: &[String]) -> Result<Output, String> {
     })
 }
 
+fn parse_pack_meta(
+    imported: &interchange::Imported,
+    file: &str,
+    lang: &str,
+    out: &mut String,
+) -> Result<Option<PackMeta>, String> {
+    let meta_text = imported
+        .pack
+        .as_ref()
+        .map(|p| serde_json::to_string_pretty(p).unwrap_or_default())
+        .ok_or("the file has no `pack` object (identity of the language); export a template with `l10n export` and fill it")?;
+    let (meta, meta_issues) = pack::parse_meta(&meta_text, lang);
+    let Some(mut meta) = meta else {
+        for i in &meta_issues {
+            let _ = writeln!(out, "{file} (pack): {}", i.message);
+        }
+        let _ = writeln!(
+            out,
+            "{file}: the `pack` object is incomplete; nothing written"
+        );
+        return Ok(None);
+    };
+    if let Some(b) = &imported.base_version {
+        meta.base_version.clone_from(b);
+    }
+    Ok(Some(meta))
+}
+
+fn write_imported_pack(
+    dir: &Path,
+    accepted: &interchange::Imported,
+    meta: &PackMeta,
+    reference: &Reference,
+    mut out: String,
+) -> Result<Output, String> {
+    std::fs::create_dir_all(dir).map_err(|e| io_err(dir, &e))?;
+    let meta_path = dir.join("pack.json");
+    std::fs::write(&meta_path, meta.to_json()).map_err(|e| io_err(&meta_path, &e))?;
+    let _ = writeln!(out, "wrote {}", meta_path.display());
+    for (name, body) in interchange::import_to_ftl(accepted) {
+        let p = dir.join(name);
+        std::fs::write(&p, body).map_err(|e| io_err(&p, &e))?;
+        let _ = writeln!(out, "wrote {}", p.display());
+    }
+    let p = pack::load_pack_dir(dir, reference);
+    let _ = writeln!(
+        out,
+        "{}: {:.1} % translated, {} error(s), {} warning(s)",
+        dir.display(),
+        p.stats.percent(),
+        p.errors(),
+        p.warnings()
+    );
+    Ok(Output {
+        code: i32::from(p.errors() > 0),
+        out,
+        err: String::new(),
+    })
+}
+
 pub(super) fn import(args: &[String]) -> Result<Output, String> {
     let a = Args::parse(args, &["root", "lang"], &["force", "lenient"])?;
     let [file] = a.positional.as_slice() else {
@@ -102,53 +162,14 @@ pub(super) fn import(args: &[String]) -> Result<Output, String> {
             dir.display()
         ));
     }
-    // pack.json from the file's `pack` object, else from nothing.
-    let meta_text = imported
-        .pack
-        .as_ref()
-        .map(|p| serde_json::to_string_pretty(p).unwrap_or_default())
-        .ok_or("the file has no `pack` object (identity of the language); export a template with `l10n export` and fill it")?;
-    let (meta, meta_issues) = pack::parse_meta(&meta_text, &lang);
-    let Some(mut meta) = meta else {
-        for i in &meta_issues {
-            let _ = writeln!(out, "{file} (pack): {}", i.message);
-        }
-        let _ = writeln!(
-            out,
-            "{file}: the `pack` object is incomplete; nothing written"
-        );
+    let Some(meta) = parse_pack_meta(&imported, file, &lang, &mut out)? else {
         return Ok(Output {
             code: 1,
             out,
             err: String::new(),
         });
     };
-    if let Some(b) = &imported.base_version {
-        meta.base_version.clone_from(b);
-    }
     let mut accepted = imported;
     accepted.table = checked.table;
-    std::fs::create_dir_all(&dir).map_err(|e| io_err(&dir, &e))?;
-    let meta_path = dir.join("pack.json");
-    std::fs::write(&meta_path, meta.to_json()).map_err(|e| io_err(&meta_path, &e))?;
-    let _ = writeln!(out, "wrote {}", meta_path.display());
-    for (name, body) in interchange::import_to_ftl(&accepted) {
-        let p = dir.join(name);
-        std::fs::write(&p, body).map_err(|e| io_err(&p, &e))?;
-        let _ = writeln!(out, "wrote {}", p.display());
-    }
-    let p = pack::load_pack_dir(&dir, &reference);
-    let _ = writeln!(
-        out,
-        "{}: {:.1} % translated, {} error(s), {} warning(s)",
-        dir.display(),
-        p.stats.percent(),
-        p.errors(),
-        p.warnings()
-    );
-    Ok(Output {
-        code: i32::from(p.errors() > 0),
-        out,
-        err: String::new(),
-    })
+    write_imported_pack(&dir, &accepted, &meta, &reference, out)
 }

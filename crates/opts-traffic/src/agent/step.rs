@@ -3,36 +3,13 @@
 use super::*;
 
 impl TrafficWorld {
-    /// Advances every agent by `dt` seconds (use steps of at most 0.1 s).
-    pub fn step(&mut self, dt: f64) {
-        if dt <= 0.0 {
-            return;
-        }
-        for i in 0..self.agents.len() {
-            self.extend_plan(i);
-        }
-        self.add_phantoms();
-        let mut by_lane = self.agents_by_lane();
-        // One lane change per step at most; the lists are rebuilt when it happened.
-        if self.lane_change_pass(&by_lane) {
-            for i in 0..self.agents.len() {
-                self.extend_plan(i);
-            }
-            by_lane = self.agents_by_lane();
-        }
-        let looks: Vec<Vec<(LaneId, f64)>> =
-            (0..self.agents.len()).map(|i| self.lookahead(i)).collect();
-        // Lights first: vehicles standing at a red light are not "arriving" for conflict zones.
-        let signal: Vec<Option<f64>> = (0..self.agents.len())
-            .map(|i| self.signal_gap(i, &looks[i]))
-            .collect();
-        let held: Vec<bool> = self
-            .agents
-            .iter()
-            .zip(&signal)
-            .map(|(a, g)| g.is_some_and(|g| g < 12.0) && a.speed < 3.0)
-            .collect();
-        // Decide accelerations from the state at the start of the step.
+    fn compute_accelerations(
+        &self,
+        looks: &[Vec<(LaneId, f64)>],
+        signal: &[Option<f64>],
+        held: &[bool],
+        by_lane: &HashMap<LaneId, Vec<usize>>,
+    ) -> (Vec<f64>, Vec<bool>) {
         let mut accels = Vec::with_capacity(self.agents.len());
         let mut blocked = vec![false; self.agents.len()];
         for (i, a) in self.agents.iter().enumerate() {
@@ -40,17 +17,14 @@ impl TrafficWorld {
                 accels.push(0.0);
                 continue;
             }
-            let leader = self.leader(i, &looks[i], &by_lane);
-            let wait = self.conflict_gap(i, &looks[i], &by_lane, &held);
+            let leader = self.leader(i, &looks[i], by_lane);
+            let wait = self.conflict_gap(i, &looks[i], by_lane, held);
             blocked[i] = wait.is_some();
-            // The end of the lane a strategic change has to happen on is a stop line until the
-            // change is made.
             let stuck = a.strategic.and_then(|c| {
                 let (_, off) = looks[i].iter().find(|(l, _)| *l == c.from)?;
                 let len = self.graph.lane(c.from)?.length();
                 Some((off + len - STRATEGIC_STOP_M).max(0.0))
             });
-            // The nearest of leader, light, conflict zone and such a stop limits the vehicle.
             let mut ahead = leader;
             let stop = self.stop_gap(i, &looks[i]);
             for gap in [signal[i], wait, stuck, stop].into_iter().flatten() {
@@ -62,15 +36,18 @@ impl TrafficWorld {
             let acc = a.params.acceleration(a.speed, cap, ahead).min(brake);
             accels.push(acc.max(-a.params.max_decel));
         }
-        // Integrate (ballistic; a vehicle that would reverse stops within the step).
+        (accels, blocked)
+    }
+
+    fn integrate_agents(&mut self, accels: &[f64], dt: f64) -> Vec<f64> {
         let travel: Vec<f64> = self
             .agents
             .iter()
-            .zip(&accels)
+            .zip(accels)
             .map(|(a, &acc)| (a.speed.max(a.speed + acc * dt) + MAX_GLIDE_SPEED) * dt)
             .collect();
         let mut hard = 0;
-        for (a, &acc) in self.agents.iter_mut().zip(&accels) {
+        for (a, &acc) in self.agents.iter_mut().zip(accels) {
             if a.foreign {
                 continue;
             }
@@ -95,7 +72,10 @@ impl TrafficWorld {
         self.stats.hard_brakes += hard;
         self.time += dt;
         self.update_stops();
-        // A vehicle that cannot make its strategic change re-plans from its lane after a while.
+        travel
+    }
+
+    fn handle_strategic_timeouts(&mut self, dt: f64) {
         for i in 0..self.agents.len() {
             let a = &mut self.agents[i];
             let Some(c) = a.strategic.filter(|c| c.from == a.lane) else {
@@ -120,14 +100,11 @@ impl TrafficWorld {
                 self.extend_plan(i);
             }
         }
-        // A vehicle that waited too long at a zone goes anyway (cyclic waits, ghost vehicles), but
-        // **one at a time** per junction: in a cycle (right before left at a four-way) every
-        // vehicle times out together, and releasing them all sends them through the middle at
-        // once. The one that waited longest (ties: the lower id) is released; the others that
-        // share a conflict with it keep waiting, see it inside the zone and yield, and get their
-        // turn when its zone is clear.
+    }
+
+    fn resolve_deadlocks(&mut self, blocked: &[bool], dt: f64) {
         let mut due: Vec<usize> = Vec::new();
-        for (i, (a, &b)) in self.agents.iter_mut().zip(&blocked).enumerate() {
+        for (i, (a, &b)) in self.agents.iter_mut().zip(blocked).enumerate() {
             if b && a.speed < 0.2 {
                 a.waiting_s += dt;
                 if a.waiting_s > DEADLOCK_AFTER_S {
@@ -151,19 +128,19 @@ impl TrafficWorld {
                 .iter()
                 .any(|&j| j != i && self.shares_conflict(i, j))
             {
-                continue; // its turn comes when the one released ahead of it has gone through
+                continue;
             }
             let a = &mut self.agents[i];
             a.waiting_s = 0.0;
             a.ignore_conflicts_until = self.time + DEADLOCK_IGNORE_S;
             released.push(i);
         }
-        // The "vehicle stuck" flag: standing with no light to wait for. The first agent to reach
-        // the limit is removed (one per step), which usually frees the others.
+    }
+
+    fn check_stuck_agents(&mut self, signal: &[Option<f64>], dt: f64) -> Option<(AgentId, LaneId)> {
         let limit = self.stuck_after_s;
         let mut stuck = None;
-        for (a, g) in self.agents.iter_mut().zip(&signal) {
-            // A scheduled vehicle waiting at its stop is not stuck.
+        for (a, g) in self.agents.iter_mut().zip(signal) {
             let dwelling = a.stops.front().is_some_and(|s| s.arrived_at.is_some());
             if !a.foreign && a.speed < 0.2 && g.is_none() && !dwelling {
                 a.stuck_s += dt;
@@ -174,12 +151,49 @@ impl TrafficWorld {
                 a.stuck_s = 0.0;
             }
         }
-        if let Some((id, lane)) = stuck {
+        stuck
+    }
+
+    /// Advances every agent by `dt` seconds (use steps of at most 0.1 s).
+    pub fn step(&mut self, dt: f64) {
+        if dt <= 0.0 {
+            return;
+        }
+        for i in 0..self.agents.len() {
+            self.extend_plan(i);
+        }
+        self.add_phantoms();
+        let mut by_lane = self.agents_by_lane();
+        if self.lane_change_pass(&by_lane) {
+            for i in 0..self.agents.len() {
+                self.extend_plan(i);
+            }
+            by_lane = self.agents_by_lane();
+        }
+        let looks: Vec<Vec<(LaneId, f64)>> =
+            (0..self.agents.len()).map(|i| self.lookahead(i)).collect();
+        let signal: Vec<Option<f64>> = (0..self.agents.len())
+            .map(|i| self.signal_gap(i, &looks[i]))
+            .collect();
+        let held: Vec<bool> = self
+            .agents
+            .iter()
+            .zip(&signal)
+            .map(|(a, g)| g.is_some_and(|g| g < 12.0) && a.speed < 3.0)
+            .collect();
+
+        let (accels, blocked) = self.compute_accelerations(&looks, &signal, &held, &by_lane);
+        let travel = self.integrate_agents(&accels, dt);
+        self.handle_strategic_timeouts(dt);
+        self.resolve_deadlocks(&blocked, dt);
+
+        if let Some((id, lane)) = self.check_stuck_agents(&signal, dt) {
             self.despawn(id);
             self.events.push(TrafficEvent::Stuck { id, lane });
             self.remove_phantoms();
             return;
         }
+
         let ids: Vec<AgentId> = self.agents.iter().map(|a| a.id).collect();
         self.advance_lanes();
         // Axles after the lane transitions (agents removed at dead ends drop out of `ids`).

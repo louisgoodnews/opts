@@ -12,6 +12,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, WindowTheme, WindowThemeChanged};
 use chrono::NaiveTime;
@@ -175,39 +176,53 @@ pub fn track_system_theme(
     }
 }
 
+/// Parameters for [`resolve_theme`].
+#[derive(SystemParam)]
+pub struct ThemeResolveParams<'w, 's> {
+    pub time: Res<'w, Time<Real>>,
+    pub prefs: Res<'w, ThemePreferences>,
+    pub system: Res<'w, SystemColorScheme>,
+    pub clock: Res<'w, ThemeClock>,
+    pub lock: Res<'w, ThemeSwitchLock>,
+    pub modals: Query<'w, 's, (), With<ModalRoot>>,
+    pub runtime: ResMut<'w, ThemeRuntime>,
+    pub theme: ResMut<'w, MaterialTheme>,
+}
+
 /// Applies the theme the preferences select: immediately after an explicit change, held back
 /// while a modal is open or the lock is set when the change is automatic.
-#[allow(clippy::too_many_arguments)]
-pub fn resolve_theme(
-    time: Res<Time<Real>>,
-    prefs: Res<ThemePreferences>,
-    system: Res<SystemColorScheme>,
-    clock: Res<ThemeClock>,
-    lock: Res<ThemeSwitchLock>,
-    modals: Query<(), With<ModalRoot>>,
-    mut runtime: ResMut<ThemeRuntime>,
-    mut theme: ResMut<MaterialTheme>,
-) {
-    let explicit = prefs.is_changed();
-    let tick = runtime.timer.tick(time.delta()).just_finished();
+pub fn resolve_theme(mut params: ThemeResolveParams) {
+    let explicit = params.prefs.is_changed();
+    let tick = params
+        .runtime
+        .timer
+        .tick(params.time.delta())
+        .just_finished();
     // Cheap early-out: nothing could have changed since the last evaluation.
-    if !(explicit || tick || system.is_changed() || !runtime.checked || runtime.pending) {
+    if !(explicit
+        || tick
+        || params.system.is_changed()
+        || !params.runtime.checked
+        || params.runtime.pending)
+    {
         return;
     }
-    runtime.checked = true;
-    let wanted = prefs.resolve_kind(system.0, clock.now());
-    if !explicit && wanted == theme.scheme.kind {
-        runtime.pending = false;
+    params.runtime.checked = true;
+    let wanted = params
+        .prefs
+        .resolve_kind(params.system.0, params.clock.now());
+    if !explicit && wanted == params.theme.scheme.kind {
+        params.runtime.pending = false;
         return;
     }
-    if !explicit && (lock.0 || !modals.is_empty()) {
-        runtime.pending = true; // retried every frame until the obstacle is gone
+    if !explicit && (params.lock.0 || !params.modals.is_empty()) {
+        params.runtime.pending = true; // retried every frame until the obstacle is gone
         return;
     }
-    runtime.pending = false;
-    let scheme = prefs.scheme_of(wanted);
-    if theme.scheme != scheme {
-        theme.scheme = scheme;
+    params.runtime.pending = false;
+    let scheme = params.prefs.scheme_of(wanted);
+    if params.theme.scheme != scheme {
+        params.theme.scheme = scheme;
     }
 }
 

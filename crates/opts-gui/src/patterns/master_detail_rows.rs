@@ -37,39 +37,44 @@ fn header_key(section: Section) -> &'static str {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+pub(super) struct SpawnRowsContext<'a> {
+    pub root: Entity,
+    pub prefix: &'a str,
+    pub model: &'a MasterDetail,
+    pub rows: &'a [Row],
+    pub layout: &'a RowLayout,
+    pub content: Entity,
+    pub max_chars: usize,
+}
+
 /// Spawns the rows `range` as children of `content` and returns them.
 pub(super) fn spawn_rows(
     commands: &mut Commands,
-    root: Entity,
-    prefix: &str,
-    model: &MasterDetail,
-    rows: &[Row],
-    layout: &RowLayout,
+    ctx: &SpawnRowsContext<'_>,
     range: std::ops::Range<usize>,
-    content: Entity,
-    max_chars: usize,
 ) -> Vec<Entity> {
     let mut out = Vec::with_capacity(range.len());
     for i in range {
-        let top = layout.top(i);
-        let e = match rows[i] {
+        let top = ctx.layout.top(i);
+        let e = match ctx.rows[i] {
             Row::Header(section) => spawn_header(commands, section, top),
-            Row::Item { entry, section } => spawn_item(
-                commands,
-                root,
-                prefix,
-                model,
-                &model.entries[entry],
-                i,
-                section,
-                top,
-                max_chars,
-            ),
+            Row::Item { entry, section } => {
+                let item_ctx = ItemContext {
+                    root: ctx.root,
+                    prefix: ctx.prefix,
+                    model: ctx.model,
+                    entry: &ctx.model.entries[entry],
+                    row: i,
+                    section,
+                    top,
+                    max_chars: ctx.max_chars,
+                };
+                spawn_item(commands, &item_ctx)
+            }
         };
         out.push(e);
     }
-    commands.entity(content).add_children(&out);
+    commands.entity(ctx.content).add_children(&out);
     out
 }
 

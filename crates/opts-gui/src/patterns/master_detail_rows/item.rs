@@ -17,28 +17,28 @@ use crate::ui_tree::{A11yHidden, ListRow};
 
 use super::{section_key, ThumbGlyph, BAR_GUTTER};
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn spawn_item(
-    commands: &mut Commands,
-    root: Entity,
-    prefix: &str,
-    model: &MasterDetail,
-    entry: &ListEntry,
-    row: usize,
-    section: Section,
-    top: f32,
-    max_chars: usize,
-) -> Entity {
-    let selected = model.selected.as_deref() == Some(entry.id.as_str());
-    let favourite = model.favourites.contains(&entry.id);
-    let key = slug(&entry.id);
+pub(super) struct ItemContext<'a> {
+    pub root: Entity,
+    pub prefix: &'a str,
+    pub model: &'a MasterDetail,
+    pub entry: &'a ListEntry,
+    pub row: usize,
+    pub section: Section,
+    pub top: f32,
+    pub max_chars: usize,
+}
+
+pub(super) fn spawn_item(commands: &mut Commands, ctx: &ItemContext<'_>) -> Entity {
+    let selected = ctx.model.selected.as_deref() == Some(ctx.entry.id.as_str());
+    let favourite = ctx.model.favourites.contains(&ctx.entry.id);
+    let key = slug(&ctx.entry.id);
     let wrap = commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(0.0),
                 right: Val::Px(BAR_GUTTER),
-                top: Val::Px(top),
+                top: Val::Px(ctx.top),
                 height: Val::Px(ITEM_HEIGHT),
                 align_items: AlignItems::Center,
                 column_gap: Val::Px(4.0),
@@ -48,28 +48,28 @@ pub(super) fn spawn_item(
             Name::new("MasterRow"),
         ))
         .id();
-    let button = spawn_row_button(
-        commands, root, prefix, entry, row, section, selected, &key, max_chars,
-    );
+    let button = spawn_row_button(commands, ctx, selected, &key);
     commands.entity(wrap).add_child(button);
-    if !model.no_stars {
-        let star = spawn_star(commands, root, prefix, entry, section, favourite, &key);
+    if !ctx.model.no_stars {
+        let star = spawn_star(
+            commands,
+            ctx.root,
+            ctx.prefix,
+            ctx.entry,
+            ctx.section,
+            favourite,
+            &key,
+        );
         commands.entity(wrap).add_child(star);
     }
     wrap
 }
 
-#[allow(clippy::too_many_arguments)]
 fn spawn_row_button(
     commands: &mut Commands,
-    root: Entity,
-    prefix: &str,
-    entry: &ListEntry,
-    row: usize,
-    section: Section,
+    ctx: &ItemContext<'_>,
     selected: bool,
     key: &str,
-    max_chars: usize,
 ) -> Entity {
     let mut button = commands.spawn((
         crate::components::button::Button,
@@ -87,15 +87,15 @@ fn spawn_row_button(
         },
         RadiusToken(RadiusLevel::Medium),
         MasterRowButton {
-            root,
-            row,
-            id: entry.id.clone(),
+            root: ctx.root,
+            row: ctx.row,
+            id: ctx.entry.id.clone(),
         },
-        UiId::new(format!("{prefix}.{}.{key}", section_key(section))),
+        UiId::new(format!("{}.{}.{key}", ctx.prefix, section_key(ctx.section))),
     ));
-    if entry.title.chars().count() > max_chars {
+    if ctx.entry.title.chars().count() > ctx.max_chars {
         // Cut titles say their full text on hover and focus.
-        button.insert(Tooltip::new(entry.title.clone()));
+        button.insert(Tooltip::new(ctx.entry.title.clone()));
     }
     if selected {
         button.insert((Selected, BackgroundRole(ColorRole::SecondaryContainer)));
@@ -123,8 +123,8 @@ fn spawn_row_button(
             .entity(marker)
             .insert(BackgroundRole(ColorRole::Primary));
     }
-    let thumb = spawn_thumb(commands, root, entry);
-    let texts = spawn_texts(commands, entry, fg, max_chars);
+    let thumb = spawn_thumb(commands, ctx.root, ctx.entry);
+    let texts = spawn_texts(commands, ctx.entry, fg, ctx.max_chars);
     commands
         .entity(button)
         .add_children(&[marker, thumb, texts]);

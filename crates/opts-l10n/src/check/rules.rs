@@ -69,12 +69,7 @@ fn selects(p: &Pattern, out: &mut Vec<(String, Vec<String>)>) {
     }
 }
 
-/// Validates the parsed `.ftl` (or JSON) table `parsed` of file `file` for language `lang`
-/// against `reference`. Parse problems are included. Nothing here panics or aborts: every
-/// problem becomes an [`Issue`] and the faulty message is dropped from the result.
-#[must_use]
-pub fn validate(parsed: &Table, file: &str, lang: &str, reference: &Reference) -> Checked {
-    let mut out = Checked::default();
+fn collect_parse_diagnostics(parsed: &Table, file: &str, out: &mut Checked) {
     for d in &parsed.diagnostics {
         let dup = d.message.starts_with("duplicate key");
         out.issues.push(Issue::new(
@@ -97,170 +92,247 @@ pub fn validate(parsed: &Table, file: &str, lang: &str, reference: &Reference) -
             },
         ));
     }
+}
+
+fn validate_message_content(pattern: &Pattern) -> Result<(), (&'static str, String)> {
+    let mut text = String::new();
+    collect_texts(pattern, &mut text);
+    if text.trim().is_empty() && !pattern.iter().any(|p| !matches!(p, Part::Text(_))) {
+        return Err((
+            "empty",
+            "the message is empty; delete the key to use the English text".into(),
+        ));
+    }
+    if text.chars().count() > MAX_MESSAGE_CHARS {
+        return Err((
+            "too-long",
+            format!("more than {MAX_MESSAGE_CHARS} characters"),
+        ));
+    }
+    if let Some(c) = text
+        .chars()
+        .find(|c| (c.is_control() && *c != '\n') || *c == '\u{fffd}' || *c == '\u{27e6}')
+    {
+        return Err((
+            "bad-character",
+            format!(
+                "contains the character U+{:04X}, which cannot be shown (control character, replacement character or the gap marker)",
+                c as u32
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_variables(
+    pattern: &Pattern,
+    key: &str,
+    reference: &Reference,
+) -> Result<(), (&'static str, String)> {
+    let have = fluent::variables(pattern);
+    let want = reference.variables_of(key).cloned().unwrap_or_default();
+    let is_var = |s: &&String| s.starts_with('$');
+    let lost: Vec<&String> = want
+        .iter()
+        .filter(is_var)
+        .filter(|v| !have.contains(*v))
+        .collect();
+    let added: Vec<&String> = have
+        .iter()
+        .filter(is_var)
+        .filter(|v| !want.contains(*v))
+        .collect();
+    if !lost.is_empty() || !added.is_empty() {
+        let mut why = String::new();
+        if !lost.is_empty() {
+            why.push_str(&format!(
+                "missing {}; ",
+                lost.iter()
+                    .map(|s| format!("`{{ {s} }}`"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        if !added.is_empty() {
+            why.push_str(&format!(
+                "unknown {}; ",
+                added
+                    .iter()
+                    .map(|s| format!("`{{ {s} }}`"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        return Err((
+            "variable-mismatch",
+            format!(
+                "the variables differ from English ({why}English uses {}). Keep every `{{ $name }}` exactly as written",
+                if want.is_empty() {
+                    "none".to_string()
+                } else {
+                    want.iter().filter(is_var).cloned().collect::<Vec<_>>().join(", ")
+                }
+            ),
+        ));
+    }
+    let unknown_refs: Vec<&String> = have
+        .iter()
+        .filter(|s| !s.starts_with('$') && !reference.table.messages.contains_key(*s))
+        .collect();
+    if !unknown_refs.is_empty() {
+        return Err((
+            "unknown-reference",
+            format!("refers to message(s) that do not exist: {unknown_refs:?}"),
+        ));
+    }
+    Ok(())
+}
+
+/// The key being checked and where it is: shared by the per-key warning checks.
+struct KeyContext<'a> {
+    key: &'a str,
+    lang: &'a str,
+    required: &'a [&'a str],
+    line: Option<usize>,
+    file: &'a str,
+}
+
+fn check_message_warnings(
+    ctx: &KeyContext,
+    pattern: &Pattern,
+    source: &Pattern,
+    out: &mut Checked,
+) {
+    let KeyContext {
+        key,
+        lang,
+        required,
+        line,
+        file,
+    } = *ctx;
+    let (en_vis, tr_vis) = (visible_text(source), visible_text(pattern));
+    let (en_len, tr_len) = (en_vis.chars().count(), tr_vis.chars().count());
+    if !is_compact_script(lang) && tr_len as f32 > en_len as f32 * 2.5 + 12.0 {
+        out.issues.push(Issue::new(
+            Severity::Warning,
+            "suspicious-length",
+            file,
+            line,
+            Some(key),
+            format!("{tr_len} characters against {en_len} in English; it may not fit its button or label"),
+        ));
+    }
+    if language_of(lang) != "en" && pattern == source && is_prose(&en_vis) {
+        out.issues.push(Issue::new(
+            Severity::Warning,
+            "untranslated-copy",
+            file,
+            line,
+            Some(key),
+            "identical to the English text; translate it or delete the key",
+        ));
+    }
+    let mut sel = Vec::new();
+    selects(pattern, &mut sel);
+    for (var, variants) in sel {
+        let missing: Vec<&&str> = required
+            .iter()
+            .filter(|c| !variants.iter().any(|v| v == **c))
+            .collect();
+        let has_default_other = variants.iter().any(|v| v == "other");
+        if !missing.is_empty()
+            && !(missing.len() == 1 && *missing[0] == "other" && !has_default_other)
+        {
+            out.issues.push(Issue::new(
+                Severity::Warning,
+                "plural-forms",
+                file,
+                line,
+                Some(key),
+                format!(
+                    "`{{ ${var} -> ... }}` lacks the plural form(s) {} that {} uses (the `*[other]` form covers them, but may read wrong)",
+                    missing.iter().map(|m| format!("[{m}]")).collect::<Vec<_>>().join(" "),
+                    language_of(lang)
+                ),
+            ));
+        }
+    }
+}
+
+fn validate_single_key(
+    key: &str,
+    parsed: &Table,
+    file: &str,
+    lang: &str,
+    reference: &Reference,
+    required: &[&str],
+    out: &mut Checked,
+) {
+    let pattern = &parsed.messages[key];
+    let line = parsed.lines.get(key).copied();
+    let Some(source) = reference.table.messages.get(key) else {
+        out.issues.push(Issue::new(
+            Severity::Error,
+            "unknown-key",
+            file,
+            line,
+            Some(key),
+            "no such key in English; check the spelling (keys are lower-case words joined by dashes). The message is skipped",
+        ));
+        return;
+    };
+    if let Err((code, msg)) = validate_message_content(pattern) {
+        out.issues.push(Issue::new(
+            Severity::Error,
+            code,
+            file,
+            line,
+            Some(key),
+            msg,
+        ));
+        return;
+    }
+    if let Err((code, msg)) = validate_variables(pattern, key, reference) {
+        out.issues.push(Issue::new(
+            Severity::Error,
+            code,
+            file,
+            line,
+            Some(key),
+            msg,
+        ));
+        return;
+    }
+    let ctx = KeyContext {
+        key,
+        lang,
+        required,
+        line,
+        file,
+    };
+    check_message_warnings(&ctx, pattern, source, out);
+    out.table.messages.insert(key.to_string(), pattern.clone());
+    out.table.order.push(key.to_string());
+    if let Some(l) = line {
+        out.table.lines.insert(key.to_string(), l);
+    }
+    if let Some(c) = parsed.comments.get(key) {
+        out.table.comments.insert(key.to_string(), c.clone());
+    }
+}
+
+/// Validates the parsed `.ftl` (or JSON) table `parsed` of file `file` for language `lang`
+/// against `reference`. Parse problems are included. Nothing here panics or aborts: every
+/// problem becomes an [`Issue`] and the faulty message is dropped from the result.
+#[must_use]
+pub fn validate(parsed: &Table, file: &str, lang: &str, reference: &Reference) -> Checked {
+    let mut out = Checked::default();
+    collect_parse_diagnostics(parsed, file, &mut out);
     let mut keys: Vec<&String> = parsed.messages.keys().collect();
     keys.sort_by_key(|k| parsed.lines.get(*k).copied().unwrap_or(usize::MAX));
     let required: &[&str] = fluent::plural_categories(language_of(lang));
     for key in keys {
-        let pattern = &parsed.messages[key];
-        let line = parsed.lines.get(key).copied();
-        let mut bad = |code: &'static str, message: String| {
-            out.issues.push(Issue::new(
-                Severity::Error,
-                code,
-                file,
-                line,
-                Some(key),
-                message,
-            ));
-        };
-        let Some(source) = reference.table.messages.get(key) else {
-            bad(
-                "unknown-key",
-                "no such key in English; check the spelling (keys are lower-case words joined by dashes). The message is skipped".into(),
-            );
-            continue;
-        };
-        let mut text = String::new();
-        collect_texts(pattern, &mut text);
-        if text.trim().is_empty() && !pattern.iter().any(|p| !matches!(p, Part::Text(_))) {
-            bad(
-                "empty",
-                "the message is empty; delete the key to use the English text".into(),
-            );
-            continue;
-        }
-        if text.chars().count() > MAX_MESSAGE_CHARS {
-            bad(
-                "too-long",
-                format!("more than {MAX_MESSAGE_CHARS} characters"),
-            );
-            continue;
-        }
-        if let Some(c) = text
-            .chars()
-            .find(|c| (c.is_control() && *c != '\n') || *c == '\u{fffd}' || *c == '\u{27e6}')
-        {
-            bad(
-                "bad-character",
-                format!(
-                    "contains the character U+{:04X}, which cannot be shown (control character, replacement character or the gap marker)",
-                    c as u32
-                ),
-            );
-            continue;
-        }
-        let have = fluent::variables(pattern);
-        let want = reference.variables_of(key).cloned().unwrap_or_default();
-        let is_var = |s: &&String| s.starts_with('$');
-        let lost: Vec<&String> = want
-            .iter()
-            .filter(is_var)
-            .filter(|v| !have.contains(*v))
-            .collect();
-        let added: Vec<&String> = have
-            .iter()
-            .filter(is_var)
-            .filter(|v| !want.contains(*v))
-            .collect();
-        if !lost.is_empty() || !added.is_empty() {
-            let mut why = String::new();
-            if !lost.is_empty() {
-                why.push_str(&format!(
-                    "missing {}; ",
-                    lost.iter()
-                        .map(|s| format!("`{{ {s} }}`"))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ));
-            }
-            if !added.is_empty() {
-                why.push_str(&format!(
-                    "unknown {}; ",
-                    added
-                        .iter()
-                        .map(|s| format!("`{{ {s} }}`"))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ));
-            }
-            bad(
-                "variable-mismatch",
-                format!(
-                    "the variables differ from English ({why}English uses {}). Keep every `{{ $name }}` exactly as written",
-                    if want.is_empty() {
-                        "none".to_string()
-                    } else {
-                        want.iter().filter(is_var).cloned().collect::<Vec<_>>().join(", ")
-                    }
-                ),
-            );
-            continue;
-        }
-        let unknown_refs: Vec<&String> = have
-            .iter()
-            .filter(|s| !s.starts_with('$') && !reference.table.messages.contains_key(*s))
-            .collect();
-        if !unknown_refs.is_empty() {
-            bad(
-                "unknown-reference",
-                format!("refers to message(s) that do not exist: {unknown_refs:?}"),
-            );
-            continue;
-        }
-        // Accepted; warnings from here on.
-        let mut warn = |code: &'static str, message: String| {
-            out.issues.push(Issue::new(
-                Severity::Warning,
-                code,
-                file,
-                line,
-                Some(key),
-                message,
-            ));
-        };
-        let (en_vis, tr_vis) = (visible_text(source), visible_text(pattern));
-        let (en_len, tr_len) = (en_vis.chars().count(), tr_vis.chars().count());
-        if !is_compact_script(lang) && tr_len as f32 > en_len as f32 * 2.5 + 12.0 {
-            warn(
-                "suspicious-length",
-                format!("{tr_len} characters against {en_len} in English; it may not fit its button or label"),
-            );
-        }
-        if language_of(lang) != "en" && pattern == source && is_prose(&en_vis) {
-            warn(
-                "untranslated-copy",
-                "identical to the English text; translate it or delete the key".into(),
-            );
-        }
-        let mut sel = Vec::new();
-        selects(pattern, &mut sel);
-        for (var, variants) in sel {
-            let missing: Vec<&&str> = required
-                .iter()
-                .filter(|c| !variants.iter().any(|v| v == **c))
-                .collect();
-            let has_default_other = variants.iter().any(|v| v == "other");
-            if !missing.is_empty()
-                && !(missing.len() == 1 && *missing[0] == "other" && !has_default_other)
-            {
-                warn(
-                    "plural-forms",
-                    format!(
-                        "`{{ ${var} -> ... }}` lacks the plural form(s) {} that {} uses (the `*[other]` form covers them, but may read wrong)",
-                        missing.iter().map(|m| format!("[{m}]")).collect::<Vec<_>>().join(" "),
-                        language_of(lang)
-                    ),
-                );
-            }
-        }
-        out.table.messages.insert(key.clone(), pattern.clone());
-        out.table.order.push(key.clone());
-        if let Some(l) = line {
-            out.table.lines.insert(key.clone(), l);
-        }
-        if let Some(c) = parsed.comments.get(key) {
-            out.table.comments.insert(key.clone(), c.clone());
-        }
+        validate_single_key(key, parsed, file, lang, reference, required, &mut out);
     }
     out
 }

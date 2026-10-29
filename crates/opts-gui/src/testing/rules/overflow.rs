@@ -7,6 +7,64 @@ use crate::ui_tree::rect_of;
 
 use super::contrast::{hidden, in_tooltip};
 
+/// A clipping ancestor: its rectangle and how it clips.
+type Clip = ([f32; 4], Overflow);
+
+fn collect_clips(world: &World, e: Entity) -> (Vec<Clip>, Option<[f32; 4]>) {
+    let mut clips: Vec<Clip> = Vec::new();
+    let mut cur = world.get::<ChildOf>(e).map(|c| c.parent());
+    let parent_rect = cur.and_then(|p| rect_of(world, p));
+    while let Some(a) = cur {
+        if let Some(n) = world.get::<Node>(a) {
+            if n.overflow.x != OverflowAxis::Visible || n.overflow.y != OverflowAxis::Visible {
+                if let Some(c) = rect_of(world, a) {
+                    clips.push((c, n.overflow));
+                }
+            }
+        }
+        cur = world.get::<ChildOf>(a).map(|c| c.parent());
+    }
+    (clips, parent_rect)
+}
+
+fn intersect_seen(r: [f32; 4], clips: &[([f32; 4], Overflow)]) -> [f32; 4] {
+    let mut seen = r;
+    for (c, _) in clips {
+        let x0 = seen[0].max(c[0]);
+        let y0 = seen[1].max(c[1]);
+        let x1 = (seen[0] + seen[2]).min(c[0] + c[2]);
+        let y1 = (seen[1] + seen[3]).min(c[1] + c[3]);
+        seen = [x0, y0, (x1 - x0).max(0.0), (y1 - y0).max(0.0)];
+    }
+    seen
+}
+
+fn modal_layer(world: &World, e: Entity) -> Option<Entity> {
+    let mut cur = Some(e);
+    while let Some(x) = cur {
+        if world
+            .get::<crate::components::modal::ModalRoot>(x)
+            .is_some()
+        {
+            return Some(x);
+        }
+        cur = world.get::<ChildOf>(x).map(|c| c.parent());
+    }
+    None
+}
+
+fn check_overlaps(world: &World, rects: &[(Entity, String, [f32; 4])], out: &mut Vec<String>) {
+    for (i, (ea, na, a)) in rects.iter().enumerate() {
+        for (eb, nb, b) in &rects[i + 1..] {
+            let w = (a[0] + a[2]).min(b[0] + b[2]) - a[0].max(b[0]);
+            let h = (a[1] + a[3]).min(b[1] + b[3]) - a[1].max(b[1]);
+            if w > 2.0 && h > 2.0 && modal_layer(world, *ea) == modal_layer(world, *eb) {
+                out.push(format!("{na} overlaps {nb} ({w:.0}x{h:.0} px)"));
+            }
+        }
+    }
+}
+
 /// Text that does not fit: wider than its container, cut by a clipping ancestor, outside the
 /// window, or overlapping another text. Ellipsis with a tooltip is the only allowed truncation
 /// (design language section 5 and expandability section 7.4), so a text that already carries
@@ -24,43 +82,23 @@ pub fn text_overflow(world: &mut World, window: Vec2) -> Vec<String> {
         .collect();
     let mut rects: Vec<(Entity, String, [f32; 4])> = Vec::new();
     let mut out = Vec::new();
+    let tolerance = 1.5;
+
     for (e, text) in texts {
         if hidden(world, e) || in_tooltip(world, e) {
-            continue; // a tooltip floats over the page by design
+            continue;
         }
         let Some(r) = rect_of(world, e) else { continue };
         let name = world
             .get::<UiId>(e)
             .map_or(format!("{text:?}"), |u| format!("{text:?} ({})", u.0));
-        // Every clipping ancestor, and the direct parent's box.
-        let mut clips: Vec<([f32; 4], Overflow)> = Vec::new();
-        let mut cur = world.get::<ChildOf>(e).map(|c| c.parent());
-        let parent_rect = cur.and_then(|p| rect_of(world, p));
-        while let Some(a) = cur {
-            if let Some(n) = world.get::<Node>(a) {
-                if n.overflow.x != OverflowAxis::Visible || n.overflow.y != OverflowAxis::Visible {
-                    if let Some(c) = rect_of(world, a) {
-                        clips.push((c, n.overflow));
-                    }
-                }
-            }
-            cur = world.get::<ChildOf>(a).map(|c| c.parent());
-        }
-        let tolerance = 1.5;
+        let (clips, parent_rect) = collect_clips(world, e);
         let has_tooltip = world
             .get::<crate::interaction::tooltip::Tooltip>(e)
             .is_some();
-        // What a player can see of the text: its box cut by every clipping ancestor.
-        let mut seen = r;
-        for (c, _) in &clips {
-            let x0 = seen[0].max(c[0]);
-            let y0 = seen[1].max(c[1]);
-            let x1 = (seen[0] + seen[2]).min(c[0] + c[2]);
-            let y1 = (seen[1] + seen[3]).min(c[1] + c[3]);
-            seen = [x0, y0, (x1 - x0).max(0.0), (y1 - y0).max(0.0)];
-        }
+        let seen = intersect_seen(r, &clips);
         if seen[2] <= 0.0 || seen[3] <= 0.0 {
-            continue; // scrolled out of view
+            continue;
         }
         let cut_sideways = clips.iter().any(|(c, o)| {
             o.x != OverflowAxis::Visible
@@ -87,33 +125,8 @@ pub fn text_overflow(world: &mut World, window: Vec2) -> Vec<String> {
                 window.x, window.y, seen[0], seen[1], seen[2], seen[3]
             ));
         }
-        let r = seen;
-        rects.push((e, name, r));
+        rects.push((e, name, seen));
     }
-    for (i, (ea, na, a)) in rects.iter().enumerate() {
-        for (eb, nb, b) in &rects[i + 1..] {
-            let w = (a[0] + a[2]).min(b[0] + b[2]) - a[0].max(b[0]);
-            let h = (a[1] + a[3]).min(b[1] + b[3]) - a[1].max(b[1]);
-            if w > 2.0 && h > 2.0 {
-                // Texts on different layers (a dialog over a page) are expected to overlap.
-                let layer = |e: Entity| {
-                    let mut cur = Some(e);
-                    while let Some(x) = cur {
-                        if world
-                            .get::<crate::components::modal::ModalRoot>(x)
-                            .is_some()
-                        {
-                            return Some(x);
-                        }
-                        cur = world.get::<ChildOf>(x).map(|c| c.parent());
-                    }
-                    None
-                };
-                if layer(*ea) == layer(*eb) {
-                    out.push(format!("{na} overlaps {nb} ({w:.0}x{h:.0} px)"));
-                }
-            }
-        }
-    }
+    check_overlaps(world, &rects, &mut out);
     out
 }

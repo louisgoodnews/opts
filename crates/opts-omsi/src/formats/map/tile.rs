@@ -330,6 +330,7 @@ pub(super) fn spline_end_pose(s: &MapSplineInstance) -> (f32, f32, f32, f32) {
     )
 }
 
+mod attachment;
 mod parse;
 mod scan;
 

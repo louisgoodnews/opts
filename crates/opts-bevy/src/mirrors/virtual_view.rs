@@ -147,38 +147,41 @@ pub fn stream_size(base: UVec2) -> UVec2 {
     (base * 2).min(UVec2::splat(1024))
 }
 
+/// Parameters for [`toggle_virtual_mirrors`].
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct ToggleVirtualMirrorsParams<'w> {
+    pub keys: Res<'w, ButtonInput<KeyCode>>,
+    pub camera: Res<'w, CameraState>,
+    pub avail: Res<'w, CameraAvailability>,
+    pub editor: Option<Res<'w, ViewpointState>>,
+    pub mouse: Option<ResMut<'w, MouseDriving>>,
+    pub state: ResMut<'w, VirtualMirrors>,
+}
+
 /// Tab (without Shift) opens and closes the mode in the driver's view; leaving that view closes
 /// it. Shift + Tab is the viewpoint editor's, which keeps Tab while it is open.
-#[allow(clippy::too_many_arguments)]
-pub fn toggle_virtual_mirrors(
-    keys: Res<ButtonInput<KeyCode>>,
-    camera: Res<CameraState>,
-    avail: Res<CameraAvailability>,
-    editor: Option<Res<ViewpointState>>,
-    mouse: Option<ResMut<MouseDriving>>,
-    mut state: ResMut<VirtualMirrors>,
-) {
-    let in_cockpit = camera.mode == CameraMode::Cockpit && avail.cockpit;
-    let editing = editor.is_some_and(|e| e.editing);
-    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+pub fn toggle_virtual_mirrors(mut params: ToggleVirtualMirrorsParams) {
+    let in_cockpit = params.camera.mode == CameraMode::Cockpit && params.avail.cockpit;
+    let editing = params.editor.as_ref().is_some_and(|e| e.editing);
+    let shift = params.keys.pressed(KeyCode::ShiftLeft) || params.keys.pressed(KeyCode::ShiftRight);
     let want = if !in_cockpit || editing {
         false
-    } else if keys.just_pressed(KeyCode::Tab) && !shift {
-        !state.open
+    } else if params.keys.just_pressed(KeyCode::Tab) && !shift {
+        !params.state.open
     } else {
-        state.open
+        params.state.open
     };
-    if want == state.open {
+    if want == params.state.open {
         return;
     }
-    state.open = want;
-    if let Some(mut mouse) = mouse {
+    params.state.open = want;
+    if let Some(mut mouse) = params.mouse {
         if want && mouse.drives() {
             mouse.freed = true;
-            state.released_mouse = true;
-        } else if !want && state.released_mouse {
+            params.state.released_mouse = true;
+        } else if !want && params.state.released_mouse {
             mouse.freed = false;
-            state.released_mouse = false;
+            params.state.released_mouse = false;
         }
     }
 }

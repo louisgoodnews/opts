@@ -78,12 +78,7 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
-    commands.spawn(Camera2d);
-    let base: f32 = std::env::var("OPTS_FONT_COMPARE_SIZE")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(14.0);
+fn load_font_handles(fonts: &mut Assets<Font>) -> Vec<Handle<Font>> {
     let mut handles = Vec::new();
     for (_, files) in CANDIDATES.iter().chain(MONO) {
         for f in *files {
@@ -92,6 +87,90 @@ fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
             }
         }
     }
+    handles
+}
+
+fn spawn_candidate_column(
+    root: &mut ChildSpawnerCommands,
+    family: &str,
+    base: f32,
+    fg: Color,
+    dim: Color,
+) {
+    root.spawn(Node {
+        flex_direction: FlexDirection::Column,
+        width: Val::Px(760.0),
+        row_gap: Val::Px(2.0),
+        ..default()
+    })
+    .with_children(|col| {
+        line(col, family, family, 700, base + 4.0, dim, false);
+        for (w, name) in [
+            (400, "Regular 400"),
+            (500, "Medium 500"),
+            (600, "SemiBold 600"),
+            (700, "Bold 700"),
+        ] {
+            line(
+                col,
+                &format!("{name}: Fahrplan München Äpfel Öl Übung ß € – Next stop: Hauptbahnhof"),
+                family,
+                w,
+                base,
+                fg,
+                false,
+            );
+        }
+        for size in [12.0, 13.0, 16.0, 20.0] {
+            line(
+                col,
+                &format!(
+                    "{size:.0} px  Start new drive · Settings · Quit — 07:45 → 08:12 — 48 km/h"
+                ),
+                family,
+                400,
+                size,
+                fg,
+                false,
+            );
+        }
+        line(
+            col,
+            "Numerals 1111111111 / 0000000000 / 8888888888 (default)",
+            family,
+            500,
+            base + 2.0,
+            fg,
+            false,
+        );
+        line(
+            col,
+            "Numerals 1111111111 / 0000000000 / 8888888888 (tnum)",
+            family,
+            500,
+            base + 2.0,
+            fg,
+            true,
+        );
+        line(
+            col,
+            "48 km/h  12:45  1,234.56 m  il1I O0 rn m",
+            family,
+            600,
+            base + 14.0,
+            fg,
+            true,
+        );
+    });
+}
+
+fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
+    commands.spawn(Camera2d);
+    let base: f32 = std::env::var("OPTS_FONT_COMPARE_SIZE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(14.0);
+    let handles = load_font_handles(&mut fonts);
     // keep the handles alive for the whole run
     commands.insert_resource(Keep(handles));
 
@@ -114,40 +193,7 @@ fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
         ))
         .with_children(|root| {
             for (family, _) in CANDIDATES {
-                root.spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    width: Val::Px(760.0),
-                    row_gap: Val::Px(2.0),
-                    ..default()
-                })
-                .with_children(|col| {
-                    line(col, family, family, 700, base + 4.0, dim, false);
-                    for (w, name) in [(400, "Regular 400"), (500, "Medium 500"), (600, "SemiBold 600"), (700, "Bold 700")] {
-                        line(
-                            col,
-                            &format!("{name}: Fahrplan München Äpfel Öl Übung ß € – Next stop: Hauptbahnhof"),
-                            family,
-                            w,
-                            base,
-                            fg,
-                            false,
-                        );
-                    }
-                    for size in [12.0, 13.0, 16.0, 20.0] {
-                        line(
-                            col,
-                            &format!("{size:.0} px  Start new drive · Settings · Quit — 07:45 → 08:12 — 48 km/h"),
-                            family,
-                            400,
-                            size,
-                            fg,
-                            false,
-                        );
-                    }
-                    line(col, "Numerals 1111111111 / 0000000000 / 8888888888 (default)", family, 500, base + 2.0, fg, false);
-                    line(col, "Numerals 1111111111 / 0000000000 / 8888888888 (tnum)", family, 500, base + 2.0, fg, true);
-                    line(col, "48 km/h  12:45  1,234.56 m  il1I O0 rn m", family, 600, base + 14.0, fg, true);
-                });
+                spawn_candidate_column(root, family, base, fg, dim);
             }
             for (family, _) in MONO {
                 root.spawn(Node {
@@ -157,8 +203,24 @@ fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
                     ..default()
                 })
                 .with_children(|col| {
-                    line(col, &format!("{family} (companion)"), family, 700, base + 4.0, dim, false);
-                    line(col, "fps 144.2  entities 18432  decode 0.37 ms  il1I O0 {}[]", family, 400, base, fg, false);
+                    line(
+                        col,
+                        &format!("{family} (companion)"),
+                        family,
+                        700,
+                        base + 4.0,
+                        dim,
+                        false,
+                    );
+                    line(
+                        col,
+                        "fps 144.2  entities 18432  decode 0.37 ms  il1I O0 {}[]",
+                        family,
+                        400,
+                        base,
+                        fg,
+                        false,
+                    );
                 });
             }
         });

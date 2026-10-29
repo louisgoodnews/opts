@@ -95,6 +95,62 @@ fn rpm_of_omega(omega_rad_s: f32) -> f32 {
     omega_rad_s * 60.0 / std::f32::consts::TAU
 }
 
+/// The axle states the scripts read (one entry per axle of the simulation).
+fn collect_axle_inputs(sim: &opts_sim::VehicleSimulation) -> Vec<AxleInput> {
+    let wheels = sim.body.as_ref().map_or(&[][..], |b| &b.wheels[..]);
+    let travel = |k: usize| wheels.get(k).map_or(0.0, |w| w.omsi_travel_m());
+    let rest = sim.body.as_ref().map_or(0.0, |b| b.rest_travel_m());
+    let mut axles: Vec<AxleInput> = sim
+        .axles
+        .iter()
+        .enumerate()
+        .map(|(i, axle)| {
+            let wheel = |w: &opts_sim::WheelState, side: usize| WheelInput {
+                speed_rpm: rpm_of_omega(w.angular_velocity_rad_s),
+                rotation_rad: w.rotation_rad,
+                steering_rad: w.steer_angle_rad,
+                suspension_m: travel(i * 2 + side),
+            };
+            AxleInput {
+                left: wheel(&axle.left_wheel, 0),
+                right: wheel(&axle.right_wheel, 1),
+            }
+        })
+        .collect();
+
+    let r0 = sim
+        .axles
+        .first()
+        .map_or(0.49, |a| a.left_wheel.rolling_radius_m)
+        .max(0.1);
+    let rolling = WheelInput {
+        speed_rpm: rpm_of_omega(sim.chassis.forward_speed_m_s() / r0),
+        rotation_rad: sim.axles.first().map_or(0.0, |a| a.left_wheel.rotation_rad),
+        steering_rad: 0.0,
+        suspension_m: rest,
+    };
+    for unit in &sim.trailer_loads {
+        for _ in &unit.axles {
+            axles.push(AxleInput {
+                left: rolling,
+                right: rolling,
+            });
+        }
+    }
+    axles
+}
+
+fn apply_clock_inputs(inputs: &mut HostInputs, c: &crate::scenery_runtime::SceneryClock) {
+    inputs.envir_brightness = c.envir_brightness();
+    inputs.temperature_c = c.temperature_c;
+    inputs.abs_hum = c.weather.abs_hum;
+    inputs.precip_type = c.weather.precip_type;
+    inputs.precip_rate = c.weather.precip_rate;
+    inputs.sun_alt_deg = c.sun_alt_deg;
+    inputs.time_of_day_s = (c.seconds_of_day % 86_400.0) as f32;
+    (inputs.year, inputs.month, inputs.day) = (c.year, c.month, c.day);
+}
+
 /// The host's state a vehicle's scripts may read, from the simulation and the session's clock
 /// (the table of `opts_sim::script::inputs`, units of the OMSI wiki as far as known: `Velocity`
 /// in km/h ❓, pedals `0..1`).
@@ -107,8 +163,6 @@ pub fn host_inputs(
     let mut inputs = HostInputs {
         velocity_km_h: sim.chassis.forward_speed_km_h(),
         velocity_ground_km_h: sim.chassis.forward_speed_km_h(),
-        // `A_Trans_Z`: following the ground plus the body on its springs (kerbs, the road's
-        // unevenness; the rattle scripts read mostly this one, M-0146).
         a_trans: [
             sim.chassis.local_acceleration.x,
             sim.chassis.local_acceleration.y,
@@ -135,62 +189,9 @@ pub fn host_inputs(
             .sum::<f32>()
             / sim.axles.len() as f32
     };
-    // Wheel spin (rad, growing while driving forward), steering (rad; positive turns right like
-    // the simulation's: the scripts' automatic indicator cancel arms the right indicator on a
-    // positive `Axle_Steering_0_L`) and suspension travel (m, OMSI's extension from the unloaded
-    // spring, negative at rest: `WheelSuspension::omsi_travel_m`).
-    let wheels = sim.body.as_ref().map_or(&[][..], |b| &b.wheels[..]);
-    let travel = |k: usize| wheels.get(k).map_or(0.0, |w| w.omsi_travel_m());
-    // The axles of the following units have no body model: they rest at the head's mean travel.
-    let rest = sim.body.as_ref().map_or(0.0, |b| b.rest_travel_m());
-    inputs.axles = sim
-        .axles
-        .iter()
-        .enumerate()
-        .map(|(i, axle)| {
-            let wheel = |w: &opts_sim::WheelState, side: usize| WheelInput {
-                speed_rpm: rpm_of_omega(w.angular_velocity_rad_s),
-                rotation_rad: w.rotation_rad,
-                steering_rad: w.steer_angle_rad,
-                suspension_m: travel(i * 2 + side),
-            };
-            AxleInput {
-                left: wheel(&axle.left_wheel, 0),
-                right: wheel(&axle.right_wheel, 1),
-            }
-        })
-        .collect();
-    // The axles of the following units continue the numbering (the driven axle of an articulated
-    // bus is the third, hanging in its second unit; the scripts read its wheel speed): they roll
-    // with the road.
-    let r0 = sim
-        .axles
-        .first()
-        .map_or(0.49, |a| a.left_wheel.rolling_radius_m)
-        .max(0.1);
-    let rolling = WheelInput {
-        speed_rpm: rpm_of_omega(sim.chassis.forward_speed_m_s() / r0),
-        rotation_rad: sim.axles.first().map_or(0.0, |a| a.left_wheel.rotation_rad),
-        steering_rad: 0.0,
-        suspension_m: rest,
-    };
-    for unit in &sim.trailer_loads {
-        for _ in &unit.axles {
-            inputs.axles.push(AxleInput {
-                left: rolling,
-                right: rolling,
-            });
-        }
-    }
+    inputs.axles = collect_axle_inputs(sim);
     if let Some(c) = clock {
-        inputs.envir_brightness = c.envir_brightness();
-        inputs.temperature_c = c.temperature_c;
-        inputs.abs_hum = c.weather.abs_hum;
-        inputs.precip_type = c.weather.precip_type;
-        inputs.precip_rate = c.weather.precip_rate;
-        inputs.sun_alt_deg = c.sun_alt_deg;
-        inputs.time_of_day_s = (c.seconds_of_day % 86_400.0) as f32;
-        (inputs.year, inputs.month, inputs.day) = (c.year, c.month, c.day);
+        apply_clock_inputs(&mut inputs, c);
     }
     inputs
 }

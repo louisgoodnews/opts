@@ -5,6 +5,7 @@
 
 use std::borrow::Cow;
 
+use bevy::ecs::system::SystemParam;
 use bevy::input_focus::InputFocusVisible;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -70,23 +71,26 @@ type Candidate<'a> = (
     Has<Disabled>,
 );
 
-/// Tracks hover/focus, spawns and removes the tooltip node.
-#[allow(clippy::too_many_arguments)]
-pub fn tooltip_system(
-    mut commands: Commands,
-    time: Res<Time<Real>>,
-    mut state: ResMut<TooltipState>,
-    visible: Option<Res<InputFocusVisible>>,
-    candidates: Query<Candidate>,
-    existing: Query<(Entity, &TooltipNode)>,
-    geometry: Query<(&ComputedNode, &UiGlobalTransform)>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-    ui_scale: Res<UiScale>,
-) {
-    let focus_visible = visible.is_none_or(|v| v.0);
+/// Parameters for [`tooltip_system`].
+#[derive(SystemParam)]
+pub struct TooltipParams<'w, 's> {
+    pub time: Res<'w, Time<Real>>,
+    pub state: ResMut<'w, TooltipState>,
+    pub visible: Option<Res<'w, InputFocusVisible>>,
+    pub candidates: Query<'w, 's, Candidate<'static>>,
+    pub existing: Query<'w, 's, (Entity, &'static TooltipNode)>,
+    pub geometry: Query<'w, 's, (&'static ComputedNode, &'static UiGlobalTransform)>,
+    pub windows: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
+    pub ui_scale: Res<'w, UiScale>,
+}
+
+fn find_tooltip_target(
+    candidates: &Query<Candidate>,
+    focus_visible: bool,
+) -> (Option<Entity>, bool) {
     let mut hovered_target = None;
     let mut focused_target = None;
-    for (entity, hovered, focused, tooltip, reason, disabled) in &candidates {
+    for (entity, hovered, focused, tooltip, reason, disabled) in candidates {
         if tooltip_text(tooltip, reason, disabled).is_none() {
             continue;
         }
@@ -97,38 +101,19 @@ pub fn tooltip_system(
             focused_target = Some(entity);
         }
     }
-    let (target, by_focus) = match (hovered_target, focused_target) {
+    match (hovered_target, focused_target) {
         (Some(h), _) => (Some(h), false),
         (None, Some(f)) => (Some(f), true),
         _ => (None, false),
-    };
-    if target != state.target {
-        state.target = target;
-        state.hover_secs = 0.0;
     }
-    state.by_focus = by_focus;
-    if target.is_some() {
-        state.hover_secs += time.delta_secs();
-    }
+}
 
-    let want = target.filter(|_| state.by_focus || state.hover_secs >= TOOLTIP_DELAY_SECS);
-    let mut keep = false;
-    for (node, info) in &existing {
-        if Some(info.target) == want {
-            keep = true;
-        } else {
-            commands.entity(node).despawn();
-        }
-    }
-    let Some(target) = want.filter(|_| !keep) else {
-        return;
-    };
-    let Ok((_, _, _, tooltip, reason, disabled)) = candidates.get(target) else {
-        return;
-    };
-    let Some(text) = tooltip_text(tooltip, reason, disabled) else {
-        return;
-    };
+fn compute_tooltip_coords(
+    target: Entity,
+    geometry: &Query<(&ComputedNode, &UiGlobalTransform)>,
+    windows: &Query<&Window, With<PrimaryWindow>>,
+    ui_scale: f32,
+) -> (f32, f32) {
     let (mut left, mut top) = (0.0, 0.0);
     if let Ok((computed, transform)) = geometry.get(target) {
         let scale = computed.inverse_scale_factor;
@@ -137,15 +122,17 @@ pub fn tooltip_system(
         left = center.x - size.x / 2.0;
         top = center.y + size.y / 2.0 + 6.0;
         if let Ok(window) = windows.single() {
-            // Node coordinates are in UI units: the window's logical size divided by `UiScale`
-            // (at 200 % the window is 512 units wide, not 1024).
-            let (width, height) = (window.width() / ui_scale.0, window.height() / ui_scale.0);
+            let (width, height) = (window.width() / ui_scale, window.height() / ui_scale);
             left = left.min(width - TOOLTIP_MAX_WIDTH - 8.0).max(8.0);
             if top + 40.0 > height {
                 top = (center.y - size.y / 2.0 - 40.0).max(8.0);
             }
         }
     }
+    (left, top)
+}
+
+fn spawn_tooltip(commands: &mut Commands, target: Entity, text: &str, left: f32, top: f32) {
     commands
         .spawn((
             Node {
@@ -172,6 +159,43 @@ pub fn tooltip_system(
                 Pickable::IGNORE,
             ));
         });
+}
+
+/// Tracks hover/focus, spawns and removes the tooltip node.
+pub fn tooltip_system(mut commands: Commands, mut params: TooltipParams) {
+    let focus_visible = params.visible.is_none_or(|v| v.0);
+    let (target, by_focus) = find_tooltip_target(&params.candidates, focus_visible);
+    if target != params.state.target {
+        params.state.target = target;
+        params.state.hover_secs = 0.0;
+    }
+    params.state.by_focus = by_focus;
+    if target.is_some() {
+        params.state.hover_secs += params.time.delta_secs();
+    }
+
+    let want =
+        target.filter(|_| params.state.by_focus || params.state.hover_secs >= TOOLTIP_DELAY_SECS);
+    let mut keep = false;
+    for (node, info) in &params.existing {
+        if Some(info.target) == want {
+            keep = true;
+        } else {
+            commands.entity(node).despawn();
+        }
+    }
+    let Some(target) = want.filter(|_| !keep) else {
+        return;
+    };
+    let Ok((_, _, _, tooltip, reason, disabled)) = params.candidates.get(target) else {
+        return;
+    };
+    let Some(text) = tooltip_text(tooltip, reason, disabled) else {
+        return;
+    };
+    let (left, top) =
+        compute_tooltip_coords(target, &params.geometry, &params.windows, params.ui_scale.0);
+    spawn_tooltip(&mut commands, target, &text, left, top);
 }
 
 /// Registers the tooltip resource and system.

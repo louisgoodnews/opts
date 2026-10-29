@@ -263,62 +263,7 @@ pub fn build_params(spec: &CommandSpec, words: &[String]) -> Result<Value, Strin
             (None, None)
         };
         if let Some(key) = key {
-            if key == "json" {
-                let raw = match inline {
-                    Some(v) => v.to_string(),
-                    None => {
-                        i += 1;
-                        words.get(i).cloned().ok_or("--json needs a value")?
-                    }
-                };
-                let v: Value = serde_json::from_str(&raw).map_err(|e| format!("--json: {e}"))?;
-                let Value::Object(map) = v else {
-                    return Err("--json must be an object".into());
-                };
-                for (k, v) in map {
-                    out.entry(k).or_insert(v);
-                }
-                i += 1;
-                continue;
-            }
-            let key = key.replace('-', "_");
-            if spec.method.is_empty() {
-                // Unknown (newer) method: take the pair as written; JSON if it parses, text otherwise.
-                let raw = match inline {
-                    Some(v) => v.to_string(),
-                    None => {
-                        i += 1;
-                        words
-                            .get(i)
-                            .cloned()
-                            .ok_or_else(|| format!("`--{key}` needs a value"))?
-                    }
-                };
-                let value = serde_json::from_str(&raw).unwrap_or_else(|_| json!(raw));
-                out.insert(key, value);
-                i += 1;
-                continue;
-            }
-            let decl = decls
-                .iter()
-                .find(|d| d.name == key || d.aliases.iter().any(|a| a.replace('-', "_") == key))
-                .ok_or_else(|| format!("`{}` has no parameter `{key}`", spec.method))?;
-            let raw = match inline {
-                Some(v) => v.to_string(),
-                None if decl.kind == Kind::Bool
-                    && words.get(i + 1).is_none_or(|n| n.starts_with("--")) =>
-                {
-                    "true".to_string()
-                }
-                None => {
-                    i += 1;
-                    words
-                        .get(i)
-                        .cloned()
-                        .ok_or_else(|| format!("`--{key}` needs a value"))?
-                }
-            };
-            out.insert(decl.name.to_string(), coerce(decl.kind, decl.name, &raw)?);
+            handle_named_param(spec, &decls, words, &mut i, key, inline, &mut out)?;
         } else {
             let decl = decls
                 .iter()
@@ -340,6 +285,89 @@ pub fn build_params(spec: &CommandSpec, words: &[String]) -> Result<Value, Strin
     } else {
         Value::Object(out)
     })
+}
+
+fn handle_named_param(
+    spec: &CommandSpec,
+    decls: &[ParamDecl<'_>],
+    words: &[String],
+    i: &mut usize,
+    key: &str,
+    inline: Option<&str>,
+    out: &mut Map<String, Value>,
+) -> Result<(), String> {
+    if key == "json" {
+        return handle_json_param(words, i, inline, out);
+    }
+    let norm_key = key.replace('-', "_");
+    if spec.method.is_empty() {
+        let raw = read_flag_value(words, i, inline, &norm_key)?;
+        let value = serde_json::from_str(&raw).unwrap_or_else(|_| json!(raw));
+        out.insert(norm_key, value);
+        return Ok(());
+    }
+    let decl = decls
+        .iter()
+        .find(|d| d.name == norm_key || d.aliases.iter().any(|a| a.replace('-', "_") == norm_key))
+        .ok_or_else(|| format!("`{}` has no parameter `{norm_key}`", spec.method))?;
+    let raw = match inline {
+        Some(v) => v.to_string(),
+        None if decl.kind == Kind::Bool
+            && words.get(*i + 1).is_none_or(|n| n.starts_with("--")) =>
+        {
+            "true".to_string()
+        }
+        None => {
+            *i += 1;
+            words
+                .get(*i)
+                .cloned()
+                .ok_or_else(|| format!("`--{norm_key}` needs a value"))?
+        }
+    };
+    out.insert(decl.name.to_string(), coerce(decl.kind, decl.name, &raw)?);
+    Ok(())
+}
+
+fn handle_json_param(
+    words: &[String],
+    i: &mut usize,
+    inline: Option<&str>,
+    out: &mut Map<String, Value>,
+) -> Result<(), String> {
+    let raw = match inline {
+        Some(v) => v.to_string(),
+        None => {
+            *i += 1;
+            words.get(*i).cloned().ok_or("--json needs a value")?
+        }
+    };
+    let v: Value = serde_json::from_str(&raw).map_err(|e| format!("--json: {e}"))?;
+    let Value::Object(map) = v else {
+        return Err("--json must be an object".into());
+    };
+    for (k, v) in map {
+        out.entry(k).or_insert(v);
+    }
+    Ok(())
+}
+
+fn read_flag_value(
+    words: &[String],
+    i: &mut usize,
+    inline: Option<&str>,
+    key: &str,
+) -> Result<String, String> {
+    match inline {
+        Some(v) => Ok(v.to_string()),
+        None => {
+            *i += 1;
+            words
+                .get(*i)
+                .cloned()
+                .ok_or_else(|| format!("`--{key}` needs a value"))
+        }
+    }
 }
 
 fn is_name(s: &str) -> bool {

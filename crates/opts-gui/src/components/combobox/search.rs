@@ -1,6 +1,7 @@
 //! The combobox search: filter, keys, reveal and no-match row.
 
 use super::*;
+use bevy::ecs::system::SystemParam;
 
 /// Menus with more options than this get a search field (see [`ComboboxBuilder::with_search_threshold`]).
 pub const DEFAULT_SEARCH_THRESHOLD: usize = 8;
@@ -89,21 +90,30 @@ pub fn combobox_search_keys_system(
     }
 }
 
+/// Parameters for [`combobox_filter_system`].
+#[derive(SystemParam)]
+pub struct ComboboxFilterParams<'w, 's> {
+    pub time: Option<Res<'w, Time>>,
+    pub roots: Query<'w, 's, (Entity, &'static M3Combobox, &'static mut ComboboxFilter)>,
+    pub searches: Query<'w, 's, (&'static ComboboxSearch, &'static M3TextField)>,
+    pub items: Query<
+        'w,
+        's,
+        (Entity, &'static ComboboxMenuItem, &'static mut Node),
+        Without<ComboboxNoMatch>,
+    >,
+    pub no_match:
+        Query<'w, 's, (&'static ComboboxNoMatch, &'static mut Node), Without<ComboboxMenuItem>>,
+    pub focus: MessageWriter<'w, FocusEvent>,
+    pub activated: MessageWriter<'w, Activated>,
+}
+
 /// Applies the search text to the options after the debounce, shows the "No match" row and acts
 /// on a pending Down / Enter.
-#[allow(clippy::too_many_arguments)]
-pub fn combobox_filter_system(
-    time: Option<Res<Time>>,
-    mut roots: Query<(Entity, &M3Combobox, &mut ComboboxFilter)>,
-    searches: Query<(&ComboboxSearch, &M3TextField)>,
-    mut items: Query<(Entity, &ComboboxMenuItem, &mut Node), Without<ComboboxNoMatch>>,
-    mut no_match: Query<(&ComboboxNoMatch, &mut Node), Without<ComboboxMenuItem>>,
-    mut focus: MessageWriter<FocusEvent>,
-    mut activated: MessageWriter<Activated>,
-) {
-    let dt = time.map_or(0.0, |t| t.delta_secs());
-    for (root, combo, mut filter) in &mut roots {
-        let Some((_, field)) = searches.iter().find(|(s, _)| s.0 == root) else {
+pub fn combobox_filter_system(mut params: ComboboxFilterParams) {
+    let dt = params.time.map_or(0.0, |t| t.delta_secs());
+    for (root, combo, mut filter) in &mut params.roots {
+        let Some((_, field)) = params.searches.iter().find(|(s, _)| s.0 == root) else {
             continue;
         };
         if field.text != filter.seen {
@@ -123,7 +133,7 @@ pub fn combobox_filter_system(
         filter.wait = None;
         filter.applied.clone_from(&query);
         let mut visible = Vec::new();
-        for (entity, item, mut node) in &mut items {
+        for (entity, item, mut node) in &mut params.items {
             if item.combobox_entity != root {
                 continue;
             }
@@ -139,7 +149,7 @@ pub fn combobox_filter_system(
                 visible.push((item.index, entity));
             }
         }
-        for (n, mut node) in &mut no_match {
+        for (n, mut node) in &mut params.no_match {
             if n.0 == root {
                 let display = if visible.is_empty() {
                     Display::Flex
@@ -158,9 +168,9 @@ pub fn combobox_filter_system(
             .map(|(_, e)| *e);
         if let Some(target) = target {
             if filter.choose {
-                activated.write(Activated(target));
+                params.activated.write(Activated(target));
             } else if filter.focus_item {
-                focus.write(FocusEvent::Set(target));
+                params.focus.write(FocusEvent::Set(target));
             }
         }
         filter.choose = false;

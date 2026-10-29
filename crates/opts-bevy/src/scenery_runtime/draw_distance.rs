@@ -41,23 +41,21 @@ pub fn is_culled(distance: f32, extent: f32, limit: f32, was_culled: bool) -> bo
     }
 }
 
+type SceneryDrawObject<'a> = (
+    Entity,
+    &'a GlobalTransform,
+    Option<&'a SceneryLod>,
+    Has<DistanceCulled>,
+    &'a mut Visibility,
+);
+
 /// Hides scenery object roots beyond [`SceneryDrawDistance`] and restores them.
-#[allow(clippy::type_complexity)]
 pub fn scenery_draw_distance_system(
     time: Res<Time>,
     limit: Res<SceneryDrawDistance>,
     mut since: Local<f32>,
     cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
-    mut objects: Query<
-        (
-            Entity,
-            &GlobalTransform,
-            Option<&SceneryLod>,
-            Has<DistanceCulled>,
-            &mut Visibility,
-        ),
-        With<SceneryDrawRoot>,
-    >,
+    mut objects: Query<SceneryDrawObject<'_>, With<SceneryDrawRoot>>,
     mut commands: Commands,
 ) {
     *since += time.delta_secs();

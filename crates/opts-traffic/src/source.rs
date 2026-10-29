@@ -120,11 +120,7 @@ fn rules_for(
     (speed, out)
 }
 
-/// Lane segments of every spline and object of `tile`, which sits at `origin`.
-///
-/// Pedestrian and rail paths are included (see [`LaneKind`]); filter by kind when building a
-/// road-only graph.
-pub fn segments_from_tile(
+fn spline_segments(
     tile: &MapTile,
     origin: DVec2,
     source: &mut impl PathSource,
@@ -147,9 +143,6 @@ pub fn segments_from_tile(
             index: si,
             id_code: s.id_code,
         };
-        // A mirrored spline turns its profile round: the lanes change sides *and* direction, so
-        // a right-hand road stays right-hand (on Berlin-Spandau the lanes then join up: 178 dead
-        // ends against 336 with the offsets negated alone and 279 with `mirror` ignored).
         let mirror = if s.mirrored { -1.0 } else { 1.0 };
         for (pi, p) in paths.iter().enumerate() {
             let Some(kind) = LaneKind::from_path_type(p.path_type) else {
@@ -157,8 +150,6 @@ pub fn segments_from_tile(
             };
             let (speed_limit, rules) = rules_for(&tile.rules, owner, pi);
             let geometry = centre.offset(mirror * f64::from(p.offset_x));
-            // The height follows the centre line at the same fraction of the length, so the
-            // gradients scale with the lane's length on an arc.
             let scale = centre.length / geometry.length.max(1e-6);
             out.push(LaneSegment {
                 geometry,
@@ -184,6 +175,15 @@ pub fn segments_from_tile(
             });
         }
     }
+    out
+}
+
+fn object_segments(
+    tile: &MapTile,
+    origin: DVec2,
+    source: &mut impl PathSource,
+) -> Vec<LaneSegment> {
+    let mut out = Vec::new();
     for (oi, o) in tile.objects.iter().enumerate() {
         if source
             .sco_paths(&o.sco_file)
@@ -243,6 +243,20 @@ pub fn segments_from_tile(
             });
         }
     }
+    out
+}
+
+/// Lane segments of every spline and object of `tile`, which sits at `origin`.
+///
+/// Pedestrian and rail paths are included (see [`LaneKind`]); filter by kind when building a
+/// road-only graph.
+pub fn segments_from_tile(
+    tile: &MapTile,
+    origin: DVec2,
+    source: &mut impl PathSource,
+) -> Vec<LaneSegment> {
+    let mut out = spline_segments(tile, origin, source);
+    out.extend(object_segments(tile, origin, source));
     out
 }
 

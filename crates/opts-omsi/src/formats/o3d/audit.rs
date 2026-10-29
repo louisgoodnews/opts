@@ -14,12 +14,7 @@ fn percentile(v: &mut [f32], q: f32) -> f32 {
     v[((v.len() - 1) as f32 * q) as usize]
 }
 
-/// Geometric and structural plausibility checks on a (possibly decoded) mesh: non-finite values,
-/// index and material-index range, empty meshes, bounding-box extent, exploded vertices, degenerate
-/// and huge triangles, winding disagreement with the stored normals and texture-coordinate chaos.
-///
-/// Each finding appends a code (prefixed with `tag`) to `codes` and the measurement to `metrics`.
-pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<String>) {
+fn check_structure(o: &O3d, tag: &str, codes: &mut Vec<String>) -> bool {
     let nv = o.vertices.len();
     let nt = o.indices.len();
     let finite = |v: Vec3| v.is_finite();
@@ -34,7 +29,7 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
         .any(|t| t.iter().any(|&i| i as usize >= nv))
     {
         codes.push(format!("{tag}INDEX_OOR"));
-        return;
+        return false;
     }
     if o.face_materials.len() != nt {
         codes.push(format!("{tag}FACEMAT_LEN"));
@@ -48,9 +43,14 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
     }
     if nv == 0 || nt == 0 {
         codes.push(format!("{tag}EMPTY"));
-        return;
+        return false;
     }
-    // bounding box and outliers
+    true
+}
+
+fn check_bbox_and_outliers(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<String>) {
+    let nv = o.vertices.len();
+    let finite = |v: Vec3| v.is_finite();
     let mut lo = Vec3::splat(f32::MAX);
     let mut hi = Vec3::splat(f32::MIN);
     for v in &o.vertices {
@@ -89,7 +89,34 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
             codes.push(format!("{tag}OUTLIER_VERTS"));
         }
     }
-    // triangles
+}
+
+fn check_uv_chaos(
+    uv_ratio: &mut [f32],
+    vertices: &[super::Vertex],
+    tag: &str,
+    codes: &mut Vec<String>,
+    metrics: &mut Vec<String>,
+) {
+    if uv_ratio.len() >= 8 {
+        let m = percentile(uv_ratio, 0.5).max(1e-6);
+        let bad = uv_ratio
+            .iter()
+            .filter(|&&r| r > m * 40.0 && r > 2.0)
+            .count();
+        let frac = bad as f32 / uv_ratio.len() as f32;
+        metrics.push(format!("{tag}uvchaos={frac:.2}"));
+        if frac > 0.10 {
+            codes.push(format!("{tag}UV_CHAOS"));
+        }
+    }
+    if vertices.iter().any(|v| v.uv.abs().max_element() > 1000.0) {
+        codes.push(format!("{tag}UV_HUGE"));
+    }
+}
+
+fn check_triangles_and_uv(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<String>) {
+    let nt = o.indices.len();
     let (mut degen, mut huge, mut flip, mut agree_n) = (0usize, 0usize, 0usize, 0usize);
     let mut edges: Vec<f32> = Vec::with_capacity(nt);
     let mut uv_ratio: Vec<f32> = Vec::with_capacity(nt);
@@ -152,20 +179,18 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
             codes.push(format!("{tag}WINDING_MIXED"));
         }
     }
-    // uv chaos
-    if uv_ratio.len() >= 8 {
-        let m = percentile(&mut uv_ratio.clone(), 0.5).max(1e-6);
-        let bad = uv_ratio
-            .iter()
-            .filter(|&&r| r > m * 40.0 && r > 2.0)
-            .count();
-        let frac = bad as f32 / uv_ratio.len() as f32;
-        metrics.push(format!("{tag}uvchaos={frac:.2}"));
-        if frac > 0.10 {
-            codes.push(format!("{tag}UV_CHAOS"));
-        }
+    check_uv_chaos(&mut uv_ratio, &o.vertices, tag, codes, metrics);
+}
+
+/// Geometric and structural plausibility checks on a (possibly decoded) mesh: non-finite values,
+/// index and material-index range, empty meshes, bounding-box extent, exploded vertices, degenerate
+/// and huge triangles, winding disagreement with the stored normals and texture-coordinate chaos.
+///
+/// Each finding appends a code (prefixed with `tag`) to `codes` and the measurement to `metrics`.
+pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<String>) {
+    if !check_structure(o, tag, codes) {
+        return;
     }
-    if o.vertices.iter().any(|v| v.uv.abs().max_element() > 1000.0) {
-        codes.push(format!("{tag}UV_HUGE"));
-    }
+    check_bbox_and_outliers(o, tag, codes, metrics);
+    check_triangles_and_uv(o, tag, codes, metrics);
 }

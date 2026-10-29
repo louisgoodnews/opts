@@ -202,21 +202,30 @@ pub struct HeldHotSpot {
     dragged: bool,
 }
 
+/// Parameters for [`script_mouse_trigger_system`].
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct ScriptMouseTriggerParams<'w, 's> {
+    pub mouse: Res<'w, ButtonInput<MouseButton>>,
+    pub motion: MessageReader<'w, 's, MouseMotion>,
+    pub vehicles: Query<'w, 's, &'static VehicleScripts, Scripted>,
+    pub player: Query<'w, 's, &'static crate::vehicle_sim::VehicleController, With<PlayerVehicle>>,
+    pub picker: HotSpotPicker<'w, 's>,
+    pub driving: Option<Res<'w, crate::mouse_driving::MouseDriving>>,
+}
+
 /// Raises hot-spot triggers for left clicks on [`MouseTrigger`] meshes of the player's vehicle.
-#[allow(clippy::too_many_arguments)]
 pub fn script_mouse_trigger_system(
-    mouse: Res<ButtonInput<MouseButton>>,
-    mut motion: MessageReader<MouseMotion>,
-    vehicles: Query<&VehicleScripts, Scripted>,
-    player: Query<&crate::vehicle_sim::VehicleController, With<PlayerVehicle>>,
-    mut picker: HotSpotPicker,
-    driving: Option<Res<crate::mouse_driving::MouseDriving>>,
+    mut params: ScriptMouseTriggerParams,
     mut held: Local<Option<HeldHotSpot>>,
 ) {
-    let delta: Vec2 = motion.read().map(|m| m.delta).sum();
-    let speed = player.iter().next().map_or(0.0, |c| c.forward_speed_km_h());
+    let delta: Vec2 = params.motion.read().map(|m| m.delta).sum();
+    let speed = params
+        .player
+        .iter()
+        .next()
+        .map_or(0.0, |c| c.forward_speed_km_h());
     if let Some(h) = held.as_mut() {
-        if let Ok(scripts) = vehicles.get(h.owner) {
+        if let Ok(scripts) = params.vehicles.get(h.owner) {
             if let Ok(mut engine) = scripts.engine.lock() {
                 engine.set_system("mouse_x", delta.x);
                 engine.set_system("mouse_y", delta.y);
@@ -228,36 +237,36 @@ pub fn script_mouse_trigger_system(
         if delta != Vec2::ZERO {
             h.dragged = true;
             if !door_lock::held_back(&h.trigger, speed) {
-                raise(&vehicles, h.owner, &format!("{}_drag", h.trigger));
+                raise(&params.vehicles, h.owner, &format!("{}_drag", h.trigger));
             }
         }
-        if !mouse.pressed(MouseButton::Left) {
-            if let Ok(scripts) = vehicles.get(h.owner) {
+        if !params.mouse.pressed(MouseButton::Left) {
+            if let Ok(scripts) = params.vehicles.get(h.owner) {
                 if let Ok(mut engine) = scripts.engine.lock() {
                     engine.set_system("mouse_x", 0.0);
                     engine.set_system("mouse_y", 0.0);
                 }
             }
-            raise(&vehicles, h.owner, &format!("{}_off", h.trigger));
+            raise(&params.vehicles, h.owner, &format!("{}_off", h.trigger));
             *held = None;
         }
         return;
     }
-    if !mouse.just_pressed(MouseButton::Left) {
+    if !params.mouse.just_pressed(MouseButton::Left) {
         return;
     }
     // The cursor is the steering wheel while the mouse drives: it clicks nothing in the cockpit.
-    if driving.is_some_and(|d| d.drives()) {
+    if params.driving.is_some_and(|d| d.drives()) {
         return;
     }
-    let Some(spot) = picker.under_cursor() else {
+    let Some(spot) = params.picker.under_cursor() else {
         return;
     };
     if door_lock::held_back(&spot.trigger, speed) {
         tracing::debug!(trigger = %spot.trigger, speed, "door hot-spot held back: the vehicle moves");
         return;
     }
-    raise(&vehicles, spot.owner, &spot.trigger);
+    raise(&params.vehicles, spot.owner, &spot.trigger);
     *held = Some(HeldHotSpot {
         owner: spot.owner,
         trigger: spot.trigger.clone(),
