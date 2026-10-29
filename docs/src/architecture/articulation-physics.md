@@ -184,7 +184,7 @@ Corrections of the task brief found while writing (so that later readers do not 
 
 ## 🔗 Related Documents
 
-- [Articulated Vehicles](articulation.md) — runtime behaviour as implemented; to be rewritten by plan step 8
+- [Articulated Vehicles](articulation.md) — runtime behaviour as implemented (rewritten 2026-10-29, plan step 8)
 - [Animation axes](animation-axes.md), [Bellows census](bellows-census.md) — variable meaning and sign argument
 - [Vehicle Physics & Kinematics](../simulation/vehicle_physics.md) — the older specification whose hitch formula differs from the implementation
 - [Chain assembly](chain-assembly.md) — spawn re-seeding of a chain
