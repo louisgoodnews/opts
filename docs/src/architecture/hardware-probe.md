@@ -70,6 +70,7 @@ Pure functions, tested over a table of synthetic profiles (`recommend.rs`):
 | :--- | :--- | :--- |
 | `gpu_tier` | GPU device class, vendor, VRAM, software flag | `Low`, `Mid`, `High`, `Unknown` |
 | `recommended_tile_radius(profile, map)` | available RAM, GPU tier, logical cores, storage class, map size | integer ≥ 1 (≤ largest useful radius of the map) |
+| `estimate_load_all(profile, tiles, map)` (M-0080) | available RAM, storage class, tile count and tile size | memory (MiB), loading time as a range (s), `Fits` / `TooLarge` / `Unknown` against `safe_resident_mib` (60 % of the available RAM), whether the times were measured on this kind of storage |
 | `recommended_texture_filtering` | GPU tier | `off`, `4`, `8`, `16` |
 | `recommended_look` | GPU tier, HDR | `vivid`, `natural`, `bevy` |
 | `recommended_ui_scale` | display scale factor, resolution | percent in steps of 25 (75..200) |
@@ -80,3 +81,5 @@ Pure functions, tested over a table of synthetic profiles (`recommend.rs`):
 * `opts-tools hardware report [--json] [--bench]` prints the profile in the terminal.
 * Control protocol `hardware.profile` returns the profile (and the stored-profile state).
 * *Settings → Advanced → Hardware*: the profile, *Re-detect*, *Delete stored profile*, *Allow including the profile in reports* (default off); strings in `messages_{en,de}.ftl`, rows through the [settings registry](settings-registry.md).
+* *Plan a drive → Review*: the *Load the whole map* switch shows `estimate_load_all` for the chosen map (tile count from the catalogue, the default `MapStats`), a red warning with *Use the tile radius* when the verdict is `TooLarge`, and nothing but the estimate when it is `Unknown` (M-0080).
+* *Settings → Gameplay → Tile radius*: a value of 0 reads "Automatic (currently N)", N from `recommended_tile_radius` for a typical map (M-0080).

@@ -24,7 +24,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0046 — World Loader in `opts-bevy`](M-0046.md) — ⏳ Planned (extraction refactor)
 - [M-0049 — AI Road Traffic (`opts-traffic`, `opts-bevy`)](M-0049.md) — 🟡 Running in game (lights, right of way, lane changes); debug tooling, speed limits, scheduled AI open
 - [M-0050 — Pedestrians](M-0050.md) — 🟡 Walking pedestrians done; crossings, stops and boarding open
-- [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — 🟡 core delivered 2026-10-18 (settings, live streaming, `scene.tiles`); wizard switch, memory guard and page label open (R-20, R-21)
+- [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — ✅ Done 2026-10-29 (settings, live streaming, `scene.tiles`, wizard switch with estimate, memory guard, page label) (R-20, R-21)
 - [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — ✅ Done (R-26)
 - [M-0089 — Tile Streaming Performance: Investigation and Improvements](M-0089.md) — 🟢 Complete 2026-10-18 (worst frame 36.9 ms), 🔴 high (R-32)
 - [M-0093 — Host Callbacks — Timetable, Termini, Bus Stops, Tickets (IBIS)](M-0093.md) — 🟢 Complete (2026-10-14)
@@ -94,8 +94,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0094](M-0094.md) (complete 2026-10-14).
   - [~] Articulated vehicle completion: one articulation model with one serialised state in `opts-sim`, consist mass in the longitudinal dynamics, β/γ in the fixed step ([design](../../architecture/articulation-physics.md); scope proposed 2026-10-14), `[couple_front]`, trailers for AI and parked vehicles — [M-0053](M-0053.md) (F-002, F-003). (Parts 1–3 done 2026-10-14)
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](M-0046.md); F-009).
-- [~] **🗺️ Tile Loading Controls** — [M-0080](M-0080.md)
-  - [~] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — both settings, live streaming and `scene.tiles` done 2026-10-18; wizard summary switch, memory guard and "Automatic (currently N)" open.
+- [x] **🗺️ Tile Loading Controls** — [M-0080](M-0080.md) — ✅ done 2026-10-29
+  - [x] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — done 2026-10-29 (settings, live streaming and `scene.tiles` 2026-10-18; wizard switch with estimate, memory guard and "Automatic (currently N)" 2026-10-29).
 - [x] **🎥 Viewpoint Editor** — [M-0084](M-0084.md) — ✅ done 2026-10-29
   - [x] Shift + Tab (Tab until 2026-10-22) opens an editor in the driver's view (height, X/Y/Z, FOV), saved per vehicle or per model; `graphics.default_fov`; Shift + Space resets each view (R-26, R-33). Export and import of viewpoints through `camera.viewpoint.export` / `.import` (2026-10-29).
 - [x] **🌀 Tile Streaming Performance** — [M-0089](M-0089.md)

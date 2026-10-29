@@ -39,8 +39,8 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 
 | ID | Report | Area | Milestone | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| R-20 | A setting **Load all tiles on start**: all map tiles are force-loaded at start and stay loaded; it must also be exposed in the *summary screen* of the new-game menu where the user confirms the start | world / settings / wizard | [M-0080](../roadmap/phase-4/M-0080.md) | 🟡 core implemented 2026-10-18 (wizard switch and memory guard open) |
-| R-21 | A setting for the **number of tiles around the centre tile** (the tile the player camera stands on) to load; the default is derived dynamically from the hardware capabilities | world / settings | [M-0080](../roadmap/phase-4/M-0080.md) | 🟡 core implemented 2026-10-18 (wizard switch and memory guard open) |
+| R-20 | A setting **Load all tiles on start**: all map tiles are force-loaded at start and stay loaded; it must also be exposed in the *summary screen* of the new-game menu where the user confirms the start | world / settings / wizard | [M-0080](../roadmap/phase-4/M-0080.md) | ✅ done 2026-10-29 (wizard switch with estimate, memory guard, "Automatic (currently N)") |
+| R-21 | A setting for the **number of tiles around the centre tile** (the tile the player camera stands on) to load; the default is derived dynamically from the hardware capabilities | world / settings | [M-0080](../roadmap/phase-4/M-0080.md) | ✅ done 2026-10-29 (wizard switch with estimate, memory guard, "Automatic (currently N)") |
 | R-22 | A new crate **`opts-hardware`** for deep research of the hardware **without spying on the system** | tooling | [M-0081](../roadmap/phase-5/M-0081.md) | 🟡 implemented on `feat/opts-hardware` (Linux verified; macOS/Windows untested; report-dialog preview and GPU benchmark open) |
 | R-23 | **Research branch** for leveraging Bevy's **instancing** for repeatedly used meshes | performance | [M-0082](../roadmap/phase-5/M-0082.md) (branch `research/mesh-instancing`) | 🔬 started |
 

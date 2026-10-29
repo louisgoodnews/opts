@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-29 by Agent (M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-10-29 by Agent (M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -187,7 +187,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### Field report 2026-10-13 — Phase 10 and related (planned, from the project lead; [report](../src/quality/field-report-2026-10-13.md))
 - [~] 🔴 **Water: format semantics, parser, rendering** (M-0067, spec + code) — R-02. Water drawn since 2026-10-16; **depth tint done 2026-10-18** (shore fade, darker with depth, looked at on the Lemmental river); open: the per-map water textures (47 maps by fixed name, Q-M08), the `[water]` marker rule and in-tile interpolation (Q-M07, need an in-engine OMSI check).
 - [~] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15. **2026-10-20 on `agent/bus-config-session`: Alt menu *Configurations* page (list, spawn, save current vehicle, delete) and `config.spawn` (protocol 1.18.0); rename added the same day; only thumbnails are open.** In progress 2026-10-18 on `agent/bus-configs`: data model, store, load-time check, `config.*` (protocol 1.9.0) and the wizard's Configurations section done; open: Pause list, rename in the UI, spawn into a session, session save.
-- [~] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21. Core done 2026-10-18 on `agent/tile-loading-controls` (settings, live streaming, load-all during loading, `scene.tiles`); open: wizard summary switch with estimate, memory guard, "Automatic (currently N)" label.
+- [x] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21. Core done 2026-10-18 on `agent/tile-loading-controls` (settings, live streaming, load-all during loading, `scene.tiles`). Done 2026-10-29 on `agent/tile-controls`: `estimate_load_all` in `opts-hardware`; the Review-step switch with the estimate, the red memory warning with *Use the tile radius*, and "Automatic (currently N)" on the settings page. The memory per tile is still the unmeasured 120 MiB default.
 - [~] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22. Merged into master (branch `feat/opts-hardware`): Linux verified; macOS/Windows CI-compiled only; open: report-dialog preview checkbox, GPU benchmark.
 - [x] 🟠 **Mesh instancing research** (M-0082, research) — R-23; done 2026-10-13, recommendation: adopt partly ([report](../src/architecture/instancing-research.md)); `research/mesh-instancing` merged 2026-10-17 (`44ef86d9`).
 - [~] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25. *Implemented on `feat/language-packs` (merged into master): [architecture](../src/architecture/localisation-packs.md), tooling, language list, `l10n.*`; trial in the running app and right-to-left/fonts open.*
@@ -612,4 +612,7 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0050 separation by lane position done (`agent/walker-lanes`): walkers keep to the right of their lane.
 - `2026-10-29` — Review checklist written (`agent/review-checklist`): one page with the steps and expected results for what waits for a look in the running game (M-0074 verification debt).
 - `2026-10-29` — M-0004: report on which Draft format specs could be promoted (`agent/spec-readiness`): 9 ready for review, 6 blocked by OMSI experiments; nothing promoted.
+- `2026-10-29` — M-0080 first slice (`agent/tile-controls`): `estimate_load_all` in `opts-hardware` for the wizard's load-all estimate and the memory guard; the UI is next.
+- `2026-10-29` — M-0080: plan for the three open UI items written into the milestone (`agent/tile-controls`).
+- `2026-10-29` — M-0080 done (`agent/tile-controls`): Review-step *Load the whole map* switch with the estimate, the memory warning, and "Automatic (currently N)" for the tile radius.
 - `2026-10-29` — M-0028: Criterion benches of `global.cfg` and `model.cfg` (`agent/bench-configs`).

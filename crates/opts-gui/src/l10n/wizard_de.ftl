@@ -139,6 +139,14 @@ wiz-weather-live = Live-Wetter
 
 wiz-review-title = Bereit zur Fahrt?
 
+wiz-load-all-title = Ganze Karte laden
+wiz-load-all-note = { $tiles } Kacheln, etwa { $memory } Speicher, das Laden dauert { $time }.
+wiz-load-all-slow-disk = Die Zeiten wurden auf einer SSD gemessen; eine Festplatte kann länger brauchen.
+wiz-load-all-unknown-map = Die Kachelzahl dieser Karte ist nicht bekannt, die Kosten lassen sich nicht schätzen.
+wiz-load-all-no-profile = Der Rechner wurde noch nicht vermessen, die Kosten lassen sich nicht schätzen.
+wiz-load-all-too-large = Die ganze Karte braucht etwa { $memory }, nutzbar sind ohne Auslagerung nur { $safe }.
+wiz-load-all-use-radius = Kachelradius verwenden
+
 wiz-option-vis_wimpel_invisible = Wimpel vorn
 wiz-option-wimpel_visibility = Fahnenhalterung
 wiz-option-vis_grill_invisible = Grillabdeckung

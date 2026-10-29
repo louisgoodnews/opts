@@ -82,6 +82,46 @@ fn review_row(
     line
 }
 
+/// The trip row of the summary, only when timetable runs are offered: the chosen run, or "none".
+fn trip_row(commands: &mut Commands, ctx: &BuildCtx) -> Option<Entity> {
+    if ctx.trips.trips.is_empty() {
+        return None;
+    }
+    let trip_lines = match &ctx.setup.trip {
+        Some(t) => vec![
+            commands
+                .spawn(plain(
+                    format!("{}  {}", t.depart_text(), t.title()),
+                    TypeScale::TitleMedium,
+                    ColorRole::OnSurface,
+                ))
+                .id(),
+            commands
+                .spawn(keyed_args(
+                    "wiz-review-trip-from",
+                    L10nArgs::one("stop", t.stop_name.clone()),
+                    TypeScale::BodyMedium,
+                    ColorRole::OnSurfaceVariant,
+                ))
+                .id(),
+        ],
+        None => vec![commands
+            .spawn(keyed(
+                "wiz-trip-none",
+                TypeScale::TitleMedium,
+                ColorRole::OnSurface,
+            ))
+            .id()],
+    };
+    Some(review_row(
+        commands,
+        PlannerStep::Trip,
+        glyphs::SCHEDULE,
+        None,
+        trip_lines,
+    ))
+}
+
 /// Builds the step body.
 pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     let s = ctx.setup;
@@ -218,45 +258,11 @@ pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
         when_lines,
     );
     let mut rows = vec![where_row, what_row, when_row];
-    if ctx.trips.trips.is_empty() {
-        // No step *Trip*: nothing to show.
-    } else {
-        let trip_lines = match &s.trip {
-            Some(t) => vec![
-                commands
-                    .spawn(plain(
-                        format!("{}  {}", t.depart_text(), t.title()),
-                        TypeScale::TitleMedium,
-                        ColorRole::OnSurface,
-                    ))
-                    .id(),
-                commands
-                    .spawn(keyed_args(
-                        "wiz-review-trip-from",
-                        L10nArgs::one("stop", t.stop_name.clone()),
-                        TypeScale::BodyMedium,
-                        ColorRole::OnSurfaceVariant,
-                    ))
-                    .id(),
-            ],
-            None => vec![commands
-                .spawn(keyed(
-                    "wiz-trip-none",
-                    TypeScale::TitleMedium,
-                    ColorRole::OnSurface,
-                ))
-                .id()],
-        };
-        rows.push(review_row(
-            commands,
-            PlannerStep::Trip,
-            glyphs::SCHEDULE,
-            None,
-            trip_lines,
-        ));
+    if let Some(trip) = trip_row(commands, ctx) {
+        rows.push(trip);
     }
     commands.entity(card).add_children(&rows);
-    let mut kids = vec![title, card];
+    let mut kids = vec![title, card, super::step_load::spawn_load_row(commands)];
     if let Err(reason) = validate(s, ctx.catalogue) {
         kids.push(
             commands

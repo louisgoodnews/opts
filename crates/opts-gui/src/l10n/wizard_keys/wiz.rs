@@ -290,3 +290,17 @@ pub const WIZ_CONFIGS_VEHICLE_MISSING: &str = "wiz-configs-vehicle-missing";
 pub const WIZ_CONFIGS_REPAINT_MISSING: &str = "wiz-configs-repaint-missing";
 /// `wiz-configs-option-left-out`.
 pub const WIZ_CONFIGS_OPTION_LEFT_OUT: &str = "wiz-configs-option-left-out";
+/// `wiz-load-all-title`.
+pub const WIZ_LOAD_ALL_TITLE: &str = "wiz-load-all-title";
+/// `wiz-load-all-note`.
+pub const WIZ_LOAD_ALL_NOTE: &str = "wiz-load-all-note";
+/// `wiz-load-all-slow-disk`.
+pub const WIZ_LOAD_ALL_SLOW_DISK: &str = "wiz-load-all-slow-disk";
+/// `wiz-load-all-unknown-map`.
+pub const WIZ_LOAD_ALL_UNKNOWN_MAP: &str = "wiz-load-all-unknown-map";
+/// `wiz-load-all-no-profile`.
+pub const WIZ_LOAD_ALL_NO_PROFILE: &str = "wiz-load-all-no-profile";
+/// `wiz-load-all-too-large`.
+pub const WIZ_LOAD_ALL_TOO_LARGE: &str = "wiz-load-all-too-large";
+/// `wiz-load-all-use-radius`.
+pub const WIZ_LOAD_ALL_USE_RADIUS: &str = "wiz-load-all-use-radius";

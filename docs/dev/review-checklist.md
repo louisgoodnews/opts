@@ -40,4 +40,3 @@ Keys used below, all from the code or the camera spec: **1** ego, **2** driver's
 ## C. What this page does not cover
 
 * Anything that is a decision rather than a look, such as red-light running or what `gameplay.time_scale` should mean; those are in the [gap analysis](../src/meta/gap-analysis-2026-10-29.md) and the milestone files.
-* The M-0080 estimate (`agent/tile-controls`) has no screen yet.

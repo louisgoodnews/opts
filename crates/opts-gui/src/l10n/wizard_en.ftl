@@ -139,6 +139,14 @@ wiz-weather-live = Live weather
 
 wiz-review-title = Ready to drive?
 
+wiz-load-all-title = Load the whole map
+wiz-load-all-note = { $tiles } tiles, about { $memory } of memory, loading takes { $time }.
+wiz-load-all-slow-disk = The times were measured on an SSD; a hard disk may take longer.
+wiz-load-all-unknown-map = The tile count of this map is not known, so the cost cannot be estimated.
+wiz-load-all-no-profile = The computer has not been measured yet, so the cost cannot be estimated.
+wiz-load-all-too-large = The whole map needs about { $memory }, but only { $safe } can be used without swapping.
+wiz-load-all-use-radius = Use the tile radius
+
 wiz-option-vis_wimpel_invisible = Pennant on the front
 wiz-option-wimpel_visibility = Flag mount
 wiz-option-vis_grill_invisible = Grille cover

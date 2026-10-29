@@ -213,8 +213,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0094](docs/src/roadmap/phase-4/M-0094.md) (complete 2026-10-14).
   - [~] Articulated vehicle completion: one articulation model with one serialised state in `opts-sim`, consist mass in the longitudinal dynamics, β/γ in the fixed step ([design](docs/src/architecture/articulation-physics.md); scope proposed 2026-10-14), `[couple_front]`, trailers for AI and parked vehicles — [M-0053](docs/src/roadmap/phase-4/M-0053.md) (F-002, F-003). (Parts 1–3 done 2026-10-14)
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](docs/src/roadmap/phase-4/M-0046.md); F-009).
-- [~] **🗺️ Tile Loading Controls** — [M-0080](docs/src/roadmap/phase-4/M-0080.md)
-  - [~] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — both settings, live streaming and `scene.tiles` done 2026-10-18; wizard summary switch, memory guard and "Automatic (currently N)" open.
+- [x] **🗺️ Tile Loading Controls** — [M-0080](docs/src/roadmap/phase-4/M-0080.md) — ✅ done 2026-10-29
+  - [x] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — done 2026-10-29 (settings, live streaming and `scene.tiles` 2026-10-18; wizard switch with estimate, memory guard and "Automatic (currently N)" 2026-10-29).
 - [x] **🎥 Viewpoint Editor** — [M-0084](docs/src/roadmap/phase-4/M-0084.md) — ✅ done 2026-10-29
   - [x] Shift + Tab (Tab until 2026-10-22) opens an editor in the driver's view (height, X/Y/Z, FOV), saved per vehicle or per model; `graphics.default_fov`; Shift + Space resets each view (R-26, R-33). Export and import of viewpoints through `camera.viewpoint.export` / `.import` (2026-10-29).
 - [x] **🌀 Tile Streaming Performance** — [M-0089](docs/src/roadmap/phase-4/M-0089.md)
