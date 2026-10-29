@@ -63,7 +63,8 @@ jobs:
       - name: Dependency license and ban check (M-0042)
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
-          arguments: check licenses bans sources
+          command: check
+          command-arguments: licenses bans sources
 
   docs-links:
     name: Documentation links
