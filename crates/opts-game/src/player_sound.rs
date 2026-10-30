@@ -310,6 +310,33 @@ fn loop_step(
     counted
 }
 
+
+/// An edge-triggered voice: plays its one-shot when its conditions just turned true and the
+/// listener's view lets it be heard.
+fn edge_step(
+    commands: &mut Commands,
+    (loader, stats): (&mut ClipLoader, &mut PlayerAudioStats),
+    (entity, voice): (Entity, &mut PlayerVoice),
+    (active, audible_here): (bool, bool),
+    read: impl Fn(&str) -> f32 + Copy,
+) {
+    let edge = active && !voice.was_active;
+    if voice.was_active != active {
+        voice.was_active = active;
+    }
+    if edge && audible_here {
+        let level = level(&voice.def, read);
+        fire(
+            commands,
+            loader,
+            stats,
+            entity,
+            voice,
+            level,
+        );
+    }
+}
+
 /// Updates the loops and the `[noloop]` edges twenty times a second.
 #[allow(clippy::too_many_arguments)]
 pub fn stream_player_voices(
@@ -372,23 +399,13 @@ pub fn stream_player_voices(
                     read,
                 ));
             }
-            Playback::OnEdge => {
-                let edge = active && !voice.was_active;
-                if voice.was_active != active {
-                    voice.was_active = active;
-                }
-                if edge && audible_here {
-                    let level = level(&voice.def, read);
-                    fire(
-                        &mut commands,
-                        &mut loader,
-                        &mut stats,
-                        entity,
-                        &voice,
-                        level,
-                    );
-                }
-            }
+            Playback::OnEdge => edge_step(
+                &mut commands,
+                (&mut loader, &mut stats),
+                (entity, &mut voice),
+                (active, audible_here),
+                read,
+            ),
             Playback::OnTrigger | Playback::Unsupported => {}
         }
     }

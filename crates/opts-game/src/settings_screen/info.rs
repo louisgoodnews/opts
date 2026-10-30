@@ -172,129 +172,142 @@ pub fn fill_content_lines(
     }
 }
 
+
+/// The theme line, which follows the theme while the page is open.
+fn interface_info(c: &mut Commands, pane: Entity, ctx: &Ctx, theme_kind: &str) {
+    let now = line(
+        c,
+        pane,
+        "settings-info-theme-now",
+        &[("theme", ctx.loc.t(theme_kind))],
+        TypeScale::BodyMedium,
+    );
+    // The theme file list comes from the background facts.
+    c.entity(now)
+        .insert(crate::content_facts::WantsContentFacts);
+    c.queue(|world: &mut World| {
+        // The last spawned text of the page is the line above: mark it so it follows
+        // the theme while the page is open.
+        let mut q = world.query::<(Entity, &opts_gui::l10n::L10nKey)>();
+        let found: Vec<Entity> = q
+            .iter(world)
+            .filter(|(_, k)| k.0 == "settings-info-theme-now")
+            .map(|(e, _)| e)
+            .collect();
+        for e in found {
+            world.entity_mut(e).insert(super::page::ThemeNowText);
+        }
+    });
+}
+
+/// The content numbers; each shows "Calculating..." until the background facts answer.
+fn content_info(c: &mut Commands, pane: Entity) {
+    // The numbers come from the background facts (`content_facts`): the page never
+    // waits for them. Each line shows "Calculating..." until its answer arrives.
+    for (which, key) in [
+        (ContentLine::Catalogue, "settings-info-catalogue-pending"),
+        (ContentLine::Total, "settings-info-catalogue-total-pending"),
+        (ContentLine::LastScan, "settings-info-last-scan-pending"),
+    ] {
+        let e = label(
+            c,
+            pane,
+            key,
+            TypeScale::BodyMedium,
+            ColorRole::OnSurfaceVariant,
+        );
+        c.entity(e).insert((
+            which,
+            L10nArgs::default(),
+            crate::content_facts::WantsContentFacts,
+        ));
+    }
+}
+
+/// The hardware profile and the places of the files.
+fn advanced_info(c: &mut Commands, pane: Entity, ctx: &Ctx) {
+    hardware_info(c, pane, ctx);
+    label(
+        c,
+        pane,
+        "settings-info-locations",
+        TypeScale::TitleMedium,
+        ColorRole::OnSurface,
+    );
+    line(
+        c,
+        pane,
+        "settings-info-settings-file",
+        &[("path", path_text(GameSettings::database_path()))],
+        TypeScale::BodyMedium,
+    );
+    line(
+        c,
+        pane,
+        "settings-info-reference-file",
+        &[("path", path_text(GameSettings::toml_reference_path()))],
+        TypeScale::BodyMedium,
+    );
+    line(
+        c,
+        pane,
+        "settings-info-catalogue-file",
+        &[(
+            "path",
+            path_text(crate::catalogue_service::catalogue_db_path()),
+        )],
+        TypeScale::BodyMedium,
+    );
+    line(
+        c,
+        pane,
+        "settings-info-themes-folder",
+        &[("path", path_text(crate::theme_files::themes_dir()))],
+        TypeScale::BodyMedium,
+    );
+    line(
+        c,
+        pane,
+        "settings-info-last-map",
+        &[(
+            "path",
+            ctx.settings
+                .recent_map_path
+                .as_deref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default(),
+        )],
+        TypeScale::BodyMedium,
+    );
+}
+
+/// The key lines.
+fn controls_info(c: &mut Commands, pane: Entity) {
+    label(
+        c,
+        pane,
+        "settings-keys-title",
+        TypeScale::TitleMedium,
+        ColorRole::OnSurface,
+    );
+    for k in KEY_LINES {
+        label(
+            c,
+            pane,
+            k,
+            TypeScale::BodyMedium,
+            ColorRole::OnSurfaceVariant,
+        );
+    }
+}
+
 /// Information that belongs to `cat`, below the rows.
 pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, theme_kind: &str) {
     match cat {
-        Category::Interface => {
-            let now = line(
-                c,
-                pane,
-                "settings-info-theme-now",
-                &[("theme", ctx.loc.t(theme_kind))],
-                TypeScale::BodyMedium,
-            );
-            // The theme file list comes from the background facts.
-            c.entity(now)
-                .insert(crate::content_facts::WantsContentFacts);
-            c.queue(|world: &mut World| {
-                // The last spawned text of the page is the line above: mark it so it follows
-                // the theme while the page is open.
-                let mut q = world.query::<(Entity, &opts_gui::l10n::L10nKey)>();
-                let found: Vec<Entity> = q
-                    .iter(world)
-                    .filter(|(_, k)| k.0 == "settings-info-theme-now")
-                    .map(|(e, _)| e)
-                    .collect();
-                for e in found {
-                    world.entity_mut(e).insert(super::page::ThemeNowText);
-                }
-            });
-        }
-        Category::Content => {
-            // The numbers come from the background facts (`content_facts`): the page never
-            // waits for them. Each line shows "Calculating..." until its answer arrives.
-            for (which, key) in [
-                (ContentLine::Catalogue, "settings-info-catalogue-pending"),
-                (ContentLine::Total, "settings-info-catalogue-total-pending"),
-                (ContentLine::LastScan, "settings-info-last-scan-pending"),
-            ] {
-                let e = label(
-                    c,
-                    pane,
-                    key,
-                    TypeScale::BodyMedium,
-                    ColorRole::OnSurfaceVariant,
-                );
-                c.entity(e).insert((
-                    which,
-                    L10nArgs::default(),
-                    crate::content_facts::WantsContentFacts,
-                ));
-            }
-        }
-        Category::Advanced => {
-            hardware_info(c, pane, ctx);
-            label(
-                c,
-                pane,
-                "settings-info-locations",
-                TypeScale::TitleMedium,
-                ColorRole::OnSurface,
-            );
-            line(
-                c,
-                pane,
-                "settings-info-settings-file",
-                &[("path", path_text(GameSettings::database_path()))],
-                TypeScale::BodyMedium,
-            );
-            line(
-                c,
-                pane,
-                "settings-info-reference-file",
-                &[("path", path_text(GameSettings::toml_reference_path()))],
-                TypeScale::BodyMedium,
-            );
-            line(
-                c,
-                pane,
-                "settings-info-catalogue-file",
-                &[(
-                    "path",
-                    path_text(crate::catalogue_service::catalogue_db_path()),
-                )],
-                TypeScale::BodyMedium,
-            );
-            line(
-                c,
-                pane,
-                "settings-info-themes-folder",
-                &[("path", path_text(crate::theme_files::themes_dir()))],
-                TypeScale::BodyMedium,
-            );
-            line(
-                c,
-                pane,
-                "settings-info-last-map",
-                &[(
-                    "path",
-                    ctx.settings
-                        .recent_map_path
-                        .as_deref()
-                        .map(|p| p.display().to_string())
-                        .unwrap_or_default(),
-                )],
-                TypeScale::BodyMedium,
-            );
-        }
-        Category::Controls => {
-            label(
-                c,
-                pane,
-                "settings-keys-title",
-                TypeScale::TitleMedium,
-                ColorRole::OnSurface,
-            );
-            for k in KEY_LINES {
-                label(
-                    c,
-                    pane,
-                    k,
-                    TypeScale::BodyMedium,
-                    ColorRole::OnSurfaceVariant,
-                );
-            }
-        }
+        Category::Interface => interface_info(c, pane, ctx, theme_kind),
+        Category::Content => content_info(c, pane),
+        Category::Advanced => advanced_info(c, pane, ctx),
+        Category::Controls => controls_info(c, pane),
         _ => {}
     }
 }

@@ -2,6 +2,90 @@
 
 use super::*;
 
+
+/// The category buttons that have a visible setting.
+fn spawn_category_buttons(commands: &mut Commands, cat_list: Entity, registry: &SettingsRegistry) {
+    for cat in registry.categories() {
+        let visible = registry.in_category(cat).iter().any(|d| !d.hidden);
+        if !visible {
+            continue;
+        }
+        let b = ButtonBuilder::text(cat.label_key())
+            .with_key(cat.label_key())
+            .spawn(commands);
+        commands.entity(b).insert((
+            SettingOp::Category(cat),
+            UiId::new(format!("settings/category/{}", cat.id())),
+            ChildOf(cat_list),
+        ));
+    }
+}
+
+/// The page of a search: the settings that match, under the headline of their category.
+fn spawn_search_results(
+    commands: &mut Commands,
+    pane: Entity,
+    ctx: &Ctx,
+    (query, notice): (&str, Option<&str>),
+) {
+    spawn_notice(commands, pane, notice);
+    let found = search::search(ctx.registry, ctx.loc, query);
+    if found.is_empty() {
+        label(
+            commands,
+            pane,
+            "settings-no-results",
+            TypeScale::BodyLarge,
+            ColorRole::OnSurfaceVariant,
+        );
+    }
+    let mut last = None;
+    for d in found.into_iter().filter(|d| !d.hidden) {
+        if last != Some(d.category) {
+            last = Some(d.category);
+            label(
+                commands,
+                pane,
+                d.category.label_key(),
+                TypeScale::TitleLarge,
+                ColorRole::Primary,
+            );
+        }
+        light_section(commands, pane, ctx, d);
+        spawn_row(commands, pane, ctx, d);
+    }
+}
+
+/// The page of one category: its headline, notice, rows and info lines.
+fn spawn_category(
+    commands: &mut Commands,
+    pane: Entity,
+    ctx: &Ctx,
+    (category, notice, theme_kind): (Category, Option<&str>, &str),
+) {
+    label(
+        commands,
+        pane,
+        category.label_key(),
+        TypeScale::TitleLarge,
+        ColorRole::Primary,
+    );
+    spawn_notice(commands, pane, notice);
+    for d in ctx
+        .registry
+        .in_category(category)
+        .into_iter()
+        .filter(|d| !d.hidden)
+    {
+        light_section(commands, pane, ctx, d);
+        spawn_row(commands, pane, ctx, d);
+        if d.key == "content.rescan" {
+            super::super::scan_status::spawn_chip(commands, pane);
+        }
+    }
+    super::super::info::spawn_info(commands, pane, ctx, category, theme_kind);
+}
+
 /// Fills the category list and the pane.
 #[allow(clippy::too_many_arguments)]
 pub fn rebuild_page(
@@ -58,73 +142,14 @@ pub fn rebuild_page(
     };
     let notice = state.notice.clone();
     let searching = !state.query.trim().is_empty();
-    for cat in registry
-        .categories()
-        .into_iter()
-        .filter(|_| build_categories)
-    {
-        let visible = registry.in_category(cat).iter().any(|d| !d.hidden);
-        if !visible {
-            continue;
-        }
-        let b = ButtonBuilder::text(cat.label_key())
-            .with_key(cat.label_key())
-            .spawn(&mut commands);
-        commands.entity(b).insert((
-            SettingOp::Category(cat),
-            UiId::new(format!("settings/category/{}", cat.id())),
-            ChildOf(cat_list),
-        ));
+    if build_categories {
+        spawn_category_buttons(&mut commands, cat_list, &registry);
     }
     if searching {
-        spawn_notice(&mut commands, pane, notice.as_deref());
-        let found = search::search(&registry, &loc, &state.query);
-        if found.is_empty() {
-            label(
-                &mut commands,
-                pane,
-                "settings-no-results",
-                TypeScale::BodyLarge,
-                ColorRole::OnSurfaceVariant,
-            );
-        }
-        let mut last = None;
-        for d in found.into_iter().filter(|d| !d.hidden) {
-            if last != Some(d.category) {
-                last = Some(d.category);
-                label(
-                    &mut commands,
-                    pane,
-                    d.category.label_key(),
-                    TypeScale::TitleLarge,
-                    ColorRole::Primary,
-                );
-            }
-            light_section(&mut commands, pane, &ctx, d);
-            spawn_row(&mut commands, pane, &ctx, d);
-        }
+        spawn_search_results(&mut commands, pane, &ctx, (&state.query, notice.as_deref()));
     } else {
-        label(
-            &mut commands,
-            pane,
-            state.category.label_key(),
-            TypeScale::TitleLarge,
-            ColorRole::Primary,
-        );
-        spawn_notice(&mut commands, pane, notice.as_deref());
-        for d in registry
-            .in_category(state.category)
-            .into_iter()
-            .filter(|d| !d.hidden)
-        {
-            light_section(&mut commands, pane, &ctx, d);
-            spawn_row(&mut commands, pane, &ctx, d);
-            if d.key == "content.rescan" {
-                super::super::scan_status::spawn_chip(&mut commands, pane);
-            }
-        }
         let kind = theme_name_key(theme.kind());
-        super::super::info::spawn_info(&mut commands, pane, &ctx, state.category, kind);
+        spawn_category(&mut commands, pane, &ctx, (state.category, notice.as_deref(), kind));
     }
 }
 

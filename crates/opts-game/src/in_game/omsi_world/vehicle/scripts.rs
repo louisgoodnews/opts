@@ -25,6 +25,78 @@ pub(super) fn script_seed(
         })
 }
 
+
+/// Logs every compile problem once, with its file and line (the diagnostics of one compile are
+/// distinct); a missing file is an error with the position tag, like other missing content.
+fn log_diagnostics(manifest: &BusManifest, diags: &[opts_sim::script::Diagnostic]) {
+    let errors = diags
+        .iter()
+        .filter(|d| d.severity == opts_sim::script::Severity::Error)
+        .count();
+    for d in diags {
+        if d.message == "file not found" {
+            tracing::error!(at = %opts_bevy::position_tag(), file = %d.file, "vehicle script file not found");
+        } else if d.severity == opts_sim::script::Severity::Error {
+            tracing::error!(file = %d.file, line = d.line, "vehicle script: {}", d.message);
+        } else {
+            tracing::warn!(file = %d.file, line = d.line, "vehicle script: {}", d.message);
+        }
+    }
+    tracing::info!(
+        scripts = manifest.scripts.len(),
+        diagnostics = diags.len(),
+        errors,
+        "vehicle scripts loaded"
+    );
+}
+
+/// What the host callbacks of the vehicle's scripts need: passenger counts, tickets, coins, fonts
+/// and the texture folder.
+fn host_context(
+    job: &WorldLoadJob,
+    (bus_dir, seed): (&Path, u64),
+    route: &opts_bevy::route::RouteHandle,
+    counts: &opts_bevy::host_callbacks::PassengerCountsHandle,
+) -> opts_bevy::host_callbacks::VehicleHostContext {
+    opts_bevy::host_callbacks::VehicleHostContext {
+            passengers: counts.0.clone(),
+            seed,
+            route: route.clone(),
+            script_textures: job.vehicle_script_textures.clone(),
+            fonts: std::sync::Arc::new(std::sync::RwLock::new(opts_bevy::text_texture::load_fonts(
+                &job.install,
+            ))),
+            font_bitmaps: opts_bevy::script_text::FontBitmapSource::new(&job.install),
+            texture_base_dir: Some(bus_dir.join("Texture")),
+            tickets: std::sync::Arc::new(crate::passengers::ticket_book(
+                &super::passengers::ticket_pack(job),
+            )),
+            coins: std::sync::Arc::new(
+                super::passengers::money_system(job)
+                    .map(|m| m.coins.iter().map(|c| c.value as f32).collect())
+                    .unwrap_or_default(),
+            ),
+            ..Default::default()
+        }
+}
+
+/// The equipment options of the chosen repaint (`[setvar]` of its `.cti` items).
+fn apply_repaint_setvars(engine: &mut opts_sim::script::ScriptEngine, job: &WorldLoadJob) {
+    if let Some(r) = &job.repaint {
+        let name = if job.config.livery.is_empty() {
+            r.default_name.as_str()
+        } else {
+            job.config.livery.as_str()
+        };
+        for (var, value) in r.setvars.get(name).into_iter().flatten() {
+            match value.trim().replace(',', ".").parse::<f32>() {
+                Ok(v) => engine.set(var, v),
+                Err(_) => tracing::warn!(var, value, "repaint [setvar] value is not a number"),
+            }
+        }
+    }
+}
+
 /// Loads the vehicle's `.osc` scripts, variable lists and constants into a script engine.
 /// A vehicle with `[scriptshare]` has none of its own and gets no engine. `part` is the unit's
 /// number in the consist for a unit behind the head: its engine stands alone (no route, no
@@ -50,27 +122,7 @@ pub(super) fn attach_scripts(
         }
         found
     });
-    let errors = diags
-        .iter()
-        .filter(|d| d.severity == opts_sim::script::Severity::Error)
-        .count();
-    // Every compile problem once, with its file and line (the diagnostics of one compile are
-    // distinct); a missing file is an error with the position tag, like other missing content.
-    for d in &diags {
-        if d.message == "file not found" {
-            tracing::error!(at = %opts_bevy::position_tag(), file = %d.file, "vehicle script file not found");
-        } else if d.severity == opts_sim::script::Severity::Error {
-            tracing::error!(file = %d.file, line = d.line, "vehicle script: {}", d.message);
-        } else {
-            tracing::warn!(file = %d.file, line = d.line, "vehicle script: {}", d.message);
-        }
-    }
-    tracing::info!(
-        scripts = manifest.scripts.len(),
-        diagnostics = diags.len(),
-        errors,
-        "vehicle scripts loaded"
-    );
+    log_diagnostics(manifest, &diags);
     let mut engine = engine;
     let folder = job
         .config
@@ -103,43 +155,11 @@ pub(super) fn attach_scripts(
     if part.is_none() {
         commands.entity(root).insert(counts.clone());
     }
-    let ctx = opts_bevy::host_callbacks::VehicleHostContext {
-        passengers: counts.0.clone(),
-        seed,
-        route: route.clone(),
-        script_textures: job.vehicle_script_textures.clone(),
-        fonts: std::sync::Arc::new(std::sync::RwLock::new(opts_bevy::text_texture::load_fonts(
-            &job.install,
-        ))),
-        font_bitmaps: opts_bevy::script_text::FontBitmapSource::new(&job.install),
-        texture_base_dir: Some(bus_dir.join("Texture")),
-        tickets: std::sync::Arc::new(crate::passengers::ticket_book(
-            &super::passengers::ticket_pack(job),
-        )),
-        coins: std::sync::Arc::new(
-            super::passengers::money_system(job)
-                .map(|m| m.coins.iter().map(|c| c.value as f32).collect())
-                .unwrap_or_default(),
-        ),
-        ..Default::default()
-    };
+    let ctx = host_context(job, (bus_dir, seed), &route, &counts);
     engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
         ctx,
     ));
-    // Equipment options of the chosen repaint (`[setvar]` of its `.cti` items).
-    if let Some(r) = &job.repaint {
-        let name = if job.config.livery.is_empty() {
-            r.default_name.as_str()
-        } else {
-            job.config.livery.as_str()
-        };
-        for (var, value) in r.setvars.get(name).into_iter().flatten() {
-            match value.trim().replace(',', ".").parse::<f32>() {
-                Ok(v) => engine.set(var, v),
-                Err(_) => tracing::warn!(var, value, "repaint [setvar] value is not a number"),
-            }
-        }
-    }
+    apply_repaint_setvars(&mut engine, job);
     for (var, value) in &job.config.setvars {
         engine.set(var, *value as f32);
     }
