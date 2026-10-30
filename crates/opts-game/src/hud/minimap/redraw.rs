@@ -195,6 +195,17 @@ fn record(
     state.up_heading_deg = up_heading.to_degrees().rem_euclid(360.0);
 }
 
+/// The map colours of the current theme and variant.
+fn look_colors(look: &super::params::MapLook) -> MapColors {
+    colors_of(
+        look.theme
+            .as_ref()
+            .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
+                t.instrument(*look.variant)
+            }),
+    )
+}
+
 /// Redraws the map at most 10 times per second.
 pub fn redraw(
     time: Res<Time<Real>>,
@@ -209,7 +220,6 @@ pub fn redraw(
         handle,
         mut images,
     } = texture;
-    let super::params::MapLook { variant, theme } = look;
     let super::params::MapPoses { vehicles, cameras } = poses;
     let super::params::MiniSources {
         traffic,
@@ -234,13 +244,8 @@ pub fn redraw(
         return;
     };
 
-    let colors = colors_of(
-        theme
-            .as_ref()
-            .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
-                t.instrument(*variant)
-            }),
-    );
+    let colors = look_colors(&look);
+
     let view = choose_view(
         &mut state,
         (centre, scene.heading),

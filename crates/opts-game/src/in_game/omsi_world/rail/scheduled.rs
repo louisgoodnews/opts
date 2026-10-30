@@ -133,11 +133,11 @@ pub fn spawn_scheduled_trains(
         return;
     }
     let Some(tt) = job.timetables() else { return };
-    let stops = markers.iter().map(|(m, g)| {
-        let t = g.translation();
-        (m.id_code as u32, Vec2::new(t.x, -t.z))
-    });
-    let pass = Pass::new((net, &tt, env.seconds_of_day()), cam, stops.collect());
+    let pass = Pass::new(
+        (net, &tt, env.seconds_of_day()),
+        cam,
+        stop_positions(&markers),
+    );
     let mut assets: SpawnAssets = (
         &mut train_assets.meshes,
         &mut train_assets.materials,
@@ -177,6 +177,22 @@ pub fn spawn_scheduled_trains(
             Spawned::Placed | Spawned::Stop => return,
         }
     }
+    log_no_spawn(&seen);
+}
+
+/// The bus stop objects of the map by station id, in the session frame.
+fn stop_positions(markers: &Query<(&BusStopMarker, &GlobalTransform)>) -> HashMap<u32, Vec2> {
+    markers
+        .iter()
+        .map(|(m, g)| {
+            let t = g.translation();
+            (m.id_code as u32, Vec2::new(t.x, -t.z))
+        })
+        .collect()
+}
+
+/// The debug line of a pass that placed no train: how far the candidates got.
+fn log_no_spawn(seen: &[u32; 6]) {
     tracing::debug!(
         candidates = seen[0],
         rail = seen[1],

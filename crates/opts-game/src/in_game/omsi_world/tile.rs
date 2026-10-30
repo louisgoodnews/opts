@@ -54,11 +54,10 @@ pub(super) enum Placement {
     OnParent(Transform),
 }
 
+mod placement;
+use placement::{no_mesh_parts, object_transform, spawn_map_lights_only};
 mod attached;
 pub(super) use attached::place_attached_objects;
-
-/// Height above a road at which an `on_surface` object is drawn (m): enough to avoid z-fighting.
-const ON_SURFACE_LIFT_M: f32 = 0.01;
 
 /// Places one scenery object (or tree) of a tile; the scene trace sees what came of it.
 pub(super) fn spawn_object(
@@ -181,160 +180,6 @@ fn special_object(
     false
 }
 
-/// Where the object stands: the terrain height at its place (or the absolute one), moved onto the
-/// road for markings and parked cars, and the transform from its OMSI heading, pitch and roll.
-fn object_transform(
-    job: &WorldLoadJob,
-    sco: &opts_core::formats::scenery::SceneryObject,
-    (obj, placement, terrain, origin): (
-        &MapObjectInstance,
-        Placement,
-        Option<&TileTerrain>,
-        (f32, f32),
-    ),
-    on_marker: bool,
-) -> (Transform, f32) {
-    // `[absheight]` objects (crossings, bridges, ...) store an absolute elevation.
-    let terrain_h = if sco.has_absolute_height() {
-        0.0
-    } else {
-        terrain
-            .as_ref()
-            .map_or(0.0, |t| t.height(obj.position.x, obj.position.y))
-    };
-    let mut z = match (placement, sco.has_absolute_height()) {
-        (Placement::OnSpline(z), true) => z,
-        _ => terrain_h + obj.position.z,
-    };
-    // `[rendertype] on_surface` objects (road markings, text on the road) lie on the road they
-    // were placed on, not on the terrain below it: the map stores their height above the terrain
-    // (0.12 m for the bus text of Ahlheim V5), where the road may be higher or lower.
-    // A parked car stands on the road of its parking bay the same way: the terrain under a bay
-    // that was built into a street is not carved to the street, so a car placed by terrain
-    // height floated above (or sank into) it (Berlin-Spandau, Westerwaldstraße).
-    let on_road_plane = sco.render_type.as_deref() == Some("on_surface") || on_marker;
-    if on_road_plane && !sco.has_absolute_height() && matches!(placement, Placement::Tile) {
-        let (x, y) = (origin.0 + obj.position.x, origin.1 + obj.position.y);
-        if let Some(road) = job
-            .tile_ground
-            .as_ref()
-            .and_then(|g| g.road_height_at(x, y, z))
-        {
-            // A parked car keeps the height the map gives above its ground; a marking lies a
-            // hair over the road.
-            z = road
-                + if on_marker {
-                    obj.position.z
-                } else {
-                    ON_SURFACE_LIFT_M
-                };
-        }
-    }
-    let world = Vec3::new(origin.0 + obj.position.x, origin.1 + obj.position.y, z);
-    let transform = match placement {
-        Placement::OnParent(t) => t,
-        _ => Transform {
-            translation: omsi_to_bevy_pos(world),
-            // OMSI headings are clockwise-positive (compass-style); the helper is CCW.
-            rotation: omsi_euler_to_bevy_quat(
-                -obj.heading_deg,
-                obj.pitch_deg.unwrap_or(0.0),
-                obj.roll_deg.unwrap_or(0.0),
-            ),
-            scale: Vec3::ONE,
-        },
-    };
-    (transform, terrain_h)
-}
-
-/// An object that draws no mesh but whose `[maplight]`s still light the map (and a bus stop's
-/// marker).
-fn spawn_map_lights_only(
-    commands: &mut Commands,
-    children: &mut Vec<Entity>,
-    (obj, sco, sco_path): (
-        &MapObjectInstance,
-        &opts_core::formats::scenery::SceneryObject,
-        &Path,
-    ),
-    transform: Transform,
-) {
-    // No mesh is drawn, but the `[maplight]`s still light the map (e.g. the
-    // `sodiumlight_4L_break_L_Forum.sco` helpers that light a square from hidden lamps).
-    let root = commands.spawn((transform, Name::new("MapLights"))).id();
-    if sco.bus_stop {
-        // The marker of a bus stop (`[busstop]`): where the bus stops and the passengers wait.
-        commands.entity(root).insert((
-            opts_bevy::bus_stops::BusStopMarker {
-                id_code: obj.id_code,
-            },
-            Name::new("BusStop"),
-        ));
-    }
-    opts_bevy::scenery_runtime::spawn_map_lights(commands, root, sco);
-    children.push(root);
-    tracing::debug!(sco = %sco_path.display(), "editor-only object: map lights only");
-}
-
-/// An object whose meshes gave no parts: a sound source without geometry becomes a root with its
-/// voices; any other is counted as having no geometry, being protected or having failed.
-fn no_mesh_parts(
-    (job, stats, commands, meshes, materials): (
-        &mut WorldLoadJob,
-        &mut WorldStats,
-        &mut Commands,
-        &mut Assets<Mesh>,
-        &mut Assets<StandardMaterial>,
-    ),
-    (obj, sco, sco_path, sco_dir, key): (
-        &MapObjectInstance,
-        &opts_core::formats::scenery::SceneryObject,
-        &Path,
-        &Path,
-        (i32, i32),
-    ),
-    (transform, mesh_parts, template, children): ObjParts<'_>,
-    (hidden_before, protected_before): (usize, usize),
-) {
-    if sco.sound.is_some() && (sco.meshes.is_empty() || sco.is_editor_only()) {
-        // A sound source without geometry (the `Generic` ambient objects: `[onlyeditor]`
-        // mesh, a script that raises the triggers): the root carries the script and the
-        // voices.
-        let name = sco
-            .friendly_name
-            .clone()
-            .unwrap_or_else(|| obj.sco_file.clone());
-        let parent = commands.spawn((transform, Name::new(name))).id();
-        children.push(parent);
-        job.finish_object(
-            commands,
-            (&mut *meshes, &mut *materials),
-            parent,
-            (sco, obj),
-            mesh_parts,
-            template,
-        );
-        crate::scenery_sound::attach(job, commands, parent, sco, sco_dir);
-        stats.objects_loaded += 1;
-        return;
-    }
-    if sco.meshes.is_empty() || sco.is_editor_only() {
-        tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
-        stats.objects_no_geometry += 1;
-    } else if job.cache.stats.hidden_parts > hidden_before {
-        // Every slot is scaled by a script variable (`[alphascale]`, e.g. a night overlay):
-        // nothing to draw, which is not a failure (P-1014, MI-0029).
-        tracing::debug!(sco = %sco_path.display(), "object has only variable-hidden slots");
-        stats.objects_no_geometry += 1;
-    } else if job.cache.stats.protected_meshes > protected_before {
-        stats.objects_protected += 1;
-        tracing::warn!(sco = %sco_path.display(), tile = ?key, pos = ?obj.position, "object skipped: no mesh has usable geometry");
-    } else {
-        tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), "object has meshes but none could be loaded");
-        stats.objects_failed += 1;
-    }
-}
-
 fn spawn_object_inner(
     (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
     (meshes, materials, images): (
@@ -349,17 +194,7 @@ fn spawn_object_inner(
         super::trace::Site<'_>,
     ),
 ) {
-    let t_sco = opts_logging::stream_trace::span("obj.sco");
-    let sco_found = job.sco(&obj.sco_file);
-    drop(t_sco);
-    let Some((sco_path, sco)) = sco_found else {
-        stats.objects_failed += 1;
-        super::trace::warn(|| {
-            format!(
-                "scenery object file not found or unreadable: {}",
-                obj.sco_file
-            )
-        });
+    let Some((sco_path, sco)) = finish::lookup_sco(job, stats, obj) else {
         return;
     };
     if special_object(
@@ -371,13 +206,7 @@ fn spawn_object_inner(
     ) {
         return;
     }
-    let sco_dir = sco_path.parent().map(Path::to_path_buf).unwrap_or_default();
-    let model_dir = job
-        .install
-        .find_in(&sco_dir, "model")
-        .unwrap_or_else(|| sco_dir.join("model"));
-    let tex_dirs = vec![sco_dir.join("texture"), job.config.map_dir.join("texture")];
-
+    let (sco_dir, model_dir, tex_dirs) = finish::object_dirs(job, &sco_path);
     let (transform, terrain_h) = object_transform(
         job,
         &sco,
@@ -388,63 +217,24 @@ fn spawn_object_inner(
         spawn_map_lights_only(commands, children, (obj, &sco, &sco_path), transform);
         return;
     }
-    // `[attachObj]` children of this object are placed relative to it.
-    job.placed
-        .entry(obj.id_code)
-        .or_insert_with(|| (transform, sco.clone()));
-
-    tracing::debug!(
-        sco = %sco_path.display(),
-        tile = ?key,
-        pos = ?obj.position,
-        terrain_h,
-        heading = obj.heading_deg,
-        pitch = ?obj.pitch_deg,
-        roll = ?obj.roll_deg,
-        "placing scenery object"
+    let bend = finish::register_placed(
+        (job, commands),
+        (obj, &sco, &sco_path, &model_dir),
+        (&transform, key, terrain_h),
     );
-    // `[crossing_heightdeformation]`: meshes and collision boxes bent over the base surface.
-    let bend = job.crossing_base(&sco_path, &sco);
-    {
-        let _t = opts_logging::stream_trace::span("obj.collision");
-        super::collision::register_object(
-            job,
-            commands,
-            &sco,
-            &model_dir,
-            &transform,
-            key,
-            bend.as_ref(),
-        );
-    }
-    super::trace::set_transform(&transform);
     if let Some(cfg_rel) = &sco.model_cfg {
-        super::trace::set_model_cfg(cfg_rel);
-        // The colour scheme of this placement (`[CTC]` repaints), fixed per object and tile.
-        let seed = crate::new_game_screen::repaints::instance_seed(&[
-            obj.id_code,
-            u64::from(key.0 as u32),
-            u64::from(key.1 as u32),
-        ]);
-        spawn_vehicle_model(
+        finish::spawn_cfg_object(
             (job, stats, commands),
             (meshes, materials, images),
+            (obj, key, transform),
             (&sco_path, &sco_dir, cfg_rel),
-            (transform, seed),
             children,
         );
         return;
     }
     let protected_before = job.cache.stats.protected_meshes;
     let hidden_before = job.cache.stats.hidden_parts;
-    // Scripts and string-variable names (`[texttexture_enh]` sources given by name).
-    let t_tpl = opts_logging::stream_trace::span("obj.script_template");
-    let template = job.script_template(&sco_path, &sco);
-    drop(t_tpl);
-    let string_names = template
-        .as_ref()
-        .map(|t| t.string_names.clone())
-        .unwrap_or_default();
+    let (template, string_names) = finish::template_and_names(job, (&sco_path, &sco));
     let Some(mesh_parts) = load_sco_meshes(
         job,
         (meshes, materials, images),
@@ -464,51 +254,19 @@ fn spawn_object_inner(
         return;
     }
 
-    // Static scenery is baked into per-tile merged meshes (`OPTS_INSTANCING=merge`).
-    if opts_bevy::instancing::merge()
-        && WorldLoadJob::is_flat_static(&sco, &mesh_parts, template.as_ref())
-        && job.scenery.dev_look.is_idle()
-        && mesh_parts.iter().flatten().all(|p| {
-            opts_bevy::instancing::StaticMerger::can_merge(meshes, materials, &p.mesh, &p.material)
-        })
-    {
-        for p in mesh_parts.iter().flatten() {
-            job.cache
-                .merger
-                .add(meshes, materials, &p.mesh, &p.material, &transform);
-            stats.scene_vertices += p.vertices;
-        }
-        stats.objects_loaded += 1;
-        return;
-    }
-    let name = sco
-        .friendly_name
-        .clone()
-        .unwrap_or_else(|| obj.sco_file.clone());
-    let _t_fin = opts_logging::stream_trace::span("obj.entity_spawn");
-    let parent = commands.spawn((transform, Name::new(name))).id();
-    children.push(parent);
-    stats.scene_vertices += mesh_parts
-        .iter()
-        .flatten()
-        .map(|p| p.vertices)
-        .sum::<usize>();
-    job.finish_object(
-        commands,
-        (&mut *meshes, &mut *materials),
-        parent,
-        (&sco, obj),
-        mesh_parts,
-        template,
+    finish::place_meshes(
+        (job, stats, commands),
+        (meshes, materials),
+        (obj, &sco, &sco_dir),
+        (transform, mesh_parts, template, children),
     );
-    crate::scenery_sound::attach(job, commands, parent, &sco, &sco_dir);
-    stats.objects_loaded += 1;
 }
 
+mod finish;
 mod meshes;
+use meshes::load_sco_meshes;
 #[cfg(test)]
 use meshes::lod_preference;
-use meshes::{load_sco_meshes, spawn_vehicle_model};
 
 #[cfg(test)]
 mod tests;

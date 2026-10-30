@@ -132,6 +132,11 @@ fn main() {
         report_vehicle(&args, &mut totals, &info, &engine, run, &mut out);
     }
 
+    finish(&args, &mut totals);
+}
+
+/// Prints the closing summary of the run.
+fn finish(args: &Args, totals: &mut Totals) {
     print_summary(
         SummaryCounts {
             with_scripts: totals.with_scripts,

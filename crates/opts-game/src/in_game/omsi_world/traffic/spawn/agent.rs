@@ -15,6 +15,11 @@ use super::models::SpawnedModels;
 use super::variants::unit_size;
 use super::*;
 
+mod log;
+use log::{log_spawned, trace_spawned};
+mod place;
+use place::{agent_params, fill_unit_sizes, finish_spawned, Placed};
+
 /// The canvases of the head's script textures, once.
 type HeadCanvases =
     Option<Arc<std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>>>;
@@ -70,58 +75,6 @@ fn route_scheduled(
         scripted_head = scripted;
     }
     scripted_head
-}
-
-/// The debug line of a spawned AI vehicle.
-fn log_spawned(
-    id: AgentId,
-    (name, group_name): (&str, &str),
-    speed: f64,
-    (params, traits): (&IdmParams, &opts_traffic::VehicleTraits),
-    (units, measured, fallbacks): (usize, bool, &dyn std::fmt::Debug),
-) {
-    tracing::debug!(
-        agent = id.0,
-        vehicle = %name,
-        group = %group_name,
-        speed,
-        mass_kg = traits.mass_kg,
-        desired_kmh = params.desired_speed * 3.6,
-        accel = params.max_accel,
-        comfort = params.comfort_decel,
-        max_decel = params.max_decel,
-        class = ?params.class,
-        units,
-        measured,
-        fallbacks = ?fallbacks,
-        "AI vehicle spawned"
-    );
-}
-
-/// The scene trace record of a spawned AI vehicle, when tracing.
-fn trace_spawned(
-    root: Entity,
-    name: &str,
-    origin: &Transform,
-    trace_frame: &trace::Frame,
-    (lane_id, speed, params, units): (LaneId, f64, &IdmParams, usize),
-) {
-    if opts_bevy::scene_trace::enabled() {
-        trace::spawned(
-            opts_bevy::scene_trace::kind::TRAFFIC,
-            name,
-            name,
-            (root, origin),
-            trace_frame,
-            "ok",
-            serde_json::json!({
-                "lane": format!("{lane_id:?}"),
-                "speed": speed,
-                "class": format!("{:?}", params.class),
-                "units": units,
-            }),
-        );
-    }
 }
 
 /// What the vehicle's body and wheels need to follow its agent.
@@ -289,7 +242,7 @@ pub(crate) fn place_and_insert_agent(
         entities,
         bounds,
         origin,
-        mut head_canvases,
+        head_canvases,
         head_setvars,
         trace_frame,
     } = models;
@@ -297,18 +250,9 @@ pub(crate) fn place_and_insert_agent(
     let SlotState::Ready(variant) = &mut pool.slots[slot].state else {
         return;
     };
-    for (unit, (min, max)) in variant.units.iter_mut().zip(&bounds) {
-        let boxed = unit.profile.body_length_m;
-        unit.size
-            .get_or_insert_with(|| unit_size(min.z, max.z, boxed));
-    }
+    fill_unit_sizes(variant, &bounds);
     let traits = variant.traits();
-    let mut params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64());
-    params.density_group = if request.is_some() {
-        u8::MAX
-    } else {
-        density_group
-    };
+    let params = agent_params(&traits, (request.is_some(), density_group), rng);
     if state
         .world
         .graph()
@@ -324,64 +268,29 @@ pub(crate) fn place_and_insert_agent(
     };
     let look = variant_look(variant, &params, &entities);
     let fallbacks = variant.units[0].profile.fallbacks.clone();
-    let VariantLook {
-        sound,
-        door_ahead,
-        unit_sounds,
-        wheel_radius,
-        rear_axle_y,
-        delta_height,
-        name,
-        measured,
-        head_bus_path,
-        chain,
-    } = look;
     for (unit, &e) in variant.units.iter().zip(&entities) {
         opts_bevy::spawn_vehicle_glows(commands, root, e, &unit.model);
     }
     let mut rng_pax = Rng::new(rng.next_u64());
-    let mut scripted_head = false;
     match state.world.spawn(lane_id, s, speed, params) {
         Ok(id) => {
             pool.agent_groups.insert(id, pool_group);
-            if let Some(r) = request {
-                scripted_head = route_scheduled(
-                    (job, commands, state, sched),
-                    (id, r),
-                    (root, door_ahead),
-                    (
-                        &mut head_canvases,
-                        &head_bus_path,
-                        &head_setvars,
-                        sound.as_ref(),
-                    ),
-                );
-            }
-            log_spawned(
+            let placed = Placed {
                 id,
-                (&name, &group_name),
+                lane_id,
+                at,
                 speed,
-                (&params, &traits),
-                (entities.len(), measured, &fallbacks),
-            );
-            trace_spawned(
-                root,
-                &name,
-                &origin,
-                &trace_frame,
-                (lane_id, speed, &params, entities.len()),
-            );
-            attach_agent(
-                commands,
-                (root, &entities),
-                (id, &mut rng_pax),
-                AgentLook {
-                    delta_height,
-                    wheel_radius,
-                    rear_axle_y,
-                    at,
-                },
-                (sound.as_ref(), &unit_sounds, scripted_head, chain),
+                params: &params,
+                traits: &traits,
+                group_name: &group_name,
+                fallbacks: &fallbacks,
+            };
+            finish_spawned(
+                (job, commands, state, sched),
+                (&placed, request),
+                (&entities, &origin, &trace_frame),
+                (look, head_canvases, &head_setvars),
+                &mut rng_pax,
             );
         }
         Err(_) => give_up(commands, entities, (sched, request)),

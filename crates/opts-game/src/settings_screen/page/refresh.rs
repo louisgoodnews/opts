@@ -104,23 +104,32 @@ pub fn refresh_rows(
             continue;
         }
         let at_default = registry.get(key).is_some_and(|d| d.default == text(key));
-        if at_default && !disabled {
-            commands.entity(e).insert((
-                opts_gui::interaction::state::Disabled,
-                opts_gui::interaction::state::DisabledReason(
-                    loc.t("settings-reset-disabled").into(),
-                ),
-            ));
-        } else if !at_default && disabled {
-            commands.entity(e).remove::<(
-                opts_gui::interaction::state::Disabled,
-                opts_gui::interaction::state::DisabledReason,
-            )>();
-        }
+        sync_reset(&mut commands, e, at_default, disabled, &loc);
     }
     if theme.is_changed() || !keys.is_empty() {
         for mut args in &mut now {
             *args = L10nArgs::one("theme", loc.t(theme_name_key(theme.kind())));
         }
+    }
+}
+
+/// Disables a reset button whose setting is at its default, and enables it again otherwise.
+fn sync_reset(
+    commands: &mut Commands,
+    e: Entity,
+    at_default: bool,
+    disabled: bool,
+    loc: &Localization,
+) {
+    if at_default && !disabled {
+        commands.entity(e).insert((
+            opts_gui::interaction::state::Disabled,
+            opts_gui::interaction::state::DisabledReason(loc.t("settings-reset-disabled").into()),
+        ));
+    } else if !at_default && disabled {
+        commands.entity(e).remove::<(
+            opts_gui::interaction::state::Disabled,
+            opts_gui::interaction::state::DisabledReason,
+        )>();
     }
 }

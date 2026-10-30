@@ -250,11 +250,7 @@ pub fn handle_vehicle_requests(
                 resolved.cars
             }
             Err(issues) => {
-                let text = issues
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join("; ");
+                let text = join_issues(&issues);
                 tracing::error!(at = %opts_bevy::position_tag(), formation = %formation.name, "formation cannot be spawned: {text}");
                 registry.mark_failed(id, text);
                 return;
@@ -281,6 +277,15 @@ pub fn handle_vehicle_requests(
         &entries,
         (id, &rec, bus_path, formation_cars),
     );
+}
+
+/// The issues of a formation as one text.
+fn join_issues<T: ToString>(issues: &[T]) -> String {
+    issues
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("; ")
 }
 
 /// How far from a bus stop another vehicle must stand for the stop to count as free (m): about a

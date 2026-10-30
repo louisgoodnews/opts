@@ -190,6 +190,69 @@ fn record_redraw(
     state.drawn_generation = generation;
 }
 
+/// The map colours of the current theme and variant.
+fn look_colors(look: &super::params::MapLook) -> super::super::minimap::MapColors {
+    colors_of(
+        look.theme
+            .as_ref()
+            .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
+                t.instrument(*look.variant)
+            }),
+    )
+}
+
+/// Copies the canvas into the image the surface shows.
+fn upload_image(images: &mut Assets<Image>, handle: &Handle<Image>, canvas: &Canvas) {
+    if let Some(mut image) = images.get_mut(handle) {
+        match image.data.as_mut() {
+            Some(data) if data.len() == canvas.data.len() => data.copy_from_slice(&canvas.data),
+            _ => image.data = Some(canvas.data.clone()),
+        }
+    }
+}
+
+/// Draws roads, route and markers onto the canvas; returns how many lines and markers it drew.
+fn draw_scene(
+    canvas: &mut Canvas,
+    (viewport, screen): (Viewport, Vec2),
+    traffic_fixture: (Option<&TrafficState>, Option<&FixtureRoads>),
+    (overview, route, scheduled): (
+        &OverviewRoads,
+        &super::super::route_path::PlayerRoutePath,
+        &super::super::route_path::ScheduledVehicles,
+    ),
+    (markers, colors): (&[(DVec2, f32, bool)], &super::super::minimap::MapColors),
+) -> (usize, usize) {
+    let radius_m = viewport.canvas_radius_m(screen);
+    let view = MapView {
+        radius_m: radius_m as f32,
+        up_heading: 0.0,
+    };
+    let roads = collect_roads(viewport.centre, radius_m, traffic_fixture, overview);
+    let px_per_m = f64::from(canvas.size) / 2.0 / radius_m;
+    // Chords of at least six pixels: the large canvas has many arcs, and a six-pixel chord is
+    // still within a fifth of a pixel of the arc (this keeps a redraw near the 2 ms budget).
+    let min_chord = MIN_CHORD_PX / px_per_m;
+    let lines = road_lines(&roads, viewport.centre, (min_chord, px_per_m));
+    let drawn_markers = marker_pixels(markers, viewport.centre);
+    let (route_lines, route_stops, scheduled_px) =
+        route_overlay(route, scheduled, viewport.centre, min_chord);
+    raster::render_routed(
+        canvas,
+        view,
+        &lines,
+        super::super::minimap::MapRoute {
+            lines: &route_lines,
+            stops: &route_stops,
+            vehicles: &scheduled_px,
+        },
+        &drawn_markers,
+        colors,
+        (MARKER_UNIT, false),
+    );
+    (lines.len(), drawn_markers.len())
+}
+
 /// Redraws the map: at once after a change of the view, while a vehicle moves at most ten times
 /// a second, otherwise twice a second.
 pub fn redraw(
@@ -206,7 +269,6 @@ pub fn redraw(
         mut handle,
         mut images,
     } = texture;
-    let super::params::MapLook { variant, theme } = look;
     let super::params::MapPoses { vehicles, cameras } = poses;
     let super::params::MapSources {
         traffic,
@@ -230,13 +292,7 @@ pub fn redraw(
         return;
     }
     let started = std::time::Instant::now();
-    let colors = colors_of(
-        theme
-            .as_ref()
-            .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
-                t.instrument(*variant)
-            }),
-    );
+    let colors = look_colors(&look);
     if resized {
         let (c, image) = new_canvas(side, colors.ground);
         handle.0 = Some(images.add(image));
@@ -250,48 +306,18 @@ pub fn redraw(
     state.immediate = false;
 
     let viewport = state.viewport;
-    let radius_m = viewport.canvas_radius_m(screen);
-    let view = MapView {
-        radius_m: radius_m as f32,
-        up_heading: 0.0,
-    };
-    let roads = collect_roads(
-        viewport.centre,
-        radius_m,
-        (traffic.as_deref(), fixture.as_deref()),
-        &overview,
-    );
-    let px_per_m = f64::from(canvas.size) / 2.0 / radius_m;
-    // Chords of at least six pixels: the large canvas has many arcs, and a six-pixel chord is
-    // still within a fifth of a pixel of the arc (this keeps a redraw near the 2 ms budget).
-    let min_chord = MIN_CHORD_PX / px_per_m;
-    let lines = road_lines(&roads, viewport.centre, (min_chord, px_per_m));
-    let drawn_markers = marker_pixels(&markers, viewport.centre);
-    let (route_lines, route_stops, scheduled_px) =
-        route_overlay(&route, &scheduled, viewport.centre, min_chord);
-    raster::render_routed(
+    let (lines, drawn_markers) = draw_scene(
         canvas,
-        view,
-        &lines,
-        super::super::minimap::MapRoute {
-            lines: &route_lines,
-            stops: &route_stops,
-            vehicles: &scheduled_px,
-        },
-        &drawn_markers,
-        &colors,
-        (MARKER_UNIT, false),
+        (viewport, state.screen),
+        (traffic.as_deref(), fixture.as_deref()),
+        (&overview, &route, &scheduled),
+        (&markers, &colors),
     );
-    if let Some(mut image) = images.get_mut(handle) {
-        match image.data.as_mut() {
-            Some(data) if data.len() == canvas.data.len() => data.copy_from_slice(&canvas.data),
-            _ => image.data = Some(canvas.data.clone()),
-        }
-    }
+    upload_image(&mut images, handle, canvas);
     record_redraw(
         &mut state,
         started,
-        (lines.len(), drawn_markers.len()),
+        (lines, drawn_markers),
         (viewport, markers, overview.generation + route.generation),
     );
 }
