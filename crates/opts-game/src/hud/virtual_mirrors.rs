@@ -7,8 +7,7 @@
 //! something that comes up on the left appears on the left of the panel, as in a mirror.
 
 use bevy::prelude::*;
-use opts_bevy::camera::viewpoint::ViewpointState;
-use opts_bevy::camera::{CameraAvailability, CameraMode, CameraState};
+use opts_bevy::camera::CameraMode;
 use opts_bevy::mirrors::{MirrorSlot, VirtualMirrors};
 use opts_gui::interaction::events::ButtonClicked;
 use opts_gui::interaction::focus::PointerOnly;
@@ -149,18 +148,20 @@ fn spawn_slot(
 }
 
 /// Keeps the areas and panels in step with the state of the virtual mirrors.
-#[allow(clippy::too_many_arguments)]
 pub fn sync_virtual_mirrors(
     mut commands: Commands,
     vm: Res<VirtualMirrors>,
-    camera: Res<CameraState>,
-    avail: Res<CameraAvailability>,
-    editor: Option<Res<ViewpointState>>,
+    view: super::params::MirrorView,
     theme: Res<MaterialTheme>,
     variant: Res<InstrumentVariant>,
     nodes: Query<Entity, With<MirrorSlotNode>>,
     mut last: Local<Option<Shown>>,
 ) {
+    let super::params::MirrorView {
+        camera,
+        avail,
+        editor,
+    } = view;
     let visible =
         camera.mode == CameraMode::Cockpit && avail.cockpit && !editor.is_some_and(|e| e.editing);
     // Streaming panels also show in the external view (the areas to click exist only in the

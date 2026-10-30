@@ -7,19 +7,29 @@ use bevy::window::PrimaryWindow;
 use crate::in_game::types::SimulationLoadState;
 use crate::AppArgs;
 
-#[allow(clippy::too_many_arguments)]
+/// The CLI args, the renderer's screenshot store and the primary window.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct ScreenshotEnv<'w, 's> {
+    args: Option<Res<'w, AppArgs>>,
+    renderer: Option<Res<'w, bevy::render::view::screenshot::CapturedScreenshots>>,
+    window: Query<'w, 's, Entity, With<PrimaryWindow>>,
+}
+
 /// Waits `--screenshot-delay` seconds after the HUD appears, saves the frame, then exits.
 pub fn capture_screenshot_when_ready(
-    args: Option<Res<AppArgs>>,
+    env: ScreenshotEnv,
     state: Res<SimulationLoadState>,
     time: Res<Time>,
     mut waited: Local<f32>,
     mut requested: Local<bool>,
     mut commands: Commands,
-    renderer: Option<Res<bevy::render::view::screenshot::CapturedScreenshots>>,
-    window: Query<Entity, With<PrimaryWindow>>,
     mut exit: MessageWriter<AppExit>,
 ) {
+    let ScreenshotEnv {
+        args,
+        renderer,
+        window,
+    } = env;
     let Some(args) = args else { return };
     let Some(path) = args.0.screenshot.clone() else {
         return;

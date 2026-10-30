@@ -2,17 +2,8 @@
 
 use super::*;
 
-/// How far the terrain beside the outer edges of the road surfaces lies from the edge height
-/// after the carve and the alignment, on the tile of Berlin-Spandau's Westerwaldstraße start
-/// point (the project lead's report 2026-10-24: the terrain must fit the outer edges).
-#[test]
-fn spandau_terrain_beside_the_surface_edges_fits_their_height() {
-    let Some(mut map) = Map::open("Berlin-Spandau") else {
-        eprintln!("OMSI_PATH not set or Berlin-Spandau not installed; skipping");
-        return;
-    };
-    let key = (2402, 11279);
-    let raw = map.terrain(key).expect("terrain");
+/// The ground triangles of every spline surface on the tile `key` and its neighbours.
+fn surfaces_around(map: &mut Map, key: (i32, i32)) -> Vec<GroundTriangle> {
     let mut surfaces: Vec<GroundTriangle> = Vec::new();
     for dy in -1..=1 {
         for dx in -1..=1 {
@@ -28,7 +19,16 @@ fn spandau_terrain_beside_the_surface_edges_fits_their_height() {
             }
         }
     }
-    let (carved, _) = carve_terrain(&raw, &surfaces);
+    surfaces
+}
+
+/// Per distance in `dists`, the gaps between the carved terrain beside the outer edges (edges used
+/// by a single triangle) and the edge height.
+fn outer_edge_gaps(
+    surfaces: &[GroundTriangle],
+    carved: &TileTerrain,
+    dists: &[f32; 4],
+) -> Vec<Vec<f32>> {
     // Outer edges with the side that is outside (away from the triangle's third corner).
     type P = (i64, i64, i64);
     let k = |v: bevy::math::Vec3| -> P {
@@ -40,7 +40,7 @@ fn spandau_terrain_beside_the_surface_edges_fits_their_height() {
     };
     let mut count: HashMap<(P, P), (u8, bevy::math::Vec3, bevy::math::Vec3, bevy::math::Vec3)> =
         HashMap::new();
-    for t in &surfaces {
+    for t in surfaces {
         for e in 0..3 {
             let (a, b, c) = (t[e], t[(e + 1) % 3], t[(e + 2) % 3]);
             let (ka, kb) = (k(a), k(b));
@@ -53,7 +53,6 @@ fn spandau_terrain_beside_the_surface_edges_fits_their_height() {
         }
     }
     let mut gaps: Vec<Vec<f32>> = vec![Vec::new(); 4];
-    let dists = [0.3_f32, 1.0, 2.0, 3.0];
     for (n, a, b, c) in count.values() {
         if *n != 1 {
             continue;
@@ -81,6 +80,11 @@ fn spandau_terrain_beside_the_surface_edges_fits_their_height() {
             s += 1.0;
         }
     }
+    gaps
+}
+
+/// Checks the gap percentiles per distance and prints them.
+fn report_gaps(mut gaps: Vec<Vec<f32>>, dists: &[f32; 4]) {
     for (i, d) in dists.iter().enumerate() {
         // Gaps of more than 0.75 m are content (embankments, cuttings, bridges): the fit leaves
         // them, so they are not counted here.
@@ -112,4 +116,21 @@ fn spandau_terrain_beside_the_surface_edges_fits_their_height() {
             over(0.50)
         );
     }
+}
+
+/// How far the terrain beside the outer edges of the road surfaces lies from the edge height
+/// after the carve and the alignment, on the tile of Berlin-Spandau's Westerwaldstraße start
+/// point (the project lead's report 2026-10-24: the terrain must fit the outer edges).
+#[test]
+fn spandau_terrain_beside_the_surface_edges_fits_their_height() {
+    let Some(mut map) = Map::open("Berlin-Spandau") else {
+        eprintln!("OMSI_PATH not set or Berlin-Spandau not installed; skipping");
+        return;
+    };
+    let key = (2402, 11279);
+    let raw = map.terrain(key).expect("terrain");
+    let surfaces = surfaces_around(&mut map, key);
+    let (carved, _) = carve_terrain(&raw, &surfaces);
+    let dists = [0.3_f32, 1.0, 2.0, 3.0];
+    report_gaps(outer_edge_gaps(&surfaces, &carved, &dists), &dists);
 }

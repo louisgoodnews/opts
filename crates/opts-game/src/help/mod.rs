@@ -7,6 +7,7 @@
 mod about;
 mod controls;
 mod overlay;
+mod params;
 pub mod scroll;
 pub mod vehicle_controls;
 
@@ -18,10 +19,10 @@ use opts_gui::l10n::L10nKey;
 use opts_gui::prelude::*;
 
 pub use overlay::{open_overlay, HelpOverlay};
+pub use params::{F1Gate, ReportRequest, VehicleProbe};
 
 use crate::app_state::AppState;
 use crate::pause::Pause;
-use crate::shell::esc::EscGate;
 use crate::shell::nav::{Navigate, PendingDeepLink};
 use crate::shell::{keys, spawn_screen_root, ShellContent};
 
@@ -304,19 +305,21 @@ fn report_click(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 /// F1 opens Help: the page in the shell, the overlay (over a paused scene) in a drive.
 pub fn f1_opens_help(
-    keys_in: Res<ButtonInput<KeyCode>>,
-    action_keys: Option<Res<opts_bevy::ActionKeys>>,
+    input: F1Gate,
     state: Res<State<AppState>>,
-    gate: Res<EscGate>,
-    overlays: Query<(), With<HelpOverlay>>,
     mut pause: ResMut<Pause>,
     mut time: ResMut<Time<Virtual>>,
     mut navigate: MessageWriter<Navigate>,
     mut commands: Commands,
 ) {
+    let F1Gate {
+        keys_in,
+        action_keys,
+        gate,
+        overlays,
+    } = input;
     if !opts_bevy::action_keys_of(&action_keys).just_pressed(&keys_in, "help")
         || gate.closed()
         || !overlays.is_empty()

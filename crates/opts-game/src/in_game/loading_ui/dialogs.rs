@@ -41,22 +41,35 @@ pub fn ask_to_cancel(commands: &mut Commands) {
     commands.entity(content).add_children(&[title, body, line]);
 }
 
+/// The queries of [`handle_cancel`].
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct CancelQueries<'w, 's> {
+    cancel: Query<'w, 's, (), With<CancelLoadingBtn>>,
+    keep: Query<'w, 's, (), With<KeepLoadingBtn>>,
+    confirm: Query<'w, 's, (), With<ConfirmCancelBtn>>,
+    dialogs: Query<'w, 's, Entity, With<CancelDialog>>,
+    other_modals: Query<'w, 's, (), (With<ModalRoot>, Without<CancelDialog>)>,
+    screen: Query<'w, 's, (), With<LoadingScreenRoot>>,
+}
+
 /// The cancel button, the dialog's buttons and `Esc`.
-#[allow(clippy::too_many_arguments)]
 pub fn handle_cancel(
     mut activated: MessageReader<Activated>,
     mut actions: MessageReader<UiAction>,
     mut modal_events: MessageReader<ModalEvent>,
-    cancel: Query<(), With<CancelLoadingBtn>>,
-    keep: Query<(), With<KeepLoadingBtn>>,
-    confirm: Query<(), With<ConfirmCancelBtn>>,
-    dialogs: Query<Entity, With<CancelDialog>>,
-    other_modals: Query<(), (With<ModalRoot>, Without<CancelDialog>)>,
-    screen: Query<(), With<LoadingScreenRoot>>,
+    queries: CancelQueries,
     report: Res<LoadReport>,
     mut next_state: ResMut<NextState<AppState>>,
     mut commands: Commands,
 ) {
+    let CancelQueries {
+        cancel,
+        keep,
+        confirm,
+        dialogs,
+        other_modals,
+        screen,
+    } = queries;
     if screen.is_empty() {
         return;
     }
@@ -125,18 +138,28 @@ pub fn announce_minor_problems(
     commands.insert_resource(MinorToast(toast));
 }
 
+/// The queries of [`handle_minor_dialog`].
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct MinorQueries<'w, 's> {
+    actions: Query<'w, 's, &'static opts_gui::components::toast::ToastActionButton>,
+    close: Query<'w, 's, (), With<MinorCloseBtn>>,
+    dialogs: Query<'w, 's, Entity, With<MinorDialog>>,
+}
+
 /// The toast's *Details* opens the list; *Close* and `Esc` close it.
-#[allow(clippy::too_many_arguments)]
 pub fn handle_minor_dialog(
     mut activated: MessageReader<Activated>,
     mut modal_events: MessageReader<ModalEvent>,
-    actions: Query<&opts_gui::components::toast::ToastActionButton>,
-    close: Query<(), With<MinorCloseBtn>>,
-    dialogs: Query<Entity, With<MinorDialog>>,
+    queries: MinorQueries,
     toast: Option<Res<MinorToast>>,
     report: Res<LoadReport>,
     mut commands: Commands,
 ) {
+    let MinorQueries {
+        actions,
+        close,
+        dialogs,
+    } = queries;
     for Activated(e) in activated.read() {
         let opens = actions
             .get(*e)

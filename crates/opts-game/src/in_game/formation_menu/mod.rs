@@ -58,7 +58,6 @@ type ShownEntries = Option<(Vec<(u32, String)>, Option<u32>, (usize, bool))>;
 type Roots<'w, 's> = Query<'w, 's, Entity, With<FormationRoot>>;
 
 /// Builds the page when it is open and something changed, and removes it when it is not.
-#[allow(clippy::too_many_arguments)]
 fn rebuild_formation(
     mut ed: ResMut<FormationEditor>,
     menu: Res<VehicleMenu>,

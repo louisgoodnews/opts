@@ -44,8 +44,8 @@ impl Extras {
     };
 }
 
-/// A HUD of `kind` in a window of `w` x `h` logical pixels at UI scale `scale`.
-pub fn build_hud(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) -> App {
+/// The headless app with the HUD plugins and fixture resources, before any vehicle or layout.
+fn hud_base(w: u32, h: u32) -> App {
     opts_game::isolation::isolate_user_dirs();
     let mut app = layout_base();
     let mut settings = GameSettings::default();
@@ -73,7 +73,11 @@ pub fn build_hud(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) 
         ))
         .add_plugins(ShellPlugin)
         .add_plugins(HudPlugin);
-    // A drive with two session vehicles: the active one and another one 60 m away.
+    app
+}
+
+/// A drive with two session vehicles: the active one and another one 60 m away.
+fn spawn_drive(app: &mut App) {
     app.world_mut().spawn((
         VehicleController::standard_bus(12_000.0, 5.9),
         PlayerVehicle,
@@ -86,32 +90,10 @@ pub fn build_hud(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) 
         SessionVehicle(2),
         GlobalTransform::from(Transform::from_xyz(40.0, 0.0, -60.0)),
     ));
-    resize(&mut app, w, h);
-    app.insert_resource(UiScale(scale));
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::InGame);
-    for _ in 0..4 {
-        app.update();
-    }
-    let profile = app
-        .world()
-        .resource::<HudProfiles>()
-        .get(kind)
-        .cloned()
-        .expect("profile");
-    let palette = *app
-        .world()
-        .resource::<opts_gui::theme::MaterialTheme>()
-        .instrument(opts_gui::theme::InstrumentVariant::Day);
-    {
-        let mut commands = app.world_mut().commands();
-        build::spawn_hud(&mut commands, &profile, &palette);
-    }
-    for _ in 0..6 {
-        app.update();
-    }
+}
+
+/// Raises the alert, camera label, toast and editor panel that `extras` asks for.
+fn apply_extras(app: &mut App, extras: Extras) {
     if extras.alert {
         app.world_mut().write_message(RaiseAlert {
             id: "fixture",
@@ -139,6 +121,39 @@ pub fn build_hud(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) 
             .resource_mut::<opts_bevy::ViewpointState>()
             .editing = true;
     }
+}
+
+/// A HUD of `kind` in a window of `w` x `h` logical pixels at UI scale `scale`.
+pub fn build_hud(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) -> App {
+    let mut app = hud_base(w, h);
+    spawn_drive(&mut app);
+    resize(&mut app, w, h);
+    app.insert_resource(UiScale(scale));
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::InGame);
+    for _ in 0..4 {
+        app.update();
+    }
+    let profile = app
+        .world()
+        .resource::<HudProfiles>()
+        .get(kind)
+        .cloned()
+        .expect("profile");
+    let palette = *app
+        .world()
+        .resource::<opts_gui::theme::MaterialTheme>()
+        .instrument(opts_gui::theme::InstrumentVariant::Day);
+    {
+        let mut commands = app.world_mut().commands();
+        build::spawn_hud(&mut commands, &profile, &palette);
+    }
+    for _ in 0..6 {
+        app.update();
+    }
+    apply_extras(&mut app, extras);
     for _ in 0..8 {
         app.update();
     }

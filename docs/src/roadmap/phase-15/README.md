@@ -2,7 +2,7 @@
 
 *Goal: minimise AI-agent input and output token consumption across the workspace by enforcing a two-tier source file budget (150–200 code lines target, 250-line inline-test extraction trigger, 350-line hard ceiling), an 80-line function ratchet, and Bevy `SystemParam` bundling—backed by fast `< 1.5 s` pre-commit and CI gates.*
 
-**Status:** 🟡 In Progress — [M-0147](M-0147.md), [M-0148](M-0148.md), and [M-0149](M-0149.md) done 2026-10-28; [M-0150](M-0150.md) in progress, first batch 2026-10-29: functions over 80 lines 249 → 172 (production 198 → 128), signature allows 145 → 112 (research and workload audit in [AI-Agent Token Optimization & Source File Budgets](../../architecture/ai-token-optimization.md); coding rules in [Coding Standards §3.7 & §3.14](../../contributing/standards.md)).
+**Status:** ✅ Done — [M-0147](M-0147.md), [M-0148](M-0148.md), and [M-0149](M-0149.md) done 2026-10-28; [M-0150](M-0150.md) done 2026-10-30: `function-known.txt` empty (0 functions over 80 lines, 0 signature allows) (research and workload audit in [AI-Agent Token Optimization & Source File Budgets](../../architecture/ai-token-optimization.md); coding rules in [Coding Standards §3.7 & §3.14](../../contributing/standards.md)).
 
 The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 15); this page holds the details.
 
@@ -29,4 +29,4 @@ Phase 999 Cycle 1 ([M-0125](../phase-999/M-0125.md)–[M-0129](../phase-999/M-01
 | Pre-commit + CI ratchet v2 (`M-0147`) | ✅ Done 2026-10-28 | 4 ratchets in `pre-commit` + `ci.yml` | Done |
 | Prod files > 250 LOC with inline `#[cfg(test)]` (`M-0148`) | ✅ Done 2026-10-28 (101 → 0) | **0** | Done |
 | Prod files > 350 non-test LOC (`M-0149`) | ✅ Done 2026-10-28 (120 → 0) | **0** (new modules 150–220 LOC) | Done |
-| Prod functions > 80 LOC & `SystemParam` allows (`M-0150`) | 191 functions / 155 allows (2026-10-29: 128 production functions, 112 allows) | **0** unratcheted | 8–10 sessions (first batch done) |
+| Prod functions > 80 LOC & `SystemParam` allows (`M-0150`) | 191 functions / 155 allows (2026-10-30: **0 / 0**) | **0** unratcheted | done |

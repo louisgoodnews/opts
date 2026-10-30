@@ -1,24 +1,215 @@
 //! Button actions and set-variable values of the menu.
 
+mod groups;
 mod remote;
 
-use super::route_page::{clear_route, jump_to_entry, pick_route, pick_route_text, pick_run};
 use super::*;
-use remote::parse_remote_commands;
+use groups::{change_map_action, navigate_action, route_action, vehicle_action};
+use remote::{parse_remote_commands, RemoteCtx};
 
-#[allow(clippy::too_many_arguments)]
+/// What the action handlers of the menu read and change.
+struct MenuCtx<'a> {
+    menu: &'a mut VehicleMenu,
+    commands: &'a mut Commands<'a, 'a>,
+    registry: &'a mut SessionVehicles,
+    catalogue: Option<&'a GameCatalogue>,
+    job: Option<&'a WorldLoadJob>,
+    library: &'a mut Option<&'a mut crate::new_game_screen::configs::ConfigLibrary>,
+    fallback: &'a mut Option<crate::new_game_screen::configs::ConfigLibrary>,
+}
+
+/// The bus configurations and the setvar editor. Returns the action when this group does not handle it.
+fn config_action(action: Action, c: &mut MenuCtx) -> Option<Action> {
+    match action {
+        Action::OpenConfigs => {
+            c.menu.page = Page::Configs;
+            c.menu.status.clear();
+            if let Some(cat) = c.catalogue {
+                let lib = lib_of(c.library, c.fallback);
+                c.menu.configs = super::load_view(lib, cat);
+            }
+            None
+        }
+        Action::SaveConfig => {
+            if let Some(cat) = c.catalogue {
+                let lib = lib_of(c.library, c.fallback);
+                super::configs_page::save_active(c.menu, lib, c.registry, cat);
+            }
+            None
+        }
+        Action::SpawnConfig(id) => {
+            if let (Some(cat), Some(job)) = (c.catalogue, c.job) {
+                let lib = lib_of(c.library, c.fallback);
+                super::configs_page::spawn(c.menu, lib, c.registry, cat, job, &id);
+            }
+            None
+        }
+        Action::OpenSetvars => {
+            c.commands
+                .queue(|w: &mut World| super::setvars_page::open(w));
+            None
+        }
+        Action::LiveToggle(name) => {
+            c.commands
+                .queue(move |w: &mut World| super::setvars_page::change(w, &name, None));
+            None
+        }
+        Action::LiveStep(name, delta) => {
+            c.commands
+                .queue(move |w: &mut World| super::setvars_page::change(w, &name, Some(delta)));
+            None
+        }
+        Action::LiveReset => {
+            c.commands
+                .queue(|w: &mut World| super::setvars_page::reset(w));
+            None
+        }
+        Action::RenameConfig(id) => {
+            super::configs_page::start_rename(c.menu, &id);
+            None
+        }
+        Action::CancelRename => {
+            c.menu.configs.renaming = None;
+            None
+        }
+        Action::CommitRename => {
+            if let Some(cat) = c.catalogue {
+                let lib = lib_of(c.library, c.fallback);
+                super::configs_page::commit_rename(c.menu, lib, cat);
+            }
+            None
+        }
+        Action::DeleteConfig(id) => {
+            if let Some(cat) = c.catalogue {
+                let lib = lib_of(c.library, c.fallback);
+                super::configs_page::delete(c.menu, lib, cat, &id);
+            }
+            None
+        }
+        other => Some(other),
+    }
+}
+
+/// Choosing the vehicle, repaint, entry or stop, the options, and the spawn itself. Returns the action when this group does not handle it.
+fn pick_action(action: Action, c: &mut MenuCtx) -> Option<Action> {
+    match action {
+        Action::PickVehicle(i) => {
+            if c.menu.vehicle != Some(i) {
+                c.menu.vehicle = Some(i);
+                c.menu.repaint.clear();
+                c.menu.setvars.clear();
+                c.menu.repaints = None;
+                c.menu.scroll[1] = 0.0;
+                c.menu.scroll[3] = 0.0;
+            }
+            None
+        }
+        Action::PickRepaint(name) => {
+            c.menu.repaint = name;
+            None
+        }
+        Action::PickEntry(id) => {
+            (c.menu.entry, c.menu.stop) = (Some(id), None);
+            None
+        }
+        Action::PickStop(id) => {
+            (c.menu.entry, c.menu.stop) = (None, Some(id));
+            None
+        }
+        Action::Toggle(var) => {
+            let current = menu_setvar_value(c.menu, c.catalogue, &var);
+            c.menu.setvars.insert(var, i32::from(current == 0));
+            None
+        }
+        Action::Step(var, delta) => {
+            let veh = c
+                .menu
+                .vehicle
+                .and_then(|i| c.catalogue.and_then(|c| c.vehicles.get(i)))?;
+            let items = get_vehicle_setvars(veh, &c.menu.setvars, &c.menu.repaint);
+            if let Some(item) = items.iter().find(|s| s.name == var) {
+                let next = item.step(item.value, delta);
+                c.menu.setvars.insert(var, next);
+            }
+            None
+        }
+        Action::Confirm => {
+            confirm_spawn(c);
+            None
+        }
+        other => Some(other),
+    }
+}
+
+/// Spawns the chosen vehicle at the chosen entry or stop, or says what is missing.
+fn confirm_spawn(c: &mut MenuCtx) {
+    let (Some(cat), Some(job)) = (c.catalogue, c.job) else {
+        return;
+    };
+    let Some(veh) = c.menu.vehicle.and_then(|i| cat.vehicles.get(i)) else {
+        c.menu.status = "Choose a vehicle.".into();
+        return;
+    };
+    let entry = match (c.menu.stop, c.menu.entry) {
+        (Some(stop), _) => EntrySel::Stop(stop),
+        (None, Some(entry)) => EntrySel::Id(entry),
+        (None, None) => {
+            c.menu.status = "Choose an entry point or a bus stop.".into();
+            return;
+        }
+    };
+    let Some(bus) = job.bus_file(&veh.bus_file) else {
+        tracing::error!(at = %opts_bevy::position_tag(), bus = %veh.bus_file, "vehicle .bus not found; nothing spawned");
+        c.menu.status = format!("ERROR: {} not found in the installation.", veh.bus_file);
+        return;
+    };
+    let mut setvars: Vec<(String, i32)> = c
+        .menu
+        .setvars
+        .iter()
+        .map(|(k, v)| (k.clone(), *v))
+        .collect();
+    setvars.sort();
+    c.registry.request_spawn(SpawnParams {
+        catalogue_id: veh.id.clone(),
+        name: veh.full_name.clone(),
+        bus_file: bus.display().to_string(),
+        repaint: c.menu.repaint.clone(),
+        setvars,
+        entry,
+        formation: None,
+    });
+    c.menu.current = veh.full_name.clone();
+    c.menu.page = Page::Closed;
+    c.menu.config_open = false;
+}
+
+/// The resources the menu actions read and change besides the menu itself.
+#[derive(bevy::ecs::system::SystemParam)]
+pub(super) struct MenuWorld<'w> {
+    catalogue: Option<Res<'w, GameCatalogue>>,
+    job: Option<Res<'w, WorldLoadJob>>,
+    registry: ResMut<'w, SessionVehicles>,
+    remote: ResMut<'w, MenuCommands>,
+    formation_commands: ResMut<'w, super::super::formation_menu::FormationCommands>,
+    library: Option<ResMut<'w, crate::new_game_screen::configs::ConfigLibrary>>,
+}
+
 pub(super) fn menu_actions(
     mut clicks: MessageReader<ButtonClicked>,
     actions: Query<&Action>,
     mut menu: ResMut<VehicleMenu>,
-    catalogue: Option<Res<GameCatalogue>>,
-    job: Option<Res<WorldLoadJob>>,
     mut commands: Commands,
-    mut registry: ResMut<SessionVehicles>,
-    mut remote: ResMut<MenuCommands>,
-    mut formation_commands: ResMut<super::super::formation_menu::FormationCommands>,
-    mut library: Option<ResMut<crate::new_game_screen::configs::ConfigLibrary>>,
+    world: MenuWorld,
 ) {
+    let MenuWorld {
+        catalogue,
+        job,
+        mut registry,
+        mut remote,
+        mut formation_commands,
+        mut library,
+    } = world;
     // The wizard's list when the game has one (one list for the screens and the protocol), else
     // one read from the file when first needed.
     let mut fallback: Option<crate::new_game_screen::configs::ConfigLibrary> = None;
@@ -28,264 +219,54 @@ pub(super) fn menu_actions(
         .collect();
     parse_remote_commands(
         &mut remote,
-        &mut menu,
-        &mut formation_commands,
-        catalogue.as_deref(),
-        job.as_deref(),
-        &registry,
-        &mut commands,
+        RemoteCtx {
+            menu: &mut menu,
+            formation_commands: &mut formation_commands,
+            catalogue: catalogue.as_deref(),
+            job: job.as_deref(),
+            registry: &registry,
+            commands: &mut commands,
+        },
         &mut todo,
     );
+    // Fresh `Commands` and plain borrows, so `MenuCtx`'s single lifetime fits.
+    let mut commands = commands.reborrow();
+    let mut library = library.as_deref_mut();
+    let mut ctx = MenuCtx {
+        menu: &mut menu,
+        commands: &mut commands,
+        registry: &mut registry,
+        catalogue: catalogue.as_deref(),
+        job: job.as_deref(),
+        library: &mut library,
+        fallback: &mut fallback,
+    };
     for action in todo {
-        match action {
-            Action::Despawn => match registry.active_id() {
-                None => menu.status = "There is no vehicle to despawn.".into(),
-                Some(id) => {
-                    crate::session_vehicles::defer(&mut commands, move |w: &mut World| {
-                        if let Err(e) = ops::despawn(w, id, DespawnReason::User) {
-                            tracing::warn!("despawn refused: {e}");
-                        }
-                    });
-                    menu.current.clear();
-                    menu.status = "Vehicle despawned.".into();
-                }
-            },
-            Action::Switch(id) => {
-                commands.queue(move |w: &mut World| {
-                    if let Err(e) = ops::switch_to(w, id) {
-                        tracing::warn!("switch refused: {e}");
-                    }
-                });
-                menu.status.clear();
-            }
-            Action::DespawnId(id) => {
-                commands.queue(move |w: &mut World| crate::session_vehicles::ask_despawn(w, id));
-            }
-            Action::Respawn(id) => {
-                commands.queue(move |w: &mut World| {
-                    if let Err(e) = ops::respawn(w, id) {
-                        tracing::warn!("respawn refused: {e}");
-                    }
-                });
-                menu.status = "Vehicle put back at its spawn point.".into();
-            }
-            Action::ResetOnRoad(id) => {
-                commands.queue(move |w: &mut World| {
-                    if let Err(e) = crate::session_vehicles::reset_on_road(w, id) {
-                        tracing::warn!("reset on the road refused: {e}");
-                    }
-                });
-                menu.status = "Vehicle put on the nearest road.".into();
-            }
-            Action::OpenSelect => {
-                menu.page = Page::Select;
-                menu.status.clear();
-            }
-            Action::OpenFormation => {
-                menu.page = Page::Formation;
-                menu.status.clear();
-            }
-            Action::Close => {
-                menu.page = Page::Closed;
-                menu.config_open = false;
-            }
-            Action::Back => {
-                menu.page = if menu.page == Page::ChangeMapConfirm {
-                    Page::ChangeMap
-                } else {
-                    Page::Main
-                };
-                menu.config_open = false;
-            }
-            Action::OpenRoute => {
-                menu.page = Page::Route;
-                menu.status.clear();
-            }
-            Action::PickRoute(code) => {
-                commands.queue(move |w: &mut World| pick_route(w, code));
-            }
-            Action::PickRouteText(text) => {
-                menu.page = Page::Route;
-                commands.queue(move |w: &mut World| pick_route_text(w, &text));
-            }
-            Action::TtLine(i) => {
-                menu.tt_line = Some(i);
-                menu.tt_tour = None;
-                menu.scroll[6] = 0.0;
-            }
-            Action::TtTour(i) => {
-                menu.tt_tour = Some(i);
-                menu.scroll[6] = 0.0;
-            }
-            Action::TtRun(i) => {
-                let (Some(l), Some(t)) = (menu.tt_line, menu.tt_tour) else {
-                    continue;
-                };
-                commands.queue(move |w: &mut World| pick_run(w, l, t, i));
-            }
-            Action::TtUp => {
-                if menu.tt_tour.take().is_none() {
-                    menu.tt_line = None;
-                }
-                menu.scroll[6] = 0.0;
-            }
-            Action::ClearRoute => {
-                commands.queue(|w: &mut World| clear_route(w));
-            }
-            Action::OpenChangeMap => {
-                menu.page = Page::ChangeMap;
-                menu.status.clear();
-                menu.change_map = ChangeMapDraft::default();
-            }
-            Action::PickMap(id) => {
-                if menu.change_map.map.as_deref() != Some(id.as_str()) {
-                    menu.change_map.entry = menu
-                        .change_map
-                        .entry
-                        .take()
-                        .filter(|_| menu.page == Page::ChangeMap);
-                }
-                menu.change_map.map = Some(id);
-                menu.page = Page::ChangeMapConfirm;
-                menu.status.clear();
-            }
-            Action::PickMapEntry(name) => menu.change_map.entry = Some(name),
-            Action::DriveWithoutVehicle => menu.change_map.without_vehicle = true,
-            Action::ConfirmChangeMap => {
-                commands.queue(|w: &mut World| confirm_change_map(w));
-            }
-            Action::OpenConfigs => {
-                menu.page = Page::Configs;
-                menu.status.clear();
-                if let Some(cat) = catalogue.as_deref() {
-                    let lib = lib_of(&mut library, &mut fallback);
-                    menu.configs = super::load_view(lib, cat);
-                }
-            }
-            Action::SaveConfig => {
-                if let Some(cat) = catalogue.as_deref() {
-                    let lib = lib_of(&mut library, &mut fallback);
-                    super::configs_page::save_active(&mut menu, lib, &registry, cat);
-                }
-            }
-            Action::SpawnConfig(id) => {
-                if let (Some(cat), Some(job)) = (catalogue.as_deref(), job.as_deref()) {
-                    let lib = lib_of(&mut library, &mut fallback);
-                    super::configs_page::spawn(&mut menu, lib, &mut registry, cat, job, &id);
-                }
-            }
-            Action::OpenSetvars => {
-                commands.queue(|w: &mut World| super::setvars_page::open(w));
-            }
-            Action::LiveToggle(name) => {
-                commands.queue(move |w: &mut World| super::setvars_page::change(w, &name, None));
-            }
-            Action::LiveStep(name, delta) => {
-                commands
-                    .queue(move |w: &mut World| super::setvars_page::change(w, &name, Some(delta)));
-            }
-            Action::LiveReset => {
-                commands.queue(|w: &mut World| super::setvars_page::reset(w));
-            }
-            Action::RenameConfig(id) => super::configs_page::start_rename(&mut menu, &id),
-            Action::CancelRename => menu.configs.renaming = None,
-            Action::CommitRename => {
-                if let Some(cat) = catalogue.as_deref() {
-                    let lib = lib_of(&mut library, &mut fallback);
-                    super::configs_page::commit_rename(&mut menu, lib, cat);
-                }
-            }
-            Action::DeleteConfig(id) => {
-                if let Some(cat) = catalogue.as_deref() {
-                    let lib = lib_of(&mut library, &mut fallback);
-                    super::configs_page::delete(&mut menu, lib, cat, &id);
-                }
-            }
-            Action::OpenJump => {
-                menu.page = Page::Jump;
-                menu.status.clear();
-            }
-            Action::JumpEntry(id) => {
-                menu.page = Page::Closed;
-                commands.queue(move |w: &mut World| jump_to_entry(w, id));
-            }
-            Action::PickVehicle(i) => {
-                if menu.vehicle != Some(i) {
-                    menu.vehicle = Some(i);
-                    menu.repaint.clear();
-                    menu.setvars.clear();
-                    menu.repaints = None;
-                    menu.scroll[1] = 0.0;
-                    menu.scroll[3] = 0.0;
-                }
-            }
-            Action::PickRepaint(name) => menu.repaint = name,
-            Action::PickEntry(id) => (menu.entry, menu.stop) = (Some(id), None),
-            Action::PickStop(id) => (menu.entry, menu.stop) = (None, Some(id)),
-            Action::OpenConfig => menu.config_open = true,
-            Action::CloseConfig => menu.config_open = false,
-            Action::ResetConfig => menu.setvars.clear(),
-            Action::Toggle(var) => {
-                let current = menu_setvar_value(&menu, catalogue.as_deref(), &var);
-                menu.setvars.insert(var, i32::from(current == 0));
-            }
-            Action::Step(var, delta) => {
-                let Some(veh) = menu
-                    .vehicle
-                    .and_then(|i| catalogue.as_deref().and_then(|c| c.vehicles.get(i)))
-                else {
-                    continue;
-                };
-                let items = get_vehicle_setvars(veh, &menu.setvars, &menu.repaint);
-                if let Some(item) = items.iter().find(|s| s.name == var) {
-                    let next = item.step(item.value, delta);
-                    menu.setvars.insert(var, next);
-                }
-            }
-            Action::Confirm => {
-                let (Some(cat), Some(job)) = (catalogue.as_deref(), job.as_deref()) else {
-                    continue;
-                };
-                let Some(veh) = menu.vehicle.and_then(|i| cat.vehicles.get(i)) else {
-                    menu.status = "Choose a vehicle.".into();
-                    continue;
-                };
-                let entry = match (menu.stop, menu.entry) {
-                    (Some(stop), _) => EntrySel::Stop(stop),
-                    (None, Some(entry)) => EntrySel::Id(entry),
-                    (None, None) => {
-                        menu.status = "Choose an entry point or a bus stop.".into();
-                        continue;
-                    }
-                };
-                let Some(bus) = job.bus_file(&veh.bus_file) else {
-                    tracing::error!(at = %opts_bevy::position_tag(), bus = %veh.bus_file, "vehicle .bus not found; nothing spawned");
-                    menu.status = format!("ERROR: {} not found in the installation.", veh.bus_file);
-                    continue;
-                };
-                let mut setvars: Vec<(String, i32)> =
-                    menu.setvars.iter().map(|(k, v)| (k.clone(), *v)).collect();
-                setvars.sort();
-                registry.request_spawn(SpawnParams {
-                    catalogue_id: veh.id.clone(),
-                    name: veh.full_name.clone(),
-                    bus_file: bus.display().to_string(),
-                    repaint: menu.repaint.clone(),
-                    setvars,
-                    entry,
-                    formation: None,
-                });
-                menu.current = veh.full_name.clone();
-                menu.page = Page::Closed;
-                menu.config_open = false;
-            }
-        }
+        let Some(action) = vehicle_action(action, &mut ctx) else {
+            continue;
+        };
+        let Some(action) = navigate_action(action, &mut ctx) else {
+            continue;
+        };
+        let Some(action) = route_action(action, &mut ctx) else {
+            continue;
+        };
+        let Some(action) = change_map_action(action, &mut ctx) else {
+            continue;
+        };
+        let Some(action) = config_action(action, &mut ctx) else {
+            continue;
+        };
+        let Some(action) = pick_action(action, &mut ctx) else {
+            continue;
+        };
+        let _ = action;
     }
 }
 
 /// The configuration list the menu works on: the game's own, else one read from the file.
 fn lib_of<'a>(
-    library: &'a mut Option<ResMut<crate::new_game_screen::configs::ConfigLibrary>>,
+    library: &'a mut Option<&mut crate::new_game_screen::configs::ConfigLibrary>,
     fallback: &'a mut Option<crate::new_game_screen::configs::ConfigLibrary>,
 ) -> &'a mut crate::new_game_screen::configs::ConfigLibrary {
     match library {

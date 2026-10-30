@@ -2,11 +2,13 @@
 
 mod agent;
 mod models;
+mod params;
 
 use super::variants::{baseline_targets, group_lane_metres, pick_slot, time_factor};
 use super::*;
 use agent::place_and_insert_agent;
 use models::build_unit_models;
+use params::{SpawnContext, SpawnLocals, SpawnStores};
 
 /// What the unscheduled traffic aims for.
 struct DensityPlan {
@@ -178,26 +180,102 @@ fn pick_place(
     Ok((lane_id, s, slot, at))
 }
 
+/// Builds the models of the vehicle picked for `slot` and puts its agent on the lane; a vehicle
+/// whose meshes are not ready is tried again later (or given up).
+fn finish_spawn(
+    (commands, job): (&mut Commands, &mut WorldLoadJob),
+    (state, pool, sched): (&mut TrafficState, &mut TrafficPool, &mut ScheduledTraffic),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (chrono, request): (
+        Option<&crate::in_game::omsi_world::chrono::ChronoState>,
+        Option<super::scheduled::ScheduledRequest>,
+    ),
+    ((lane_id, s, slot, at), mut rng): ((opts_traffic::LaneId, f64, usize, DVec2), Rng),
+) {
+    pool.built += 1;
+    let repaint_seed = crate::new_game_screen::repaints::instance_seed(&[slot as u64, pool.built]);
+    let SlotState::Ready(variant) = &pool.slots[slot].state else {
+        pool.rng = Some(rng);
+        if let Some(r) = &request {
+            sched.failed(r);
+        }
+        return;
+    };
+    let fleet = &pool.slots[slot].fleet;
+    let models = match build_unit_models(
+        (commands, job),
+        (meshes, materials, images),
+        (variant, at, fleet),
+        (repaint_seed, chrono, request.is_some()),
+    ) {
+        Ok(m) => m,
+        Err(unusable) => {
+            let name = variant.name.clone();
+            tracing::debug!(vehicle = %name, "AI vehicle meshes not ready");
+            if let Some(r) = &request {
+                sched.failed(r);
+            }
+            mark_unusable(pool, slot, unusable);
+            pool.rng = Some(rng);
+            return;
+        }
+    };
+    place_and_insert_agent(
+        (commands, job),
+        (state, pool, sched),
+        (slot, lane_id, s, at),
+        request.as_ref(),
+        models,
+        &mut rng,
+    );
+    pool.rng = Some(rng);
+}
+
+/// A vehicle whose meshes cannot be loaded now: a slot that can never load is failed, any other
+/// gets a few more tries.
+fn mark_unusable(pool: &mut TrafficPool, slot: usize, unusable: bool) {
+    if unusable {
+        pool.slots[slot].state = SlotState::Failed;
+    } else {
+        pool.slots[slot].fails += 1;
+        if pool.slots[slot].fails >= MAX_LOAD_TRIES {
+            pool.slots[slot].state = SlotState::Failed;
+        }
+    }
+}
+
 /// Spawns vehicles on lanes around the camera up to the density-derived target.
-#[allow(clippy::too_many_arguments)]
 pub fn spawn_traffic(
     time: Res<Time>,
-    mut elapsed: Local<f32>,
-    mut since_log: Local<f32>,
-    mut rejected: Local<[u32; 5]>,
+    locals: SpawnLocals,
     mut commands: Commands,
     job: Option<ResMut<WorldLoadJob>>,
-    mut state: ResMut<TrafficState>,
-    mut pool: ResMut<TrafficPool>,
-    settings: Res<TrafficSettings>,
-    mut sched: ResMut<ScheduledTraffic>,
-    env: Option<Res<opts_bevy::SessionEnvironment>>,
-    chrono: Option<Res<crate::in_game::omsi_world::ChronoState>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
+    ctx: SpawnContext,
+    stores: SpawnStores,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
 ) {
+    let SpawnLocals {
+        mut elapsed,
+        mut since_log,
+        mut rejected,
+    } = locals;
+    let SpawnContext {
+        mut state,
+        mut pool,
+        settings,
+        mut sched,
+        env,
+        chrono,
+    } = ctx;
+    let SpawnStores {
+        mut meshes,
+        mut materials,
+        mut images,
+    } = stores;
     *elapsed += time.delta_secs();
     if *elapsed < SPAWN_INTERVAL_S || settings.baseline == 0 {
         return;
@@ -244,61 +322,11 @@ pub fn spawn_traffic(
         }
     };
 
-    pool.built += 1;
-    let repaint_seed = crate::new_game_screen::repaints::instance_seed(&[slot as u64, pool.built]);
-    let SlotState::Ready(variant) = &pool.slots[slot].state else {
-        pool.rng = Some(rng);
-        if let Some(r) = &request {
-            sched.failed(r);
-        }
-        return;
-    };
-    let fleet = &pool.slots[slot].fleet;
-    let models = match build_unit_models(
-        &mut commands,
-        &mut job,
-        &mut meshes,
-        &mut materials,
-        &mut images,
-        variant,
-        at,
-        fleet,
-        repaint_seed,
-        chrono.as_deref(),
-        request.is_some(),
-    ) {
-        Ok(m) => m,
-        Err(unusable) => {
-            let name = variant.name.clone();
-            tracing::debug!(vehicle = %name, "AI vehicle meshes not ready");
-            if let Some(r) = &request {
-                sched.failed(r);
-            }
-            if unusable {
-                pool.slots[slot].state = SlotState::Failed;
-            } else {
-                pool.slots[slot].fails += 1;
-                if pool.slots[slot].fails >= MAX_LOAD_TRIES {
-                    pool.slots[slot].state = SlotState::Failed;
-                }
-            }
-            pool.rng = Some(rng);
-            return;
-        }
-    };
-    place_and_insert_agent(
-        &mut commands,
-        &mut job,
-        &mut state,
-        &mut pool,
-        &mut sched,
-        slot,
-        lane_id,
-        s,
-        at,
-        request.as_ref(),
-        models,
-        &mut rng,
+    finish_spawn(
+        (&mut commands, &mut job),
+        (&mut state, &mut pool, &mut sched),
+        (&mut meshes, &mut materials, &mut images),
+        (chrono.as_deref(), request),
+        ((lane_id, s, slot, at), rng),
     );
-    pool.rng = Some(rng);
 }

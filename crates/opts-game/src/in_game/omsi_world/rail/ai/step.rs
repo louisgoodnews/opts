@@ -98,21 +98,52 @@ fn place_units(
     }
 }
 
+/// The networks, clock and schedule the AI trains move by.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct AiMoveWorld<'w> {
+    rail_net: Res<'w, RailNetwork>,
+    bike_net: Res<'w, BikeNetwork>,
+    env: Option<Res<'w, opts_bevy::SessionEnvironment>>,
+    sched: ResMut<'w, crate::in_game::omsi_world::ScheduledTraffic>,
+}
+
+/// The queries around the AI trains: the camera, the player, and the units to pose.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct AiMoveViews<'w, 's> {
+    camera: Query<'w, 's, &'static GlobalTransform, With<opts_bevy::MainCamera>>,
+    players: Query<'w, 's, PlayerFootprint, With<opts_bevy::PlayerVehicle>>,
+    globals: Query<'w, 's, &'static GlobalTransform>,
+    units: Query<
+        'w,
+        's,
+        (
+            &'static mut Transform,
+            &'static mut Visibility,
+            &'static mut opts_bevy::AiVariables,
+        ),
+    >,
+}
+
 /// Runs the AI trains along their track and poses every unit by its distance behind the head.
-#[allow(clippy::too_many_arguments)]
 pub fn move_ai_trains(
     time: Res<Time>,
     mut commands: Commands,
-    rail_net: Res<RailNetwork>,
-    bike_net: Res<BikeNetwork>,
-    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    players: Query<PlayerFootprint, With<opts_bevy::PlayerVehicle>>,
-    globals: Query<&GlobalTransform>,
+    world: AiMoveWorld,
+    views: AiMoveViews,
     mut trains: Query<(Entity, &mut AiTrain)>,
-    mut units: Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
-    env: Option<Res<opts_bevy::SessionEnvironment>>,
-    mut sched: ResMut<crate::in_game::omsi_world::ScheduledTraffic>,
 ) {
+    let AiMoveWorld {
+        rail_net,
+        bike_net,
+        env,
+        mut sched,
+    } = world;
+    let AiMoveViews {
+        camera,
+        players,
+        globals,
+        mut units,
+    } = views;
     let clock = env.as_ref().map_or(0.0, |e| e.seconds_of_day());
     let dt = time.delta_secs().min(0.1);
     let cam = camera.single().ok().map(|c| c.translation());

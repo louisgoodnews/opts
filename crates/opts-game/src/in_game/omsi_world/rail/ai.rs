@@ -124,24 +124,48 @@ fn next_rand(state: &mut u32) -> f32 {
     opts_sim::pedestrian::net::next_f32(state)
 }
 
+/// The settings, networks and spec pools of AI trains and cyclists.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct AiFleet<'w> {
+    settings: Res<'w, RailSettings>,
+    bike_settings: Res<'w, BikeSettings>,
+    net: Res<'w, RailNetwork>,
+    bike_net: Res<'w, BikeNetwork>,
+    pool: ResMut<'w, RailAiPool>,
+    bike_pool: ResMut<'w, BikeAiPool>,
+}
+
+/// The asset stores the AI vehicles' meshes are added to.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct AiAssets<'w> {
+    meshes: ResMut<'w, Assets<Mesh>>,
+    materials: ResMut<'w, Assets<StandardMaterial>>,
+    images: ResMut<'w, Assets<Image>>,
+}
+
 /// Spawns AI trains on tracks and cyclists on cycle paths around the camera.
-#[allow(clippy::too_many_arguments)]
 pub fn spawn_ai_trains(
     time: Res<Time>,
     mut commands: Commands,
     job: Option<ResMut<WorldLoadJob>>,
-    settings: Res<RailSettings>,
-    bike_settings: Res<BikeSettings>,
-    net: Res<RailNetwork>,
-    bike_net: Res<BikeNetwork>,
-    mut pool: ResMut<RailAiPool>,
-    mut bike_pool: ResMut<BikeAiPool>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
+    fleet: AiFleet,
+    store: AiAssets,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     living: Query<&AiTrain>,
 ) {
+    let AiFleet {
+        settings,
+        bike_settings,
+        net,
+        bike_net,
+        mut pool,
+        mut bike_pool,
+    } = fleet;
+    let AiAssets {
+        mut meshes,
+        mut materials,
+        mut images,
+    } = store;
     let (Some(mut job), Ok(cam)) = (job, camera.single()) else {
         return;
     };
@@ -154,10 +178,12 @@ pub fn spawn_ai_trains(
     let dt = time.delta_secs();
     let mut assets = (&mut *meshes, &mut *materials, &mut *images);
     try_spawn(
-        false,
-        dt,
-        settings.max_trains.saturating_sub(trains),
-        centre,
+        (
+            false,
+            dt,
+            settings.max_trains.saturating_sub(trains),
+            centre,
+        ),
         &net.0,
         &mut pool,
         &mut job,
@@ -165,10 +191,12 @@ pub fn spawn_ai_trains(
         &mut assets,
     );
     try_spawn(
-        true,
-        dt,
-        bike_settings.max_riders.saturating_sub(riders),
-        centre,
+        (
+            true,
+            dt,
+            bike_settings.max_riders.saturating_sub(riders),
+            centre,
+        ),
         &bike_net.0,
         &mut bike_pool.0,
         &mut job,
@@ -188,12 +216,8 @@ pub(super) type SpawnAssets<'a> = (
 );
 
 /// One spawn attempt per second and kind, when below the cap.
-#[allow(clippy::too_many_arguments)]
 fn try_spawn(
-    bike: bool,
-    dt: f32,
-    room: usize,
-    centre: (f32, f32),
+    (bike, dt, room, centre): (bool, f32, usize, (f32, f32)),
     net: &PedestrianNet,
     pool: &mut RailAiPool,
     job: &mut WorldLoadJob,
@@ -275,9 +299,7 @@ pub(super) fn build_train(
         let (count, ..) = load_segment_meshes(
             job,
             commands,
-            meshes,
-            materials,
-            images,
+            (&mut *meshes, &mut *materials, &mut *images),
             root,
             &u.lod,
             &u.model_dir,

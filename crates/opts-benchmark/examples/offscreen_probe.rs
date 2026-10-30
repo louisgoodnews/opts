@@ -20,29 +20,9 @@ use bevy::winit::WinitPlugin;
 
 type Shared = Arc<Mutex<Vec<(usize, Vec<u8>)>>>;
 
-fn main() {
-    let out = std::env::args().nth(1).unwrap_or_else(|| ".".into());
-    let t0 = std::time::Instant::now();
-    let mut app = App::new();
-    app.add_plugins(
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: None,
-                exit_condition: ExitCondition::DontExit,
-                ..default()
-            })
-            .set(RenderPlugin {
-                synchronous_pipeline_compilation: true,
-                ..default()
-            })
-            .disable::<WinitPlugin>(),
-    );
-    app.finish();
-    app.cleanup();
-    let mut apps: SubApps = std::mem::take(app.sub_apps_mut());
-    println!("app built in {:?}", t0.elapsed());
-
-    let world = apps.main.world_mut();
+/// Spawns the two cameras (black and white clear colour, each with an image target) and the
+/// test scene; returns the two image targets.
+fn spawn_scene(world: &mut World) -> Vec<Handle<Image>> {
     let mut targets = Vec::new();
     for clear in [Color::BLACK, Color::WHITE] {
         let mut img = Image::new_target_texture(512, 512, TextureFormat::Rgba8UnormSrgb, None);
@@ -90,8 +70,15 @@ fn main() {
         DirectionalLight::default(),
         Transform::from_xyz(-3.0, 5.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
+    targets
+}
 
-    let shared: Shared = Arc::default();
+/// Runs six frames, attaching the readbacks on the third; returns the frame times.
+fn run_frames(
+    apps: &mut SubApps,
+    targets: &[Handle<Image>],
+    shared: &Shared,
+) -> Vec<std::time::Duration> {
     let mut times = Vec::new();
     for frame in 0..6 {
         let t = std::time::Instant::now();
@@ -116,13 +103,11 @@ fn main() {
         });
         times.push(t.elapsed());
     }
-    println!("frame times {times:?}");
-    let got = shared.lock().map(|v| v.clone()).unwrap_or_default();
-    println!("readbacks received: {}", got.len());
-    let mut by_index: Vec<Option<Vec<u8>>> = vec![None, None];
-    for (i, d) in got {
-        by_index[i].get_or_insert(d);
-    }
+    times
+}
+
+/// Prints the matting result of the black and white readbacks and saves them as PNGs.
+fn report(by_index: &[Option<Vec<u8>>], out: &str) {
     let (Some(black), Some(white)) = (&by_index[0], &by_index[1]) else {
         println!("missing readback");
         return;
@@ -147,4 +132,40 @@ fn main() {
             let _ = img.save(format!("{out}/probe_{name}.png"));
         }
     }
+}
+
+fn main() {
+    let out = std::env::args().nth(1).unwrap_or_else(|| ".".into());
+    let t0 = std::time::Instant::now();
+    let mut app = App::new();
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: None,
+                exit_condition: ExitCondition::DontExit,
+                ..default()
+            })
+            .set(RenderPlugin {
+                synchronous_pipeline_compilation: true,
+                ..default()
+            })
+            .disable::<WinitPlugin>(),
+    );
+    app.finish();
+    app.cleanup();
+    let mut apps: SubApps = std::mem::take(app.sub_apps_mut());
+    println!("app built in {:?}", t0.elapsed());
+
+    let targets = spawn_scene(apps.main.world_mut());
+
+    let shared: Shared = Arc::default();
+    let times = run_frames(&mut apps, &targets, &shared);
+    println!("frame times {times:?}");
+    let got = shared.lock().map(|v| v.clone()).unwrap_or_default();
+    println!("readbacks received: {}", got.len());
+    let mut by_index: Vec<Option<Vec<u8>>> = vec![None, None];
+    for (i, d) in got {
+        by_index[i].get_or_insert(d);
+    }
+    report(&by_index, &out);
 }

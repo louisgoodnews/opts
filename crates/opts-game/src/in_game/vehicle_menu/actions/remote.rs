@@ -73,21 +73,91 @@ fn repaint_action(menu: &VehicleMenu, has: impl Fn(&str) -> bool) -> Option<Acti
         })
 }
 
-#[allow(clippy::too_many_arguments)]
+/// The commands that name something by a piece of its text: the first configuration, vehicle,
+/// repaint, entry, stop, jump target or session vehicle whose name contains it.
+fn lookup_action(
+    word: &str,
+    rest: &str,
+    menu: &VehicleMenu,
+    (registry, catalogue, job): (
+        &SessionVehicles,
+        Option<&GameCatalogue>,
+        Option<&WorldLoadJob>,
+    ),
+) -> Option<Action> {
+    let has = |name: &str| name.to_lowercase().contains(rest);
+    match word {
+        // `renameconfig <text>` starts renaming the first configuration whose name matches.
+        "renameconfig" => menu
+            .configs
+            .rows
+            .iter()
+            .find(|r| has(&r.name))
+            .map(|r| Action::RenameConfig(r.id.clone())),
+        // `spawnconfig <text>` spawns the first listed configuration whose name matches.
+        "spawnconfig" => menu
+            .configs
+            .rows
+            .iter()
+            .find(|r| has(&r.name))
+            .map(|r| Action::SpawnConfig(r.id.clone())),
+        "jump" => job
+            .and_then(|j| j.entry_records().into_iter().find(|(_, n)| has(n)))
+            .map(|(id, _)| Action::JumpEntry(id)),
+        "switch" => registry
+            .records()
+            .iter()
+            .find(|r| r.is_alive() && (has(&r.name) || has(&r.repaint)))
+            .map(|r| Action::Switch(r.id)),
+        "vehicle" => catalogue
+            .and_then(|c| {
+                c.vehicles
+                    .iter()
+                    .position(|v| has(&v.full_name) || has(&v.id))
+            })
+            .map(Action::PickVehicle),
+        "repaint" => repaint_action(menu, has),
+        "entry" => menu
+            .shown_entries
+            .iter()
+            .find(|(_, n)| has(n))
+            .map(|(id, _)| Action::PickEntry(*id)),
+        "stop" => menu
+            .shown_stops
+            .iter()
+            .find(|(_, n)| has(n))
+            .map(|(id, _)| Action::PickStop(*id)),
+        _ => None,
+    }
+}
+
+/// What [`parse_remote_commands`] reads and changes besides the command queue.
+pub(super) struct RemoteCtx<'a, 'w, 's> {
+    pub(super) menu: &'a mut VehicleMenu,
+    pub(super) formation_commands: &'a mut super::super::super::formation_menu::FormationCommands,
+    pub(super) catalogue: Option<&'a GameCatalogue>,
+    pub(super) job: Option<&'a WorldLoadJob>,
+    pub(super) registry: &'a SessionVehicles,
+    pub(super) commands: &'a mut Commands<'w, 's>,
+}
+
+/// Turns the queued control protocol lines into menu actions (pushed on `todo`).
 pub(super) fn parse_remote_commands(
     remote: &mut MenuCommands,
-    menu: &mut VehicleMenu,
-    formation_commands: &mut super::super::super::formation_menu::FormationCommands,
-    catalogue: Option<&GameCatalogue>,
-    job: Option<&WorldLoadJob>,
-    registry: &SessionVehicles,
-    commands: &mut Commands,
+    ctx: RemoteCtx,
     todo: &mut Vec<Action>,
 ) {
+    let RemoteCtx {
+        menu,
+        formation_commands,
+        catalogue,
+        job,
+        registry,
+        commands,
+    } = ctx;
     for line in std::mem::take(&mut remote.0) {
         let (word, rest) = line.split_once(' ').unwrap_or((line.as_str(), ""));
         let rest = rest.trim().to_lowercase();
-        let has = |name: &str| name.to_lowercase().contains(&rest);
         let action = match word {
             "open" if menu.page == Page::Closed => {
                 menu.page = Page::Main;
@@ -107,29 +177,12 @@ pub(super) fn parse_remote_commands(
             "configs" => Some(Action::OpenConfigs),
             "saveconfig" => Some(Action::SaveConfig),
             "setvars" => Some(Action::OpenSetvars),
-            // `renameconfig <text>` starts renaming the first configuration whose name matches.
-            "renameconfig" => menu
-                .configs
-                .rows
-                .iter()
-                .find(|r| has(&r.name))
-                .map(|r| Action::RenameConfig(r.id.clone())),
             "commitrename" => Some(Action::CommitRename),
-            // `spawnconfig <text>` spawns the first listed configuration whose name matches.
-            "spawnconfig" => menu
-                .configs
-                .rows
-                .iter()
-                .find(|r| has(&r.name))
-                .map(|r| Action::SpawnConfig(r.id.clone())),
             "map" => map_action(menu, catalogue, &rest),
             "route" if rest.is_empty() => Some(Action::OpenRoute),
             "route" => Some(Action::PickRouteText(rest.clone())),
             "route-clear" => Some(Action::ClearRoute),
             "jump" if rest.is_empty() => Some(Action::OpenJump),
-            "jump" => job
-                .and_then(|j| j.entry_records().into_iter().find(|(_, n)| has(n)))
-                .map(|(id, _)| Action::JumpEntry(id)),
             "run" => {
                 queue_run(commands, &rest);
                 None
@@ -139,34 +192,11 @@ pub(super) fn parse_remote_commands(
             "confirm" if menu.page == Page::ChangeMapConfirm => Some(Action::ConfirmChangeMap),
             "confirm" => Some(Action::Confirm),
             "despawn" => Some(Action::Despawn),
-            "switch" => registry
-                .records()
-                .iter()
-                .find(|r| r.is_alive() && (has(&r.name) || has(&r.repaint)))
-                .map(|r| Action::Switch(r.id)),
             "respawn" => registry.active_id().map(Action::Respawn),
             "reset" => registry.active_id().map(Action::ResetOnRoad),
             "toggle" => Some(Action::Toggle(rest.clone())),
             "step" => step_action(&rest),
-            "vehicle" => catalogue
-                .and_then(|c| {
-                    c.vehicles
-                        .iter()
-                        .position(|v| has(&v.full_name) || has(&v.id))
-                })
-                .map(Action::PickVehicle),
-            "repaint" => repaint_action(menu, has),
-            "entry" => menu
-                .shown_entries
-                .iter()
-                .find(|(_, n)| has(n))
-                .map(|(id, _)| Action::PickEntry(*id)),
-            "stop" => menu
-                .shown_stops
-                .iter()
-                .find(|(_, n)| has(n))
-                .map(|(id, _)| Action::PickStop(*id)),
-            _ => None,
+            _ => lookup_action(word, &rest, menu, (registry, catalogue, job)),
         };
         todo.extend(action);
     }

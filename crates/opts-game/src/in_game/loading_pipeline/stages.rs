@@ -37,15 +37,14 @@ pub(super) fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) 
             };
             let id = registry.request_spawn(params);
             match load_player_vehicle(
-                job,
-                stats,
-                commands,
-                &mut assets.meshes,
-                &mut assets.materials,
-                &mut assets.images,
-                &mut assets.bindposes,
-                id,
-                true,
+                (job, stats, commands),
+                (
+                    &mut assets.meshes,
+                    &mut assets.materials,
+                    &mut assets.images,
+                    &mut assets.bindposes,
+                ),
+                (id, true),
             ) {
                 Ok(spawned) => {
                     let point = job.spawn_point().map(|(p, heading)| {

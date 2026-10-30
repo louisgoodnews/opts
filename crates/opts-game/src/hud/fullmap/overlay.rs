@@ -183,22 +183,27 @@ fn caption_texts(
 
 /// Builds the overlay when the map opens and removes it when it closes; keeps the texture node,
 /// the caption and the scale bar in step with the window and the zoom.
-#[allow(clippy::too_many_arguments)]
 pub fn overlay(
     mut commands: Commands,
     state: Res<FullMapState>,
     image: Res<FullMapImage>,
     roots: Query<Entity, With<FullMapRoot>>,
-    mut surface: Query<(&mut Node, &mut ImageNode), With<FullMapSurface>>,
-    mut caption: Query<&mut Text, (With<FullMapCaption>, Without<FullMapScaleText>)>,
-    mut scale_text: Query<&mut Text, (With<FullMapScaleText>, Without<FullMapCaption>)>,
-    mut scale_bar: Query<&mut Node, (With<FullMapScaleBar>, Without<FullMapSurface>)>,
-    session: Option<Res<InGameSessionInfo>>,
-    overview: Res<super::overview::OverviewRoads>,
-    loc: Res<Localization>,
-    variant: Res<InstrumentVariant>,
-    theme: Option<Res<MaterialTheme>>,
+    nodes: super::params::OverlayNodes,
+    env: super::params::OverlayEnv,
 ) {
+    let super::params::OverlayNodes {
+        mut surface,
+        mut caption,
+        mut scale_text,
+        mut scale_bar,
+    } = nodes;
+    let super::params::OverlayEnv {
+        session,
+        overview,
+        loc,
+        variant,
+        theme,
+    } = env;
     let existing = roots.iter().next();
     if !state.open {
         if let Some(root) = existing {

@@ -15,6 +15,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
+#[path = "reflection_census/report.rs"]
+mod report;
+
 const TEXT_EXT: [&str; 8] = ["cfg", "sco", "sli", "bus", "ovh", "osc", "xml", "txt"];
 const GLASS_WORDS: [&str; 9] = [
     "glas",
@@ -72,6 +75,201 @@ fn unit_of(rel: &str) -> String {
     }
 }
 
+type Counts = BTreeMap<String, u64>;
+
+#[derive(Default)]
+struct Census {
+    kw: BTreeMap<String, Tally>,
+    alpha_vals: Counts,
+    envmap_tex: Counts,
+    envmap_factor: Counts,
+    glass_alpha: Counts,
+    glass_tex: Counts,
+    mirror_tex: Counts,
+    mirror_env: u64,
+    glass_env: u64,
+    mirror_mats: u64,
+    glass_mats: u64,
+    total_matl: u64,
+    total_matl_files: BTreeSet<String>,
+    env_nonglass_mats: u64,
+    name_hits: BTreeMap<&'static str, Vec<String>>,
+    text_files: u64,
+    vehicles: BTreeSet<String>,
+    objects: BTreeSet<String>,
+    sco_files: u64,
+    env_files_bmp: Counts,
+}
+
+/// The `[matl]` block being read.
+struct Mat {
+    in_mat: bool,
+    tex: String,
+    has_env: bool,
+    alpha: String,
+}
+
+impl Mat {
+    fn new() -> Self {
+        Self {
+            in_mat: false,
+            tex: String::new(),
+            has_env: false,
+            alpha: String::from("-"),
+        }
+    }
+}
+
+impl Census {
+    /// Classifies the finished material by its texture name.
+    fn flush(&mut self, m: &Mat) {
+        if !m.in_mat {
+            return;
+        }
+        let t = m.tex.rsplit(['/', '\\']).next().unwrap_or(&m.tex);
+        let g = has_any(t, &GLASS_WORDS);
+        let mir = has_any(t, &MIRROR_WORDS);
+        if g {
+            self.glass_mats += 1;
+            *self.glass_alpha.entry(m.alpha.to_string()).or_default() += 1;
+            *self.glass_tex.entry(t.to_string()).or_default() += 1;
+            if m.has_env {
+                self.glass_env += 1;
+            }
+        }
+        if mir {
+            self.mirror_mats += 1;
+            *self.mirror_tex.entry(t.to_string()).or_default() += 1;
+            if m.has_env {
+                self.mirror_env += 1;
+            }
+        }
+        if m.has_env && !g && !mir {
+            self.env_nonglass_mats += 1;
+        }
+    }
+
+    /// File-name statistics (any file type); `fname` is the lower-case base name.
+    fn scan_name(&mut self, rel: &str, ext: &str, fname: &str) {
+        if has_any(fname, &MIRROR_WORDS) {
+            let key = if matches!(ext, "o3d" | "x" | "bmp" | "dds" | "tga" | "jpg" | "png") {
+                "mirror-named file"
+            } else {
+                "mirror-named other"
+            };
+            self.name_hits.entry(key).or_default().push(rel.to_string());
+        }
+        if fname.contains("envmap") || fname.contains("env_map") || fname.contains("reflect") {
+            *self.env_files_bmp.entry(fname.to_string()).or_default() += 1;
+        }
+    }
+
+    /// One `[keyword]` line (`lines[i]`) of a text file; `at` is (relative path, unit).
+    fn on_header(&mut self, m: &mut Mat, lines: &[String], i: usize, at: (&str, &str)) {
+        let (rel, unit) = at;
+        let l = &lines[i];
+        let name = &l[1..l.len() - 1];
+        let next = lines.get(i + 1).map(String::as_str).unwrap_or("");
+        if name == "matl" {
+            self.flush(m);
+            *m = Mat {
+                in_mat: true,
+                tex: next.to_string(),
+                has_env: false,
+                alpha: "-".into(),
+            };
+            self.total_matl += 1;
+            self.total_matl_files.insert(rel.to_string());
+        }
+        let interesting = matches!(
+            name,
+            "matl_envmap"
+                | "matl_envmap_mask"
+                | "matl_alpha"
+                | "matl_transmap"
+                | "matl_bumpmap"
+                | "matl_nightmap"
+                | "matl_lightmap"
+                | "matl_noZwrite"
+                | "matl_nozwrite"
+                | "matl_nozcheck"
+        ) || has_any(name, &["mirror", "spiegel", "reflect", "cube", "env"]);
+        if interesting {
+            self.kw.entry(name.to_string()).or_default().add(rel, unit);
+        }
+        if name == "matl_alpha" {
+            *self.alpha_vals.entry(next.to_string()).or_default() += 1;
+            m.alpha = next.to_string();
+        }
+        if name == "matl_envmap" {
+            m.has_env = true;
+            *self.envmap_tex.entry(next.to_string()).or_default() += 1;
+            let fac = lines.get(i + 2).map(String::as_str).unwrap_or("");
+            *self.envmap_factor.entry(fac.to_string()).or_default() += 1;
+        }
+    }
+
+    /// Scans the trimmed, lower-cased lines of one text file.
+    fn scan_lines(&mut self, lines: &[String], ext: &str, at: (&str, &str)) {
+        let mut m = Mat::new();
+        for (i, l) in lines.iter().enumerate() {
+            if l.starts_with('[') && l.ends_with(']') {
+                self.on_header(&mut m, lines, i, at);
+            } else if ext == "osc" || ext == "txt" || ext == "cfg" {
+                // Script or free text mentioning mirrors.
+                if (l.contains("mirror") || l.contains("spiegel"))
+                    && !l.starts_with("//")
+                    && !l.starts_with('#')
+                {
+                    self.name_hits
+                        .entry("text line mentions mirror")
+                        .or_default()
+                        .push(format!(
+                            "{}: {}",
+                            at.0,
+                            l.chars().take(80).collect::<String>()
+                        ));
+                }
+            }
+        }
+        self.flush(&m);
+    }
+
+    fn visit(&mut self, f: &Path, root: &Path) {
+        let rel = f
+            .strip_prefix(root)
+            .unwrap_or(f)
+            .to_string_lossy()
+            .replace('\\', "/");
+        let ext = f
+            .extension()
+            .map(|e| e.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        let unit = unit_of(&rel);
+        if unit.starts_with("V:") {
+            self.vehicles.insert(unit.clone());
+        }
+        if unit.starts_with("O:") {
+            self.objects.insert(unit.clone());
+        }
+        if ext == "sco" {
+            self.sco_files += 1;
+        }
+        let lower_rel = rel.to_lowercase();
+        self.scan_name(&rel, &ext, lower_rel.rsplit('/').next().unwrap_or(""));
+        if !TEXT_EXT.contains(&ext.as_str()) {
+            return;
+        }
+        let Ok(bytes) = std::fs::read(f) else {
+            return;
+        };
+        self.text_files += 1;
+        let text: String = bytes.iter().map(|&b| b as char).collect();
+        let lines: Vec<String> = text.lines().map(|l| l.trim().to_lowercase()).collect();
+        self.scan_lines(&lines, &ext, (&rel, &unit));
+    }
+}
+
 fn main() {
     let Some(root) = std::env::args().nth(1) else {
         eprintln!("usage: reflection_census <omsi-root>");
@@ -81,261 +279,9 @@ fn main() {
     let mut files = Vec::new();
     walk(&root, &mut files);
     files.sort();
-
-    let mut kw: BTreeMap<String, Tally> = BTreeMap::new();
-    let mut alpha_vals: BTreeMap<String, u64> = BTreeMap::new();
-    let mut envmap_tex: BTreeMap<String, u64> = BTreeMap::new();
-    let mut envmap_factor: BTreeMap<String, u64> = BTreeMap::new();
-    let mut glass_alpha: BTreeMap<String, u64> = BTreeMap::new();
-    let mut glass_tex: BTreeMap<String, u64> = BTreeMap::new();
-    let mut mirror_tex: BTreeMap<String, u64> = BTreeMap::new();
-    let mut mirror_env: u64 = 0;
-    let mut glass_env: u64 = 0;
-    let mut mirror_mats: u64 = 0;
-    let mut glass_mats: u64 = 0;
-    let mut total_matl: u64 = 0;
-    let mut total_matl_files: BTreeSet<String> = BTreeSet::new();
-    let mut env_nonglass_mats: u64 = 0;
-    let mut name_hits: BTreeMap<&str, Vec<String>> = BTreeMap::new();
-    let mut text_files = 0u64;
-    let mut vehicles: BTreeSet<String> = BTreeSet::new();
-    let mut objects: BTreeSet<String> = BTreeSet::new();
-    let mut sco_files = 0u64;
-    let mut env_files_bmp: BTreeMap<String, u64> = BTreeMap::new();
-
+    let mut census = Census::default();
     for f in &files {
-        let rel = f
-            .strip_prefix(&root)
-            .unwrap_or(f)
-            .to_string_lossy()
-            .replace('\\', "/");
-        let lower_rel = rel.to_lowercase();
-        let ext = f
-            .extension()
-            .map(|e| e.to_string_lossy().to_lowercase())
-            .unwrap_or_default();
-        let unit = unit_of(&rel);
-        if unit.starts_with("V:") {
-            vehicles.insert(unit.clone());
-        }
-        if unit.starts_with("O:") {
-            objects.insert(unit.clone());
-        }
-        if ext == "sco" {
-            sco_files += 1;
-        }
-        // File-name hits (any type).
-        let fname = lower_rel.rsplit('/').next().unwrap_or("").to_string();
-        if has_any(&fname, &MIRROR_WORDS) {
-            let key = if matches!(
-                ext.as_str(),
-                "o3d" | "x" | "bmp" | "dds" | "tga" | "jpg" | "png"
-            ) {
-                "mirror-named file"
-            } else {
-                "mirror-named other"
-            };
-            name_hits.entry(key).or_default().push(rel.clone());
-        }
-        if fname.contains("envmap") || fname.contains("env_map") || fname.contains("reflect") {
-            *env_files_bmp.entry(fname.clone()).or_default() += 1;
-        }
-        if !TEXT_EXT.contains(&ext.as_str()) {
-            continue;
-        }
-        let Ok(bytes) = std::fs::read(f) else {
-            continue;
-        };
-        text_files += 1;
-        let text: String = bytes.iter().map(|&b| b as char).collect();
-        let lines: Vec<String> = text.lines().map(|l| l.trim().to_lowercase()).collect();
-        let mut cur_tex = String::new();
-        let mut cur_has_env = false;
-        let mut cur_alpha = String::from("-");
-        let mut in_mat = false;
-        let flush = |in_mat: bool,
-                     tex: &str,
-                     has_env: bool,
-                     alpha: &str,
-                     glass_alpha: &mut BTreeMap<String, u64>,
-                     glass_tex: &mut BTreeMap<String, u64>,
-                     mirror_tex: &mut BTreeMap<String, u64>,
-                     glass_mats: &mut u64,
-                     mirror_mats: &mut u64,
-                     glass_env: &mut u64,
-                     mirror_env: &mut u64,
-                     env_nonglass: &mut u64| {
-            if !in_mat {
-                return;
-            }
-            let t = tex.rsplit(['/', '\\']).next().unwrap_or(tex);
-            let g = has_any(t, &GLASS_WORDS);
-            let m = has_any(t, &MIRROR_WORDS);
-            if g {
-                *glass_mats += 1;
-                *glass_alpha.entry(alpha.to_string()).or_default() += 1;
-                *glass_tex.entry(t.to_string()).or_default() += 1;
-                if has_env {
-                    *glass_env += 1;
-                }
-            }
-            if m {
-                *mirror_mats += 1;
-                *mirror_tex.entry(t.to_string()).or_default() += 1;
-                if has_env {
-                    *mirror_env += 1;
-                }
-            }
-            if has_env && !g && !m {
-                *env_nonglass += 1;
-            }
-        };
-        let mut i = 0;
-        while i < lines.len() {
-            let l = &lines[i];
-            if l.starts_with('[') && l.ends_with(']') {
-                let name = &l[1..l.len() - 1];
-                let next = lines.get(i + 1).map(String::as_str).unwrap_or("");
-                if name == "matl" {
-                    flush(
-                        in_mat,
-                        &cur_tex,
-                        cur_has_env,
-                        &cur_alpha,
-                        &mut glass_alpha,
-                        &mut glass_tex,
-                        &mut mirror_tex,
-                        &mut glass_mats,
-                        &mut mirror_mats,
-                        &mut glass_env,
-                        &mut mirror_env,
-                        &mut env_nonglass_mats,
-                    );
-                    in_mat = true;
-                    cur_tex = next.to_string();
-                    cur_has_env = false;
-                    cur_alpha = "-".into();
-                    total_matl += 1;
-                    total_matl_files.insert(rel.clone());
-                }
-                let interesting =
-                    matches!(
-                        name,
-                        "matl_envmap"
-                            | "matl_envmap_mask"
-                            | "matl_alpha"
-                            | "matl_transmap"
-                            | "matl_bumpmap"
-                            | "matl_nightmap"
-                            | "matl_lightmap"
-                            | "matl_noZwrite"
-                            | "matl_nozwrite"
-                            | "matl_nozcheck"
-                    ) || has_any(name, &["mirror", "spiegel", "reflect", "cube", "env"]);
-                if interesting {
-                    kw.entry(name.to_string()).or_default().add(&rel, &unit);
-                }
-                if name == "matl_alpha" {
-                    *alpha_vals.entry(next.to_string()).or_default() += 1;
-                    cur_alpha = next.to_string();
-                }
-                if name == "matl_envmap" {
-                    cur_has_env = true;
-                    *envmap_tex.entry(next.to_string()).or_default() += 1;
-                    let fac = lines.get(i + 2).map(String::as_str).unwrap_or("");
-                    *envmap_factor.entry(fac.to_string()).or_default() += 1;
-                }
-            } else if ext == "osc" || ext == "txt" || ext == "cfg" {
-                // Script or free text mentioning mirrors.
-                if (l.contains("mirror") || l.contains("spiegel"))
-                    && !l.starts_with("//")
-                    && !l.starts_with('#')
-                {
-                    name_hits
-                        .entry("text line mentions mirror")
-                        .or_default()
-                        .push(format!("{rel}: {}", l.chars().take(80).collect::<String>()));
-                }
-            }
-            i += 1;
-        }
-        flush(
-            in_mat,
-            &cur_tex,
-            cur_has_env,
-            &cur_alpha,
-            &mut glass_alpha,
-            &mut glass_tex,
-            &mut mirror_tex,
-            &mut glass_mats,
-            &mut mirror_mats,
-            &mut glass_env,
-            &mut mirror_env,
-            &mut env_nonglass_mats,
-        );
+        census.visit(f, &root);
     }
-
-    println!(
-        "files walked: {}  text files read: {text_files}",
-        files.len()
-    );
-    println!(
-        "vehicle folders: {}  object folders: {}  .sco files: {sco_files}",
-        vehicles.len(),
-        objects.len()
-    );
-    println!(
-        "materials ([matl]): {total_matl} in {} files",
-        total_matl_files.len()
-    );
-    println!("\n== keyword | uses | files | vehicle/object units");
-    for (k, t) in &kw {
-        let v = t.units.iter().filter(|u| u.starts_with("V:")).count();
-        let o = t.units.iter().filter(|u| u.starts_with("O:")).count();
-        println!(
-            "[{k}] | {} | {} | {v} vehicle dirs, {o} object dirs, {} other",
-            t.count,
-            t.files.len(),
-            t.units.len() - v - o
-        );
-    }
-    println!("\n== [matl_alpha] values (all)");
-    for (k, v) in &alpha_vals {
-        println!("{k:?}: {v}");
-    }
-    println!("\n== [matl_envmap] texture (top 15)");
-    top(&envmap_tex, 15);
-    println!("\n== [matl_envmap] factor (top 15)");
-    top(&envmap_factor, 15);
-    println!("\n== glass-named materials: {glass_mats} (with envmap {glass_env})");
-    println!("alpha mode of glass-named materials:");
-    top(&glass_alpha, 10);
-    println!("glass texture names (top 15):");
-    top(&glass_tex, 15);
-    println!("\n== mirror-named materials: {mirror_mats} (with envmap {mirror_env})");
-    top(&mirror_tex, 15);
-    println!(
-        "\n== env-mapped materials that are neither glass- nor mirror-named: {env_nonglass_mats}"
-    );
-    println!("\n== envmap/reflect-named files (top 10)");
-    top(&env_files_bmp, 10);
-    println!("\n== name hits");
-    for (k, v) in &name_hits {
-        let mut u: BTreeSet<&str> = BTreeSet::new();
-        for s in v {
-            u.insert(s);
-        }
-        println!("{k}: {} hits", v.len());
-        for s in u.iter().take(12) {
-            println!("   {s}");
-        }
-    }
-}
-
-fn top(m: &BTreeMap<String, u64>, n: usize) {
-    let mut v: Vec<_> = m.iter().collect();
-    v.sort_by_key(|(_, c)| std::cmp::Reverse(**c));
-    for (k, c) in v.into_iter().take(n) {
-        println!("   {c:>6}  {k}");
-    }
+    census.print_report(files.len());
 }

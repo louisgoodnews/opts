@@ -4,18 +4,20 @@ use super::*;
 
 /// Marks the page dirty when something it cannot update in place changed: the language, or a
 /// path or free text value.
-#[allow(clippy::too_many_arguments)]
 pub fn mark_dirty(
     mut state: ResMut<SettingsPageState>,
     mut changes: MessageReader<SettingChanged>,
-    registry: Res<SettingsRegistry>,
-    loc: Res<Localization>,
+    watched: super::params::DirtyFacts,
     added: Query<(), Added<SettingsPage>>,
-    facts: Res<crate::content_facts::ContentFactsStore>,
-    light: Option<Res<opts_bevy::light_quality::LightQuality>>,
-    fonts: Option<Res<crate::ui_typography::FontChoices>>,
     mut themes: Local<Vec<String>>,
 ) {
+    let super::params::DirtyFacts {
+        registry,
+        loc,
+        facts,
+        light,
+        fonts,
+    } = watched;
     if fonts.is_some_and(|f| f.is_changed()) {
         state.dirty = true;
     }
@@ -39,39 +41,28 @@ pub fn mark_dirty(
     }
 }
 
-/// Query of the elements `refresh_rows` updates.
-type OptionButtons<'w, 's> = Query<
-    'w,
-    's,
-    (
-        &'static SettingOp,
-        &'static mut BackgroundRole,
-        &'static mut BorderRole,
-        Option<&'static Children>,
-    ),
->;
-
 /// Shows the new value of a changed setting in its row without rebuilding it (keeps focus).
-#[allow(clippy::too_many_arguments)]
 pub fn refresh_rows(
     mut commands: Commands,
     mut changes: MessageReader<SettingChanged>,
-    registry: Res<SettingsRegistry>,
-    settings: Res<GameSettings>,
-    loc: Res<Localization>,
-    theme: Res<MaterialTheme>,
-    mut options: OptionButtons,
-    mut labels: Query<&mut ForegroundRole>,
-    mut switches: Query<(&SettingSwitch, &mut M3Switch)>,
-    mut values: Query<(&SettingValueText, &mut Text)>,
-    resets: Query<(
-        Entity,
-        &SettingOp,
-        Has<opts_gui::interaction::state::Disabled>,
-    )>,
-    mut now: Query<&mut L10nArgs, With<ThemeNowText>>,
-    hardware: Option<Res<crate::hardware::HardwareState>>,
+    facts: super::params::RowFacts,
+    nodes: super::params::RowNodes,
 ) {
+    let super::params::RowFacts {
+        registry,
+        settings,
+        loc,
+        theme,
+        hardware,
+    } = facts;
+    let super::params::RowNodes {
+        mut options,
+        mut labels,
+        mut switches,
+        mut values,
+        resets,
+        mut now,
+    } = nodes;
     let keys: Vec<String> = changes.read().map(|c| c.key.clone()).collect();
     let text = |k: &str| registry.text(&settings, k).unwrap_or_default();
     for (op, mut bg, mut border, kids) in &mut options {
@@ -113,23 +104,32 @@ pub fn refresh_rows(
             continue;
         }
         let at_default = registry.get(key).is_some_and(|d| d.default == text(key));
-        if at_default && !disabled {
-            commands.entity(e).insert((
-                opts_gui::interaction::state::Disabled,
-                opts_gui::interaction::state::DisabledReason(
-                    loc.t("settings-reset-disabled").into(),
-                ),
-            ));
-        } else if !at_default && disabled {
-            commands.entity(e).remove::<(
-                opts_gui::interaction::state::Disabled,
-                opts_gui::interaction::state::DisabledReason,
-            )>();
-        }
+        sync_reset(&mut commands, e, at_default, disabled, &loc);
     }
     if theme.is_changed() || !keys.is_empty() {
         for mut args in &mut now {
             *args = L10nArgs::one("theme", loc.t(theme_name_key(theme.kind())));
         }
+    }
+}
+
+/// Disables a reset button whose setting is at its default, and enables it again otherwise.
+fn sync_reset(
+    commands: &mut Commands,
+    e: Entity,
+    at_default: bool,
+    disabled: bool,
+    loc: &Localization,
+) {
+    if at_default && !disabled {
+        commands.entity(e).insert((
+            opts_gui::interaction::state::Disabled,
+            opts_gui::interaction::state::DisabledReason(loc.t("settings-reset-disabled").into()),
+        ));
+    } else if !at_default && disabled {
+        commands.entity(e).remove::<(
+            opts_gui::interaction::state::Disabled,
+            opts_gui::interaction::state::DisabledReason,
+        )>();
     }
 }

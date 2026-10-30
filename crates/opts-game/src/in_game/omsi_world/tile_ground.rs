@@ -187,15 +187,13 @@ pub(super) const NEIGHBOURHOOD_LEN: usize = NEIGHBOURHOOD.len();
 /// Terrain stage, part 3: carves the grid under the drawn ground and spawns the ground mesh
 /// (`docs/src/architecture/terrain-carving.md`). Returns the carved grid: the ground every object,
 /// lane and vehicle stands on.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn spawn_terrain(
     job: &mut WorldLoadJob,
     stats: &mut WorldStats,
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     input: Option<TerrainInput>,
-    key: (i32, i32),
-    origin: (f32, f32),
+    (key, origin): ((i32, i32), (f32, f32)),
     children: &mut Vec<Entity>,
 ) -> Option<TileTerrain> {
     let Some(TerrainInput {

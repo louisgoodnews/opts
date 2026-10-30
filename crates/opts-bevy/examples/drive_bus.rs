@@ -99,6 +99,75 @@ fn setup_world(
     });
 }
 
+/// Spawns the four road wheels: front steer axle (0), rear drive axle (1); returns them as
+/// front left, front right, rear left, rear right.
+fn spawn_wheels(
+    commands: &mut Commands,
+    wheel_mesh: &Handle<Mesh>,
+    wheel_mat: &Handle<StandardMaterial>,
+) -> [Entity; 4] {
+    let mut wheel = |visual: WheelVisual, pos: Vec3, name: &'static str| {
+        commands
+            .spawn((
+                (
+                    Mesh3d(wheel_mesh.clone()),
+                    MeshMaterial3d(wheel_mat.clone()),
+                    Transform::from_translation(pos),
+                ),
+                visual,
+                Name::new(name),
+            ))
+            .id()
+    };
+    // Front Steer Axle (Axle 0): longitudinal +2.925m in OMSI => -2.925m in Bevy (-Z forward)
+    let fl = Vec3::new(-1.25, 0.49, -2.925);
+    let fr = Vec3::new(1.25, 0.49, -2.925);
+    // Rear Drive Axle (Axle 1): longitudinal -2.925m in OMSI => +2.925m in Bevy
+    let rl = Vec3::new(-1.25, 0.49, 2.925);
+    let rr = Vec3::new(1.25, 0.49, 2.925);
+    [
+        wheel(
+            WheelVisual::new(0, WheelSide::Left, fl),
+            fl,
+            "Wheel_Axle0_Left",
+        ),
+        wheel(
+            WheelVisual::new(0, WheelSide::Right, fr),
+            fr,
+            "Wheel_Axle0_Right",
+        ),
+        wheel(
+            WheelVisual::new(1, WheelSide::Left, rl),
+            rl,
+            "Wheel_Axle1_Left",
+        ),
+        wheel(
+            WheelVisual::new(1, WheelSide::Right, rr),
+            rr,
+            "Wheel_Axle1_Right",
+        ),
+    ]
+}
+
+/// Spawns the tracking camera with its `VehicleCameraRig`.
+fn spawn_chase_camera(commands: &mut Commands) {
+    commands.spawn((
+        (
+            Camera3d::default(),
+            opts_bevy::MainCamera,
+            Transform::from_xyz(0.0, 4.5, 14.0).looking_at(Vec3::new(0.0, 1.5, 0.0), Vec3::Y),
+        ),
+        VehicleCameraRig {
+            mode: VehicleCameraMode::ExteriorChase,
+            chase_distance: 14.0,
+            chase_height: 4.5,
+            cockpit_offset: Vec3::new(-0.7, 2.0, -4.8),
+            damping: 8.0,
+        },
+        Name::new("Chase_Camera"),
+    ));
+}
+
 /// Spawns the playable bus entity hierarchy with chassis, body, windows, and wheels.
 fn setup_vehicle(
     mut commands: Commands,
@@ -170,55 +239,8 @@ fn setup_vehicle(
         ..default()
     });
 
-    // Front Steer Axle (Axle 0): longitudinal +2.925m in OMSI => -2.925m in Bevy (-Z forward)
-    let front_left_wheel = commands
-        .spawn((
-            (
-                Mesh3d(wheel_mesh.clone()),
-                MeshMaterial3d(wheel_mat.clone()),
-                Transform::from_xyz(-1.25, 0.49, -2.925),
-            ),
-            WheelVisual::new(0, WheelSide::Left, Vec3::new(-1.25, 0.49, -2.925)),
-            Name::new("Wheel_Axle0_Left"),
-        ))
-        .id();
-
-    let front_right_wheel = commands
-        .spawn((
-            (
-                Mesh3d(wheel_mesh.clone()),
-                MeshMaterial3d(wheel_mat.clone()),
-                Transform::from_xyz(1.25, 0.49, -2.925),
-            ),
-            WheelVisual::new(0, WheelSide::Right, Vec3::new(1.25, 0.49, -2.925)),
-            Name::new("Wheel_Axle0_Right"),
-        ))
-        .id();
-
-    // Rear Drive Axle (Axle 1): longitudinal -2.925m in OMSI => +2.925m in Bevy
-    let rear_left_wheel = commands
-        .spawn((
-            (
-                Mesh3d(wheel_mesh.clone()),
-                MeshMaterial3d(wheel_mat.clone()),
-                Transform::from_xyz(-1.25, 0.49, 2.925),
-            ),
-            WheelVisual::new(1, WheelSide::Left, Vec3::new(-1.25, 0.49, 2.925)),
-            Name::new("Wheel_Axle1_Left"),
-        ))
-        .id();
-
-    let rear_right_wheel = commands
-        .spawn((
-            (
-                Mesh3d(wheel_mesh),
-                MeshMaterial3d(wheel_mat),
-                Transform::from_xyz(1.25, 0.49, 2.925),
-            ),
-            WheelVisual::new(1, WheelSide::Right, Vec3::new(1.25, 0.49, 2.925)),
-            Name::new("Wheel_Axle1_Right"),
-        ))
-        .id();
+    let [front_left_wheel, front_right_wheel, rear_left_wheel, rear_right_wheel] =
+        spawn_wheels(&mut commands, &wheel_mesh, &wheel_mat);
 
     commands.entity(vehicle_root).add_children(&[
         body_entity,
@@ -229,22 +251,7 @@ fn setup_vehicle(
         rear_right_wheel,
     ]);
 
-    // Tracking Camera with VehicleCameraRig
-    commands.spawn((
-        (
-            Camera3d::default(),
-            opts_bevy::MainCamera,
-            Transform::from_xyz(0.0, 4.5, 14.0).looking_at(Vec3::new(0.0, 1.5, 0.0), Vec3::Y),
-        ),
-        VehicleCameraRig {
-            mode: VehicleCameraMode::ExteriorChase,
-            chase_distance: 14.0,
-            chase_height: 4.5,
-            cockpit_offset: Vec3::new(-0.7, 2.0, -4.8),
-            damping: 8.0,
-        },
-        Name::new("Chase_Camera"),
-    ));
+    spawn_chase_camera(&mut commands);
 }
 
 /// Marker component for the on-screen telemetry dashboard text.

@@ -15,6 +15,11 @@ use super::models::SpawnedModels;
 use super::variants::unit_size;
 use super::*;
 
+mod log;
+use log::{log_spawned, trace_spawned};
+mod place;
+use place::{agent_params, fill_unit_sizes, finish_spawned, Placed};
+
 /// The canvases of the head's script textures, once.
 type HeadCanvases =
     Option<Arc<std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>>>;
@@ -61,10 +66,8 @@ fn route_scheduled(
             commands,
             root,
             head_bus_path,
-            canvases,
-            &r.run,
-            seed,
-            head_setvars,
+            (canvases, &r.run),
+            (seed, head_setvars),
         );
         if let (true, Some(set)) = (scripted, sound) {
             crate::player_sound::attach_defs(commands, root, None, &set.scripted);
@@ -72,59 +75,6 @@ fn route_scheduled(
         scripted_head = scripted;
     }
     scripted_head
-}
-
-/// The debug line of a spawned AI vehicle.
-fn log_spawned(
-    id: AgentId,
-    (name, group_name): (&str, &str),
-    speed: f64,
-    (params, traits): (&IdmParams, &opts_traffic::VehicleTraits),
-    (units, measured, fallbacks): (usize, bool, &dyn std::fmt::Debug),
-) {
-    tracing::debug!(
-        agent = id.0,
-        vehicle = %name,
-        group = %group_name,
-        speed,
-        mass_kg = traits.mass_kg,
-        desired_kmh = params.desired_speed * 3.6,
-        accel = params.max_accel,
-        comfort = params.comfort_decel,
-        max_decel = params.max_decel,
-        class = ?params.class,
-        units,
-        measured,
-        fallbacks = ?fallbacks,
-        "AI vehicle spawned"
-    );
-}
-
-/// The scene trace record of a spawned AI vehicle, when tracing.
-fn trace_spawned(
-    root: Entity,
-    name: &str,
-    origin: &Transform,
-    trace_frame: &trace::Frame,
-    (lane_id, speed, params, units): (LaneId, f64, &IdmParams, usize),
-) {
-    if opts_bevy::scene_trace::enabled() {
-        trace::spawned(
-            opts_bevy::scene_trace::kind::TRAFFIC,
-            name,
-            name,
-            root,
-            origin,
-            trace_frame,
-            "ok",
-            serde_json::json!({
-                "lane": format!("{lane_id:?}"),
-                "speed": speed,
-                "class": format!("{:?}", params.class),
-                "units": units,
-            }),
-        );
-    }
 }
 
 /// What the vehicle's body and wheels need to follow its agent.
@@ -191,66 +141,26 @@ fn attach_agent(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn place_and_insert_agent(
-    commands: &mut Commands,
-    job: &mut WorldLoadJob,
-    state: &mut TrafficState,
-    pool: &mut TrafficPool,
-    sched: &mut ScheduledTraffic,
-    slot: usize,
-    lane_id: LaneId,
-    s: f64,
-    at: DVec2,
-    request: Option<&ScheduledRequest>,
-    models: SpawnedModels,
-    rng: &mut Rng,
-) {
-    let pool_group = pool.slots[slot].group;
-    let group_name = pool.groups[pool_group].name.clone();
-    let density_group = u8::try_from(pool.groups[pool_group].density_group).unwrap_or(u8::MAX);
-    let SpawnedModels {
-        entities,
-        bounds,
-        origin,
-        mut head_canvases,
-        head_setvars,
-        trace_frame,
-    } = models;
-    let root = entities[0];
-    let SlotState::Ready(variant) = &mut pool.slots[slot].state else {
-        return;
-    };
-    for (unit, (min, max)) in variant.units.iter_mut().zip(&bounds) {
-        let boxed = unit.profile.body_length_m;
-        unit.size
-            .get_or_insert_with(|| unit_size(min.z, max.z, boxed));
-    }
-    let traits = variant.traits();
-    let mut params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64());
-    params.density_group = if request.is_some() {
-        u8::MAX
-    } else {
-        density_group
-    };
-    if state
-        .world
-        .graph()
-        .lane(lane_id)
-        .is_some_and(|l| !l.rules.allows(params.class))
-    {
-        for e in entities {
-            commands.entity(e).despawn();
-        }
-        if let Some(r) = request {
-            sched.failed(r);
-        }
-        return;
-    }
-    let speed = match request {
-        Some(r) => r.speed.min(state.world.lane_cap(&params, lane_id)),
-        None => state.world.lane_cap(&params, lane_id) * 0.8,
-    };
+/// What the spawned vehicle needs from its variant: sounds, the front door's reach, wheel and
+/// axle geometry, the names and the chain of trailing units.
+struct VariantLook {
+    sound: Option<SoundSet>,
+    door_ahead: f32,
+    unit_sounds: Vec<Option<SoundSet>>,
+    wheel_radius: f32,
+    rear_axle_y: f32,
+    delta_height: f32,
+    name: String,
+    measured: bool,
+    head_bus_path: std::path::PathBuf,
+    chain: Vec<ChainUnit>,
+}
+
+fn variant_look(
+    variant: &crate::in_game::omsi_world::traffic_variant::Variant,
+    params: &IdmParams,
+    entities: &[Entity],
+) -> VariantLook {
     let head = &variant.units[0];
     let sound = head.sound.clone();
     let door_ahead = head
@@ -271,13 +181,12 @@ pub(crate) fn place_and_insert_agent(
     let rear_axle_y = size.1 - (params.front_overhang + params.wheelbase) as f32;
     let delta_height = head.profile.delta_height_m;
     let name = variant.name.clone();
-    let fallbacks = head.profile.fallbacks.clone();
     let measured = head.response.is_some();
     let head_bus_path = head.bus_path.clone();
     let chain: Vec<ChainUnit> = variant
         .units
         .iter()
-        .zip(&entities)
+        .zip(entities)
         .skip(1)
         .map(|(u, &e)| {
             ChainUnit::new(
@@ -290,61 +199,100 @@ pub(crate) fn place_and_insert_agent(
             )
         })
         .collect();
+    VariantLook {
+        sound,
+        door_ahead,
+        unit_sounds,
+        wheel_radius,
+        rear_axle_y,
+        delta_height,
+        name,
+        measured,
+        head_bus_path,
+        chain,
+    }
+}
+
+/// A spawn that did not come to be: the unit roots go and a scheduled run is told.
+fn give_up(
+    commands: &mut Commands,
+    entities: Vec<Entity>,
+    (sched, request): (&mut ScheduledTraffic, Option<&ScheduledRequest>),
+) {
+    for e in entities {
+        commands.entity(e).despawn();
+    }
+    if let Some(r) = request {
+        sched.failed(r);
+    }
+}
+
+pub(crate) fn place_and_insert_agent(
+    (commands, job): (&mut Commands, &mut WorldLoadJob),
+    (state, pool, sched): (&mut TrafficState, &mut TrafficPool, &mut ScheduledTraffic),
+    (slot, lane_id, s, at): (usize, LaneId, f64, DVec2),
+    request: Option<&ScheduledRequest>,
+    models: SpawnedModels,
+    rng: &mut Rng,
+) {
+    let pool_group = pool.slots[slot].group;
+    let group_name = pool.groups[pool_group].name.clone();
+    let density_group = u8::try_from(pool.groups[pool_group].density_group).unwrap_or(u8::MAX);
+    let SpawnedModels {
+        entities,
+        bounds,
+        origin,
+        head_canvases,
+        head_setvars,
+        trace_frame,
+    } = models;
+    let root = entities[0];
+    let SlotState::Ready(variant) = &mut pool.slots[slot].state else {
+        return;
+    };
+    fill_unit_sizes(variant, &bounds);
+    let traits = variant.traits();
+    let params = agent_params(&traits, (request.is_some(), density_group), rng);
+    if state
+        .world
+        .graph()
+        .lane(lane_id)
+        .is_some_and(|l| !l.rules.allows(params.class))
+    {
+        give_up(commands, entities, (sched, request));
+        return;
+    }
+    let speed = match request {
+        Some(r) => r.speed.min(state.world.lane_cap(&params, lane_id)),
+        None => state.world.lane_cap(&params, lane_id) * 0.8,
+    };
+    let look = variant_look(variant, &params, &entities);
+    let fallbacks = variant.units[0].profile.fallbacks.clone();
     for (unit, &e) in variant.units.iter().zip(&entities) {
         opts_bevy::spawn_vehicle_glows(commands, root, e, &unit.model);
     }
     let mut rng_pax = Rng::new(rng.next_u64());
-    let mut scripted_head = false;
     match state.world.spawn(lane_id, s, speed, params) {
         Ok(id) => {
             pool.agent_groups.insert(id, pool_group);
-            if let Some(r) = request {
-                scripted_head = route_scheduled(
-                    (job, commands, state, sched),
-                    (id, r),
-                    (root, door_ahead),
-                    (
-                        &mut head_canvases,
-                        &head_bus_path,
-                        &head_setvars,
-                        sound.as_ref(),
-                    ),
-                );
-            }
-            log_spawned(
+            let placed = Placed {
                 id,
-                (&name, &group_name),
+                lane_id,
+                at,
                 speed,
-                (&params, &traits),
-                (entities.len(), measured, &fallbacks),
-            );
-            trace_spawned(
-                root,
-                &name,
-                &origin,
-                &trace_frame,
-                (lane_id, speed, &params, entities.len()),
-            );
-            attach_agent(
-                commands,
-                (root, &entities),
-                (id, &mut rng_pax),
-                AgentLook {
-                    delta_height,
-                    wheel_radius,
-                    rear_axle_y,
-                    at,
-                },
-                (sound.as_ref(), &unit_sounds, scripted_head, chain),
+                params: &params,
+                traits: &traits,
+                group_name: &group_name,
+                fallbacks: &fallbacks,
+            };
+            finish_spawned(
+                (job, commands, state, sched),
+                (&placed, request),
+                (&entities, &origin, &trace_frame),
+                (look, head_canvases, &head_setvars),
+                &mut rng_pax,
             );
         }
-        Err(_) => {
-            for e in entities {
-                commands.entity(e).despawn();
-            }
-            if let Some(r) = request {
-                sched.failed(r);
-            }
-        }
+        Err(_) => give_up(commands, entities, (sched, request)),
     }
 }

@@ -1,5 +1,7 @@
 //! Probing and filling thumbnail, hero, and livery-swatch UI slots in the wizard.
 
+use bevy::ecs::system::SystemParam;
+
 use super::*;
 
 /// A preview image the content provides for a vehicle, if any.
@@ -114,23 +116,57 @@ fn fill_swatches(
     }
 }
 
+/// The slots still to fill and the glyphs they may carry.
+#[derive(SystemParam)]
+pub struct ThumbSlots<'w, 's> {
+    /// Row thumbnails.
+    pub rows: Query<'w, 's, (Entity, &'static RowThumb), Without<ThumbDone>>,
+    /// Hero images.
+    pub heroes: Query<'w, 's, (Entity, &'static HeroImage), Without<ThumbDone>>,
+    /// Livery swatches.
+    pub swatches: Query<'w, 's, (Entity, &'static LiverySwatch), Without<ThumbDone>>,
+    /// The children of a slot.
+    pub children: Query<'w, 's, &'static Children>,
+    /// The placeholder glyphs.
+    pub glyphs: Query<'w, 's, (), GlyphFilter>,
+}
+
+/// Either placeholder glyph.
+type GlyphFilter = Or<(With<HeroGlyph>, With<ThumbGlyph>)>;
+
+/// What the slots are filled from.
+#[derive(SystemParam)]
+pub struct ThumbSources<'w> {
+    /// The maps and vehicles read.
+    pub catalogue: Res<'w, GameCatalogue>,
+    /// The livery state.
+    pub liveries: Res<'w, LiveryState>,
+    /// The catalogue service (it knows the OMSI root).
+    pub service_root: Option<Res<'w, crate::catalogue_service::CatalogueService>>,
+}
+
 /// Finishes decodes and fills the slots of lists, details and livery swatches.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn fill_thumbnails(
     mut service: ResMut<ThumbnailService>,
     mut images: ResMut<Assets<Image>>,
-    catalogue: Res<GameCatalogue>,
-    liveries: Res<LiveryState>,
-    rows: Query<(Entity, &RowThumb), Without<ThumbDone>>,
-    heroes: Query<(Entity, &HeroImage), Without<ThumbDone>>,
-    swatches: Query<(Entity, &LiverySwatch), Without<ThumbDone>>,
-    children: Query<&Children>,
-    glyphs: Query<(), Or<(With<HeroGlyph>, With<ThumbGlyph>)>>,
+    sources: ThumbSources,
+    pending: ThumbSlots,
     mut commands: Commands,
-    service_root: Option<Res<crate::catalogue_service::CatalogueService>>,
     mut known_root: Local<Option<PathBuf>>,
     mut wait: Local<u32>,
 ) {
+    let ThumbSources {
+        catalogue,
+        liveries,
+        service_root,
+    } = sources;
+    let ThumbSlots {
+        rows,
+        heroes,
+        swatches,
+        children,
+        glyphs,
+    } = pending;
     service.poll(&mut images);
     let slots_waiting = !rows.is_empty() || !heroes.is_empty() || !swatches.is_empty();
     if !slots_waiting {

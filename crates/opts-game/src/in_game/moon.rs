@@ -71,11 +71,36 @@ pub fn choose_carrier(current: Option<LightRole>, sun: f32, moon: f32) -> Option
     }
 }
 
+/// Any sun light (data-driven or fallback).
+type SunsQuery<'w, 's> = Query<'w, 's, (), Or<(With<SunLight>, With<FallbackLight>)>>;
+/// Moon discs still without a mesh.
+type NewDiscsQuery<'w, 's> =
+    Query<'w, 's, (Entity, &'static MoonDiscTexture), (With<MoonDisc>, Without<Mesh3d>)>;
+/// The main camera's transform.
+type CameraQuery<'w, 's> =
+    Query<'w, 's, &'static GlobalTransform, (With<opts_bevy::MainCamera>, Without<MoonDisc>)>;
+/// The moon light's light and transform.
+type MoonLightQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static mut DirectionalLight, &'static mut Transform),
+    (With<MoonLight>, Without<MoonDisc>),
+>;
+/// The moon disc's transform and material.
+type MoonDiscQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut Transform,
+        &'static MeshMaterial3d<MoonMaterial>,
+    ),
+    With<MoonDisc>,
+>;
+
 /// Spawns the moon light once a sun light exists (the data-driven one or the fallback).
-#[allow(clippy::type_complexity)]
 pub fn spawn_moon_light(
     mut commands: Commands,
-    suns: Query<(), Or<(With<SunLight>, With<FallbackLight>)>>,
+    suns: SunsQuery,
     moons: Query<(), With<MoonLight>>,
 ) {
     if suns.is_empty() || !moons.is_empty() {
@@ -99,10 +124,9 @@ pub fn spawn_moon_light(
 
 /// Gives the moon disc its mesh and phase material (needs the material plugin; without it the
 /// disc stays invisible, as in headless tests).
-#[allow(clippy::type_complexity)]
 pub fn setup_moon_disc(
     mut commands: Commands,
-    discs: Query<(Entity, &MoonDiscTexture), (With<MoonDisc>, Without<Mesh3d>)>,
+    discs: NewDiscsQuery,
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Option<ResMut<Assets<MoonMaterial>>>,
 ) {
@@ -127,15 +151,11 @@ pub fn disc_brightness(sun_elevation_deg: f32, weather_moon: f32) -> f32 {
 
 /// Moves the moon light and the disc to the model's position and sets the light and the disc's
 /// phase from the session environment.
-#[allow(clippy::type_complexity)]
 pub fn update_moon(
     env: Res<SessionEnvironment>,
-    cameras: Query<&GlobalTransform, (With<opts_bevy::MainCamera>, Without<MoonDisc>)>,
-    mut lights: Query<
-        (&mut DirectionalLight, &mut Transform),
-        (With<MoonLight>, Without<MoonDisc>),
-    >,
-    mut discs: Query<(&mut Transform, &MeshMaterial3d<MoonMaterial>), With<MoonDisc>>,
+    cameras: CameraQuery,
+    mut lights: MoonLightQuery,
+    mut discs: MoonDiscQuery,
     mut materials: Option<ResMut<Assets<MoonMaterial>>>,
 ) {
     let moon = env.moon();

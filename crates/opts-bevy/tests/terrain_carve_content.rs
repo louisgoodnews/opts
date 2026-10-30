@@ -255,8 +255,7 @@ fn spandau_bent_crossings_lie_on_the_terrain_and_meet_their_arms() {
     };
     let keys: Vec<(i32, i32)> = map.files.keys().copied().collect();
     let mut terrain = HashMap::new();
-    let (mut placements, mut area, mut below) = (0, 0.0_f64, 0.0_f64);
-    let (mut arms, mut arm_misses) = (0, Vec::new());
+    let mut tally = Tally::default();
     for key in keys {
         let Some(tile) = map.tile(key) else { continue };
         for o in &tile.objects {
@@ -266,56 +265,18 @@ fn spandau_bent_crossings_lie_on_the_terrain_and_meet_their_arms() {
             let Some((meshes, base)) = bent_meshes(&map, &path, &sco) else {
                 continue;
             };
-            placements += 1;
-            // Ground faces: centroid and three inner points, area-weighted.
-            for f in crossing_ground_faces(&meshes, Some(&base)) {
-                let a = 0.5 * (f[1] - f[0]).cross(f[2] - f[0]).length();
-                let c = (f[0] + f[1] + f[2]) / 3.0;
-                for q in [
-                    c,
-                    (2.0 * c + f[0]) / 3.0,
-                    (2.0 * c + f[1]) / 3.0,
-                    (2.0 * c + f[2]) / 3.0,
-                ] {
-                    let Some(g) = map.ground_at(key, place(o, q.x, q.z), &mut terrain) else {
-                        continue;
-                    };
-                    area += f64::from(a) / 4.0;
-                    if g - (o.position.z + q.y) > 0.02 {
-                        below += f64::from(a) / 4.0;
-                    }
-                }
-            }
-            // Arms against the spline ends of the tile and its neighbours.
-            let bent = sco.bent(&base);
-            for h in &bent.spline_helpers {
-                let at = place(o, h.position.x, h.position.y);
-                let z = o.position.z + h.position.z;
-                let mut best: Option<(f32, f32)> = None;
-                for dy in -1..=1 {
-                    for dx in -1..=1 {
-                        let other = (key.0 + dx, key.1 + dy);
-                        let Some(t) = map.tile(other) else { continue };
-                        let off = map.grid.neighbour_offset(key, other);
-                        for s in &t.splines {
-                            for p in [spline_pose(s, 0.0), spline_pose(s, s.length_m)] {
-                                let d = (Vec2::new(p.x, p.y) + off).distance(at);
-                                if best.is_none_or(|(bd, _)| d < bd) {
-                                    best = Some((d, p.z));
-                                }
-                            }
-                        }
-                    }
-                }
-                if let Some((d, sz)) = best.filter(|(d, _)| *d < 0.5) {
-                    arms += 1;
-                    if (sz - z).abs() > 0.01 {
-                        arm_misses.push((o.sco_file.clone(), d, sz - z));
-                    }
-                }
-            }
+            tally.placements += 1;
+            tally.add_ground(&map, key, o, (&meshes, &base), &mut terrain);
+            tally.add_arms(&mut map, key, o, &sco.bent(&base));
         }
     }
+    let Tally {
+        placements,
+        area,
+        below,
+        arms,
+        arm_misses,
+    } = tally;
     let share = 100.0 * below / area.max(1.0);
     eprintln!(
         "bent placements {placements}, ground {area:.0} m2, below terrain {share:.3} %, arms {arms}, height misses {}",
@@ -338,6 +299,10 @@ fn spandau_bent_crossings_lie_on_the_terrain_and_meet_their_arms() {
         "arms off their spline: {arm_misses:?}"
     );
 }
+
+#[path = "terrain_carve_content/crossing_tally.rs"]
+mod crossing_tally;
+use crossing_tally::Tally;
 
 #[path = "terrain_carve_content/edge_fit.rs"]
 mod edge_fit;

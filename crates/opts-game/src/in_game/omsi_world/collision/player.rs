@@ -87,7 +87,6 @@ fn scrape_velocity(ch: &mut opts_sim::vehicle::chassis::ChassisState, normals: &
 }
 
 /// Pushes the player's vehicle out of everything it overlaps (fixed step, after the physics).
-#[allow(clippy::too_many_arguments)]
 pub fn player_collisions(
     mut logged: Local<u32>,
     index: Res<CollisionIndex>,
@@ -128,42 +127,20 @@ pub fn player_collisions(
                 head,
                 &followers,
             );
-            let mut worst: Option<(Vec2, f32)> = None;
-            let mut worst_is_traffic = false;
-            let mut worst_other: Option<Obb> = None;
-            for me in &mine {
-                let statics = index.grid.query(me.centre, me.radius()).map(|o| (o, false));
-                for (other, is_traffic) in statics.chain(dynamic.iter().map(|o| (o, true))) {
-                    if !me.overlaps_height(other, STEP_M) {
-                        continue;
-                    }
-                    if let Some(c) = me.contact(other) {
-                        if !is_traffic {
-                            if first_seen && !free.contains(other) {
-                                free.push(*other);
-                            }
-                            if free.contains(other) {
-                                if !touching.contains(other) {
-                                    touching.push(*other);
-                                }
-                                continue;
-                            }
-                        }
-                        if worst.is_none_or(|w| c.depth > w.1) {
-                            worst = Some((c.normal, c.depth));
-                            worst_is_traffic = is_traffic;
-                            worst_other = Some(*other);
-                        }
-                    }
-                }
-            }
+            let Worst {
+                mut contact,
+                traffic: worst_is_traffic,
+                other: worst_other,
+            } = worst_contact(&mine, (&index, &dynamic), (first_seen, free, &mut touching));
             // Steps in the ground around the head's footprint.
             if let Some(n) = ground_step(&ground, &mine[0], ch.elevation_z, head.0.height) {
-                if worst.is_none_or(|w| 0.05 > w.1) {
-                    worst = Some((n, 0.05));
+                if contact.is_none_or(|w| 0.05 > w.1) {
+                    contact = Some((n, 0.05));
                 }
             }
-            let Some((normal, depth)) = worst else { break };
+            let Some((normal, depth)) = contact else {
+                break;
+            };
             log_push(
                 &mut logged,
                 &controller,
@@ -190,6 +167,51 @@ pub fn player_collisions(
         }
         scrape_velocity(&mut controller.sim.chassis, &normals);
     }
+}
+
+/// The deepest overlap of the player's boxes with the static boxes and the AI vehicles. Static
+/// boxes the vehicle was placed inside (a spawn point in a bus stop's collision box) do not push
+/// it: it is on its way out when it drives off; `touching` collects the boxes it still touches.
+#[derive(Default)]
+struct Worst {
+    contact: Option<(Vec2, f32)>,
+    traffic: bool,
+    other: Option<Obb>,
+}
+
+fn worst_contact(
+    mine: &[Obb],
+    (index, dynamic): (&CollisionIndex, &[Obb]),
+    (first_seen, free, touching): (bool, &mut Vec<Obb>, &mut Vec<Obb>),
+) -> Worst {
+    let mut worst = Worst::default();
+    for me in mine {
+        let statics = index.grid.query(me.centre, me.radius()).map(|o| (o, false));
+        for (other, is_traffic) in statics.chain(dynamic.iter().map(|o| (o, true))) {
+            if !me.overlaps_height(other, STEP_M) {
+                continue;
+            }
+            if let Some(c) = me.contact(other) {
+                if !is_traffic {
+                    if first_seen && !free.contains(other) {
+                        free.push(*other);
+                    }
+                    if free.contains(other) {
+                        if !touching.contains(other) {
+                            touching.push(*other);
+                        }
+                        continue;
+                    }
+                }
+                if worst.contact.is_none_or(|w| c.depth > w.1) {
+                    worst.contact = Some((c.normal, c.depth));
+                    worst.traffic = is_traffic;
+                    worst.other = Some(*other);
+                }
+            }
+        }
+    }
+    worst
 }
 
 /// Direction away from a step in the ground around a footprint, if there is one: points on the

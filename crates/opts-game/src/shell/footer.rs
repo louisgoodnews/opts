@@ -1,6 +1,7 @@
 //! The rail footer: theme toggle (F2) and *Quit OPTS* with its confirmation.
 
 use bevy::app::AppExit;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_gui::interaction::activation::Activated;
 use opts_gui::interaction::tooltip::Tooltip;
@@ -49,18 +50,27 @@ pub fn theme_toggle_system(
     }
 }
 
+/// The glyph and the label inside the toggle.
+#[derive(SystemParam)]
+pub struct ToggleParts<'w, 's> {
+    icons: Query<'w, 's, &'static mut Text, With<RailIcon>>,
+    labels: Query<'w, 's, &'static mut L10nKey, Without<RailIcon>>,
+}
+
 /// The footer toggle offers the mode a click switches **to**.
-#[allow(clippy::too_many_arguments)]
 pub fn sync_theme_toggle(
     theme: Res<MaterialTheme>,
     toggles: Query<(Entity, &RailAction)>,
     children: Query<&Children>,
-    mut icons_q: Query<&mut Text, With<RailIcon>>,
-    mut labels: Query<&mut L10nKey, Without<RailIcon>>,
+    parts: ToggleParts,
     mut commands: Commands,
     added: Query<(), Added<RailAction>>,
     loc: Res<opts_gui::l10n::Localization>,
 ) {
+    let ToggleParts {
+        icons: mut icons_q,
+        mut labels,
+    } = parts;
     if !theme.is_changed() && added.is_empty() {
         return;
     }

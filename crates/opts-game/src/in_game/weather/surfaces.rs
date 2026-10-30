@@ -49,21 +49,29 @@ pub fn drive_wetness(
     }
 }
 
+/// The ground and standard material stores that [`update_surfaces`] rewrites.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct SurfaceMaterials<'w> {
+    ground: ResMut<'w, Assets<GroundMaterial>>,
+    standard: ResMut<'w, Assets<StandardMaterial>>,
+}
+
 /// Applies the surface state to the ground and road materials: at once when it changes, and
 /// every half second for materials that are new.
-#[allow(clippy::too_many_arguments)]
 pub fn update_surfaces(
-    time: Res<Time<Real>>,
-    env: Res<SessionEnvironment>,
-    effects: Res<WeatherEffects>,
+    scene: super::WeatherScene,
     wetness: Res<Wetness>,
     job: Option<Res<WorldLoadJob>>,
-    mut ground: ResMut<Assets<GroundMaterial>>,
-    mut standard: ResMut<Assets<StandardMaterial>>,
+    materials: SurfaceMaterials,
     mut originals: Local<HashMap<AssetId<StandardMaterial>, (Color, f32)>>,
     mut last: Local<Option<SurfaceState>>,
     mut next_scan: Local<f32>,
 ) {
+    let super::WeatherScene { time, env, effects } = scene;
+    let SurfaceMaterials {
+        mut ground,
+        mut standard,
+    } = materials;
     // Wetness comes from the `Wetness` resource; puddles and snow from the weather.
     let mut state = wanted_state(&env, &effects);
     state.wet = wetness.0.clamp(0.0, 1.0);

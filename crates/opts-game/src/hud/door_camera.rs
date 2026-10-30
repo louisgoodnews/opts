@@ -6,6 +6,7 @@
 //! up. The panels exist only while the setting `camera.door_overlay` is on; they step aside for
 //! the viewpoint editor, which owns that edge.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_bevy::door_camera::{DoorCamera, DoorPoints, DoorSlot, Zone};
 use opts_bevy::PlayerVehicle;
@@ -154,6 +155,36 @@ fn caption(loc: &Localization, doors: &DoorPoints, door: usize) -> String {
     )
 }
 
+type Roots<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static mut DoorOverlay,
+        &'static mut Node,
+        &'static mut InstrumentFade,
+    ),
+>;
+
+/// The resources [`update_overlay`] reads.
+#[derive(SystemParam)]
+pub struct OverlayEnv<'w> {
+    /// Real time.
+    pub time: Res<'w, Time<Real>>,
+    /// The door cameras' slots.
+    pub cam: Res<'w, DoorCamera>,
+    /// The HUD layout.
+    pub layout: Res<'w, HudLayout>,
+    /// The texts.
+    pub loc: Res<'w, Localization>,
+    /// The theme, once there.
+    pub theme: Option<Res<'w, MaterialTheme>>,
+    /// The instrument variant.
+    pub variant: Res<'w, InstrumentVariant>,
+    /// The viewpoint editor's state.
+    pub editor: Option<Res<'w, opts_bevy::ViewpointState>>,
+}
+
 type Images<'w, 's> = Query<
     'w,
     's,
@@ -214,21 +245,23 @@ fn fit_captions(
 
 /// Keeps one panel per slot: made when a door's picture appears, stacked in slot order, gliding
 /// up when one above it goes, faded with the slot, removed with it.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_overlay(
     mut commands: Commands,
-    time: Res<Time<Real>>,
-    cam: Res<DoorCamera>,
-    layout: Res<HudLayout>,
-    loc: Res<Localization>,
-    theme: Option<Res<MaterialTheme>>,
-    variant: Res<InstrumentVariant>,
-    editor: Option<Res<opts_bevy::ViewpointState>>,
+    env: OverlayEnv,
     vehicles: Query<&DoorPoints, With<PlayerVehicle>>,
-    mut roots: Query<(Entity, &mut DoorOverlay, &mut Node, &mut InstrumentFade)>,
+    mut roots: Roots,
     mut images: Images,
     mut captions: Captions,
 ) {
+    let OverlayEnv {
+        time,
+        cam,
+        layout,
+        loc,
+        theme,
+        variant,
+        editor,
+    } = env;
     let hidden = editor.is_some_and(|e| e.editing);
     let slots: &[_] = if hidden { &[] } else { &cam.slots };
     // Panels of doors that have no slot any more.

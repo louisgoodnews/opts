@@ -32,17 +32,20 @@
 //! (`docs/src/architecture/bus-script-integration.md`, principle 8): each later phase is accepted
 //! by a number of this report.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::io::Write as _;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 
-use opts_bevy::host_callbacks::vehicle_callbacks;
 use opts_core::formats::vehicles::BusManifest;
-use opts_sim::script::inputs::{feed, FeedPlan, HostInputs, OUTPUT_TABLE};
+use opts_sim::script::inputs::{feed, FeedPlan, OUTPUT_TABLE};
 use opts_sim::script::{load_vehicle_scripts, Severity};
 
 const DT: f32 = 1.0 / 60.0;
+
+mod args;
+use args::Args;
+
+mod modes;
+use modes::{physics_mode, route_mode};
 
 mod physics;
 use physics::{physics_diff, physics_report, GOLDEN_TIMES, GOLDEN_VARS};
@@ -56,71 +59,31 @@ use route::{buses, depot_for, find_ci, route_report, seed_of, unconsumed, ENGINE
 mod summary;
 use summary::{print_summary, write_or_check_golden, SummaryCounts};
 
+mod vehicle;
+use vehicle::{report_vehicle, run_vehicle, Totals, VehicleInfo};
+
 fn main() {
-    let mut args = std::env::args().skip(1);
-    let root = PathBuf::from(args.next().expect("OMSI root"));
-    let (mut filter, mut frames, mut json, mut csv, mut limit) = (
-        None::<String>,
-        720usize,
-        None::<PathBuf>,
-        None::<PathBuf>,
-        usize::MAX,
-    );
-    let (mut golden, mut check) = (None::<PathBuf>, None::<PathBuf>);
-    let (mut physics, mut hz) = (false, 60.0f32);
-    let (mut route_code, mut hof_filter) = (None::<i32>, None::<String>);
-    let (mut map_name, mut timetable) = (None::<String>, None::<(String, usize, usize)>);
-    while let Some(a) = args.next() {
-        match a.as_str() {
-            "--vehicle" => filter = args.next().map(|s| s.to_lowercase()),
-            "--frames" => frames = args.next().and_then(|v| v.parse().ok()).unwrap_or(720),
-            "--json" => json = args.next().map(PathBuf::from),
-            "--csv" => csv = args.next().map(PathBuf::from),
-            "--physics" => physics = true,
-            "--route" => route_code = args.next().and_then(|v| v.parse().ok()),
-            "--hof" => hof_filter = args.next().map(|s| s.to_lowercase()),
-            "--map" => map_name = args.next(),
-            "--timetable" => {
-                timetable = args.next().and_then(|v| {
-                    let mut p = v.rsplitn(3, '/');
-                    let run = p.next()?.parse().ok()?;
-                    let tour = p.next()?.parse().ok()?;
-                    Some((p.next()?.to_string(), tour, run))
-                });
-            }
-            "--hz" => hz = args.next().and_then(|v| v.parse().ok()).unwrap_or(60.0),
-            "--golden" => golden = args.next().map(PathBuf::from),
-            "--check" => check = args.next().map(PathBuf::from),
-            "--limit" => {
-                limit = args
-                    .next()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(usize::MAX)
-            }
-            other => panic!("unknown argument {other}"),
-        }
-    }
+    let args = Args::parse();
     let mut files = Vec::new();
-    buses(&root.join("Vehicles"), &mut files);
+    buses(&args.root.join("Vehicles"), &mut files);
     files.sort();
-    let mut out = json.and_then(|p| std::fs::File::create(p).ok());
-    if let Some(dir) = &csv {
+    let mut out = args
+        .json
+        .as_ref()
+        .and_then(|p| std::fs::File::create(p).ok());
+    if let Some(dir) = &args.csv {
         let _ = std::fs::create_dir_all(dir);
     }
 
-    let mut with_scripts = 0usize;
-    let mut underflow_vehicles = 0usize;
-    let mut non_finite_vehicles = 0usize;
-    let mut load_errors = 0usize;
-    let mut unfed: BTreeMap<String, usize> = BTreeMap::new();
-    let mut stubbed: BTreeMap<String, usize> = BTreeMap::new();
-    let mut unconsumed_count: BTreeMap<String, usize> = BTreeMap::new();
-    let mut real: BTreeMap<String, usize> = BTreeMap::new();
-    let mut frame_us = Vec::new();
-
+    let mut totals = Totals::default();
     for f in &files {
-        let rel = f.strip_prefix(&root).unwrap_or(f).display().to_string();
-        if filter
+        let rel = f
+            .strip_prefix(&args.root)
+            .unwrap_or(f)
+            .display()
+            .to_string();
+        if args
+            .filter
             .as_ref()
             .is_some_and(|x| !rel.to_lowercase().contains(x))
         {
@@ -135,227 +98,57 @@ fn main() {
         if bus.scripts.is_empty() {
             continue;
         }
-        if with_scripts >= limit {
+        if totals.with_scripts >= args.limit {
             break;
         }
-        with_scripts += 1;
+        totals.with_scripts += 1;
         let dir = f.parent().expect("dir").to_path_buf();
-        let (mut engine, load) =
-            load_vehicle_scripts(&bus, |r| find_ci(&dir, r).or_else(|| find_ci(&root, r)));
+        let (mut engine, load) = load_vehicle_scripts(&bus, |r| {
+            find_ci(&dir, r).or_else(|| find_ci(&args.root, r))
+        });
         let load_errors_here = load
             .iter()
             .filter(|d| d.severity == Severity::Error)
             .count();
-        load_errors += usize::from(load_errors_here > 0);
-        if route_code.is_some() || timetable.is_some() {
-            let code = route_code.unwrap_or(0);
-            let seed0 = seed_of(&rel);
-            let depot = depot_for(&dir, &root, hof_filter.as_deref());
-            let report = route_report(
-                &bus,
-                &dir,
-                &root,
-                depot,
-                code,
-                seed0,
-                timetable
-                    .as_ref()
-                    .map(|t| (t, root.join("maps").join(map_name.as_deref().unwrap_or("")))),
-            );
-            println!(
-                "{rel}\n{}",
-                serde_json::to_string_pretty(&report).unwrap_or_default()
-            );
+        totals.load_errors += usize::from(load_errors_here > 0);
+        if args.route_code.is_some() || args.timetable.is_some() {
+            route_mode(&args, &bus, &dir, &rel);
             continue;
         }
-        if physics {
-            let seed0 = seed_of(&rel);
-            let loader = || {
-                let (mut e, _) =
-                    load_vehicle_scripts(&bus, |r| find_ci(&dir, r).or_else(|| find_ci(&root, r)));
-                e.seed_random(seed0 as u32);
-                e.set_external_handler(vehicle_callbacks(seed0));
-                e
-            };
-            let trail = f
-                .to_string_lossy()
-                .strip_suffix("_main.bus")
-                .map(|stem| PathBuf::from(format!("{stem}_trail.bus")))
-                .and_then(|p| std::fs::read(p).ok())
-                .and_then(|b| BusManifest::parse_bytes(&b).ok());
-            let report = physics_report(&bus, trail.as_ref(), &loader, hz);
-            println!(
-                "{rel}\n{}",
-                serde_json::to_string_pretty(&report).unwrap_or_default()
-            );
-            let value = serde_json::to_value(&report).unwrap_or_default();
-            if let Some(path) = &golden {
-                let text = serde_json::to_string_pretty(&value).unwrap_or_default();
-                std::fs::write(path, format!("{text}\n")).expect("write the golden");
-                println!("golden written to {}", path.display());
-            }
-            if let Some(path) = &check {
-                let text = std::fs::read_to_string(path).expect("read the golden");
-                let want: serde_json::Value =
-                    serde_json::from_str(&text).expect("parse the golden");
-                let mut diffs = Vec::new();
-                physics_diff("", &want, &value, &mut diffs);
-                for d in &diffs {
-                    eprintln!("DIFFERS {d}");
-                }
-                if !diffs.is_empty() {
-                    std::process::exit(1);
-                }
-                println!("physics golden holds ({})", path.display());
-            }
+        if args.physics {
+            physics_mode(&args, f, &bus, &dir, &rel);
             continue;
         }
-        let seed = seed_of(&rel);
-        engine.seed_random(seed as u32);
-        engine.set_external_handler(vehicle_callbacks(seed));
-        let plan = FeedPlan::new(&mut engine);
-        let mut inputs = HostInputs::default();
-        let usage = engine.usage();
-        let undeclared: BTreeSet<String> = engine
-            .undeclared_variables()
-            .into_iter()
-            .map(|n| n.to_lowercase())
-            .collect();
-
-        let mut csv_out = csv.as_ref().filter(|_| filter.is_some()).and_then(|d| {
-            let name = f.file_stem()?.to_string_lossy().into_owned();
-            std::fs::File::create(d.join(format!("{name}.csv"))).ok()
-        });
-        let mut speed_ms = 0.0f32;
-        let mut startup = Startup::default();
-        let mut samples: Vec<serde_json::Value> = Vec::new();
-        feed(&mut engine, &plan, &inputs);
-        engine.run_init();
-        let mut runtime: Vec<String> = Vec::new();
-        let mut non_finite: BTreeSet<String> = BTreeSet::new();
-        let (mut ops_total, mut micros_total) = (0u64, 0.0f64);
-        let mut csv_names: Vec<String> = Vec::new();
-        for frame in 0..frames {
-            let t = frame as f32 * DT;
-            inputs.throttle = if (1.0..6.0).contains(&t) { 0.7 } else { 0.0 };
-            inputs.brake = if (8.0..10.0).contains(&t) { 0.5 } else { 0.0 };
-            speed_ms =
-                (speed_ms + (inputs.throttle * 2.0 - inputs.brake * 4.0 - 0.1) * DT).max(0.0);
-            inputs.velocity_km_h = speed_ms * 3.6;
-            inputs.velocity_ground_km_h = inputs.velocity_km_h;
-            inputs.n_wheel_rpm = speed_ms / (std::f32::consts::PI * 0.98) * 60.0;
-            inputs.time_of_day_s = 8.0 * 3600.0 + t;
-            feed(&mut engine, &plan, &inputs);
-            startup.step(t, &mut engine);
-            let (ops0, t0) = (engine.ops_executed(), Instant::now());
-            engine.run_frame(DT, false);
-            if GOLDEN_TIMES.iter().any(|g| (t - g).abs() < DT * 0.5) {
-                let values: serde_json::Map<String, serde_json::Value> = GOLDEN_VARS
-                    .iter()
-                    .map(|n| ((*n).to_owned(), serde_json::json!(engine.get(n))))
-                    .collect();
-                samples.push(serde_json::json!({ "time": GOLDEN_TIMES.iter().copied().find(|g| (t - g).abs() < DT * 0.5), "values": values }));
-            }
-            micros_total += t0.elapsed().as_secs_f64() * 1e6;
-            ops_total += engine.ops_executed() - ops0;
-            let vars = engine.variables();
-            for (n, v) in &vars {
-                if !v.is_finite() {
-                    non_finite.insert(n.clone());
-                }
-            }
-            if let Some(w) = csv_out.as_mut() {
-                if frame == 0 {
-                    csv_names = vars.iter().map(|(n, _)| n.clone()).collect();
-                    csv_names.sort();
-                    let _ = writeln!(w, "time,{}", csv_names.join(","));
-                }
-                let map: BTreeMap<&str, f32> = vars.iter().map(|(n, v)| (n.as_str(), *v)).collect();
-                let row: Vec<String> = csv_names
-                    .iter()
-                    .map(|n| format!("{}", map.get(n.as_str()).copied().unwrap_or(0.0)))
-                    .collect();
-                let _ = writeln!(w, "{t:.4},{}", row.join(","));
-            }
-            runtime.extend(engine.drain_diagnostics().into_iter().map(|d| d.message));
-        }
-        frame_us.push(micros_total / frames.max(1) as f64);
-
-        let unfed_reads: BTreeSet<String> = usage
-            .reads
-            .iter()
-            .filter(|n| !usage.writes.contains(*n) && plan.status(n).is_none())
-            .filter(|n| undeclared.contains(*n))
-            .cloned()
-            .collect();
-        let unfed_system: BTreeSet<String> = usage
-            .system_reads
-            .iter()
-            .filter(|n| plan.status(n).is_none() && !ENGINE_SET.contains(&n.as_str()))
-            .cloned()
-            .collect();
-        let stats = engine.callback_stats();
-        let stub_names: BTreeSet<String> = stats.stub.keys().cloned().collect();
-        let real_names: BTreeSet<String> = stats.real.keys().cloned().collect();
-        let unknown_names: BTreeSet<String> = stats.unknown.keys().cloned().collect();
-        let unconsumed_outputs = unconsumed(&usage.writes);
-        let underflows = runtime.iter().filter(|m| m.contains("underflow")).count();
-        underflow_vehicles += usize::from(underflows > 0);
-        non_finite_vehicles += usize::from(!non_finite.is_empty());
-        for n in unfed_reads.iter().chain(&unfed_system) {
-            *unfed.entry(n.clone()).or_default() += 1;
-        }
-        for n in &stub_names {
-            *stubbed.entry(n.clone()).or_default() += 1;
-        }
-        for n in &real_names {
-            *real.entry(n.clone()).or_default() += 1;
-        }
-        for n in &unconsumed_outputs {
-            *unconsumed_count.entry(n.clone()).or_default() += 1;
-        }
-        let line = serde_json::json!({
-            "vehicle": rel,
-            "scripts": bus.scripts.len(),
-            "load_errors": load_errors_here,
-            "load_warnings": load.iter().filter(|d| d.severity == Severity::Warning).count(),
-            "unfed_inputs": unfed_reads,
-            "unfed_system_values": unfed_system,
-            "unconsumed_outputs": unconsumed_outputs,
-            "callbacks_called": usage.external,
-            "callbacks_real": real_names,
-            "callbacks_stubbed": stub_names,
-            "callbacks_unknown": unknown_names,
-            "stack_underflows": underflows,
-            "non_finite": non_finite,
-            "ops_per_frame": ops_total as f64 / frames.max(1) as f64,
-            "micros_per_frame": micros_total / frames.max(1) as f64,
-            "runtime_messages": runtime.iter().filter(|m| !m.contains("neutral stub")).take(8).collect::<Vec<_>>(),
-        });
-        if let Some(o) = out.as_mut() {
-            let _ = writeln!(o, "{line}");
-        }
-        write_or_check_golden(&rel, &samples, golden.as_deref(), check.as_deref());
-        if filter.is_some() {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&line).unwrap_or_default()
-            );
-        }
+        let run = run_vehicle(&args, f, &rel, &mut engine);
+        let info = VehicleInfo {
+            rel: &rel,
+            scripts: bus.scripts.len(),
+            load_errors: load_errors_here,
+            load_warnings: load
+                .iter()
+                .filter(|d| d.severity == Severity::Warning)
+                .count(),
+        };
+        report_vehicle(&args, &mut totals, &info, &engine, run, &mut out);
     }
 
+    finish(&args, &mut totals);
+}
+
+/// Prints the closing summary of the run.
+fn finish(args: &Args, totals: &mut Totals) {
     print_summary(
         SummaryCounts {
-            with_scripts,
-            frames,
-            load_errors,
-            underflow_vehicles,
-            non_finite_vehicles,
-            unfed: &unfed,
-            stubbed: &stubbed,
-            real: &real,
-            unconsumed_count: &unconsumed_count,
+            with_scripts: totals.with_scripts,
+            frames: args.frames,
+            load_errors: totals.load_errors,
+            underflow_vehicles: totals.underflow_vehicles,
+            non_finite_vehicles: totals.non_finite_vehicles,
+            unfed: &totals.unfed,
+            stubbed: &totals.stubbed,
+            real: &totals.real,
+            unconsumed_count: &totals.unconsumed_count,
         },
-        &mut frame_us,
+        &mut totals.frame_us,
     );
 }

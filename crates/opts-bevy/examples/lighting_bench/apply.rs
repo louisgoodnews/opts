@@ -1,42 +1,101 @@
 //! Applying a plan item's keys to the scene.
 
+mod scene;
+
+use bevy::ecs::system::SystemParam;
+
 use super::cone_material::ConeMaterial;
 use super::config::Cfg;
-use super::procedural::{sky_cube, Rng};
+use super::procedural::sky_cube;
 use super::*;
 
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub(super) fn apply(
-    cfg: &Cfg,
-    commands: &mut Commands,
-    assets: &Assets3,
-    cones: &mut Assets<ConeMaterial>,
-    shadow_map: &mut DirectionalLightShadowMap,
-    cam: Option<Entity>,
-    images: &mut Assets<Image>,
-    every: &mut MirrorEvery,
-    stale_q: &Query<Entity, Or<(With<Cone>, With<Fog>, With<Mirror>)>>,
-    sun: &mut Query<(Entity, &mut Transform, &mut Visibility), (With<Sun>, Without<Cam>)>,
-    lamps: &mut Query<(&NightLamp, &mut Visibility), (Without<Sun>, Without<HeadSpot>)>,
-    spots: &mut Query<
-        (Entity, &HeadSpot, &mut SpotLight, &mut Visibility),
-        (Without<Sun>, Without<NightLamp>),
-    >,
-    ambient: &mut GlobalAmbientLight,
-) {
-    let Some(cam) = cam else { return };
+type StaleQ<'w, 's> = Query<'w, 's, Entity, Or<(With<Cone>, With<Fog>, With<Mirror>)>>;
+type SunQ<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static mut Transform, &'static mut Visibility),
+    (With<Sun>, Without<Cam>),
+>;
+type LampQ<'w, 's> =
+    Query<'w, 's, (&'static NightLamp, &'static mut Visibility), (Without<Sun>, Without<HeadSpot>)>;
+type SpotQ<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static HeadSpot,
+        &'static mut SpotLight,
+        &'static mut Visibility,
+    ),
+    (Without<Sun>, Without<NightLamp>),
+>;
+
+/// Everything `apply` touches besides `Commands` and the plan item.
+#[derive(SystemParam)]
+pub(super) struct ApplyParams<'w, 's> {
+    pub(super) assets: Res<'w, Assets3>,
+    cones: ResMut<'w, Assets<ConeMaterial>>,
+    shadow_map: ResMut<'w, DirectionalLightShadowMap>,
+    cam: Query<'w, 's, Entity, With<Cam>>,
+    images: ResMut<'w, Assets<Image>>,
+    every: ResMut<'w, MirrorEvery>,
+    stale_q: StaleQ<'w, 's>,
+    sun: SunQ<'w, 's>,
+    lamps: LampQ<'w, 's>,
+    spots: SpotQ<'w, 's>,
+    ambient: ResMut<'w, GlobalAmbientLight>,
+}
+
+pub(super) fn apply(cfg: &Cfg, commands: &mut Commands, p: &mut ApplyParams) {
+    let Some(cam) = p.cam.single().ok() else {
+        return;
+    };
     let night = cfg.s("scene", "sun") == "night";
-    shadow_map.size = cfg.u("shadow", 2048) as usize;
+    p.shadow_map.size = cfg.u("shadow", 2048) as usize;
     commands.insert_resource(ClearColor(if night {
         Color::srgb(0.01, 0.015, 0.03)
     } else {
         Color::srgb(0.52, 0.70, 0.95)
     }));
 
-    // Sun.
-    let elev = cfg.f("elev", 10.0).to_radians();
     let toward = cfg.s("look", "toward") == "toward";
     let moon = cfg.u("moon", 0) == 1;
+    apply_sun(cfg, commands, &mut p.sun, night, moon, toward);
+    p.ambient.brightness = if night { 20.0 } else { 700.0 };
+    let vspots = cfg.u("vspots", 0) as usize;
+    apply_lamps_spots(cfg, commands, &mut p.lamps, &mut p.spots, night, vspots);
+
+    // Camera.
+    // "toward" looks down -Z (toward the sun); "away" turns around and looks down +Z, the camera
+    // sits at the far end of the street so the same canyon fills the view.
+    let pos = if toward {
+        Vec3::new(0.0, 1.8, 6.0)
+    } else {
+        Vec3::new(0.0, 1.8, -140.0)
+    };
+    let look_dir = if toward { Vec3::NEG_Z } else { Vec3::Z };
+    apply_camera(cfg, commands, cam, &mut p.images, pos, look_dir);
+    // Mirror cameras (render to a small 8-bit image; every `mevery`-th frame).
+    for e in &p.stale_q {
+        commands.entity(e).despawn();
+    }
+    p.every.0 = cfg.u("mevery", 1);
+    scene::spawn_mirrors(cfg, commands, &mut p.images, pos, look_dir);
+    scene::spawn_ballast(cfg, commands, &p.assets, &mut p.cones, pos, look_dir);
+    apply_prepass_fog(cfg, commands, cam, vspots);
+    scene::spawn_fog_volume(cfg, commands, vspots, pos);
+    scene::spawn_cones(cfg, commands, &p.assets, &mut p.cones, pos, look_dir);
+}
+
+fn apply_sun(
+    cfg: &Cfg,
+    commands: &mut Commands,
+    sun: &mut SunQ,
+    night: bool,
+    moon: bool,
+    toward: bool,
+) {
+    let elev = cfg.f("elev", 10.0).to_radians();
     let az = 35f32.to_radians();
     let sz = if toward { -az.cos() } else { az.cos() };
     let sun_dir = Vec3::new(az.sin() * elev.cos(), elev.sin(), sz * elev.cos()).normalize();
@@ -63,7 +122,16 @@ pub(super) fn apply(
             Visibility::Inherited
         };
     }
-    ambient.brightness = if night { 20.0 } else { 700.0 };
+}
+
+fn apply_lamps_spots(
+    cfg: &Cfg,
+    commands: &mut Commands,
+    lamps: &mut LampQ,
+    spots: &mut SpotQ,
+    night: bool,
+    vspots: usize,
+) {
     let lamp_n = cfg.u("lamps", 48) as usize;
     for (l, mut v) in lamps {
         *v = if night && l.0 < lamp_n {
@@ -73,7 +141,6 @@ pub(super) fn apply(
         };
     }
     let spot_shadows = cfg.u("spotsh", 0) as usize;
-    let vspots = cfg.u("vspots", 0) as usize;
     for (e, h, mut s, mut v) in spots {
         *v = if night && h.0 < cfg.u("spots", 6).max(vspots as u32) as usize {
             Visibility::Inherited
@@ -87,18 +154,16 @@ pub(super) fn apply(
             commands.entity(e).remove::<VolumetricLight>();
         }
     }
+}
 
-    // Camera.
-    let az_cam = if toward { 0.0 } else { std::f32::consts::PI };
-    // "toward" looks down -Z (toward the sun); "away" turns around and looks down +Z, the camera
-    // sits at the far end of the street so the same canyon fills the view.
-    let pos = if toward {
-        Vec3::new(0.0, 1.8, 6.0)
-    } else {
-        Vec3::new(0.0, 1.8, -140.0)
-    };
-    let _ = az_cam;
-    let look_dir = if toward { Vec3::NEG_Z } else { Vec3::Z };
+fn apply_camera(
+    cfg: &Cfg,
+    commands: &mut Commands,
+    cam: Entity,
+    images: &mut Assets<Image>,
+    pos: Vec3,
+    look_dir: Vec3,
+) {
     commands
         .entity(cam)
         .insert(Transform::from_translation(pos).looking_to(look_dir, Vec3::Y));
@@ -132,73 +197,9 @@ pub(super) fn apply(
             .entity(cam)
             .remove::<GeneratedEnvironmentMapLight>();
     }
-    // Mirror cameras (render to a small 8-bit image; every `mevery`-th frame).
-    for e in stale_q {
-        commands.entity(e).despawn();
-    }
-    every.0 = cfg.u("mevery", 1);
-    let mw = cfg.u("msize", 256);
-    for i in 0..cfg.u("mirrors", 0) as usize {
-        let mut image = Image::new_fill(
-            Extent3d {
-                width: mw,
-                height: mw / 2,
-                depth_or_array_layers: 1,
-            },
-            TextureDimension::D2,
-            &[0, 0, 0, 255],
-            TextureFormat::Rgba8UnormSrgb,
-            RenderAssetUsages::default(),
-        );
-        image.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING
-            | TextureUsages::COPY_SRC
-            | TextureUsages::RENDER_ATTACHMENT;
-        let handle = images.add(image);
-        let mut m = commands.spawn((
-            Camera3d::default(),
-            Camera {
-                order: -1 - i as isize,
-                ..default()
-            },
-            RenderTarget::Image(handle.into()),
-            Msaa::Off,
-            Transform::from_translation(pos + Vec3::new(if i == 0 { 2.5 } else { -2.5 }, 0.3, 1.0))
-                .looking_to(look_dir, Vec3::Y),
-            Mirror,
-        ));
-        if cfg.u("mhdr", 0) == 1 {
-            m.insert(Hdr);
-        }
-        if cfg.u("mibl", 0) == 1 {
-            m.insert(GeneratedEnvironmentMapLight {
-                environment_map: images.add(sky_cube(64)),
-                intensity: 500.0,
-                ..default()
-            });
-        }
-    }
-    let ballast = cfg.u("ballast", 0);
-    if ballast > 0 {
-        let mat = cones.add(ConeMaterial {
-            params: Vec4::ZERO,
-            params2: Vec4::new(ballast as f32, 0.0, 0.0, 0.0),
-            march: false,
-            ballast: true,
-        });
-        commands.spawn((
-            Mesh3d(assets.quad.clone()),
-            MeshMaterial3d(mat),
-            Transform::from_translation(pos + look_dir * 1.0)
-                .looking_to(look_dir, Vec3::Y)
-                .with_scale(Vec3::new(1.7, 1.0, 1.0)),
-            NotShadowCaster,
-            NotShadowReceiver,
-            RenderLayers::layer(1),
-            bevy::camera::visibility::NoFrustumCulling,
-            Cone,
-        ));
-    }
-    let tech = cfg.s("tech", "none");
+}
+
+fn apply_prepass_fog(cfg: &Cfg, commands: &mut Commands, cam: Entity, vspots: usize) {
     let need_prepass = cfg.u("prepass", 0) == 1 || cfg.u("fade", 0) == 1;
     if need_prepass {
         commands.entity(cam).insert(DepthPrepass);
@@ -214,99 +215,6 @@ pub(super) fn apply(
         });
     } else {
         commands.entity(cam).remove::<VolumetricFog>();
-    }
-
-    // Fog volume.
-    if cfg.u("fog", 0) == 1 || vspots > 0 {
-        let side = cfg.f("vol", 200.0);
-        commands.spawn((
-            FogVolume {
-                density_factor: cfg.f("density", 0.002),
-                scattering: 0.3,
-                absorption: 0.1,
-                scattering_asymmetry: cfg.f("g", 0.6),
-                ..default()
-            },
-            Transform::from_translation(pos).with_scale(Vec3::splat(side)),
-            Fog,
-        ));
-    }
-
-    // Cones.
-    let n = cfg.u("n", 0) as usize;
-    if n > 0 && (tech == "mesh" || tech == "march") {
-        let march = tech == "march";
-        let fade = cfg.u("fade", 0) == 1;
-        let mat_l = cones.add(ConeMaterial {
-            params: Vec4::new(
-                if march {
-                    cfg.f("inten", 3.0)
-                } else {
-                    cfg.f("inten", 0.45)
-                },
-                cfg.f("edge", 2.0),
-                if fade { 1.5 } else { 0.0 },
-                cfg.f("axial", 1.5),
-            ),
-            params2: Vec4::new(cfg.u("msteps", 8) as f32, 0.35, 0.0, cfg.f("dbg", 0.0)),
-            march,
-            ballast: false,
-        });
-        if cfg.u("inside", 0) == 1 {
-            // A big cone around the camera: the view starts inside its volume.
-            let (len, half) = (40.0f32, 22f32.to_radians());
-            commands.spawn((
-                Mesh3d(assets.cone.clone()),
-                MeshMaterial3d(mat_l.clone()),
-                Transform::from_translation(pos - look_dir * 3.0 + Vec3::new(0.0, 0.3, 0.0))
-                    .looking_to(look_dir, Vec3::Y)
-                    .with_scale(Vec3::new(len * half.tan(), len * half.tan(), len)),
-                MeshTag::new(255 | (240 << 8) | (200 << 16)),
-                NotShadowCaster,
-                NotShadowReceiver,
-                Cone,
-            ));
-        }
-        let mut rng = Rng(99);
-        for i in 0..n {
-            let lantern = i % 5 < 3;
-            let side = if i % 2 == 0 { -1.0 } else { 1.0 };
-            let zf = (i as f32 + 0.5) / n as f32;
-            let z = -8.0 - zf * 120.0;
-            let (apex, dir, len, half) = if lantern {
-                (
-                    Vec3::new(side * 5.5, 6.5, z),
-                    Vec3::new(-side * 0.25, -1.0, 0.0).normalize(),
-                    8.0,
-                    30f32.to_radians(),
-                )
-            } else {
-                let lane = if rng.next() < 0.5 { -2.0 } else { 2.0 };
-                (
-                    Vec3::new(lane + rng.range(-0.5, 0.5), 0.8, z),
-                    if lane < 0.0 { Vec3::NEG_Z } else { Vec3::Z },
-                    35.0,
-                    14f32.to_radians(),
-                )
-            };
-            let col = if lantern {
-                [255u32, 215, 150]
-            } else {
-                [255, 245, 215]
-            };
-            let tag = col[0] | (col[1] << 8) | (col[2] << 16);
-            commands.spawn((
-                Mesh3d(assets.cone.clone()),
-                MeshMaterial3d(mat_l.clone()),
-                Transform::from_translation(apex)
-                    .looking_to(dir, Vec3::Y)
-                    .with_scale(Vec3::new(len * half.tan(), len * half.tan(), len)),
-                MeshTag::new(tag),
-                NotShadowCaster,
-                NotShadowReceiver,
-                Cone,
-            ));
-        }
     }
 }
 

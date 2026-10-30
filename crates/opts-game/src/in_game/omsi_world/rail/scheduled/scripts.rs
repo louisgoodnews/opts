@@ -81,19 +81,21 @@ fn run_unit(
     }
 }
 
+/// The script engine, route and variables of one unit of a scheduled train.
+type ScriptUnit = (
+    &'static mut opts_bevy::VehicleScripts,
+    &'static mut opts_bevy::route::VehicleRoute,
+    &'static opts_bevy::AiVariables,
+);
+
 /// Feeds the units' scripts of the scheduled trains near the camera and runs their frame: the
 /// doors follow the stop (`AI_Scheduled_AtStation`), the display shows the run's line.
-#[allow(clippy::type_complexity)]
 pub fn step_rail_scripts(
     time: Res<Time>,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut trains: Query<(&mut AiTrain, &Transform)>,
-    mut units: Query<(
-        &mut opts_bevy::VehicleScripts,
-        &mut opts_bevy::route::VehicleRoute,
-        &opts_bevy::AiVariables,
-    )>,
+    mut units: Query<ScriptUnit>,
 ) {
     let (Some(env), Ok(cam)) = (env, camera.single()) else {
         return;

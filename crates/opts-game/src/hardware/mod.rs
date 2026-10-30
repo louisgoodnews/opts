@@ -146,7 +146,6 @@ fn finish(
 }
 
 /// Hands renderer facts to the probe once they exist, then probes again.
-#[allow(clippy::too_many_arguments)]
 fn collect_renderer_inputs(
     mut state: ResMut<HardwareState>,
     adapter: Option<Res<RenderAdapterInfo>>,

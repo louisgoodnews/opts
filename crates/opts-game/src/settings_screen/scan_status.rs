@@ -305,58 +305,24 @@ pub fn spawn_chip(c: &mut Commands, pane: Entity) {
     ));
 }
 
-type ReasonQuery<'w, 's> = Query<
-    'w,
-    's,
-    (&'static mut L10nKey, &'static mut L10nArgs),
-    (With<ScanChipReason>, Without<ScanChipLabel>),
->;
-
-type ChipParts<'w, 's> = (
-    Query<
-        'w,
-        's,
-        (&'static mut BackgroundRole, &'static mut Tooltip),
-        (
-            With<ScanChip>,
-            Without<ScanChipIcon>,
-            Without<ScanChipLabel>,
-        ),
-    >,
-    Query<
-        'w,
-        's,
-        (&'static mut Text, &'static mut ForegroundRole),
-        (With<ScanChipIcon>, Without<ScanChipLabel>),
-    >,
-    Query<
-        'w,
-        's,
-        (
-            &'static mut L10nKey,
-            &'static mut L10nArgs,
-            &'static mut ForegroundRole,
-        ),
-        (With<ScanChipLabel>, Without<ScanChipIcon>),
-    >,
-);
-
 /// Recomputes the verdict when its inputs change (the facts arrived, a scan started or ended, the
 /// language changed) and at least every few seconds (the age of the last scan moves), and updates
 /// the chip. While the background facts are not there yet the chip says it is checking.
-#[allow(clippy::too_many_arguments)]
 pub fn refresh_scan_chip(
     time: Res<Time>,
-    loc: Res<Localization>,
-    settings: Option<Res<GameSettings>>,
-    service: Option<Res<CatalogueService>>,
-    facts: Res<ContentFactsStore>,
+    chip: chip_facts::ChipFacts,
     fresh: Query<(), Added<ScanChip>>,
     mut since: Local<f32>,
     mut last: Local<Option<(Option<ScanInputs>, String)>>,
     mut parts: ChipParts,
     mut reasons: ReasonQuery,
 ) {
+    let chip_facts::ChipFacts {
+        loc,
+        settings,
+        service,
+        facts,
+    } = chip;
     *since += time.delta_secs();
     let rebuilt = !fresh.is_empty();
     let Some(settings) = settings else { return };
@@ -377,23 +343,7 @@ pub fn refresh_scan_chip(
     let Some(inputs) = inputs else {
         // Not known yet: a quiet neutral chip, never a verdict we cannot back up.
         *last = Some(key);
-        for (mut b, mut tip) in &mut parts.0 {
-            b.0 = ColorRole::SurfaceVariant;
-            tip.0 = loc.t("scan-why-pending").into();
-        }
-        for (mut t, mut f) in &mut parts.1 {
-            t.0 = icons::REFRESH.to_owned();
-            f.0 = ColorRole::OnSurfaceVariant;
-        }
-        for (mut k, mut a, mut f) in &mut parts.2 {
-            k.0 = "scan-chip-pending";
-            a.0.clear();
-            f.0 = ColorRole::OnSurfaceVariant;
-        }
-        for (mut k, mut a) in &mut reasons {
-            k.0 = "scan-why-pending";
-            a.0.clear();
-        }
+        chip_parts::show_pending(&loc, &mut parts, &mut reasons);
         return;
     };
     *last = Some((Some(inputs), loc.locale().to_owned()));
@@ -427,6 +377,10 @@ pub fn refresh_scan_chip(
         )];
     }
 }
+
+mod chip_facts;
+mod chip_parts;
+use chip_parts::{ChipParts, ReasonQuery};
 
 #[cfg(test)]
 mod tests;

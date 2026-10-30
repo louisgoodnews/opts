@@ -135,28 +135,99 @@ fn route_overlay(
     (route_lines, route_stops, scheduled_px)
 }
 
+/// The road chords around the centre: the lane graph's paths, then the fixture (tests).
+fn road_lines(
+    (traffic, fixture): (Option<&TrafficState>, Option<&FixtureRoads>),
+    centre: DVec2,
+    (radius_m, min_chord): (f64, f64),
+) -> Vec<MapLine> {
+    let mut roads = Vec::new();
+    let radius = radius_m * std::f64::consts::SQRT_2;
+    if let Some(t) = traffic {
+        t.roads_near(centre, radius, &mut roads);
+    }
+    if let Some(f) = fixture {
+        f.roads_near(centre, radius, &mut roads);
+    }
+    let mut lines = Vec::with_capacity(roads.len() * 2);
+    for road in &roads {
+        push_chords(road, centre, min_chord, &mut lines);
+    }
+    lines
+}
+
+/// The vehicle markers in map pixels around the centre.
+fn marker_pixels(markers: &[(DVec2, f32, bool)], centre: DVec2) -> Vec<MapMarker> {
+    markers
+        .iter()
+        .map(|(p, h, active)| MapMarker {
+            pos: Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
+            heading: *h,
+            active: *active,
+        })
+        .collect()
+}
+
+/// Copies the canvas into the image the HUD shows.
+fn upload(images: &mut Assets<Image>, handle: &Handle<Image>, canvas: &raster::Canvas) {
+    if let Some(mut image) = images.get_mut(handle) {
+        match image.data.as_mut() {
+            Some(data) if data.len() == canvas.data.len() => data.copy_from_slice(&canvas.data),
+            _ => image.data = Some(canvas.data.clone()),
+        }
+    }
+}
+
+/// What the state remembers of this redraw.
+fn record(
+    state: &mut MiniMapState,
+    started: std::time::Instant,
+    (lines, markers): (usize, usize),
+    (centre, up_heading): (DVec2, f32),
+) {
+    let us = started.elapsed().as_micros() as u64;
+    state.frames += 1;
+    state.last_us = us;
+    state.worst_us = state.worst_us.max(us);
+    state.lines = lines;
+    state.markers = markers;
+    state.centre = Some(centre);
+    state.up_heading_deg = up_heading.to_degrees().rem_euclid(360.0);
+}
+
+/// The map colours of the current theme and variant.
+fn look_colors(look: &super::params::MapLook) -> MapColors {
+    colors_of(
+        look.theme
+            .as_ref()
+            .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
+                t.instrument(*look.variant)
+            }),
+    )
+}
+
 /// Redraws the map at most 10 times per second.
-#[allow(clippy::too_many_arguments)]
 pub fn redraw(
     time: Res<Time<Real>>,
     mut state: ResMut<MiniMapState>,
-    mut canvas: ResMut<MiniMapCanvas>,
-    handle: Res<MiniMapImage>,
-    mut images: ResMut<Assets<Image>>,
-    variant: Res<InstrumentVariant>,
-    theme: Option<Res<MaterialTheme>>,
-    vehicles: Query<(
-        &GlobalTransform,
-        Option<&SessionVehicle>,
-        Has<PlayerVehicle>,
-    )>,
-    cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    traffic: Option<Res<TrafficState>>,
-    route: Option<Res<super::super::route_path::PlayerRoutePath>>,
-    scheduled: Option<Res<super::super::route_path::ScheduledVehicles>>,
-    fixture: Option<Res<FixtureRoads>>,
-    hud: Option<Res<super::super::HudValues>>,
+    texture: super::params::MiniTexture,
+    look: super::params::MapLook,
+    poses: super::params::MapPoses,
+    sources: super::params::MiniSources,
 ) {
+    let super::params::MiniTexture {
+        mut canvas,
+        handle,
+        mut images,
+    } = texture;
+    let super::params::MapPoses { vehicles, cameras } = poses;
+    let super::params::MiniSources {
+        traffic,
+        route,
+        scheduled,
+        fixture,
+        hud,
+    } = sources;
     state.since += time.delta_secs();
     if !state.config.enabled || state.since < UPDATE_INTERVAL.as_secs_f32() {
         return;
@@ -173,13 +244,8 @@ pub fn redraw(
         return;
     };
 
-    let colors = colors_of(
-        theme
-            .as_ref()
-            .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
-                t.instrument(*variant)
-            }),
-    );
+    let colors = look_colors(&look);
+
     let view = choose_view(
         &mut state,
         (centre, scene.heading),
@@ -187,30 +253,14 @@ pub fn redraw(
         hud.as_deref(),
         tick_dt,
     );
-    // Roads: the lane graph's paths, then the fixture (tests).
-    let mut roads = Vec::new();
-    let radius = f64::from(view.radius_m) * std::f64::consts::SQRT_2;
-    if let Some(t) = &traffic {
-        t.roads_near(centre, radius, &mut roads);
-    }
-    if let Some(f) = &fixture {
-        f.roads_near(centre, radius, &mut roads);
-    }
     let px_per_m = f64::from(canvas.size) / 2.0 / f64::from(view.radius_m);
     let min_chord = 3.0 / px_per_m;
-    let mut lines = Vec::with_capacity(roads.len() * 2);
-    for road in &roads {
-        push_chords(road, centre, min_chord, &mut lines);
-    }
-    let markers: Vec<MapMarker> = scene
-        .markers
-        .iter()
-        .map(|(p, h, active)| MapMarker {
-            pos: Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
-            heading: *h,
-            active: *active,
-        })
-        .collect();
+    let lines = road_lines(
+        (traffic.as_deref(), fixture.as_deref()),
+        centre,
+        (f64::from(view.radius_m), min_chord),
+    );
+    let markers = marker_pixels(&scene.markers, centre);
     let (route_lines, route_stops, scheduled_px) =
         route_overlay(route.as_deref(), scheduled.as_deref(), centre, min_chord);
     raster::render_routed(
@@ -224,23 +274,15 @@ pub fn redraw(
         },
         &markers,
         &colors,
-        canvas.size as f32 / 176.0,
-        true,
+        (canvas.size as f32 / 176.0, true),
     );
-    if let Some(mut image) = images.get_mut(handle) {
-        match image.data.as_mut() {
-            Some(data) if data.len() == canvas.data.len() => data.copy_from_slice(&canvas.data),
-            _ => image.data = Some(canvas.data.clone()),
-        }
-    }
-    let us = started.elapsed().as_micros() as u64;
-    state.frames += 1;
-    state.last_us = us;
-    state.worst_us = state.worst_us.max(us);
-    state.lines = lines.len();
-    state.markers = markers.len();
-    state.centre = Some(centre);
-    state.up_heading_deg = view.up_heading.to_degrees().rem_euclid(360.0);
+    upload(&mut images, handle, canvas);
+    record(
+        &mut state,
+        started,
+        (lines.len(), markers.len()),
+        (centre, view.up_heading),
+    );
 }
 
 /// Writes the caption below the map: the radius and what points up.

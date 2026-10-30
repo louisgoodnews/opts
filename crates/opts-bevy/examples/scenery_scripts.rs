@@ -62,6 +62,66 @@ fn run(scripts: &mut SceneryScripts) -> (usize, bool, u64, u128) {
     (diags, live, (2 * FRAMES_PER_SCENARIO) as u64, nanos)
 }
 
+fn print_table(per: &HashMap<String, PerScript>, top: usize) {
+    let mut rows: Vec<_> = per.iter().collect();
+    rows.sort_by(|a, b| b.1.objects.cmp(&a.1.objects).then(a.0.cmp(b.0)));
+    println!(
+        "{:<36} {:>7} {:>8} {:>8} {:>8} {:>6} {:>9}",
+        "script", "objects", "compile", "missing", "runtime", "live", "us/tick"
+    );
+    for (name, p) in rows.iter().take(top) {
+        println!(
+            "{:<36} {:>7} {:>8} {:>8} {:>8} {:>6} {:>9.2}",
+            name,
+            p.objects,
+            p.compile_errors,
+            p.missing_files,
+            p.runtime_diags,
+            p.live,
+            p.nanos as f64 / p.ticks.max(1) as f64 / 1000.0
+        );
+    }
+}
+
+/// Prints the totals; `counts` is (.sco files, unparsable, with scripts).
+fn print_totals(
+    per: &HashMap<String, PerScript>,
+    messages: HashMap<String, usize>,
+    counts: (usize, usize, usize),
+) {
+    let (files, unparsable, scripted) = counts;
+    let sum = |f: fn(&PerScript) -> usize| per.values().map(f).sum::<usize>();
+    let objects_with = |f: fn(&PerScript) -> usize| per.values().filter(|p| f(p) > 0).count();
+    let ticks: u64 = per.values().map(|p| p.ticks).sum();
+    let nanos: u128 = per.values().map(|p| p.nanos).sum();
+    println!(
+        "\n.sco files: {} ({} unparsable), with scripts: {scripted}, distinct first scripts: {}",
+        files,
+        unparsable,
+        per.len()
+    );
+    println!(
+        "compile errors: {} (in {} script names); missing files: {} (in {}); run-time diagnostics: {} (in {}); live objects: {}",
+        sum(|p| p.compile_errors),
+        objects_with(|p| p.compile_errors),
+        sum(|p| p.missing_files),
+        objects_with(|p| p.missing_files),
+        sum(|p| p.runtime_diags),
+        objects_with(|p| p.runtime_diags),
+        sum(|p| p.live)
+    );
+    let mut top_messages: Vec<_> = messages.into_iter().collect();
+    top_messages.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    println!("most common run-time diagnostics:");
+    for (m, n) in top_messages.iter().take(15) {
+        println!("  {n:>5}  {m}");
+    }
+    println!(
+        "mean cost per tick (host feed + {{frame}}): {:.2} us over {ticks} ticks",
+        nanos as f64 / ticks.max(1) as f64 / 1000.0
+    );
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let Some(root) = args.next().map(PathBuf::from) else {
@@ -74,7 +134,7 @@ fn main() {
     scos(&root.join("Sceneryobjects"), &mut files);
     let mut per: HashMap<String, PerScript> = HashMap::new();
     let mut messages: HashMap<String, usize> = HashMap::new();
-    let (mut scripted, mut unparsable) = (0, 0);
+    let (mut scripted, mut unparsable) = (0usize, 0usize);
     for path in &files {
         let Ok(bytes) = std::fs::read(path) else {
             continue;
@@ -119,52 +179,6 @@ fn main() {
         entry.ticks += ticks;
         entry.nanos += nanos;
     }
-    let mut rows: Vec<_> = per.iter().collect();
-    rows.sort_by(|a, b| b.1.objects.cmp(&a.1.objects).then(a.0.cmp(b.0)));
-    println!(
-        "{:<36} {:>7} {:>8} {:>8} {:>8} {:>6} {:>9}",
-        "script", "objects", "compile", "missing", "runtime", "live", "us/tick"
-    );
-    for (name, p) in rows.iter().take(top) {
-        println!(
-            "{:<36} {:>7} {:>8} {:>8} {:>8} {:>6} {:>9.2}",
-            name,
-            p.objects,
-            p.compile_errors,
-            p.missing_files,
-            p.runtime_diags,
-            p.live,
-            p.nanos as f64 / p.ticks.max(1) as f64 / 1000.0
-        );
-    }
-    let sum = |f: fn(&PerScript) -> usize| per.values().map(f).sum::<usize>();
-    let objects_with = |f: fn(&PerScript) -> usize| per.values().filter(|p| f(p) > 0).count();
-    let ticks: u64 = per.values().map(|p| p.ticks).sum();
-    let nanos: u128 = per.values().map(|p| p.nanos).sum();
-    println!(
-        "\n.sco files: {} ({} unparsable), with scripts: {scripted}, distinct first scripts: {}",
-        files.len(),
-        unparsable,
-        per.len()
-    );
-    println!(
-        "compile errors: {} (in {} script names); missing files: {} (in {}); run-time diagnostics: {} (in {}); live objects: {}",
-        sum(|p| p.compile_errors),
-        objects_with(|p| p.compile_errors),
-        sum(|p| p.missing_files),
-        objects_with(|p| p.missing_files),
-        sum(|p| p.runtime_diags),
-        objects_with(|p| p.runtime_diags),
-        sum(|p| p.live)
-    );
-    let mut top_messages: Vec<_> = messages.into_iter().collect();
-    top_messages.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-    println!("most common run-time diagnostics:");
-    for (m, n) in top_messages.iter().take(15) {
-        println!("  {n:>5}  {m}");
-    }
-    println!(
-        "mean cost per tick (host feed + {{frame}}): {:.2} us over {ticks} ticks",
-        nanos as f64 / ticks.max(1) as f64 / 1000.0
-    );
+    print_table(&per, top);
+    print_totals(&per, messages, (files.len(), unparsable, scripted));
 }

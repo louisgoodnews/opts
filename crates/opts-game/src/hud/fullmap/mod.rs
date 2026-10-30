@@ -166,6 +166,7 @@ impl FullMapState {
 }
 
 mod draw;
+mod params;
 pub use draw::{redraw, FullMapCanvas, FullMapImage};
 
 mod overlay;
@@ -198,23 +199,21 @@ fn active_pose(
 
 /// F6 opens and closes the map, Esc closes it, a protocol request does either. Opening needs the
 /// session to be loaded and no other dialog (report, vehicle menu, pause) to hold the input.
-#[allow(clippy::too_many_arguments)]
 pub fn toggle(
     keyboard: Res<ButtonInput<KeyCode>>,
     action_keys: Option<Res<opts_bevy::ActionKeys>>,
-    load: Option<Res<SimulationLoadState>>,
-    report: Option<Res<ModalActive>>,
-    menu: Option<Res<MenuModalActive>>,
-    vehicles: Query<(
-        &GlobalTransform,
-        Option<&SessionVehicle>,
-        Has<PlayerVehicle>,
-    )>,
-    cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    job: Option<Res<crate::in_game::omsi_world::WorldLoadJob>>,
+    gates: params::MapGates,
+    poses: params::MapPoses,
     mut overview: ResMut<OverviewRoads>,
     mut state: ResMut<FullMapState>,
 ) {
+    let params::MapGates {
+        load,
+        report,
+        menu,
+        job,
+    } = gates;
+    let params::MapPoses { vehicles, cameras } = poses;
     let request = state.request.take();
     let toggle_key = opts_bevy::action_keys_of(&action_keys).just_pressed(&keyboard, "full_map");
     if state.open {

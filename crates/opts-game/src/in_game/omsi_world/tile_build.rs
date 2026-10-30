@@ -190,14 +190,13 @@ fn terrain_surfaces_step(b: &mut TileBuild, job: &mut WorldLoadJob) {
 
 /// Runs the steps of the build in `job.building` until `budget` says stop or the tile is done.
 /// Returns `true` when the tile is finished (or there was nothing to build).
-#[allow(clippy::too_many_arguments)]
 pub(super) fn advance(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
     mut ground_materials: Option<&mut Assets<GroundMaterial>>,
     budget: &mut FrameBudget,
 ) -> bool {
@@ -226,23 +225,19 @@ pub(super) fn advance(
             Phase::Registries => registries_step(&mut b, job, commands),
             Phase::Objects => {
                 if objects_step(
-                    &mut b, job, stats, commands, meshes, materials, images, budget,
+                    &mut b,
+                    (job, stats, commands),
+                    (meshes, materials, images),
+                    budget,
                 ) {
                     b.phase = Phase::Attached;
                 }
             }
             Phase::Attached => {
                 place_attached_objects(
-                    job,
-                    stats,
-                    commands,
-                    meshes,
-                    materials,
-                    images,
-                    &b.tile,
-                    b.terrain.as_ref(),
-                    b.key,
-                    b.origin,
+                    (job, stats, commands),
+                    (meshes, materials, images),
+                    (&b.tile, b.terrain.as_ref(), b.key, b.origin),
                     &mut b.children,
                 );
                 b.phase = Phase::Finish;

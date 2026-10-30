@@ -90,19 +90,31 @@ fn set_unit_defs(
     Some(job.vehicle_script_textures.clone())
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn build_unit_models(
-    commands: &mut Commands,
-    job: &mut WorldLoadJob,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
+/// The equipment options of the repaint the head unit gets.
+fn head_setvars_of(
     variant: &Variant,
-    at: DVec2,
-    fleet: &[FleetEntry],
-    repaint_seed: u64,
-    chrono: Option<&ChronoState>,
-    is_scheduled: bool,
+    pick_repaint: &dyn Fn(&crate::new_game_screen::repaints::VehicleRepaints) -> String,
+) -> Vec<(String, String)> {
+    let repaints = &variant.units[0].repaints;
+    let picked = pick_repaint(repaints);
+    let picked = picked.as_str();
+    let name = if picked.is_empty() {
+        repaints.default_name.as_str()
+    } else {
+        picked
+    };
+    repaints.setvars.get(name).cloned().unwrap_or_default()
+}
+
+pub(crate) fn build_unit_models(
+    (commands, job): (&mut Commands, &mut WorldLoadJob),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (variant, at, fleet): (&Variant, DVec2, &[FleetEntry]),
+    (repaint_seed, chrono, is_scheduled): (u64, Option<&ChronoState>, bool),
 ) -> Result<SpawnedModels, bool> {
     let origin = Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3()));
     let entities = spawn_unit_roots(commands, variant, origin);
@@ -119,17 +131,7 @@ pub(crate) fn build_unit_models(
             .unwrap_or_else(|| repaints.pick(repaint_seed))
             .to_owned()
     };
-    let head_setvars = {
-        let repaints = &variant.units[0].repaints;
-        let picked = pick_repaint(repaints);
-        let picked = picked.as_str();
-        let name = if picked.is_empty() {
-            repaints.default_name.as_str()
-        } else {
-            picked
-        };
-        repaints.setvars.get(name).cloned().unwrap_or_default()
-    };
+    let head_setvars = head_setvars_of(variant, &pick_repaint);
     for (unit, &entity) in variant.units.iter().zip(&entities) {
         let Some(lod) = unit_lod(unit) else {
             failed = Some(true);
@@ -148,11 +150,8 @@ pub(crate) fn build_unit_models(
         let (count, _, min, max) = load_segment_meshes_for(
             job,
             commands,
-            meshes,
-            materials,
-            images,
-            entity,
-            root,
+            (&mut *meshes, &mut *materials, &mut *images),
+            (entity, root),
             &lod,
             &unit.model_dir.clone(),
             &unit.tex_dirs.clone(),

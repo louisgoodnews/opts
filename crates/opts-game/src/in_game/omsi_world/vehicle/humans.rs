@@ -75,18 +75,16 @@ pub(in super::super::super) fn load_human_parts(
 ///
 /// The skinned mesh, joint pivots and head anchor come from the `.hum`, its model manifest and
 /// the `.o3d` bone weights; the seat contact point comes from the vehicle's passenger cabin.
-#[allow(clippy::too_many_arguments)]
 pub(in super::super::super) fn load_driver_human(
-    job: &mut WorldLoadJob,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    bindposes: &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
+    (job, commands): (&mut WorldLoadJob, &mut Commands),
+    (meshes, materials, images, bindposes): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+        &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
+    ),
     vehicle_root: Entity,
-    bus_dir: &Path,
-    cabin_rel: Option<&str>,
-    eye_target: Vec3,
+    (bus_dir, cabin_rel, eye_target): (&Path, Option<&str>, Vec3),
 ) -> Result<String, String> {
     use opts_bevy::{hip_offset, spawn_human, HumanPose};
     use opts_core::formats::humans::HumanProfile;

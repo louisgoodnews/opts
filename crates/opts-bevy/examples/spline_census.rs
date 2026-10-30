@@ -13,6 +13,53 @@ struct Row {
     problem: String,
 }
 
+/// Texture files of the profile that resolve in none of the usual folders.
+fn missing_textures<'a>(
+    profile: &'a SplineProfile,
+    path: &std::path::Path,
+    install: &OmsiInstall,
+    root: &std::path::Path,
+) -> Vec<&'a str> {
+    let dir = path.parent().unwrap().to_path_buf();
+    profile
+        .textures
+        .iter()
+        .filter(|t| {
+            let n = t.file.replace('\\', "/");
+            ![
+                dir.join("texture"),
+                dir.clone(),
+                dir.parent().unwrap().join("texture"),
+                dir.join("Texture"),
+                root.join("Texture"),
+                dir.join(".."),
+            ]
+            .iter()
+            .any(|d| {
+                install.find_in(d, &n).is_some()
+                    || install.find_in(d, n.rsplit('/').next().unwrap()).is_some()
+            })
+        })
+        .map(|t| t.file.as_str())
+        .collect()
+}
+
+fn print_rows(rows: &BTreeMap<String, Row>) {
+    let total: usize = rows.values().map(|r| r.count).sum();
+    let bad: usize = rows
+        .values()
+        .filter(|r| !r.problem.is_empty())
+        .map(|r| r.count)
+        .sum();
+    println!(
+        "{total} splines, {} profiles, {bad} splines with problems",
+        rows.len()
+    );
+    for (k, r) in rows.iter().filter(|(_, r)| !r.problem.is_empty()) {
+        println!("{:>5}  {k}  -> {}", r.count, r.problem);
+    }
+}
+
 fn main() {
     let dir = std::path::PathBuf::from(std::env::args().nth(1).expect("map dir"));
     let root = OmsiInstall::root_from_map_dir(&dir).expect("OMSI root");
@@ -59,44 +106,11 @@ fn main() {
                 );
                 continue;
             }
-            let dir = path.parent().unwrap().to_path_buf();
-            let missing: Vec<&str> = profile
-                .textures
-                .iter()
-                .filter(|t| {
-                    let n = t.file.replace('\\', "/");
-                    ![
-                        dir.join("texture"),
-                        dir.clone(),
-                        dir.parent().unwrap().join("texture"),
-                        dir.join("Texture"),
-                        root.join("Texture"),
-                        dir.join(".."),
-                    ]
-                    .iter()
-                    .any(|d| {
-                        install.find_in(d, &n).is_some()
-                            || install.find_in(d, n.rsplit('/').next().unwrap()).is_some()
-                    })
-                })
-                .map(|t| t.file.as_str())
-                .collect();
+            let missing = missing_textures(&profile, &path, &install, &root);
             if !missing.is_empty() {
                 row.problem = format!("texture missing: {missing:?}");
             }
         }
     }
-    let total: usize = rows.values().map(|r| r.count).sum();
-    let bad: usize = rows
-        .values()
-        .filter(|r| !r.problem.is_empty())
-        .map(|r| r.count)
-        .sum();
-    println!(
-        "{total} splines, {} profiles, {bad} splines with problems",
-        rows.len()
-    );
-    for (k, r) in rows.iter().filter(|(_, r)| !r.problem.is_empty()) {
-        println!("{:>5}  {k}  -> {}", r.count, r.problem);
-    }
+    print_rows(&rows);
 }

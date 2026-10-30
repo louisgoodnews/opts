@@ -240,19 +240,14 @@ fn object_parents(
 }
 
 /// Records one placed object (scenery, tree, parked vehicle, attachment).
-#[allow(clippy::too_many_arguments)]
 pub(super) fn object(
     job: &WorldLoadJob,
     stats: &WorldStats,
-    before: Counters,
+    (before, started): (Counters, Instant),
     frame: Frame,
-    obj: &MapObjectInstance,
-    site: Site<'_>,
-    tile: &MapTile,
-    key: (i32, i32),
-    origin: (f32, f32),
+    (obj, site): (&MapObjectInstance, Site<'_>),
+    (tile, key, origin): (&MapTile, (i32, i32), (f32, f32)),
     entity: Option<Entity>,
-    started: Instant,
 ) {
     if frame.skip {
         return;

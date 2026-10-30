@@ -51,66 +51,56 @@ pub(super) struct Fixture {
     pub(super) chord: Arc<AtomicBool>,
 }
 
-pub(super) fn fixture() -> Fixture {
-    let mut app = layout_app();
-    app.add_plugins(ControlPlugin::new(ControlConfig {
-        port: Some(0),
-        ..ControlConfig::default()
-    }));
-    let chord = Chord::default();
-    let seen = chord.0.clone();
-    app.insert_resource(chord).add_systems(Update, watch_chord);
-    let clicks = Arc::new(AtomicUsize::new(0));
-    let c = clicks.clone();
-    {
-        let mut commands = app.world_mut().commands();
-        // A 300 x 200 scroll view with 30 buttons of about 40 px.
-        let view = commands
-            .spawn((
-                Node {
-                    width: Val::Px(300.0),
-                    height: Val::Px(200.0),
-                    flex_direction: FlexDirection::Column,
-                    overflow: Overflow::scroll_y(),
-                    ..default()
-                },
-                ScrollPosition::default(),
-                UiId::new("list.view"),
-            ))
-            .id();
-        let rows: Vec<Entity> = (0..30)
-            .map(|i| {
-                let mut b = ButtonBuilder::filled(format!("Row {i}"));
-                if i == 0 {
-                    let c = c.clone();
-                    b = b.on_click(move |_, _| {
-                        c.fetch_add(1, Ordering::SeqCst);
-                    });
-                }
-                let e = b.spawn(&mut commands);
-                commands.entity(e).insert(UiId::new(format!("row.{i}")));
-                e
-            })
-            .collect();
-        commands.entity(view).add_children(&rows);
-        let sw = SwitchBuilder::standalone().spawn(&mut commands);
-        commands.entity(sw).insert(UiId::new("opt.switch"));
-        let combo = ComboboxBuilder::new("Weather")
-            .with_options(vec!["Sunny".into(), "Rain".into(), "Fog".into()])
-            .with_selected(0)
-            .spawn(&mut commands);
-        let _ = combo;
-        let long = ComboboxBuilder::new("Start")
-            .with_options((0..12).map(|i| format!("Start point {i}")).collect())
-            .spawn(&mut commands);
-        commands.entity(long).insert(UiId::new("opt.start"));
-        let field = TextFieldBuilder::outlined("Search").spawn(&mut commands);
-        commands.entity(field).insert(UiId::new("opt.search"));
-    }
-    spawn_list(&mut app);
-    for _ in 0..6 {
-        app.update();
-    }
+/// A scroll view of 30 buttons (the first counts its clicks), a switch, two combo boxes and a
+/// text field.
+fn spawn_controls(app: &mut App, c: &Arc<AtomicUsize>) {
+    let mut commands = app.world_mut().commands();
+    // A 300 x 200 scroll view with 30 buttons of about 40 px.
+    let view = commands
+        .spawn((
+            Node {
+                width: Val::Px(300.0),
+                height: Val::Px(200.0),
+                flex_direction: FlexDirection::Column,
+                overflow: Overflow::scroll_y(),
+                ..default()
+            },
+            ScrollPosition::default(),
+            UiId::new("list.view"),
+        ))
+        .id();
+    let rows: Vec<Entity> = (0..30)
+        .map(|i| {
+            let mut b = ButtonBuilder::filled(format!("Row {i}"));
+            if i == 0 {
+                let c = c.clone();
+                b = b.on_click(move |_, _| {
+                    c.fetch_add(1, Ordering::SeqCst);
+                });
+            }
+            let e = b.spawn(&mut commands);
+            commands.entity(e).insert(UiId::new(format!("row.{i}")));
+            e
+        })
+        .collect();
+    commands.entity(view).add_children(&rows);
+    let sw = SwitchBuilder::standalone().spawn(&mut commands);
+    commands.entity(sw).insert(UiId::new("opt.switch"));
+    let combo = ComboboxBuilder::new("Weather")
+        .with_options(vec!["Sunny".into(), "Rain".into(), "Fog".into()])
+        .with_selected(0)
+        .spawn(&mut commands);
+    let _ = combo;
+    let long = ComboboxBuilder::new("Start")
+        .with_options((0..12).map(|i| format!("Start point {i}")).collect())
+        .spawn(&mut commands);
+    commands.entity(long).insert(UiId::new("opt.start"));
+    let field = TextFieldBuilder::outlined("Search").spawn(&mut commands);
+    commands.entity(field).insert(UiId::new("opt.search"));
+}
+
+/// Gives the Weather combo box's header the id `opt.weather`.
+fn tag_weather_header(app: &mut App) {
     // The drop-down is operated through its header, the part that carries the id in the tree.
     // The header of the Weather combo box (the order of a query is not part of its contract).
     let world = app.world_mut();
@@ -130,6 +120,25 @@ pub(super) fn fixture() -> Fixture {
     app.world_mut()
         .entity_mut(header)
         .insert(UiId::new("opt.weather"));
+}
+
+pub(super) fn fixture() -> Fixture {
+    let mut app = layout_app();
+    app.add_plugins(ControlPlugin::new(ControlConfig {
+        port: Some(0),
+        ..ControlConfig::default()
+    }));
+    let chord = Chord::default();
+    let seen = chord.0.clone();
+    app.insert_resource(chord).add_systems(Update, watch_chord);
+    let clicks = Arc::new(AtomicUsize::new(0));
+    let c = clicks.clone();
+    spawn_controls(&mut app, &c);
+    spawn_list(&mut app);
+    for _ in 0..6 {
+        app.update();
+    }
+    tag_weather_header(&mut app);
     app.update();
     let port = app.world().resource::<ControlAddr>().0.port();
     Fixture {

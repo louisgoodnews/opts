@@ -278,6 +278,7 @@ fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Lo
     commands.entity(card).add_child(body);
 }
 
+mod params;
 mod systems;
 pub(crate) use systems::resume_drive;
 pub use systems::{build, environment_page_input, refresh_environment_page, resume_after_rebuild};

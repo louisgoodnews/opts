@@ -140,23 +140,49 @@ mod outcome;
 use outcome::build_outcome;
 pub use outcome::OutcomeSig;
 
+/// What the loading screen shows.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct LoadingData<'w> {
+    state: Res<'w, SimulationLoadState>,
+    report: Res<'w, LoadReport>,
+    session: Res<'w, InGameSessionInfo>,
+    setup: Res<'w, NewGameSetup>,
+    weather: Res<'w, opts_bevy::WeatherCatalogue>,
+    loc: Res<'w, Localization>,
+}
+
+/// The loading screen's nodes that [`update_loading_ui`] updates.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct LoadingNodes<'w, 's> {
+    fill: Query<'w, 's, &'static mut Node, With<ProgressBarFill>>,
+    percent: Query<'w, 's, &'static mut Text, (With<PercentText>, Without<ManifestText>)>,
+    stage: Query<'w, 's, (&'static mut L10nKey, &'static mut L10nArgs), With<StageText>>,
+    manifest: Query<'w, 's, (&'static ManifestText, &'static mut Text), Without<PercentText>>,
+    outcome_box: Query<'w, 's, Entity, With<OutcomeBox>>,
+}
+
 /// Keeps bar, percentage, stage sentence, manifest and outcome current.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_loading_ui(
-    state: Res<SimulationLoadState>,
-    report: Res<LoadReport>,
-    session: Res<InGameSessionInfo>,
-    setup: Res<NewGameSetup>,
-    weather: Res<opts_bevy::WeatherCatalogue>,
-    loc: Res<Localization>,
-    mut fill: Query<&mut Node, With<ProgressBarFill>>,
-    mut percent: Query<&mut Text, (With<PercentText>, Without<ManifestText>)>,
-    mut stage: Query<(&mut L10nKey, &mut L10nArgs), With<StageText>>,
-    mut manifest: Query<(&ManifestText, &mut Text), Without<PercentText>>,
-    outcome_box: Query<Entity, With<OutcomeBox>>,
+    data: LoadingData,
+    nodes: LoadingNodes,
     mut shown: Local<Option<OutcomeSig>>,
     mut commands: Commands,
 ) {
+    let LoadingData {
+        state,
+        report,
+        session,
+        setup,
+        weather,
+        loc,
+    } = data;
+    let LoadingNodes {
+        mut fill,
+        mut percent,
+        mut stage,
+        mut manifest,
+        outcome_box,
+    } = nodes;
     let pct = (state.progress * 100.0).clamp(0.0, 100.0);
     for mut n in &mut fill {
         let w = Val::Percent(pct.max(2.0));

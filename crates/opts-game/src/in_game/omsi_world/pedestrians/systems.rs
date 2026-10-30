@@ -77,8 +77,7 @@ fn spawn_walker(
             opts_bevy::scene_trace::kind::HUMAN,
             &v.name,
             &v.name,
-            root,
-            &tf,
+            (root, &tf),
             &frame,
             "ok",
             serde_json::json!({}),
@@ -91,21 +90,34 @@ fn spawn_walker(
     ));
 }
 
+/// The network, settings, pool and session facts the pedestrian spawner uses.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct PedestrianWorld<'w> {
+    net: Res<'w, PedestrianNetwork>,
+    settings: Res<'w, PedestrianSettings>,
+    pool: ResMut<'w, PedestrianPool>,
+    bindposes: ResMut<'w, Assets<SkinnedMeshInverseBindposes>>,
+    job: Option<Res<'w, super::WorldLoadJob>>,
+    env: Option<Res<'w, opts_bevy::SessionEnvironment>>,
+}
+
 /// Spawns pedestrians on lanes around the camera up to the density-derived target.
-#[allow(clippy::too_many_arguments)]
 pub fn spawn_pedestrians(
     time: Res<Time>,
     mut elapsed: Local<f32>,
     mut commands: Commands,
-    net: Res<PedestrianNetwork>,
-    settings: Res<PedestrianSettings>,
-    mut pool: ResMut<PedestrianPool>,
-    mut bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
+    world: PedestrianWorld,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     living: Query<(), With<Pedestrian>>,
-    job: Option<Res<super::WorldLoadJob>>,
-    env: Option<Res<opts_bevy::SessionEnvironment>>,
 ) {
+    let PedestrianWorld {
+        net,
+        settings,
+        mut pool,
+        mut bindposes,
+        job,
+        env,
+    } = world;
     *elapsed += time.delta_secs();
     if *elapsed < SPAWN_INTERVAL_S || settings.baseline == 0 {
         return;

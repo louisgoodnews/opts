@@ -245,6 +245,22 @@ fn choose_branch(
     }
 }
 
+/// The throttle (in drive), the service brake and whether the vehicle is held: a rail vehicle has
+/// no parking brake of its own, so its controls ignore it.
+fn pedals(controller: &opts_bevy::VehicleController, has_controls: bool) -> (f32, f32, bool) {
+    let i = &controller.sim.inputs;
+    (
+        if i.gear() == GearPosition::Drive {
+            i.throttle()
+        } else {
+            0.0
+        },
+        i.service_brake(),
+        // A rail vehicle has no parking brake of its own: its controls ignore it.
+        i.is_parking_brake_engaged() && !has_controls,
+    )
+}
+
 /// Holds the player's tram on the track and runs its longitudinal dynamics (fixed step, after the
 /// road physics, before the articulation of the following units).
 pub fn rail_player_step(
@@ -266,19 +282,7 @@ pub fn rail_player_step(
         if rail.gave_up {
             continue;
         }
-        let (traction, brake, hold) = {
-            let i = &controller.sim.inputs;
-            (
-                if i.gear() == GearPosition::Drive {
-                    i.throttle()
-                } else {
-                    0.0
-                },
-                i.service_brake(),
-                // A rail vehicle has no parking brake of its own: its controls ignore it.
-                i.is_parking_brake_engaged() && controls.is_none(),
-            )
-        };
+        let (traction, brake, hold) = pedals(&controller, controls.is_some());
         // The direction of travel changes only at a standstill; a backing vehicle keeps facing
         // the way it faced and its head moves back along the track it ran over.
         // Driven from the cab at the far end (a tram's head B, the last train of a traction) the

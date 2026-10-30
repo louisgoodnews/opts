@@ -41,14 +41,18 @@ pub fn row_colour(data: &[u8], width: usize, y: usize) -> Option<[f32; 3]> {
     Some(sum.map(|s| s / width as f32))
 }
 
+/// The sky dome's material handle query.
+type DomeQuery<'w, 's> = Query<'w, 's, &'static MeshMaterial3d<StandardMaterial>, With<SkyDome>>;
+/// The sun's directional light query.
+type SunQuery<'w, 's> = Query<'w, 's, &'static DirectionalLight, With<SunLight>>;
+
 /// Writes [`SkyCubeInput`] from the dome texture, the sun and the weather.
-#[allow(clippy::type_complexity)]
 pub fn feed_sky_cube(
     env: Res<SessionEnvironment>,
-    dome: Query<&MeshMaterial3d<StandardMaterial>, With<SkyDome>>,
+    dome: DomeQuery,
     materials: Res<Assets<StandardMaterial>>,
     images: Res<Assets<Image>>,
-    sun: Query<&DirectionalLight, With<SunLight>>,
+    sun: SunQuery,
     mut commands: Commands,
     current: Option<ResMut<SkyCubeInput>>,
 ) {

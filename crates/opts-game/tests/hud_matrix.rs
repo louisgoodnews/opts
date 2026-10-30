@@ -40,33 +40,8 @@ fn check(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) -> Vec<S
     check_at(w, h, scale, kind, extras, 14.0)
 }
 
-/// [`check`] with the user's base text size (`ui_font_size`).
-fn check_at(
-    w: u32,
-    h: u32,
-    scale: f32,
-    kind: VehicleKind,
-    extras: Extras,
-    base: f32,
-) -> Vec<String> {
-    let mut app = build_hud(w, h, scale, kind, extras);
-    if base != 14.0 {
-        app.insert_resource(opts_gui::fonts::UiTypography {
-            family: String::new(),
-            base_px: base,
-        });
-        for _ in 0..6 {
-            app.update();
-        }
-    }
-    let logical = Vec2::new(w as f32 / scale, h as f32 / scale);
-    let what = format!(
-        "{kind:?} {w}x{h} at {}% (layout {:.0}x{:.0}) {extras:?}",
-        (scale * 100.0) as u32,
-        logical.x,
-        logical.y
-    );
-    let mut found = Vec::new();
+/// The rectangles of the HUD elements and toasts that are shown, by id.
+fn shown_rects(app: &mut App) -> Vec<(String, [f32; 4])> {
     let mut shown: Vec<(String, [f32; 4])> = Vec::new();
     let mut ids: Vec<String> = ELEMENTS.iter().map(|s| (*s).to_owned()).collect();
     ids.push("hud.viewpoint".to_owned());
@@ -74,10 +49,10 @@ fn check_at(
         let Some(e) = opts_gui::ui_tree::find_entity(app.world_mut(), id) else {
             continue;
         };
-        if hidden(&app, e) {
+        if hidden(app, e) {
             continue;
         }
-        let Some(r) = rect(&mut app, id) else {
+        let Some(r) = rect(app, id) else {
             continue;
         };
         shown.push((id.clone(), r));
@@ -89,20 +64,31 @@ fn check_at(
         .iter(app.world())
         .collect();
     for (i, t) in toasts.iter().enumerate() {
-        if hidden(&app, *t) {
+        if hidden(app, *t) {
             continue;
         }
         if let Some(r) = opts_gui::ui_tree::rect_of(app.world(), *t) {
             shown.push((format!("toast{i}"), r));
         }
     }
+    shown
+}
+
+/// Findings about the shown rectangles: missing, outside the window or overlapping.
+fn layout_findings(
+    what: &str,
+    shown: &[(String, [f32; 4])],
+    logical: Vec2,
+    extras: Extras,
+) -> Vec<String> {
+    let mut found = Vec::new();
     for needed in ["hud.slot.cluster", "hud.minimap", "hud.pause"] {
         if !shown.iter().any(|(id, _)| id == needed) && !(extras.editor && needed == "hud.minimap")
         {
             found.push(format!("{what}: {needed} is not shown"));
         }
     }
-    for (id, r) in &shown {
+    for (id, r) in shown {
         if r[0] < -0.5
             || r[1] < -0.5
             || r[0] + r[2] > logical.x + 0.5
@@ -134,6 +120,37 @@ fn check_at(
             }
         }
     }
+    found
+}
+
+/// [`check`] with the user's base text size (`ui_font_size`).
+fn check_at(
+    w: u32,
+    h: u32,
+    scale: f32,
+    kind: VehicleKind,
+    extras: Extras,
+    base: f32,
+) -> Vec<String> {
+    let mut app = build_hud(w, h, scale, kind, extras);
+    if base != 14.0 {
+        app.insert_resource(opts_gui::fonts::UiTypography {
+            family: String::new(),
+            base_px: base,
+        });
+        for _ in 0..6 {
+            app.update();
+        }
+    }
+    let logical = Vec2::new(w as f32 / scale, h as f32 / scale);
+    let what = format!(
+        "{kind:?} {w}x{h} at {}% (layout {:.0}x{:.0}) {extras:?}",
+        (scale * 100.0) as u32,
+        logical.x,
+        logical.y
+    );
+    let shown = shown_rects(&mut app);
+    let mut found = layout_findings(&what, &shown, logical, extras);
     // The text rule compares every pair of texts, so it shares the exemption of tiny areas.
     let tiny = extras.toast && (logical.x < 640.0 || logical.y < 400.0);
     for f in rules::text_overflow(app.world_mut(), logical) {

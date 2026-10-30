@@ -104,8 +104,24 @@ fn details_text(stats: &WorldStats) -> String {
     )
 }
 
+/// The optional session facts the developer panel shows besides the world statistics.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct PanelSources<'w, 's> {
+    control: Option<Res<'w, opts_bevy::control::state::ControlState>>,
+    environment: Option<Res<'w, opts_bevy::SessionEnvironment>>,
+    traffic: Option<Res<'w, super::traffic::TrafficState>>,
+    scheduled: Option<Res<'w, super::traffic::ScheduledTraffic>>,
+    stops: Query<
+        'w,
+        's,
+        (
+            &'static GlobalTransform,
+            &'static opts_bevy::bus_stops::BusStopMarker,
+        ),
+    >,
+}
+
 /// Refreshes the developer panel text while it is visible.
-#[allow(clippy::too_many_arguments)]
 pub fn update_debug_overlay(
     stats: Res<WorldStats>,
     detail: Res<super::overlay_info::DeveloperDetail>,
@@ -113,13 +129,16 @@ pub fn update_debug_overlay(
         (&opts_bevy::VehicleController, &GlobalTransform),
         With<opts_bevy::PlayerVehicle>,
     >,
-    control: Option<Res<opts_bevy::control::state::ControlState>>,
-    environment: Option<Res<opts_bevy::SessionEnvironment>>,
-    traffic: Option<Res<super::traffic::TrafficState>>,
-    scheduled: Option<Res<super::traffic::ScheduledTraffic>>,
-    stops: Query<(&GlobalTransform, &opts_bevy::bus_stops::BusStopMarker)>,
+    sources: PanelSources,
     mut query: Query<(&mut Text, &mut Visibility), With<DebugOverlayText>>,
 ) {
+    let PanelSources {
+        control,
+        environment,
+        traffic,
+        scheduled,
+        stops,
+    } = sources;
     for (mut text, mut vis) in &mut query {
         *vis = if stats.overlay_visible {
             Visibility::Visible

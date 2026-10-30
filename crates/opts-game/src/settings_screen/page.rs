@@ -211,6 +211,7 @@ impl Plugin for SettingsPagePlugin {
     }
 }
 
+mod params;
 mod refresh;
 pub use refresh::{mark_dirty, refresh_rows};
 

@@ -263,6 +263,9 @@ fn real_keyboard_cfg_and_sd77_triggers() {
     }
 }
 
+#[path = "vehicle_script_bridge/corpus_support.rs"]
+mod corpus_support;
+
 /// Verifies M-0093 acceptance criterion: the vehicle scripts of the SD200, NLC (NL/NG) and
 /// O530 families report no unimplemented host callbacks when run with vehicle_callbacks.
 #[test]
@@ -293,48 +296,8 @@ fn vehicle_scripts_corpus_families_report_no_unimplemented_callbacks() {
         let (mut engine, _) =
             opts_sim::script::load_vehicle_scripts(&manifest, |r| install.find_in(&bus_dir, r));
 
-        // Find a .hof in the vehicle directory
-        let mut hof = None;
-        if let Ok(entries) = std::fs::read_dir(&bus_dir) {
-            for e in entries.flatten() {
-                let p = e.path();
-                if p.extension().is_some_and(|x| x.eq_ignore_ascii_case("hof")) {
-                    if let Ok(hbytes) = std::fs::read(&p) {
-                        if let Ok(h) = opts_core::formats::hof::HofFile::parse_bytes(&hbytes) {
-                            hof = Some(std::sync::Arc::new(h));
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Initialize script textures from model config if available
-        let mut script_textures = Vec::new();
-        if let Some(cfg_rel) = &manifest.model_cfg {
-            if let Some(cfg_path) = install.find_in(&bus_dir, cfg_rel) {
-                if let Ok(cfg_bytes) = std::fs::read(&cfg_path) {
-                    if let Ok(model) =
-                        opts_core::formats::vehicles::model::ModelConfig::parse_bytes(&cfg_bytes)
-                    {
-                        for st in &model.script_textures {
-                            script_textures.push(
-                                opts_core::formats::script_texture::CpuScriptTexture::new(
-                                    st.width, st.height,
-                                ),
-                            );
-                        }
-                    }
-                }
-            }
-        }
-        if script_textures.is_empty() {
-            for _ in 0..8 {
-                script_textures.push(opts_core::formats::script_texture::CpuScriptTexture::new(
-                    256, 64,
-                ));
-            }
-        }
+        let hof = corpus_support::find_hof(&bus_dir);
+        let script_textures = corpus_support::script_textures(&install, &manifest, &bus_dir);
 
         let fonts = std::sync::Arc::new(std::sync::RwLock::new(
             opts_bevy::text_texture::load_fonts(&install),

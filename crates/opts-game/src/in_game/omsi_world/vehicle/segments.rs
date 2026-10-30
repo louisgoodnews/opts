@@ -1,13 +1,10 @@
 //! Loading the segment meshes of a vehicle and its repaints.
 
-use super::skins::{
-    anim_pivots, articulation_runs, bind_skins, forms_cycle, is_bone_stem, mesh_pivot, pick_run,
-    pivot_of, SkinBinding,
-};
 use super::*;
 
 mod overrides;
-use overrides::{build_overrides, in_file_order, mesh_stem};
+mod state;
+use state::{SegmentAssets, SegmentState};
 
 /// Reads the first vehicle listed in the map's `ailists.cfg` (fallback when no `--vehicle-path`).
 pub(in super::super::super) fn first_ai_list_vehicle(job: &WorldLoadJob) -> Option<PathBuf> {
@@ -60,273 +57,55 @@ pub(super) fn repaint_map(
 
 /// Loads the visible lod0 meshes of one vehicle segment as children of `root`.
 /// Returns `(mesh_count, vertex_count, bounds_min, bounds_max)` (Bevy space, body meshes only).
-#[allow(clippy::too_many_arguments)]
 pub(in super::super::super) fn load_segment_meshes(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
+    stores: (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
     root: Entity,
     lod0: &opts_core::formats::vehicles::model::ModelLod,
     model_dir: &Path,
     tex_dirs: &[PathBuf],
 ) -> (usize, usize, Vec3, Vec3) {
     load_segment_meshes_for(
-        job, commands, meshes, materials, images, root, root, lod0, model_dir, tex_dirs,
+        job,
+        commands,
+        stores,
+        (root, root),
+        lod0,
+        model_dir,
+        tex_dirs,
     )
 }
 
 /// [`load_segment_meshes`] for a segment whose animations, light maps and hot spots read the
 /// variables of `owner` (the leading unit: trailers share its scripts, `[scriptshare]`).
-#[allow(clippy::too_many_arguments)]
 pub(in super::super::super) fn load_segment_meshes_for(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    root: Entity,
-    owner: Entity,
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (root, owner): (Entity, Entity),
     lod0: &opts_core::formats::vehicles::model::ModelLod,
     model_dir: &Path,
     tex_dirs: &[PathBuf],
 ) -> (usize, usize, Vec3, Vec3) {
-    let mut mesh_count = 0usize;
-    let mut vertex_count = 0usize;
-    let (mut min, mut max) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
-    // Dynamic text textures of this segment: one image per `[texttexture]` index, redrawn when the
-    // script string variable it shows changes (`vehicle_text.rs`).
-    let mut text_images: std::collections::HashMap<usize, Handle<Image>> = Default::default();
-    let mut script_images: std::collections::HashMap<usize, Handle<Image>> = Default::default();
-    // Dummy meshes (`…Dum_Gelenk_A`) that carry a bone's animation, and the skinned meshes
-    // (`[smoothskin]` + `[setbone]`: the articulation bellows) bound to them.
-    let mut dummies: Vec<(String, Entity)> = Vec::new();
-    let mut skins: Vec<SkinBinding> = Vec::new();
-    // Runs of `bone_<letter>` dummies: a skinned mesh numbers its bones (`[setbone] name n`)
-    // along the run of dummies declared before it (the NF6D-style bellows of the Heuliez GX).
-    // (shared stem without the last letter, dummies in declaration order); the run touched last
-    // belongs to the skinned mesh that follows.
-    let mut bone_runs: Vec<(String, Vec<Entity>)> = Vec::new();
-    let mut last_run: Option<usize> = None;
-    // Names of the bones the skinned meshes of this model list (`[setbone]`): a mesh with that
-    // file name is the dummy that carries the bone's animation (`Gelenk_A.o3d` for `Gelenk_A`).
-    let bone_names: std::collections::HashSet<String> = lod0
-        .meshes
-        .iter()
-        .flat_map(|m| m.bones.iter().map(|b| b.name.to_lowercase()))
-        .collect();
-    let sibling_run = articulation_runs(&lod0.meshes);
-    // `[mesh_ident]` / `[animparent]`: a mesh inherits the animation of its parent.
-    let pivots = anim_pivots(commands, root, &lod0.meshes);
-    // How often a mesh of each file name came before (see `in_file_order`).
-    let mut repeats: std::collections::HashMap<String, u32> = Default::default();
-    for (mesh_index, mesh_def) in lod0.meshes.iter().enumerate() {
-        // Shadow-only and AI-only meshes are not part of the visible player model.
-        let vp = mesh_def.viewpoint;
-        if mesh_def.isshadow || !(vp.is_outside() || vp.is_inside()) {
-            continue;
-        }
-        // Developer aid: `OPTS_HIDE_MESH=<substring>[,<substring>]` skips matching vehicle meshes
-        // (used to bisect rendering problems).
-        if std::env::var("OPTS_HIDE_MESH").is_ok_and(|v| {
-            v.split(',')
-                .filter(|t| !t.is_empty())
-                .any(|t| mesh_def.path.to_lowercase().contains(&t.to_lowercase()))
-        }) {
-            continue;
-        }
-        // The frame this mesh lives in: its parent's pivot (`[animparent]`), else the vehicle. A mesh
-        // that others hang on (`[mesh_ident]`) animates its pivot, and its parts sit below it.
-        let own_pivot = pivot_of(&pivots, mesh_def.mesh_ident.as_deref());
-        let frame = pivot_of(&pivots, mesh_def.animparent.as_deref())
-            .filter(|_| {
-                !forms_cycle(
-                    &lod0.meshes,
-                    mesh_def.mesh_ident.as_deref(),
-                    mesh_def.animparent.as_deref(),
-                )
-            })
-            .unwrap_or(root);
-        if let Some(pivot) = own_pivot {
-            commands.entity(frame).add_child(pivot);
-            if let Some(anim) = opts_bevy::MeshAnimation::from_mesh(
-                owner,
-                mesh_def,
-                mesh_pivot(job, &mesh_def.path, model_dir, mesh_def),
-            ) {
-                commands.entity(pivot).insert(anim);
-            }
-        }
-        let parts_parent = own_pivot.unwrap_or(frame);
-        // A dummy mesh only carries the animation of a bone. Its geometry is often protected
-        // (scrambled) or empty, so the joint is an entity of its own.
-        let stem = Path::new(&mesh_def.path.replace('\\', "/"))
-            .file_stem()
-            .map(|s| s.to_string_lossy().to_lowercase())
-            .unwrap_or_default();
-        // Numbered siblings driven by `articulation_*` (`Dum_A`…`Dum_D`, `Gelenk_Dummy_A`…,
-        // `przd_a`…) are the bones' dummies even when their names say nothing about bones.
-        let is_bone_dummy = is_bone_stem(&stem) || sibling_run[mesh_index];
-        let carries_animation = mesh_def.anims.iter().any(|a| a.driver_variable().is_some());
-        if (stem.contains("dum") || is_bone_dummy || bone_names.contains(&stem))
-            && carries_animation
-        {
-            let mut joint = commands.spawn((
-                Name::new(format!("joint_{stem}")),
-                Transform::IDENTITY,
-                Visibility::Inherited,
-            ));
-            if let Some(anim) = opts_bevy::MeshAnimation::from_mesh(
-                owner,
-                mesh_def,
-                mesh_pivot(job, &mesh_def.path, model_dir, mesh_def),
-            ) {
-                joint.insert(anim);
-            }
-            let id = joint.id();
-            commands.entity(root).add_child(id);
-            dummies.push((stem.clone(), id));
-            if is_bone_dummy {
-                let mut chars = stem.chars();
-                chars.next_back();
-                let prefix = chars.as_str().to_owned();
-                let at = match bone_runs.iter().position(|(k, _)| *k == prefix) {
-                    Some(at) => at,
-                    None => {
-                        bone_runs.push((prefix, Vec::new()));
-                        bone_runs.len() - 1
-                    }
-                };
-                bone_runs[at].1.push(id);
-                last_run = Some(at);
-            }
-        }
-        let Some(o3d_path) = job.install.find_in(model_dir, &mesh_def.path) else {
-            tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, "vehicle o3d not found");
-            job.cache
-                .stats
-                .failures
-                .push(format!("vehicle o3d not found: {}", mesh_def.path));
-            continue;
-        };
-        let overrides = build_overrides(
-            job,
-            commands,
-            images,
-            mesh_def,
-            owner,
-            root,
-            tex_dirs,
-            &mut text_images,
-            &mut script_images,
-        );
-        let mut loader = ContentLoader {
-            install: &job.install,
-            cache: &mut job.cache,
-            meshes,
-            materials,
-            images,
-        };
-        super::super::trace::mesh_used(&o3d_path);
-        let skinned = mesh_def.smoothskin && !mesh_def.bones.is_empty();
-        let parts = if skinned {
-            let slots: Vec<(String, u16)> = mesh_def
-                .bones
-                .iter()
-                .filter_map(|b| u16::try_from(b.index).ok().map(|i| (b.name.clone(), i)))
-                .collect();
-            loader.o3d_skinned_parts_slots(&o3d_path, tex_dirs, &overrides, &slots)
-        } else {
-            loader.o3d_parts(&o3d_path, tex_dirs, &overrides)
-        };
-        let copy = *repeats
-            .entry(mesh_stem(&mesh_def.path))
-            .and_modify(|n| *n += 1)
-            .or_insert(0);
-        let parts = in_file_order(job, materials, parts, copy);
-        for part in &parts {
-            if let Some(mesh) = meshes.get(&part.mesh) {
-                if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
-                    mesh.attribute(Mesh::ATTRIBUTE_POSITION)
-                {
-                    let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
-                    for p in pos {
-                        lo = lo.min(Vec3::from(*p));
-                        hi = hi.max(Vec3::from(*p));
-                    }
-                    // Camera framing uses the vehicle body only: meshes that are huge or far
-                    // from the origin (shadow volumes, sky/helper geometry) would skew it.
-                    if (hi - lo).max_element() < 16.0 && ((hi + lo) * 0.5).abs().max_element() < 8.0
-                    {
-                        min = min.min(lo);
-                        max = max.max(hi);
-                    }
-                }
-            }
-            vertex_count += part.vertices;
-            mesh_count += 1;
-        }
-        let spawned = attach_model_parts(commands, parts_parent, &parts, &mesh_def.path);
-        // Script variables move and show the mesh (`[newanim]`, `[visible]`) and switch its light
-        // maps; a click on it raises its `[mouseevent]` trigger. A pivot already carries the
-        // animation of its parts.
-        let anim = if own_pivot.is_some() {
-            None
-        } else {
-            opts_bevy::MeshAnimation::from_mesh(
-                owner,
-                mesh_def,
-                mesh_pivot(job, &mesh_def.path, model_dir, mesh_def),
-            )
-        };
-        let view_scope = opts_bevy::ViewScope::of(mesh_def.viewpoint);
-        let hot_spot = super::hot_spots::hot_spot_of(&lod0.meshes, mesh_index);
-        if skinned {
-            skins.push(SkinBinding {
-                entities: spawned.clone(),
-                bones: mesh_def.bones.clone(),
-                run: pick_run(&bone_runs, last_run, &mesh_def.bones),
-                frame: parts_parent,
-            });
-        }
-        for (e, part) in spawned.iter().copied().zip(&parts) {
-            let mut entity = commands.entity(e);
-            if let Some(anim) = &anim {
-                entity.insert(anim.clone());
-            }
-            if let Some(scope) = view_scope {
-                entity.insert(scope);
-            }
-            if let Some(var) = &part.light_variable {
-                entity.insert(opts_bevy::LightMapBinding::new(owner, var.clone()));
-            }
-            if let Some((var, light_map)) = &part.free_texture {
-                entity.insert(opts_bevy::free_texture::FreeTextureBinding::new(
-                    owner,
-                    var.clone(),
-                    tex_dirs.to_vec(),
-                    light_map.clone(),
-                ));
-            }
-            if let Some(var) = &part.alpha_variable {
-                // Starts hidden: the variable decides on the first frame (glass scaled by a
-                // script variable that is 0 stays out; dirt and rain overlays are not built).
-                entity.insert((
-                    opts_bevy::AlphaScaleBinding::new(owner, var.clone()),
-                    Visibility::Hidden,
-                ));
-            }
-            if let Some(trigger) = hot_spot {
-                entity.insert(opts_bevy::MouseTrigger {
-                    owner,
-                    trigger: trigger.to_owned(),
-                });
-            }
-        }
-    }
-    bind_skins(commands, root, &dummies, skins);
-    (mesh_count, vertex_count, min, max)
+    let mut assets = SegmentAssets {
+        meshes,
+        materials,
+        images,
+    };
+    SegmentState::new(commands, (root, owner), lod0, (model_dir, tex_dirs)).load_all(
+        job,
+        commands,
+        &mut assets,
+    )
 }
 
 #[cfg(test)]

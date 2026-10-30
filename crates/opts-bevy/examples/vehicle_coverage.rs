@@ -6,10 +6,40 @@ use opts_core::formats::vehicles::{bus::BusManifest, model::ModelConfig};
 use std::io::BufRead;
 use std::path::Path;
 
+/// A report row: vertex share, ok, scrambled, missing/bad, total, name.
+type Row = (f32, usize, usize, usize, usize, String);
+
+/// Parses a mesh file: `Some((scrambled, vertex count))`, or `None` when it fails to parse.
+fn classify(p: &Path, data: &[u8]) -> Option<(bool, usize)> {
+    let models = parse_mesh_file(p, data).ok()?;
+    let v: usize = models.iter().map(|o| o.vertices.len()).sum();
+    let scrambled = models
+        .iter()
+        .any(|o| o.vertex_layout() == VertexLayout::Unreadable);
+    Some((scrambled, v))
+}
+
+/// Sorts the rows by vertex share and prints the summary and the poorly loadable vehicles.
+fn report(rows: &mut [Row]) {
+    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let n = rows.len();
+    let broken = rows.iter().filter(|r| r.0 < 0.5).count();
+    println!("vehicles {n}; less than half of their geometry (by vertices) loadable: {broken}");
+    for (share, ok, scr, miss, total, name) in rows
+        .iter()
+        .filter(|r| r.0 < 0.9 && (std::env::var("COV_FILTER").map_or(true, |f| r.5.contains(&f))))
+    {
+        println!(
+            "{:5.1}%  ok {ok:3} scrambled {scr:3} missing/bad {miss:3} of {total:3}  {name}",
+            share * 100.0
+        );
+    }
+}
+
 fn main() {
     let root = std::env::args().nth(1).expect("OMSI root");
     let install = OmsiInstall::new(&root);
-    let mut rows = Vec::new();
+    let mut rows: Vec<Row> = Vec::new();
     for line in std::io::stdin().lock().lines().map_while(Result::ok) {
         let bus_path = Path::new(&line);
         let Ok(bytes) = std::fs::read(bus_path) else {
@@ -50,21 +80,16 @@ fn main() {
                 missing += 1;
                 continue;
             };
-            match parse_mesh_file(&p, &data) {
-                Ok(models) => {
-                    let v: usize = models.iter().map(|o| o.vertices.len()).sum();
-                    if models
-                        .iter()
-                        .any(|o| o.vertex_layout() == VertexLayout::Unreadable)
-                    {
-                        scr += 1;
-                        verts_scr += v;
-                    } else {
-                        ok += 1;
-                        verts_ok += v;
-                    }
+            match classify(&p, &data) {
+                Some((true, v)) => {
+                    scr += 1;
+                    verts_scr += v;
                 }
-                Err(_) => bad += 1,
+                Some((false, v)) => {
+                    ok += 1;
+                    verts_ok += v;
+                }
+                None => bad += 1,
             }
         }
         let total = ok + scr + missing + bad;
@@ -78,17 +103,5 @@ fn main() {
             line.rsplit("OMSI 2/").next().unwrap_or(&line).to_string(),
         ));
     }
-    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
-    let n = rows.len();
-    let broken = rows.iter().filter(|r| r.0 < 0.5).count();
-    println!("vehicles {n}; less than half of their geometry (by vertices) loadable: {broken}");
-    for (share, ok, scr, miss, total, name) in rows
-        .iter()
-        .filter(|r| r.0 < 0.9 && (std::env::var("COV_FILTER").map_or(true, |f| r.5.contains(&f))))
-    {
-        println!(
-            "{:5.1}%  ok {ok:3} scrambled {scr:3} missing/bad {miss:3} of {total:3}  {name}",
-            share * 100.0
-        );
-    }
+    report(&mut rows);
 }

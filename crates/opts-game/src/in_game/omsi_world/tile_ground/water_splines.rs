@@ -12,17 +12,10 @@ use super::*;
 /// Drawn when the tile announces water (`[water]` marker) and the file is there: 93 of 1,906
 /// water files in the installation lack the marker, scattered over 17 maps, and are taken as
 /// water the editor switched off (`docs/src/formats/map/tiles.md`, Q-M07).
-#[allow(clippy::too_many_arguments)]
 pub(in super::super) fn spawn_water(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    tile: &MapTile,
-    terrain: Option<&TileTerrain>,
-    key: (i32, i32),
-    origin: (f32, f32),
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials): (&mut Assets<Mesh>, &mut Assets<StandardMaterial>),
+    (tile, terrain, key, origin): (&MapTile, Option<&TileTerrain>, (i32, i32), (f32, f32)),
     children: &mut Vec<Entity>,
 ) {
     if !tile.has_water || !job.water_enabled {
@@ -128,16 +121,14 @@ fn spline_material(
 }
 
 /// Spline stage: extrudes every spline's profile and spawns the ribbons.
-#[allow(clippy::too_many_arguments)]
 pub(in super::super) fn spawn_splines(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    tile: &MapTile,
-    origin: (f32, f32),
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (tile, origin): (&MapTile, (f32, f32)),
     children: &mut Vec<Entity>,
 ) {
     // --- Splines ---------------------------------------------------------------------------

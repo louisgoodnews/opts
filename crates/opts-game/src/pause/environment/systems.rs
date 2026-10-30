@@ -25,18 +25,23 @@ fn restore(page: &EnvironmentPage, changes: &mut MessageWriter<EnvironmentChange
 }
 
 /// The page's controls, and Esc (cancel).
-#[allow(clippy::too_many_arguments)]
 pub fn environment_page_input(
     mut commands: Commands,
-    mut activated: MessageReader<Activated>,
-    mut modal_events: MessageReader<ModalEvent>,
-    actions: Query<(&EnvAction, Option<&WeatherId>)>,
-    roots: Query<Entity, With<EnvironmentOverlay>>,
-    modal_roots: Query<(), With<ModalRoot>>,
+    events: super::params::PageEvents,
+    nodes: super::params::PageNodes,
     env: Res<SessionEnvironment>,
     mut page: ResMut<EnvironmentPage>,
     mut changes: MessageWriter<EnvironmentChange>,
 ) {
+    let super::params::PageEvents {
+        mut activated,
+        mut modal_events,
+    } = events;
+    let super::params::PageNodes {
+        actions,
+        roots,
+        modal_roots,
+    } = nodes;
     for ModalEvent::CancelRequested(modal) in modal_events.read() {
         if roots.contains(*modal) && modal_roots.contains(*modal) {
             restore(&page, &mut changes);
@@ -85,14 +90,9 @@ pub fn environment_page_input(
 }
 
 /// Keeps the values, the weather chips and the rebuild line current.
-#[allow(clippy::too_many_arguments)]
 pub fn refresh_environment_page(
-    page: Res<EnvironmentPage>,
-    env: Res<SessionEnvironment>,
-    rebuild: Res<ChronoRebuild>,
-    loc: Res<Localization>,
+    facts: super::params::PageFacts,
     mut values: Query<(&EnvValue, &mut Text)>,
-    weather: Res<WeatherCatalogue>,
     chips: Query<(
         Entity,
         &WeatherId,
@@ -103,6 +103,13 @@ pub fn refresh_environment_page(
     mut nodes: Query<&mut Node, Without<RebuildLine>>,
     mut commands: Commands,
 ) {
+    let super::params::PageFacts {
+        page,
+        env,
+        rebuild,
+        loc,
+        weather,
+    } = facts;
     if !page.open {
         return;
     }

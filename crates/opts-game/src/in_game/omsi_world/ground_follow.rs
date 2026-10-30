@@ -93,6 +93,91 @@ fn add_unevenness(
     }
 }
 
+/// The height the vehicle rests at: the mean of the wheels that have ground within reach under
+/// them; with fewer than two it falls towards the highest ground below it.
+fn support_height(heights: &[f32; 4], z: f32) -> f32 {
+    let supported: Vec<f32> = heights
+        .iter()
+        .copied()
+        .filter(|g| *g >= z - UNSUPPORTED_DROP_M)
+        .collect();
+    if supported.len() >= 2 {
+        supported.iter().sum::<f32>() / supported.len() as f32
+    } else {
+        // Nothing carries the vehicle: it falls towards the highest ground below it.
+        heights.iter().copied().fold(f32::MIN, f32::max)
+    }
+}
+
+/// Moves the vehicle's elevation towards `target`: a jump (respawn, tile change) at once, a drop
+/// by gravity, a rise smoothly, and records the vertical acceleration of following the ground
+/// (kerbs, slopes; M-0146).
+fn settle_elevation(
+    ch: &mut opts_sim::vehicle::chassis::ChassisState,
+    motion: &mut BodyMotion,
+    (target, z): (f32, f32),
+    dt: f32,
+) {
+    let teleport = (target - z).abs() > 12.0;
+    if teleport {
+        // Teleports (respawn, tile change): no motion between the two heights.
+        ch.elevation_z = target;
+        motion.fall = 0.0;
+    } else if target < z - 0.02 {
+        motion.fall += GRAVITY * dt;
+        ch.elevation_z = (z - motion.fall * dt).max(target);
+        if ch.elevation_z <= target {
+            motion.fall = 0.0;
+        }
+    } else {
+        motion.fall = 0.0;
+        ch.elevation_z = z + (target - z) * (1.0 - (-RISE_RATE * dt).exp());
+    }
+    // The vertical acceleration of following the ground (kerbs, slopes; M-0146).
+    let rise = if teleport || dt <= 0.0 {
+        0.0
+    } else {
+        (ch.elevation_z - z) / dt
+    };
+    ch.ground_vertical_acc_m_s2 = if teleport || dt <= 0.0 {
+        0.0
+    } else {
+        ((rise - motion.rise) / dt).clamp(-MAX_GROUND_ACC, MAX_GROUND_ACC)
+    };
+    motion.rise = rise;
+}
+
+/// Eases the pitch and roll of the plane through the wheels towards what the ground asks.
+fn blend_tilt(motion: &mut BodyMotion, heights: [f32; 4], (wheelbase, track): (f32, f32), dt: f32) {
+    let [fl, fr, rl, rr] = heights;
+    let wheelbase = wheelbase.max(1.0);
+    let pitch_goal = (((fl + fr) - (rl + rr)) * 0.5 / wheelbase)
+        .atan()
+        .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
+    let roll_goal = (((fr + rr) - (fl + rl)) * 0.5 / track)
+        .atan()
+        .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
+    let blend = 1.0 - (-TILT_RATE * dt).exp();
+    motion.pitch += (pitch_goal - motion.pitch) * blend;
+    motion.roll += (roll_goal - motion.roll) * blend;
+}
+
+/// What the ground under each wheel adds to the plane through the four (the twist), for the
+/// springs: front pair and rear pair of the outer axles.
+fn set_wheel_twist(sim: &mut opts_sim::vehicle::VehicleSimulation, twist: f32) {
+    let wheels = sim.axles.len() * 2;
+    sim.wheel_ground_m.clear();
+    sim.wheel_ground_m.resize(wheels, 0.0);
+    if wheels >= 4 {
+        // Axle 0 is the front one by the files' convention; the last is the rear.
+        let last = wheels - 2;
+        sim.wheel_ground_m[0] = twist;
+        sim.wheel_ground_m[1] = -twist;
+        sim.wheel_ground_m[last] = -twist;
+        sim.wheel_ground_m[last + 1] = twist;
+    }
+}
+
 /// Puts the player's vehicle on the ground: the height under each of its four wheel positions
 /// gives elevation, pitch and roll. Wheels over a drop carry nothing; when all wheels leave the
 /// ground the vehicle falls under gravity instead of snapping down.
@@ -126,54 +211,8 @@ pub fn follow_ground(
             continue;
         };
         let heights = [fl, fr, rl, rr];
-        let supported: Vec<f32> = heights
-            .iter()
-            .copied()
-            .filter(|g| *g >= z - UNSUPPORTED_DROP_M)
-            .collect();
-        let target = if supported.len() >= 2 {
-            supported.iter().sum::<f32>() / supported.len() as f32
-        } else {
-            // Nothing carries the vehicle: it falls towards the highest ground below it.
-            heights.iter().copied().fold(f32::MIN, f32::max)
-        };
-        let teleport = (target - z).abs() > 12.0;
-        if teleport {
-            // Teleports (respawn, tile change): no motion between the two heights.
-            ch.elevation_z = target;
-            motion.fall = 0.0;
-        } else if target < z - 0.02 {
-            motion.fall += GRAVITY * dt;
-            ch.elevation_z = (z - motion.fall * dt).max(target);
-            if ch.elevation_z <= target {
-                motion.fall = 0.0;
-            }
-        } else {
-            motion.fall = 0.0;
-            ch.elevation_z = z + (target - z) * (1.0 - (-RISE_RATE * dt).exp());
-        }
-        // The vertical acceleration of following the ground (kerbs, slopes; M-0146).
-        let rise = if teleport || dt <= 0.0 {
-            0.0
-        } else {
-            (ch.elevation_z - z) / dt
-        };
-        ch.ground_vertical_acc_m_s2 = if teleport || dt <= 0.0 {
-            0.0
-        } else {
-            ((rise - motion.rise) / dt).clamp(-MAX_GROUND_ACC, MAX_GROUND_ACC)
-        };
-        motion.rise = rise;
-        let wheelbase = (front - rear).max(1.0);
-        let pitch_goal = (((fl + fr) - (rl + rr)) * 0.5 / wheelbase)
-            .atan()
-            .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
-        let roll_goal = (((fr + rr) - (fl + rl)) * 0.5 / track)
-            .atan()
-            .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
-        let blend = 1.0 - (-TILT_RATE * dt).exp();
-        motion.pitch += (pitch_goal - motion.pitch) * blend;
-        motion.roll += (roll_goal - motion.roll) * blend;
+        settle_elevation(ch, motion, (support_height(&heights, z), z), dt);
+        blend_tilt(motion, heights, (front - rear, track), dt);
         // The body on its springs (M-0073): heave, pitch and roll of the suspension model, on top
         // of the plane through the wheels (its roll is right side down positive, this one's right
         // side up).
@@ -186,17 +225,7 @@ pub fn follow_ground(
         // the springs: front pair and rear pair of the outer axles.
         let twist = (fl - fr - rl + rr) * 0.25;
         let sim = &mut controller.sim;
-        let wheels = sim.axles.len() * 2;
-        sim.wheel_ground_m.clear();
-        sim.wheel_ground_m.resize(wheels, 0.0);
-        if wheels >= 4 {
-            // Axle 0 is the front one by the files' convention; the last is the rear.
-            let last = wheels - 2;
-            sim.wheel_ground_m[0] = twist;
-            sim.wheel_ground_m[1] = -twist;
-            sim.wheel_ground_m[last] = -twist;
-            sim.wheel_ground_m[last + 1] = twist;
-        }
+        set_wheel_twist(sim, twist);
         add_unevenness(sim, &index, (px, py, sin, cos), z);
         tf.translation.y = sim.chassis.elevation_z + heave;
         tf.rotation = Quat::from_rotation_y(-h)

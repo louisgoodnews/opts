@@ -21,20 +21,13 @@ pub(super) fn terrain_step(
         commands,
         meshes,
         b.terrain_input.take(),
-        b.key,
-        b.origin,
+        (b.key, b.origin),
         &mut b.children,
     );
     spawn_water(
-        job,
-        stats,
-        commands,
-        meshes,
-        materials,
-        &b.tile,
-        b.terrain.as_ref(),
-        b.key,
-        b.origin,
+        (job, stats, commands),
+        (meshes, materials),
+        (&b.tile, b.terrain.as_ref(), b.key, b.origin),
         &mut b.children,
     );
     b.splines_failed_before = stats.splines_failed;
@@ -52,14 +45,9 @@ pub(super) fn splines_step(
 ) {
     let _t = opts_logging::stream_trace::span("tile.splines");
     spawn_splines(
-        job,
-        stats,
-        commands,
-        meshes,
-        materials,
-        images,
-        &b.tile,
-        b.origin,
+        (job, stats, commands),
+        (meshes, materials, images),
+        (&b.tile, b.origin),
         &mut b.children,
     );
     if opts_bevy::scene_trace::enabled() {
@@ -164,15 +152,14 @@ pub(super) fn registries_step(b: &mut TileBuild, job: &mut WorldLoadJob, command
 
 /// Spawns the scenery objects from where the build stopped, each one a step of its own. Returns
 /// `true` when all are placed.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn objects_step(
     b: &mut TileBuild,
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
     budget: &mut FrameBudget,
 ) -> bool {
     let _t = opts_logging::stream_trace::span("tile.objects");
@@ -193,24 +180,18 @@ pub(super) fn objects_step(
             (o, Placement::OnSpline(*z), "attachments", i - on_tile)
         };
         spawn_object(
-            job,
-            stats,
-            commands,
-            meshes,
-            materials,
-            images,
-            obj,
-            placement,
-            b.terrain.as_ref(),
-            b.key,
-            b.origin,
-            &mut b.children,
-            &b.tile,
-            super::super::trace::Site {
-                list,
-                index,
-                marker: None,
-            },
+            (job, stats, commands),
+            (meshes, materials, images),
+            (obj, placement, b.terrain.as_ref(), b.key, b.origin),
+            (
+                &mut b.children,
+                &b.tile,
+                super::super::trace::Site {
+                    list,
+                    index,
+                    marker: None,
+                },
+            ),
         );
         b.next_object += 1;
     }

@@ -190,6 +190,22 @@ fn setup(
     ));
 }
 
+/// Applies the current scenario's light-quality settings and starts its settle timer.
+fn start_scenario(commands: &mut Commands, probe: &mut Probe, now: f32) {
+    let idx = probe.idx;
+    let (glass, mirrors) = (probe.scenarios[idx].glass, probe.scenarios[idx].mirrors);
+    let mut q = ladder_preset(0);
+    q.glass_reflections = glass;
+    q.mirror_count = mirrors;
+    q.mirror_every = 1;
+    commands.insert_resource(LightQualityInput {
+        mode: LightMode::Custom,
+        custom: q,
+    });
+    probe.started_s = now;
+    probe.shot_taken = false;
+}
+
 fn drive(
     mut commands: Commands,
     time: Res<Time>,
@@ -209,17 +225,7 @@ fn drive(
     }
     let idx = probe.idx;
     if probe.started_s < 0.0 {
-        let (glass, mirrors) = (probe.scenarios[idx].glass, probe.scenarios[idx].mirrors);
-        let mut q = ladder_preset(0);
-        q.glass_reflections = glass;
-        q.mirror_count = mirrors;
-        q.mirror_every = 1;
-        commands.insert_resource(LightQualityInput {
-            mode: LightMode::Custom,
-            custom: q,
-        });
-        probe.started_s = now;
-        probe.shot_taken = false;
+        start_scenario(&mut commands, &mut probe, now);
         return;
     }
     if now - probe.started_s >= SETTLE_S && !probe.shot_taken {

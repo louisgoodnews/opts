@@ -47,15 +47,14 @@ fn complete_flight(
 ) {
     let id = flight.id;
     match load_player_vehicle(
-        job,
-        stats,
-        commands,
-        &mut assets.meshes,
-        &mut assets.materials,
-        &mut assets.images,
-        &mut assets.bindposes,
-        id,
-        false,
+        (job, stats, commands),
+        (
+            &mut assets.meshes,
+            &mut assets.materials,
+            &mut assets.images,
+            &mut assets.bindposes,
+        ),
+        (id, false),
     ) {
         Ok(spawned) => {
             registry.mark_alive(
@@ -134,13 +133,8 @@ fn place_at_stop(
     place(
         job,
         commands,
-        id,
-        rec,
-        bus_path,
-        formation_cars,
-        tile,
-        local,
-        heading,
+        (id, rec, bus_path, formation_cars),
+        (tile, local, heading),
         (0, name),
     );
 }
@@ -185,32 +179,40 @@ fn place_at_entry(
     place(
         job,
         commands,
-        id,
-        rec,
-        bus_path,
-        formation_cars,
-        tile,
-        local,
-        heading,
+        (id, rec, bus_path, formation_cars),
+        (tile, local, heading),
         (entry_id, entry_name),
     );
 }
 
+/// What the spawn-request system reads and writes besides the world-load state.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct RequestContext<'w, 's> {
+    registry: ResMut<'w, SessionVehicles>,
+    flight: Option<Res<'w, SpawnVehicleRequest>>,
+    entries: Res<'w, EntryIndex>,
+    camera: ResMut<'w, CameraState>,
+    loc: Option<Res<'w, Localization>>,
+    vehicles: Query<'w, 's, &'static GlobalTransform, VehicleFilter>,
+}
+
 /// Works down the spawn requests of the registry: places the vehicle at its entry point, builds it
 /// and makes it the active vehicle.
-#[allow(clippy::too_many_arguments)]
 pub fn handle_vehicle_requests(
     mut commands: Commands,
     job: Option<ResMut<WorldLoadJob>>,
     mut stats: ResMut<WorldStats>,
     mut assets: LoadAssets,
-    mut registry: ResMut<SessionVehicles>,
-    flight: Option<Res<SpawnVehicleRequest>>,
-    entries: Res<EntryIndex>,
-    mut camera: ResMut<CameraState>,
-    loc: Option<Res<Localization>>,
-    vehicles: Query<&GlobalTransform, VehicleFilter>,
+    ctx: RequestContext,
 ) {
+    let RequestContext {
+        mut registry,
+        flight,
+        entries,
+        mut camera,
+        loc,
+        vehicles,
+    } = ctx;
     let Some(mut job) = job else {
         return;
     };
@@ -248,11 +250,7 @@ pub fn handle_vehicle_requests(
                 resolved.cars
             }
             Err(issues) => {
-                let text = issues
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join("; ");
+                let text = join_issues(&issues);
                 tracing::error!(at = %opts_bevy::position_tag(), formation = %formation.name, "formation cannot be spawned: {text}");
                 registry.mark_failed(id, text);
                 return;
@@ -281,22 +279,30 @@ pub fn handle_vehicle_requests(
     );
 }
 
+/// The issues of a formation as one text.
+fn join_issues<T: ToString>(issues: &[T]) -> String {
+    issues
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
 /// How far from a bus stop another vehicle must stand for the stop to count as free (m): about a
 /// bus length from the place the new vehicle takes.
 const STOP_CLEAR_M: f32 = 10.0;
 
 /// Places the vehicle of request `id` at `local` of `tile` and asks for it to be built.
-#[allow(clippy::too_many_arguments)]
 fn place(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
-    id: crate::session_vehicles::VehicleId,
-    rec: &crate::session_vehicles::SessionVehicleRecord,
-    bus_path: PathBuf,
-    formation_cars: Vec<super::FormationCar>,
-    tile: (i32, i32),
-    local: Vec3,
-    heading: f32,
+    (id, rec, bus_path, formation_cars): (
+        crate::session_vehicles::VehicleId,
+        &crate::session_vehicles::SessionVehicleRecord,
+        PathBuf,
+        Vec<super::FormationCar>,
+    ),
+    (tile, local, heading): ((i32, i32), Vec3, f32),
     entry: (u32, String),
 ) {
     let session = job.session_pos(tile, local);

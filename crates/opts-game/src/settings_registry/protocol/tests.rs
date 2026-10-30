@@ -87,6 +87,85 @@ fn alternative(d: &SettingDescriptor, current: &str) -> Option<String> {
     }
 }
 
+/// Checks that one registered setting is listed, gettable, settable and resettable.
+fn check_setting(w: &mut World, d: SettingDescriptor, listed: &[String], fails: &mut Vec<String>) {
+    let key = d.key;
+    if !listed.iter().any(|k| k == key) {
+        fails.push(format!("{key}: not in settings.list"));
+    }
+    if let Outcome::Done(Err(e)) = get(w, &json!({ "key": key })) {
+        fails.push(format!("{key}: settings.get failed: {}", e.message));
+        return;
+    }
+    let usable = match d.available {
+        Available::Always => true,
+        Available::Capability(c) => w.resource::<SettingsCapabilities>().has(c),
+        Available::NotYet(_) => false,
+    };
+    if !usable {
+        let e = err(set(w, &json!({ "key": key, "value": d.default })));
+        if e.code != code::NOT_READY {
+            fails.push(format!("{key}: unavailable but set answered {}", e.code));
+        }
+        return;
+    }
+    let candidates: Vec<String> = match d.kind {
+        // Keys that no default binding and no reserved key of OPTS uses; the first accepted
+        // one is the test value.
+        SettingKind::Binding => ["Numpad7", "Numpad8", "Numpad9", "F12"]
+            .iter()
+            .map(|k| (*k).to_string())
+            .collect(),
+        _ => alternative(&d, &default_of(&d)).into_iter().collect(),
+    };
+    let Some(alt) = candidates
+        .iter()
+        .find(|c| {
+            let mut probe = world("probe");
+            matches!(
+                set(&mut probe, &json!({ "key": key, "value": c })),
+                Outcome::Done(Ok(_))
+            ) || !matches!(d.kind, SettingKind::Binding)
+        })
+        .cloned()
+    else {
+        if matches!(d.kind, SettingKind::Binding) {
+            fails.push(format!("{key}: no free key found among the candidates"));
+            return;
+        }
+        // Actions hold no value: setting one is refused.
+        if matches!(
+            set(w, &json!({ "key": key, "value": "x" })),
+            Outcome::Done(Ok(_))
+        ) {
+            fails.push(format!("{key}: an action accepted a value"));
+        }
+        return;
+    };
+    match set(w, &json!({ "key": key, "value": alt })) {
+        Outcome::Done(Ok(v)) => {
+            let want = normalize(&d, &alt).unwrap_or_else(|_| alt.clone());
+            if v["value"].as_str() != Some(want.as_str()) {
+                fails.push(format!("{key}: set {alt:?} read back {:?}", v["value"]));
+            }
+        }
+        Outcome::Done(Err(e)) => {
+            fails.push(format!("{key}: set {alt:?} refused: {}", e.message));
+            return;
+        }
+        Outcome::Wait(_) => panic!("answers at once"),
+    }
+    match reset(w, &json!({ "key": key })) {
+        Outcome::Done(Ok(v)) => {
+            if v["value"].as_str() != Some(default_of(&d).as_str()) {
+                fails.push(format!("{key}: reset gave {:?}", v["value"]));
+            }
+        }
+        Outcome::Done(Err(e)) => fails.push(format!("{key}: reset refused: {}", e.message)),
+        Outcome::Wait(_) => panic!("answers at once"),
+    }
+}
+
 #[test]
 fn every_registered_setting_is_listed_gettable_settable_and_resettable() {
     let mut w = world("coverage");
@@ -99,81 +178,7 @@ fn every_registered_setting_is_listed_gettable_settable_and_resettable() {
         .collect();
     let mut failures: Vec<String> = Vec::new();
     for d in descriptors(&w) {
-        let key = d.key;
-        if !listed_keys.iter().any(|k| k == key) {
-            failures.push(format!("{key}: not in settings.list"));
-        }
-        if let Outcome::Done(Err(e)) = get(&mut w, &json!({ "key": key })) {
-            failures.push(format!("{key}: settings.get failed: {}", e.message));
-            continue;
-        }
-        let usable = match d.available {
-            Available::Always => true,
-            Available::Capability(c) => w.resource::<SettingsCapabilities>().has(c),
-            Available::NotYet(_) => false,
-        };
-        if !usable {
-            let e = err(set(&mut w, &json!({ "key": key, "value": d.default })));
-            if e.code != code::NOT_READY {
-                failures.push(format!("{key}: unavailable but set answered {}", e.code));
-            }
-            continue;
-        }
-        let candidates: Vec<String> = match d.kind {
-            // Keys that no default binding and no reserved key of OPTS uses; the first accepted
-            // one is the test value.
-            SettingKind::Binding => ["Numpad7", "Numpad8", "Numpad9", "F12"]
-                .iter()
-                .map(|k| (*k).to_string())
-                .collect(),
-            _ => alternative(&d, &default_of(&d)).into_iter().collect(),
-        };
-        let Some(alt) = candidates
-            .iter()
-            .find(|c| {
-                let mut probe = world("probe");
-                matches!(
-                    set(&mut probe, &json!({ "key": key, "value": c })),
-                    Outcome::Done(Ok(_))
-                ) || !matches!(d.kind, SettingKind::Binding)
-            })
-            .cloned()
-        else {
-            if matches!(d.kind, SettingKind::Binding) {
-                failures.push(format!("{key}: no free key found among the candidates"));
-                continue;
-            }
-            // Actions hold no value: setting one is refused.
-            if matches!(
-                set(&mut w, &json!({ "key": key, "value": "x" })),
-                Outcome::Done(Ok(_))
-            ) {
-                failures.push(format!("{key}: an action accepted a value"));
-            }
-            continue;
-        };
-        match set(&mut w, &json!({ "key": key, "value": alt })) {
-            Outcome::Done(Ok(v)) => {
-                let want = normalize(&d, &alt).unwrap_or_else(|_| alt.clone());
-                if v["value"].as_str() != Some(want.as_str()) {
-                    failures.push(format!("{key}: set {alt:?} read back {:?}", v["value"]));
-                }
-            }
-            Outcome::Done(Err(e)) => {
-                failures.push(format!("{key}: set {alt:?} refused: {}", e.message));
-                continue;
-            }
-            Outcome::Wait(_) => panic!("answers at once"),
-        }
-        match reset(&mut w, &json!({ "key": key })) {
-            Outcome::Done(Ok(v)) => {
-                if v["value"].as_str() != Some(default_of(&d).as_str()) {
-                    failures.push(format!("{key}: reset gave {:?}", v["value"]));
-                }
-            }
-            Outcome::Done(Err(e)) => failures.push(format!("{key}: reset refused: {}", e.message)),
-            Outcome::Wait(_) => panic!("answers at once"),
-        }
+        check_setting(&mut w, d, &listed_keys, &mut failures);
     }
     assert!(
         failures.is_empty(),

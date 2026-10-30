@@ -77,23 +77,25 @@ fn show_row_marks(
 }
 
 /// Keeps the texts, bars and markers of the open panel in step with the state.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_panel(
     state: Res<ViewpointState>,
     loc: Res<Localization>,
     theme: Res<MaterialTheme>,
     variant: Res<InstrumentVariant>,
     vehicle: Query<&BusVehicle, With<PlayerVehicle>>,
-    mut values: Query<(&ViewpointValue, &mut Text), Without<ViewpointSubtitle>>,
-    mut subtitle: Query<&mut Text, (With<ViewpointSubtitle>, Without<ViewpointValue>)>,
-    mut fills: Query<(&ViewpointFill, &mut Node)>,
-    mut markers: Query<(&ViewpointMarker, &mut Visibility), Without<ViewpointUnsaved>>,
-    mut names: Query<(&ViewpointName, &mut InstrumentInk)>,
-    mut unsaved: Query<&mut Visibility, (With<ViewpointUnsaved>, Without<ViewpointMarker>)>,
-    mut paints: Query<(&ViewpointPaint, &mut BackgroundColor)>,
-    mut scope_text: Query<&mut L10nKey, With<ViewpointScopeText>>,
-    mut scope_row: Query<&mut Node, (With<ViewpointScopeRow>, Without<ViewpointFill>)>,
+    nodes: super::params::PanelNodes,
 ) {
+    let super::params::PanelNodes {
+        mut values,
+        mut subtitle,
+        mut fills,
+        mut markers,
+        mut names,
+        mut unsaved,
+        mut paints,
+        mut scope_text,
+        mut scope_row,
+    } = nodes;
     let palette = theme.instrument(*variant);
     for (paint, mut bg) in &mut paints {
         let want = if paint.0 {

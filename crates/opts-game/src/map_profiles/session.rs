@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 use bevy::app::AppExit;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_core::formats::chrono::{ChronoDate, ChronoSet};
 
@@ -172,13 +173,21 @@ pub fn key_of(
     Some(MapKey::new(&name, &newest))
 }
 
+/// What names the map of the drive: the setup, the catalogue and the command line.
+#[derive(SystemParam)]
+pub struct DriveChoice<'w> {
+    /// The choices of the new-game wizard.
+    pub setup: Res<'w, NewGameSetup>,
+    /// The maps and vehicles read.
+    pub catalogue: Option<Res<'w, GameCatalogue>>,
+    /// The command line.
+    pub args: Option<Res<'w, AppArgs>>,
+}
+
 /// `OnEnter(InGame)`, before the session is set up: resolves the profile (the picked one, else
 /// the fallback chain) and applies it to the session's settings.
-#[allow(clippy::too_many_arguments)]
 pub fn apply_on_enter(
-    setup: Res<NewGameSetup>,
-    catalogue: Option<Res<GameCatalogue>>,
-    args: Option<Res<AppArgs>>,
+    chosen: DriveChoice,
     registry: Res<SettingsRegistry>,
     store: Res<ProfileStoreRes>,
     mut pick: ResMut<MapProfilePick>,
@@ -186,6 +195,11 @@ pub fn apply_on_enter(
     mut active: ResMut<ActiveMapProfile>,
     mut stats: ResMut<FrameStats>,
 ) {
+    let DriveChoice {
+        setup,
+        catalogue,
+        args,
+    } = chosen;
     stats.reset();
     *active = ActiveMapProfile::default();
     // A drive that starts while another profile is still on (a restart without leaving) first

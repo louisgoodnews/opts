@@ -155,8 +155,8 @@ pub fn resize(app: &mut App, w: u32, h: u32) {
     }
 }
 
-/// Builds `screen` at `w` x `h` with `theme`.
-pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPreset) -> App {
+/// The headless app with every screen plugin and fixture resource, before any layout.
+fn screens_base(screen: Screen, w: u32, kind: ThemeKind, accent: AccentPreset) -> App {
     opts_game::isolation::isolate_user_dirs();
     let mut app = layout_base();
     let mut settings = GameSettings::default();
@@ -204,31 +204,60 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
     app.world_mut()
         .resource_mut::<opts_game::first_run::FirstRun>()
         .persist = false;
-    resize(&mut app, w, h);
-    app.update();
-    {
-        use opts_game::first_run::{FirstRun, Step};
-        let step = match screen {
-            Screen::FirstRunChoose => Some(Step::Choose),
-            Screen::Welcome => Some(Step::Welcome),
-            _ => None,
-        };
-        if step.is_some() {
-            app.world_mut().resource_mut::<FirstRun>().step = step;
-        }
-        if screen == Screen::Summary {
-            app.insert_resource(opts_game::session_summary::LastSession::new(
-                &Default::default(),
-                opts_game::pause::SessionStats {
-                    duration_s: 90.0,
-                    distance_m: 800.0,
-                    max_speed_m_s: 9.0,
-                    errors_at_start: 0,
-                    errors_now: 2,
-                },
-            ));
+    app
+}
+
+/// Puts the app into the state (first-run step, last session) that `screen` shows.
+fn prepare_screen(app: &mut App, screen: Screen) {
+    use opts_game::first_run::{FirstRun, Step};
+    let step = match screen {
+        Screen::FirstRunChoose => Some(Step::Choose),
+        Screen::Welcome => Some(Step::Welcome),
+        _ => None,
+    };
+    if step.is_some() {
+        app.world_mut().resource_mut::<FirstRun>().step = step;
+    }
+    if screen == Screen::Summary {
+        app.insert_resource(opts_game::session_summary::LastSession::new(
+            &Default::default(),
+            opts_game::pause::SessionStats {
+                duration_s: 90.0,
+                distance_m: 800.0,
+                max_speed_m_s: 9.0,
+                errors_at_start: 0,
+                errors_now: 2,
+            },
+        ));
+    }
+}
+
+/// Debug aid (`DBG_NEG`): reports nodes with a negative size or a radius on a collapsed node.
+fn debug_negative_sizes(app: &mut App, i: usize) {
+    let mut q = app
+        .world_mut()
+        .query::<(Entity, &ComputedNode, &Node, Option<&Name>)>();
+    for (e, c, n, name) in q.iter(app.world()) {
+        if c.size().min_element() < 0.0
+            || n.border_radius != BorderRadius::ZERO && c.size().min_element() <= 0.0
+        {
+            eprintln!(
+                "frame {i}: {e:?} {name:?} size {:?} radius {:?} w {:?} h {:?}",
+                c.size(),
+                n.border_radius,
+                n.width,
+                n.height
+            );
         }
     }
+}
+
+/// Builds `screen` at `w` x `h` with `theme`.
+pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPreset) -> App {
+    let mut app = screens_base(screen, w, kind, accent);
+    resize(&mut app, w, h);
+    app.update();
+    prepare_screen(&mut app, screen);
     let state = match screen {
         Screen::Home | Screen::FirstRunChoose | Screen::Welcome => AppState::MainMenu,
         Screen::Summary => AppState::MainMenu,
@@ -242,22 +271,7 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
         .set(state);
     for i in 0..8 {
         if std::env::var_os("DBG_NEG").is_some() {
-            let mut q = app
-                .world_mut()
-                .query::<(Entity, &ComputedNode, &Node, Option<&Name>)>();
-            for (e, c, n, name) in q.iter(app.world()) {
-                if c.size().min_element() < 0.0
-                    || n.border_radius != BorderRadius::ZERO && c.size().min_element() <= 0.0
-                {
-                    eprintln!(
-                        "frame {i}: {e:?} {name:?} size {:?} radius {:?} w {:?} h {:?}",
-                        c.size(),
-                        n.border_radius,
-                        n.width,
-                        n.height
-                    );
-                }
-            }
+            debug_negative_sizes(&mut app, i);
         }
         app.update();
     }

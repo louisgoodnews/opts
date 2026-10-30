@@ -19,6 +19,7 @@ pub mod keys;
 pub mod layout;
 pub mod minimap;
 pub mod mouse_driving;
+mod params;
 pub mod parts;
 pub mod profile;
 pub mod protocol;

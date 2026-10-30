@@ -14,6 +14,7 @@ use super::page::{SettingsPageState, SettingsSearch};
 use super::rows::label;
 
 mod ops;
+mod params;
 use ops::{run_op, select_category};
 
 /// A combo box that sets a text setting: the stored text of each option, in order.
@@ -204,23 +205,28 @@ fn open_prompt(commands: &mut Commands, key: String, old: String, new: String, s
 }
 
 /// Handles clicks, switches and the search field.
-#[allow(clippy::too_many_arguments)]
 pub fn handle_page_input(
     mut commands: Commands,
-    mut clicks: MessageReader<ButtonClicked>,
-    mut toggles: MessageReader<SwitchToggled>,
-    mut texts: MessageReader<TextChanged>,
-    mut chosen: MessageReader<ComboboxSelected>,
-    combos: Query<&SettingCombo>,
-    ops: Query<&SettingOp>,
-    switches: Query<&SettingSwitch>,
-    search: Query<(), With<SettingsSearch>>,
+    events: params::PageEvents,
+    controls: params::PageControls,
     mut state: ResMut<SettingsPageState>,
     mut api: SettingsApi,
     mut pending: Option<ResMut<PendingRevert>>,
-    mut actions: MessageWriter<SettingActionRequested>,
     loc: Res<opts_gui::l10n::Localization>,
 ) {
+    let params::PageEvents {
+        mut clicks,
+        mut toggles,
+        mut texts,
+        mut chosen,
+        mut actions,
+    } = events;
+    let params::PageControls {
+        combos,
+        ops,
+        switches,
+        search,
+    } = controls;
     for t in texts.read() {
         if search.contains(t.entity) && state.query != t.text {
             state.query.clone_from(&t.text);
@@ -323,17 +329,19 @@ pub fn capture_rebind(
 }
 
 /// Counts the prompt down; at zero (or *Revert*, or Escape) the old value returns.
-#[allow(clippy::too_many_arguments)]
 pub fn revert_prompt_system(
     mut commands: Commands,
     time: Res<Time<Real>>,
-    mut clicks: MessageReader<ButtonClicked>,
-    mut modal_events: MessageReader<ModalEvent>,
-    buttons: Query<&RevertButton>,
+    input: params::RevertInput,
     mut args: Query<&mut L10nArgs>,
     mut api: SettingsApi,
     pending: Option<ResMut<PendingRevert>>,
 ) {
+    let params::RevertInput {
+        mut clicks,
+        mut modal_events,
+        buttons,
+    } = input;
     let Some(mut p) = pending else { return };
     let mut keep = false;
     let mut revert = false;
