@@ -155,6 +155,96 @@ pub fn is_rail(manifest: &BusManifest) -> bool {
     manifest.vehicle_type == Some(2)
 }
 
+/// The pull and brake the vehicle's own scripts command when they write `M_Wheel`: torque at the
+/// wheel radius is the pull, their brake force the brake (the constants are the fallback).
+fn script_forces(
+    drive: Option<opts_sim::vehicle::ScriptDrive>,
+    rail: &RailPlayer,
+) -> Option<opts_sim::rail::ScriptForces> {
+    drive.map(|d| opts_sim::rail::ScriptForces {
+        // Forward the script pulls with positive torque. Backing up the direction is
+        // ours, so its torque counts whatever its sign: a bus-style script reverses the
+        // sign, the NF6D's reverse-drive switch keeps it.
+        traction_n: if rail.backing {
+            d.wheel_torque_nm.abs()
+        } else {
+            d.wheel_torque_nm
+        } / rail.wheel_radius_m,
+        brake_n: d.brake_force_n,
+    })
+}
+
+/// Puts a rail vehicle that has no train yet on the nearest track; gives up (it stays a road
+/// vehicle) when none is near. Returns false when the vehicle is not on a track this frame.
+fn place_on_track(
+    rail: &mut RailPlayer,
+    ch: &mut opts_sim::vehicle::chassis::ChassisState,
+    net: &RailNetwork,
+) -> bool {
+    if net.0.lane_count() == 0 {
+        return false; // tiles still streaming in
+    }
+    let p = Vec3::new(ch.position.x, ch.position.y, ch.elevation_z);
+    match net.0.nearest(p, rail.snap_m) {
+        Some((lane, s, dist)) => {
+            let l = net.0.lane(lane).expect("lane exists");
+            let (_, h) = l.at(s);
+            let along = (h - ch.heading_rad).cos();
+            let dir = if along >= 0.0 { 1 } else { -1 };
+            tracing::info!(lane, s, dist, dir, "rail vehicle placed on the track");
+            let mut train = Train::new(lane, s, dir);
+            // The chassis position is the body's origin; the train point (front bogie)
+            // lies one half span ahead of it.
+            train.advance(rail.span, &net.0);
+            rail.train = Some(train);
+        }
+        None => {
+            let nearest = net.0.nearest(p, 5_000.0).map(|(_, _, d)| d);
+            tracing::error!(
+                at = %opts_bevy::position_tag(),
+                nearest_track_m = ?nearest,
+                "rail vehicle spawned more than {} m from any track; it stays a road vehicle",
+                rail.snap_m
+            );
+            rail.gave_up = true;
+            return false;
+        }
+    }
+    true
+}
+
+/// Route choice at the next point (the `rail_branch_*` actions: the arrows) and the toggle of the
+/// points ahead.
+fn choose_branch(
+    train: &mut Train,
+    (keyboard, action_keys): (
+        &ButtonInput<KeyCode>,
+        &Option<Res<opts_bevy::action_keys::ActionKeys>>,
+    ),
+    typing: bool,
+    net: &RailNetwork,
+) {
+    let keys = opts_bevy::action_keys::resolve(action_keys);
+    if typing {
+    } else if keys.just_pressed(keyboard, "rail_branch_left") {
+        train.branch = Branch::Left;
+    } else if keys.just_pressed(keyboard, "rail_branch_straight") {
+        train.branch = Branch::Straight;
+    } else if keys.just_pressed(keyboard, "rail_branch_right") {
+        train.branch = Branch::Right;
+    } else if keys.just_pressed(keyboard, "rail_switch_toggle") {
+        // The points ahead: the next way they offer, in the order straight, left, right.
+        if let Some(ahead) = train.next_switch(&net.0, SWITCH_REACH_M) {
+            let at = ahead
+                .branches
+                .iter()
+                .position(|b| *b == train.branch)
+                .unwrap_or(0);
+            train.branch = ahead.branches[(at + 1) % ahead.branches.len()];
+        }
+    }
+}
+
 /// Holds the player's tram on the track and runs its longitudinal dynamics (fixed step, after the
 /// road physics, before the articulation of the following units).
 pub fn rail_player_step(
@@ -201,51 +291,10 @@ pub fn rail_player_step(
         }
         // The vehicle's own scripts drive it when they write `M_Wheel`: torque at the wheel
         // radius is the pull, their brake force the brake (the constants are the fallback).
-        let script = controller
-            .sim
-            .script_drive
-            .map(|d| opts_sim::rail::ScriptForces {
-                // Forward the script pulls with positive torque. Backing up the direction is
-                // ours, so its torque counts whatever its sign: a bus-style script reverses the
-                // sign, the NF6D's reverse-drive switch keeps it.
-                traction_n: if rail.backing {
-                    d.wheel_torque_nm.abs()
-                } else {
-                    d.wheel_torque_nm
-                } / rail.wheel_radius_m,
-                brake_n: d.brake_force_n,
-            });
+        let script = script_forces(controller.sim.script_drive, &rail);
         let ch = &mut controller.sim.chassis;
-        if rail.train.is_none() {
-            if net.0.lane_count() == 0 {
-                continue; // tiles still streaming in
-            }
-            let p = Vec3::new(ch.position.x, ch.position.y, ch.elevation_z);
-            match net.0.nearest(p, rail.snap_m) {
-                Some((lane, s, dist)) => {
-                    let l = net.0.lane(lane).expect("lane exists");
-                    let (_, h) = l.at(s);
-                    let along = (h - ch.heading_rad).cos();
-                    let dir = if along >= 0.0 { 1 } else { -1 };
-                    tracing::info!(lane, s, dist, dir, "rail vehicle placed on the track");
-                    let mut train = Train::new(lane, s, dir);
-                    // The chassis position is the body's origin; the train point (front bogie)
-                    // lies one half span ahead of it.
-                    train.advance(rail.span, &net.0);
-                    rail.train = Some(train);
-                }
-                None => {
-                    let nearest = net.0.nearest(p, 5_000.0).map(|(_, _, d)| d);
-                    tracing::error!(
-                        at = %opts_bevy::position_tag(),
-                        nearest_track_m = ?nearest,
-                        "rail vehicle spawned more than {} m from any track; it stays a road vehicle",
-                        rail.snap_m
-                    );
-                    rail.gave_up = true;
-                    continue;
-                }
-            }
+        if rail.train.is_none() && !place_on_track(&mut rail, ch, &net) {
+            continue;
         }
         let input = RailInput {
             traction,
@@ -258,26 +307,7 @@ pub fn rail_player_step(
         let Some(train) = rail.train.as_mut() else {
             continue;
         };
-        // Route choice at the next point (the `rail_branch_*` actions: the arrows).
-        let keys = opts_bevy::action_keys::resolve(&action_keys);
-        if typing {
-        } else if keys.just_pressed(&keyboard, "rail_branch_left") {
-            train.branch = Branch::Left;
-        } else if keys.just_pressed(&keyboard, "rail_branch_straight") {
-            train.branch = Branch::Straight;
-        } else if keys.just_pressed(&keyboard, "rail_branch_right") {
-            train.branch = Branch::Right;
-        } else if keys.just_pressed(&keyboard, "rail_switch_toggle") {
-            // The points ahead: the next way they offer, in the order straight, left, right.
-            if let Some(ahead) = train.next_switch(&net.0, SWITCH_REACH_M) {
-                let at = ahead
-                    .branches
-                    .iter()
-                    .position(|b| *b == train.branch)
-                    .unwrap_or(0);
-                train.branch = ahead.branches[(at + 1) % ahead.branches.len()];
-            }
-        }
+        choose_branch(train, (&keyboard, &action_keys), typing, &net);
         let pose_ahead = train.pose(&net.0);
         let grade = match (pose_ahead, train.pose_behind(&net.0, 6.0)) {
             (Some((a, _)), Some((b, _))) => (a.z - b.z) / 6.0,

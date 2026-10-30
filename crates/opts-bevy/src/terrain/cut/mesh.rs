@@ -84,6 +84,109 @@ impl Builder {
     }
 }
 
+/// One terrain triangle that strips cross: the parts outside the strip triangles keep the ground's
+/// plane, the parts inside follow the strips. A triangle no strip really touches is kept whole.
+fn cut_triangle(
+    b: &mut Builder,
+    cut: &TerrainCut,
+    (tri, ground): ([usize; 3], [Vec3; 3]),
+    candidates: &[u32],
+) {
+    let mut outside = vec![ground.map(Vec3::truncate).to_vec()];
+    let mut inside: Vec<(Vec<Vec2>, u32)> = Vec::new();
+    for &c in candidates {
+        let t = cut.strips.tris[c as usize];
+        let clip = t.map(Vec3::truncate);
+        let mut rest = Vec::new();
+        for poly in outside {
+            let within = clip_to_triangle(&poly, clip);
+            if area(&within) < 1e-5 {
+                rest.push(poly);
+                continue;
+            }
+            inside.push((within, c));
+            // The parts outside the strip triangle, edge by edge.
+            let mut remain = poly;
+            for e in 0..3 {
+                let (r, l) = split(&remain, clip[e], clip[(e + 1) % 3]);
+                if area(&r) >= 1e-5 {
+                    rest.push(r);
+                }
+                remain = l;
+            }
+        }
+        outside = rest;
+    }
+    if inside.is_empty() {
+        b.indices
+            .extend(tri.iter().map(|&k| u32::try_from(k).unwrap_or(0)));
+        return;
+    }
+    for poly in &outside {
+        // A sliver left along the seam of two strip triangles lies inside them.
+        let centre = poly.iter().copied().sum::<Vec2>() / poly.len() as f32;
+        if cut.height(centre.x, centre.y).is_some() {
+            continue;
+        }
+        b.polygon(poly, |q| plane_height(&ground, q));
+    }
+    for (poly, c) in &inside {
+        let t = cut.strips.tris[*c as usize];
+        b.polygon(poly, |q| cut.capped(plane_height(&t, q), q.x, q.y));
+    }
+}
+
+/// Steps along the strips' outer edges, split where the grid's triangles change.
+fn add_steps(
+    b: &mut Builder,
+    (terrain, cut): (&MapTerrain, &TerrainCut),
+    (cell, n, span): (f32, usize, f32),
+) {
+    let inside_tile = |p: Vec2| (0.0..=span).contains(&p.x) && (0.0..=span).contains(&p.y);
+    for (a3, b3) in &cut.edges {
+        let (a, bb) = (a3.truncate(), b3.truncate());
+        let mut ts = vec![0.0, 1.0];
+        let d = bb - a;
+        for k in 0..=n {
+            let g = k as f32 * cell;
+            for (pa, pd) in [(a.x, d.x), (a.y, d.y)] {
+                if pd.abs() > 1e-6 {
+                    ts.push((g - pa) / pd);
+                }
+            }
+        }
+        for k in 0..=2 * n {
+            // Diagonals of the split: x + y = (i + j + 1) cell.
+            let g = k as f32 * cell;
+            let s = d.x + d.y;
+            if s.abs() > 1e-6 {
+                ts.push((g - a.x - a.y) / s);
+            }
+        }
+        ts.retain(|t| (0.0..=1.0).contains(t));
+        ts.sort_by(f32::total_cmp);
+        ts.dedup_by(|x, y| (*x - *y).abs() < 1e-5);
+        for w in ts.windows(2) {
+            let (p, q) = (a + d * w[0], a + d * w[1]);
+            if !inside_tile((p + q) * 0.5) {
+                continue;
+            }
+            let top = (
+                cut.capped(a3.z + (b3.z - a3.z) * w[0], p.x, p.y),
+                cut.capped(a3.z + (b3.z - a3.z) * w[1], q.x, q.y),
+            );
+            let ground = (
+                terrain_height(terrain, cell, p.x, p.y),
+                terrain_height(terrain, cell, q.x, q.y),
+            );
+            if (ground.0 - top.0).abs().max((ground.1 - top.1).abs()) < STEP_MIN_M {
+                continue;
+            }
+            b.face(p, q, top, ground);
+        }
+    }
+}
+
 /// The terrain mesh of a tile shaped to `cut` (see the module docs), in absolute Bevy world
 /// coordinates like [`super::super::build_terrain_mesh`], whose grid split and UVs it keeps.
 #[must_use]
@@ -132,96 +235,16 @@ pub fn build_cut_terrain_mesh(
                         .extend(tri.iter().map(|&k| u32::try_from(k).unwrap_or(0)));
                     continue;
                 }
-                let ground = [p(tri[0]), p(tri[1]), p(tri[2])];
-                let mut outside = vec![ground.map(Vec3::truncate).to_vec()];
-                let mut inside: Vec<(Vec<Vec2>, u32)> = Vec::new();
-                for &c in candidates {
-                    let t = cut.strips.tris[c as usize];
-                    let clip = t.map(Vec3::truncate);
-                    let mut rest = Vec::new();
-                    for poly in outside {
-                        let within = clip_to_triangle(&poly, clip);
-                        if area(&within) < 1e-5 {
-                            rest.push(poly);
-                            continue;
-                        }
-                        inside.push((within, c));
-                        // The parts outside the strip triangle, edge by edge.
-                        let mut remain = poly;
-                        for e in 0..3 {
-                            let (r, l) = split(&remain, clip[e], clip[(e + 1) % 3]);
-                            if area(&r) >= 1e-5 {
-                                rest.push(r);
-                            }
-                            remain = l;
-                        }
-                    }
-                    outside = rest;
-                }
-                if inside.is_empty() {
-                    b.indices
-                        .extend(tri.iter().map(|&k| u32::try_from(k).unwrap_or(0)));
-                    continue;
-                }
-                for poly in &outside {
-                    // A sliver left along the seam of two strip triangles lies inside them.
-                    let centre = poly.iter().copied().sum::<Vec2>() / poly.len() as f32;
-                    if cut.height(centre.x, centre.y).is_some() {
-                        continue;
-                    }
-                    b.polygon(poly, |q| plane_height(&ground, q));
-                }
-                for (poly, c) in &inside {
-                    let t = cut.strips.tris[*c as usize];
-                    b.polygon(poly, |q| cut.capped(plane_height(&t, q), q.x, q.y));
-                }
+                cut_triangle(
+                    &mut b,
+                    cut,
+                    (tri, [p(tri[0]), p(tri[1]), p(tri[2])]),
+                    candidates,
+                );
             }
         }
     }
-    // Steps along the strips' outer edges, split where the grid's triangles change.
-    let inside_tile = |p: Vec2| (0.0..=span).contains(&p.x) && (0.0..=span).contains(&p.y);
-    for (a3, b3) in &cut.edges {
-        let (a, bb) = (a3.truncate(), b3.truncate());
-        let mut ts = vec![0.0, 1.0];
-        let d = bb - a;
-        for k in 0..=n {
-            let g = k as f32 * cell;
-            for (pa, pd) in [(a.x, d.x), (a.y, d.y)] {
-                if pd.abs() > 1e-6 {
-                    ts.push((g - pa) / pd);
-                }
-            }
-        }
-        for k in 0..=2 * n {
-            // Diagonals of the split: x + y = (i + j + 1) cell.
-            let g = k as f32 * cell;
-            let s = d.x + d.y;
-            if s.abs() > 1e-6 {
-                ts.push((g - a.x - a.y) / s);
-            }
-        }
-        ts.retain(|t| (0.0..=1.0).contains(t));
-        ts.sort_by(f32::total_cmp);
-        ts.dedup_by(|x, y| (*x - *y).abs() < 1e-5);
-        for w in ts.windows(2) {
-            let (p, q) = (a + d * w[0], a + d * w[1]);
-            if !inside_tile((p + q) * 0.5) {
-                continue;
-            }
-            let top = (
-                cut.capped(a3.z + (b3.z - a3.z) * w[0], p.x, p.y),
-                cut.capped(a3.z + (b3.z - a3.z) * w[1], q.x, q.y),
-            );
-            let ground = (
-                terrain_height(terrain, cell, p.x, p.y),
-                terrain_height(terrain, cell, q.x, q.y),
-            );
-            if (ground.0 - top.0).abs().max((ground.1 - top.1).abs()) < STEP_MIN_M {
-                continue;
-            }
-            b.face(p, q, top, ground);
-        }
-    }
+    add_steps(&mut b, (terrain, cut), (cell, n, span));
     let Builder {
         positions,
         uvs,

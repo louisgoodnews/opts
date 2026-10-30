@@ -147,54 +147,36 @@ pub(super) fn notes(frame: &Frame) -> Vec<MeshNote> {
     frame.meshes.iter().map(|p| st::note_for(p)).collect()
 }
 
-/// Records one placed object (scenery, tree, parked vehicle, attachment).
-#[allow(clippy::too_many_arguments)]
-pub(super) fn object(
-    job: &WorldLoadJob,
-    stats: &WorldStats,
+/// What the object's placement came to, from the counters before and after: `None` for nothing
+/// placed (editor-only helpers and markers without a vehicle).
+fn placement_result(
     before: Counters,
-    frame: Frame,
-    obj: &MapObjectInstance,
-    site: Site<'_>,
-    tile: &MapTile,
-    key: (i32, i32),
-    origin: (f32, f32),
-    entity: Option<Entity>,
-    started: Instant,
-) {
-    if frame.skip {
-        return;
-    }
-    let after = Counters::of(job, stats);
-    let mut warnings = frame.warnings.clone();
-    let result = if after.loaded > before.loaded {
-        "ok"
+    after: Counters,
+    warnings: &mut Vec<String>,
+) -> Option<&'static str> {
+    if after.loaded > before.loaded {
+        Some("ok")
     } else if after.no_geometry > before.no_geometry || after.hidden > before.hidden {
-        "no-geometry"
+        Some("no-geometry")
     } else if after.protected > before.protected {
         warnings.push("no mesh has usable geometry".into());
-        "failed"
+        Some("failed")
     } else if after.failed > before.failed {
-        "failed"
+        Some("failed")
     } else {
         // Editor-only helpers and markers without a vehicle: nothing was placed.
-        return;
-    };
-    let transform = frame.transform.unwrap_or_else(|| {
-        Transform::from_translation(omsi_to_bevy_pos(Vec3::new(
-            origin.0 + obj.position.x,
-            origin.1 + obj.position.y,
-            obj.position.z,
-        )))
-    });
-    let mut kind_name = frame.kind.unwrap_or(if site.list == "attachments" {
-        kind::ATTACHMENT
-    } else {
-        kind::SCENERY
-    });
-    if frame.model_cfg.is_some() {
-        kind_name = kind::PARKED;
+        None
     }
+}
+
+/// The parents of an object: the marker it belongs to, the object an attached object hangs on and
+/// the spline an attachment follows.
+fn object_parents(
+    site: &Site<'_>,
+    tile: &MapTile,
+    obj: &MapObjectInstance,
+    key: (i32, i32),
+) -> Vec<ParentRef> {
     let mut parents = Vec::new();
     if let Some(marker) = site.marker {
         parents.push(ParentRef {
@@ -254,6 +236,48 @@ pub(super) fn object(
             });
         }
     }
+    parents
+}
+
+/// Records one placed object (scenery, tree, parked vehicle, attachment).
+#[allow(clippy::too_many_arguments)]
+pub(super) fn object(
+    job: &WorldLoadJob,
+    stats: &WorldStats,
+    before: Counters,
+    frame: Frame,
+    obj: &MapObjectInstance,
+    site: Site<'_>,
+    tile: &MapTile,
+    key: (i32, i32),
+    origin: (f32, f32),
+    entity: Option<Entity>,
+    started: Instant,
+) {
+    if frame.skip {
+        return;
+    }
+    let after = Counters::of(job, stats);
+    let mut warnings = frame.warnings.clone();
+    let Some(result) = placement_result(before, after, &mut warnings) else {
+        return;
+    };
+    let transform = frame.transform.unwrap_or_else(|| {
+        Transform::from_translation(omsi_to_bevy_pos(Vec3::new(
+            origin.0 + obj.position.x,
+            origin.1 + obj.position.y,
+            obj.position.z,
+        )))
+    });
+    let mut kind_name = frame.kind.unwrap_or(if site.list == "attachments" {
+        kind::ATTACHMENT
+    } else {
+        kind::SCENERY
+    });
+    if frame.model_cfg.is_some() {
+        kind_name = kind::PARKED;
+    }
+    let parents = object_parents(&site, tile, obj, key);
     let meshes = notes(&frame);
     let probe = Probe {
         kind: kind_name,

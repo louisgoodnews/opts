@@ -151,25 +151,9 @@ fn spawn_entry(
     entry.id()
 }
 
-/// Spawns the frame and publishes [`ShellContent`].
-pub fn spawn_shell_frame(mut commands: Commands, registry: Res<ScreenRegistry>) {
-    let root = commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.0),
-                top: Val::Px(0.0),
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Row,
-                ..default()
-            },
-            BackgroundRole(ColorRole::Surface),
-            GlobalZIndex(-10),
-            ShellRoot,
-            Name::new("ShellRoot"),
-        ))
-        .id();
+/// The navigation rail: the brand, the registered screens (main ones above, utility ones below),
+/// the theme toggle, *Quit* and the version.
+fn spawn_rail(commands: &mut Commands, registry: &ScreenRegistry) -> Entity {
     let rail = commands
         .spawn((
             Node {
@@ -241,6 +225,29 @@ pub fn spawn_shell_frame(mut commands: Commands, registry: Res<ScreenRegistry>) 
             },
         ));
     });
+    rail
+}
+
+/// Spawns the frame and publishes [`ShellContent`].
+pub fn spawn_shell_frame(mut commands: Commands, registry: Res<ScreenRegistry>) {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Row,
+                ..default()
+            },
+            BackgroundRole(ColorRole::Surface),
+            GlobalZIndex(-10),
+            ShellRoot,
+            Name::new("ShellRoot"),
+        ))
+        .id();
+    let rail = spawn_rail(&mut commands, &registry);
     let main = commands
         .spawn(Node {
             flex_grow: 1.0,

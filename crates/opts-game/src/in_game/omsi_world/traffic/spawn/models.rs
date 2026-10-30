@@ -24,22 +24,9 @@ pub(crate) struct SpawnedModels {
     pub trace_frame: trace::Frame,
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn build_unit_models(
-    commands: &mut Commands,
-    job: &mut WorldLoadJob,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    variant: &Variant,
-    at: DVec2,
-    fleet: &[FleetEntry],
-    repaint_seed: u64,
-    chrono: Option<&ChronoState>,
-    is_scheduled: bool,
-) -> Result<SpawnedModels, bool> {
-    let origin = Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3()));
-    let entities: Vec<Entity> = variant
+/// One hidden root entity per unit of the vehicle, all at the spawn position.
+fn spawn_unit_roots(commands: &mut Commands, variant: &Variant, origin: Transform) -> Vec<Entity> {
+    variant
         .units
         .iter()
         .map(|u| {
@@ -52,13 +39,17 @@ pub(crate) fn build_unit_models(
                 ))
                 .id()
         })
-        .collect();
-    let root = entities[0];
-    trace::begin_frame();
-    let mut bounds = Vec::with_capacity(entities.len());
-    let mut failed = None;
-    let mut head_canvases = None;
-    let fleet_repaint = {
+        .collect()
+}
+
+/// The repaint the fleet entry of this spawn names: among the entries in service on the map date
+/// (all when none is), the one the seed picks.
+fn fleet_repaint_name(
+    fleet: &[FleetEntry],
+    chrono: Option<&ChronoState>,
+    repaint_seed: u64,
+) -> Option<String> {
+    {
         let today = chrono
             .and_then(|c| c.date)
             .map(opts_core::formats::chrono::ChronoDate::yyyymmdd);
@@ -74,7 +65,53 @@ pub(crate) fn build_unit_models(
         (!fleet.is_empty())
             .then(|| fleet[usize::try_from(repaint_seed % fleet.len() as u64).unwrap_or(0)])
             .map(|e| e.repaint.clone())
-    };
+    }
+}
+
+/// Makes the unit's text and script texture definitions the ones the mesh loader sees; for a
+/// scheduled vehicle also a fresh set of canvases, which are returned.
+fn set_unit_defs(
+    job: &mut WorldLoadJob,
+    unit: &crate::in_game::omsi_world::traffic_variant::Unit,
+    is_scheduled: bool,
+) -> Option<Arc<RwLock<Vec<CpuScriptTexture>>>> {
+    job.vehicle_text_defs = unit.model.text_textures.clone();
+    if !is_scheduled {
+        return None;
+    }
+    job.vehicle_script_defs = unit.model.script_textures.clone();
+    let canvases = unit
+        .model
+        .script_textures
+        .iter()
+        .map(|st| CpuScriptTexture::new(st.width, st.height))
+        .collect();
+    job.vehicle_script_textures = Arc::new(RwLock::new(canvases));
+    Some(job.vehicle_script_textures.clone())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn build_unit_models(
+    commands: &mut Commands,
+    job: &mut WorldLoadJob,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    variant: &Variant,
+    at: DVec2,
+    fleet: &[FleetEntry],
+    repaint_seed: u64,
+    chrono: Option<&ChronoState>,
+    is_scheduled: bool,
+) -> Result<SpawnedModels, bool> {
+    let origin = Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3()));
+    let entities = spawn_unit_roots(commands, variant, origin);
+    let root = entities[0];
+    trace::begin_frame();
+    let mut bounds = Vec::with_capacity(entities.len());
+    let mut failed = None;
+    let mut head_canvases = None;
+    let fleet_repaint = fleet_repaint_name(fleet, chrono, repaint_seed);
     let pick_repaint = |repaints: &crate::new_game_screen::repaints::VehicleRepaints| -> String {
         fleet_repaint
             .as_deref()
@@ -98,18 +135,9 @@ pub(crate) fn build_unit_models(
             failed = Some(true);
             break;
         };
-        job.vehicle_text_defs = unit.model.text_textures.clone();
-        if is_scheduled {
-            job.vehicle_script_defs = unit.model.script_textures.clone();
-            let canvases = unit
-                .model
-                .script_textures
-                .iter()
-                .map(|st| CpuScriptTexture::new(st.width, st.height))
-                .collect();
-            job.vehicle_script_textures = Arc::new(RwLock::new(canvases));
+        if let Some(canvases) = set_unit_defs(job, unit, is_scheduled) {
             if entity == root {
-                head_canvases = Some(job.vehicle_script_textures.clone());
+                head_canvases = Some(canvases);
             }
         }
         job.cache.texture_replacements = unit

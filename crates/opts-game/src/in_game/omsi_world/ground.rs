@@ -63,22 +63,13 @@ fn painted_layers(map_dir: &std::path::Path, count: usize) -> Vec<usize> {
     found.into_iter().collect()
 }
 
-/// Builds the layered ground material of a tile from its layer masks; `None` if the tile has
-/// none (the caller then repeats the base texture) or the base layer cannot be read.
-pub(super) fn compose_tile_material(
+/// The painted ground masks of a tile (`<tile>.<n>.dds`), by layer number.
+fn read_masks(
     job: &mut WorldLoadJob,
-    key: (i32, i32),
-    images: &mut Assets<Image>,
-    materials: &mut Assets<StandardMaterial>,
-    meshes: &mut Assets<Mesh>,
-    ground_materials: &mut Assets<GroundMaterial>,
-) -> Option<Handle<GroundMaterial>> {
+    file: &str,
+    layer_total: usize,
+) -> Vec<(usize, opts_bevy::ground::CpuImage)> {
     use opts_bevy::ground::CpuImage;
-    use opts_bevy::ground_material::{
-        ground_extension, layer_array, layer_array_size, mask_array, GroundSlot, MAX_TILE_LAYERS,
-    };
-    let file = job.tile_files.get(&key)?.clone();
-    let layer_total = job.manifest.ground_textures.len();
     let mut masks: Vec<(usize, CpuImage)> = Vec::new();
     for n in 1..layer_total {
         let mask = [
@@ -98,88 +89,124 @@ pub(super) fn compose_tile_material(
             masks.push((n, mask));
         }
     }
+    masks
+}
+
+/// Decodes the base and every painted layer once per map and uploads them as one mipmapped array
+/// (`job.ground_array`). `None` when the base layer cannot be decoded.
+fn build_ground_array(
+    job: &mut WorldLoadJob,
+    (images, materials, meshes): (
+        &mut Assets<Image>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Mesh>,
+    ),
+    masks: &[(usize, opts_bevy::ground::CpuImage)],
+    layer_total: usize,
+) -> Option<()> {
+    use opts_bevy::ground::CpuImage;
+    use opts_bevy::ground_material::{layer_array, layer_array_size};
+    // Decode the base and every painted layer once per map and upload them as one
+    // mipmapped array.
+    let dirs = vec![
+        job.config.map_dir.clone(),
+        job.config.map_dir.join("texture"),
+    ];
+    let mut wanted = vec![0];
+    wanted.extend(painted_layers(&job.config.map_dir, layer_total));
+    // A mask found through the install index but missed by the folder scan still counts.
+    for (n, _) in masks {
+        if !wanted.contains(n) {
+            wanted.push(*n);
+        }
+    }
+    wanted.sort_unstable();
+    let mut decoded: Vec<(usize, CpuImage, Option<CpuImage>)> = Vec::new();
+    for &n in &wanted {
+        let tex = &job.manifest.ground_textures[n];
+        let (name, detail_name) = (tex.ground_texture.clone(), tex.detail_texture.clone());
+        let mut loader = ContentLoader {
+            install: &job.install,
+            cache: &mut job.cache,
+            meshes,
+            materials,
+            images,
+        };
+        let img = loader
+            .texture(&name, &dirs)
+            .and_then(|h| loader.images.get(&h).and_then(CpuImage::from_image));
+        let detail = if detail_name.trim().is_empty() {
+            None
+        } else {
+            loader
+                .texture(&detail_name, &dirs)
+                .and_then(|h| loader.images.get(&h).and_then(CpuImage::from_image))
+        };
+        match img {
+            Some(img) => decoded.push((n, img, detail)),
+            None if n == 0 => return None,
+            None => {
+                tracing::warn!(layer = n, texture = %name, "ground layer texture cannot be decoded; layer skipped");
+            }
+        }
+    }
+    let largest = decoded
+        .iter()
+        .map(|(_, d, _)| d.width.max(d.height))
+        .max()
+        .unwrap_or(512);
+    let size = layer_array_size(decoded.len(), largest);
+    let refs: Vec<&CpuImage> = decoded.iter().map(|(_, d, _)| d).collect();
+    let layers = images.add(layer_array(&refs, size));
+    // Detail textures modulate their layer; a missing one is white (no change).
+    let white = CpuImage {
+        width: 1,
+        height: 1,
+        rgba: vec![255; 4],
+    };
+    let detail_refs: Vec<&CpuImage> = decoded
+        .iter()
+        .map(|(_, _, d)| d.as_ref().unwrap_or(&white))
+        .collect();
+    let details = images.add(layer_array(&detail_refs, 256));
+    let mut index = vec![None; layer_total];
+    for (slot, (n, _, _)) in decoded.iter().enumerate() {
+        index[*n] = Some(slot as u32);
+    }
+    tracing::info!(
+        listed = layer_total,
+        in_array = decoded.len(),
+        size,
+        "ground layer array built"
+    );
+    job.ground_array = Some(GroundArray {
+        layers,
+        details,
+        index,
+    });
+    Some(())
+}
+
+/// Builds the layered ground material of a tile from its layer masks; `None` if the tile has
+/// none (the caller then repeats the base texture) or the base layer cannot be read.
+pub(super) fn compose_tile_material(
+    job: &mut WorldLoadJob,
+    key: (i32, i32),
+    images: &mut Assets<Image>,
+    materials: &mut Assets<StandardMaterial>,
+    meshes: &mut Assets<Mesh>,
+    ground_materials: &mut Assets<GroundMaterial>,
+) -> Option<Handle<GroundMaterial>> {
+    use opts_bevy::ground::CpuImage;
+    use opts_bevy::ground_material::{ground_extension, mask_array, GroundSlot, MAX_TILE_LAYERS};
+    let file = job.tile_files.get(&key)?.clone();
+    let layer_total = job.manifest.ground_textures.len();
+    let masks = read_masks(job, &file, layer_total);
     if masks.is_empty() {
         return None;
     }
     if job.ground_array.is_none() {
-        // Decode the base and every painted layer once per map and upload them as one
-        // mipmapped array.
-        let dirs = vec![
-            job.config.map_dir.clone(),
-            job.config.map_dir.join("texture"),
-        ];
-        let mut wanted = vec![0];
-        wanted.extend(painted_layers(&job.config.map_dir, layer_total));
-        // A mask found through the install index but missed by the folder scan still counts.
-        for (n, _) in &masks {
-            if !wanted.contains(n) {
-                wanted.push(*n);
-            }
-        }
-        wanted.sort_unstable();
-        let mut decoded: Vec<(usize, CpuImage, Option<CpuImage>)> = Vec::new();
-        for &n in &wanted {
-            let tex = &job.manifest.ground_textures[n];
-            let (name, detail_name) = (tex.ground_texture.clone(), tex.detail_texture.clone());
-            let mut loader = ContentLoader {
-                install: &job.install,
-                cache: &mut job.cache,
-                meshes,
-                materials,
-                images,
-            };
-            let img = loader
-                .texture(&name, &dirs)
-                .and_then(|h| loader.images.get(&h).and_then(CpuImage::from_image));
-            let detail = if detail_name.trim().is_empty() {
-                None
-            } else {
-                loader
-                    .texture(&detail_name, &dirs)
-                    .and_then(|h| loader.images.get(&h).and_then(CpuImage::from_image))
-            };
-            match img {
-                Some(img) => decoded.push((n, img, detail)),
-                None if n == 0 => return None,
-                None => {
-                    tracing::warn!(layer = n, texture = %name, "ground layer texture cannot be decoded; layer skipped");
-                }
-            }
-        }
-        let largest = decoded
-            .iter()
-            .map(|(_, d, _)| d.width.max(d.height))
-            .max()
-            .unwrap_or(512);
-        let size = layer_array_size(decoded.len(), largest);
-        let refs: Vec<&CpuImage> = decoded.iter().map(|(_, d, _)| d).collect();
-        let layers = images.add(layer_array(&refs, size));
-        // Detail textures modulate their layer; a missing one is white (no change).
-        let white = CpuImage {
-            width: 1,
-            height: 1,
-            rgba: vec![255; 4],
-        };
-        let detail_refs: Vec<&CpuImage> = decoded
-            .iter()
-            .map(|(_, _, d)| d.as_ref().unwrap_or(&white))
-            .collect();
-        let details = images.add(layer_array(&detail_refs, 256));
-        let mut index = vec![None; layer_total];
-        for (slot, (n, _, _)) in decoded.iter().enumerate() {
-            index[*n] = Some(slot as u32);
-        }
-        tracing::info!(
-            listed = layer_total,
-            in_array = decoded.len(),
-            size,
-            "ground layer array built"
-        );
-        job.ground_array = Some(GroundArray {
-            layers,
-            details,
-            index,
-        });
+        build_ground_array(job, (images, materials, meshes), &masks, layer_total)?;
     }
     let array = job.ground_array.as_ref()?;
     let base = array.index.first().copied().flatten()?;

@@ -25,6 +25,67 @@ const FRICTION: f32 = 0.08;
 /// Bounce off an obstacle.
 const RESTITUTION: f32 = 0.05;
 
+/// The following parts' simulated poses with their boxes: (box, position, heading).
+fn follower_poses(
+    chain: Option<&opts_bevy::ArticulatedChain>,
+    part_boxes: &[BodyBox],
+    segments: &Query<&ArticulatedSegment>,
+) -> Vec<(BodyBox, Vec2, f32)> {
+    chain
+        .map(|c| {
+            c.segments
+                .iter()
+                .zip(part_boxes)
+                .filter_map(|(e, b)| {
+                    let (p, h) = segments.get(*e).ok()?.simulated_pose()?;
+                    Some((*b, p, h))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// `OPTS_DBG_COLLISION` and the first pushes by AI vehicles: what pushed the player's vehicle.
+fn log_push(
+    logged: &mut u32,
+    controller: &opts_bevy::VehicleController,
+    worst_is_traffic: bool,
+    worst_other: Option<Obb>,
+    depth: f32,
+) {
+    if !worst_is_traffic && *logged < 400 && std::env::var_os("OPTS_DBG_COLLISION").is_some() {
+        *logged += 1;
+        tracing::info!(
+            at = ?controller.sim.chassis.position,
+            z = controller.sim.chassis.elevation_z,
+            other = ?worst_other,
+            depth,
+            "the player's vehicle is pushed by a static box or a ground step"
+        );
+    }
+    if worst_is_traffic && *logged < 40 {
+        *logged += 1;
+        tracing::info!(
+            at = ?controller.sim.chassis.position,
+            speed = controller.sim.chassis.forward_speed_m_s(),
+            other = ?worst_other,
+            depth,
+            "the player's vehicle overlaps an AI vehicle and is pushed"
+        );
+    }
+}
+
+/// Velocity: nothing into the obstacle, a little scraped off along it.
+fn scrape_velocity(ch: &mut opts_sim::vehicle::chassis::ChassisState, normals: &[Vec2]) {
+    let mut v = ch.world_velocity();
+    for n in normals {
+        v = respond(v, *n, RESTITUTION, FRICTION);
+    }
+    let (s, c) = ch.heading_rad.sin_cos();
+    ch.local_velocity = Vec2::new(v.x * c - v.y * s, v.x * s + v.y * c);
+    ch.yaw_rate_rad_s *= 0.7;
+}
+
 /// Pushes the player's vehicle out of everything it overlaps (fixed step, after the physics).
 #[allow(clippy::too_many_arguments)]
 pub fn player_collisions(
@@ -59,18 +120,7 @@ pub fn player_collisions(
         let mut normals = Vec::new();
         for _ in 0..4 {
             let ch = &controller.sim.chassis;
-            let followers: Vec<(BodyBox, Vec2, f32)> = chain
-                .map(|c| {
-                    c.segments
-                        .iter()
-                        .zip(&part_boxes)
-                        .filter_map(|(e, b)| {
-                            let (p, h) = segments.get(*e).ok()?.simulated_pose()?;
-                            Some((*b, p, h))
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
+            let followers = follower_poses(chain, &part_boxes, &segments);
             let mine = player_boxes(
                 ch.position,
                 ch.heading_rad,
@@ -114,29 +164,13 @@ pub fn player_collisions(
                 }
             }
             let Some((normal, depth)) = worst else { break };
-            if !worst_is_traffic
-                && *logged < 400
-                && std::env::var_os("OPTS_DBG_COLLISION").is_some()
-            {
-                *logged += 1;
-                tracing::info!(
-                    at = ?controller.sim.chassis.position,
-                    z = controller.sim.chassis.elevation_z,
-                    other = ?worst_other,
-                    depth,
-                    "the player's vehicle is pushed by a static box or a ground step"
-                );
-            }
-            if worst_is_traffic && *logged < 40 {
-                *logged += 1;
-                tracing::info!(
-                    at = ?controller.sim.chassis.position,
-                    speed = controller.sim.chassis.forward_speed_m_s(),
-                    other = ?worst_other,
-                    depth,
-                    "the player's vehicle overlaps an AI vehicle and is pushed"
-                );
-            }
+            log_push(
+                &mut logged,
+                &controller,
+                worst_is_traffic,
+                worst_other,
+                depth,
+            );
             let cap = if worst_is_traffic {
                 MAX_TRAFFIC_PUSH_M
             } else {
@@ -154,15 +188,7 @@ pub fn player_collisions(
         if normals.is_empty() {
             continue;
         }
-        // Velocity: nothing into the obstacle, a little scraped off along it.
-        let ch = &mut controller.sim.chassis;
-        let mut v = ch.world_velocity();
-        for n in &normals {
-            v = respond(v, *n, RESTITUTION, FRICTION);
-        }
-        let (s, c) = ch.heading_rad.sin_cos();
-        ch.local_velocity = Vec2::new(v.x * c - v.y * s, v.x * s + v.y * c);
-        ch.yaw_rate_rad_s *= 0.7;
+        scrape_velocity(&mut controller.sim.chassis, &normals);
     }
 }
 

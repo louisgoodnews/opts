@@ -118,6 +118,136 @@ pub(super) fn select(world: &mut World, params: &Value) -> Outcome {
     }
 }
 
+/// Selects an entry of a master list like a click on its row does (by id or title), and chooses
+/// it with `choose`.
+fn select_in_list(
+    world: &mut World,
+    params: &Value,
+    list: Entity,
+    (id, option): (&str, &Option<String>),
+) -> Result<Outcome, RpcError> {
+    let key = option.clone().ok_or_else(|| {
+        RpcError::invalid_params("`option` (entry id or title) is needed for a list")
+    })?;
+    let md = world
+        .get::<MasterDetail>(list)
+        .cloned()
+        .ok_or_else(|| not_found(id))?;
+    let entry = md
+        .entries
+        .iter()
+        .find(|e| e.id == key)
+        .or_else(|| md.entries.iter().find(|e| e.title.eq_ignore_ascii_case(&key)))
+        .map(|e| e.id.clone())
+        .ok_or_else(|| {
+            RpcError::new(code::NOT_FOUND, format!("`{key}` is not an entry of `{id}`"))
+                .with_data(json!({ "entries": md.entries.iter().take(200).map(|e| json!({"id": e.id, "title": e.title})).collect::<Vec<_>>() }))
+        })?;
+    let shown = {
+        let mut md_live = world
+            .get::<MasterDetail>(list)
+            .cloned()
+            .ok_or_else(|| not_found(id))?;
+        let mut view = world
+            .get_mut::<MasterDetailView>(list)
+            .ok_or_else(|| not_found(id))?;
+        let ok = view.select_entry(&mut md_live, &entry);
+        if ok {
+            *world
+                .get_mut::<MasterDetail>(list)
+                .ok_or_else(|| not_found(id))? = md_live;
+        }
+        ok
+    };
+    if !shown {
+        return Err(RpcError::new(
+            code::NOT_READY,
+            format!("`{entry}` is filtered out of the list"),
+        ));
+    }
+    if opt_bool(params, "choose")?.unwrap_or(false) {
+        world.write_message(MasterDetailChosen {
+            root: list,
+            id: entry.clone(),
+        });
+    }
+    Ok(Outcome::ok(
+        json!({ "ok": true, "id": id, "selected": entry }),
+    ))
+}
+
+/// Selects an option of a combo box: opens it, waits for the entries and activates the wanted one.
+fn select_in_combo(
+    world: &mut World,
+    combo: Entity,
+    (id, option, index): (&str, &Option<String>, Option<u64>),
+) -> Result<Outcome, RpcError> {
+    let id = id.to_owned();
+    let options = world
+        .get::<M3Combobox>(combo)
+        .map(|c| c.options.clone())
+        .unwrap_or_default();
+    let wanted = match (&option, index) {
+        (Some(o), _) => options
+            .iter()
+            .position(|x| x == o || x.eq_ignore_ascii_case(o)),
+        (None, Some(i)) => Some(i as usize).filter(|i| *i < options.len()),
+        (None, None) => {
+            return Err(RpcError::invalid_params(
+                "`option` or `index` is needed for a combo box",
+            ))
+        }
+    }
+    .ok_or_else(|| {
+        RpcError::new(code::NOT_FOUND, "no such option").with_data(json!({ "options": options }))
+    })?;
+    let header = world
+        .query::<(Entity, &ComboboxHeader)>()
+        .iter(world)
+        .find(|(_, h)| h.0 == combo)
+        .map(|(e, _)| e)
+        .ok_or_else(|| not_found(&id))?;
+    if !world.get::<M3Combobox>(combo).is_some_and(|c| c.is_open) {
+        world.write_message(Activated(header));
+    }
+    let began = Instant::now();
+    let mut clicked = false;
+    Ok(Outcome::Wait(Box::new(move |world| {
+        if !clicked {
+            let item = world
+                .query::<(Entity, &ComboboxMenuItem)>()
+                .iter(world)
+                .find(|(_, i)| i.combobox_entity == combo && i.index == wanted)
+                .map(|(e, _)| e);
+            if let Some(item) = item {
+                world.write_message(Activated(item));
+                clicked = true;
+            } else if began.elapsed() > Duration::from_secs(2) {
+                return Some(Err(RpcError::new(
+                    code::FAILED,
+                    "the drop-down did not open",
+                )));
+            }
+            return None;
+        }
+        let Some(c) = world.get::<M3Combobox>(combo) else {
+            return Some(Err(RpcError::new(
+                code::FAILED,
+                "the combo box disappeared",
+            )));
+        };
+        if c.selected == Some(wanted) {
+            return Some(Ok(
+                json!({ "ok": true, "id": id, "selected": c.options.get(wanted) }),
+            ));
+        }
+        (began.elapsed() > Duration::from_secs(3)).then(|| {
+            Err(RpcError::new(code::FAILED, "the option was not taken")
+                .with_data(json!({ "selected": c.selected.and_then(|i| c.options.get(i)) })))
+        })
+    })))
+}
+
 fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
     let id = str_param(params, "id")?.to_string();
     let option = opt_str(params, "option")?.map(str::to_string);
@@ -140,54 +270,7 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
     check_modal_scope(world, entity, "ui.select")?;
     // A master list: select the entry like a click on its row does.
     if let Some(list) = world.get::<MasterList>(entity).map(|l| l.0) {
-        let key = option.clone().ok_or_else(|| {
-            RpcError::invalid_params("`option` (entry id or title) is needed for a list")
-        })?;
-        let md = world
-            .get::<MasterDetail>(list)
-            .cloned()
-            .ok_or_else(|| not_found(&id))?;
-        let entry = md
-            .entries
-            .iter()
-            .find(|e| e.id == key)
-            .or_else(|| md.entries.iter().find(|e| e.title.eq_ignore_ascii_case(&key)))
-            .map(|e| e.id.clone())
-            .ok_or_else(|| {
-                RpcError::new(code::NOT_FOUND, format!("`{key}` is not an entry of `{id}`"))
-                    .with_data(json!({ "entries": md.entries.iter().take(200).map(|e| json!({"id": e.id, "title": e.title})).collect::<Vec<_>>() }))
-            })?;
-        let shown = {
-            let mut md_live = world
-                .get::<MasterDetail>(list)
-                .cloned()
-                .ok_or_else(|| not_found(&id))?;
-            let mut view = world
-                .get_mut::<MasterDetailView>(list)
-                .ok_or_else(|| not_found(&id))?;
-            let ok = view.select_entry(&mut md_live, &entry);
-            if ok {
-                *world
-                    .get_mut::<MasterDetail>(list)
-                    .ok_or_else(|| not_found(&id))? = md_live;
-            }
-            ok
-        };
-        if !shown {
-            return Err(RpcError::new(
-                code::NOT_READY,
-                format!("`{entry}` is filtered out of the list"),
-            ));
-        }
-        if opt_bool(params, "choose")?.unwrap_or(false) {
-            world.write_message(MasterDetailChosen {
-                root: list,
-                id: entry.clone(),
-            });
-        }
-        return Ok(Outcome::ok(
-            json!({ "ok": true, "id": id, "selected": entry }),
-        ));
+        return select_in_list(world, params, list, (&id, &option));
     }
     // A combo box: open it, wait for the entries, activate the wanted one.
     let combo = world
@@ -195,70 +278,7 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
         .map(|h| h.0)
         .or_else(|| world.get::<M3Combobox>(entity).map(|_| entity));
     if let Some(combo) = combo {
-        let options = world
-            .get::<M3Combobox>(combo)
-            .map(|c| c.options.clone())
-            .unwrap_or_default();
-        let wanted = match (&option, index) {
-            (Some(o), _) => options
-                .iter()
-                .position(|x| x == o || x.eq_ignore_ascii_case(o)),
-            (None, Some(i)) => Some(i as usize).filter(|i| *i < options.len()),
-            (None, None) => {
-                return Err(RpcError::invalid_params(
-                    "`option` or `index` is needed for a combo box",
-                ))
-            }
-        }
-        .ok_or_else(|| {
-            RpcError::new(code::NOT_FOUND, "no such option")
-                .with_data(json!({ "options": options }))
-        })?;
-        let header = world
-            .query::<(Entity, &ComboboxHeader)>()
-            .iter(world)
-            .find(|(_, h)| h.0 == combo)
-            .map(|(e, _)| e)
-            .ok_or_else(|| not_found(&id))?;
-        if !world.get::<M3Combobox>(combo).is_some_and(|c| c.is_open) {
-            world.write_message(Activated(header));
-        }
-        let began = Instant::now();
-        let mut clicked = false;
-        return Ok(Outcome::Wait(Box::new(move |world| {
-            if !clicked {
-                let item = world
-                    .query::<(Entity, &ComboboxMenuItem)>()
-                    .iter(world)
-                    .find(|(_, i)| i.combobox_entity == combo && i.index == wanted)
-                    .map(|(e, _)| e);
-                if let Some(item) = item {
-                    world.write_message(Activated(item));
-                    clicked = true;
-                } else if began.elapsed() > Duration::from_secs(2) {
-                    return Some(Err(RpcError::new(
-                        code::FAILED,
-                        "the drop-down did not open",
-                    )));
-                }
-                return None;
-            }
-            let Some(c) = world.get::<M3Combobox>(combo) else {
-                return Some(Err(RpcError::new(
-                    code::FAILED,
-                    "the combo box disappeared",
-                )));
-            };
-            if c.selected == Some(wanted) {
-                return Some(Ok(
-                    json!({ "ok": true, "id": id, "selected": c.options.get(wanted) }),
-                ));
-            }
-            (began.elapsed() > Duration::from_secs(3)).then(|| {
-                Err(RpcError::new(code::FAILED, "the option was not taken")
-                    .with_data(json!({ "selected": c.selected.and_then(|i| c.options.get(i)) })))
-            })
-        })));
+        return select_in_combo(world, combo, (&id, &option, index));
     }
     // Tabs, radios, list rows, options: a click selects them.
     match node.role {

@@ -634,3 +634,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0150 seventeenth slice (`agent/fn-ratchet-17`): key code table, UI conditions, init stage, pedestrians, vehicle texture overrides, puddles, configurations and AI script runner split; 96 functions over 80 lines.
 - `2026-10-30` — M-0150 eighteenth slice (`agent/fn-ratchet-18`): voice selection, terrain carve, DDS decode, HUD cluster, trace pick, collision boxes, pedestrian spawn, session summary and language list split.
 - `2026-10-30` — M-0150 nineteenth slice (`agent/fn-ratchet-19`): player voices, settings info and page rebuild, HUD plugin registration, vehicle script attach, notebook and precipitation split; 80 functions over 80 lines.
+- `2026-10-30` — M-0150 twentieth slice (`agent/fn-ratchet-20`): first pass over 42 large functions, compiled together; 59 functions over 80 lines (14 second-pass remainders, 7 untouched).

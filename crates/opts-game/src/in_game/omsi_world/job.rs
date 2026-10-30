@@ -107,12 +107,8 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
     begin_world_load_at(config, None)
 }
 
-/// [`begin_world_load`] for a map date: the Chrono entries active on it are applied to every
-/// tile read (`None`: the base map).
-pub fn begin_world_load_at(
-    config: OmsiSessionConfig,
-    map_date: Option<opts_core::formats::chrono::ChronoDate>,
-) -> Result<WorldLoadJob, String> {
+/// The installation with the catalogue's lookups, when the session has them.
+fn install_of(config: &OmsiSessionConfig) -> OmsiInstall {
     let mut install = OmsiInstall::new(&config.root);
     if let Some(l) = &config.lookup {
         install = install.with_lookup(l.clone());
@@ -126,6 +122,11 @@ pub fn begin_world_load_at(
     if let Some(l) = &config.twin_lookup {
         install = install.with_twin_lookup(l.clone());
     }
+    install
+}
+
+/// Reads and parses the map's `global.cfg`.
+fn read_manifest(install: &OmsiInstall, config: &OmsiSessionConfig) -> Result<MapManifest, String> {
     let cfg_path = install
         .find_in(&config.map_dir, "global.cfg")
         .ok_or_else(|| format!("global.cfg not found in {}", config.map_dir.display()))?;
@@ -140,14 +141,17 @@ pub fn begin_world_load_at(
         entry_points = manifest.entry_points.len(),
         "global.cfg parsed"
     );
+    Ok(manifest)
+}
 
-    let tile_files: HashMap<(i32, i32), String> = manifest
-        .tiles
-        .iter()
-        .map(|t| ((t.x, t.y), t.file_name.clone()))
-        .collect();
-
-    let mut job = WorldLoadJob {
+/// A job with nothing loaded yet.
+fn new_job(
+    install: OmsiInstall,
+    config: OmsiSessionConfig,
+    manifest: MapManifest,
+    tile_files: HashMap<(i32, i32), String>,
+) -> WorldLoadJob {
+    WorldLoadJob {
         install,
         cache: ContentCache::default(),
         config,
@@ -206,40 +210,40 @@ pub fn begin_world_load_at(
         parked_permille: 1000,
         resolved_entry: None,
         start_entry: None,
-    };
-
-    opts_bevy::scene_trace::begin_session(&job.map_name(), job.install.root());
-    job.init_chrono(map_date);
-
-    // Tile grid: 300 m, except for maps with world coordinates (Mercator rows when the splines'
-    // border chains agree with them, else the measured pitch).
-    {
-        let mut sample = Vec::new();
-        let keys: Vec<(i32, i32)> = job.manifest.tiles.iter().map(|t| (t.x, t.y)).collect();
-        for key in keys {
-            if let Some(tile) = job.read_tile(key) {
-                sample.push((key, tile.splines));
-            }
-            if sample.len() >= 80 {
-                break;
-            }
-        }
-        let (grid, fit) =
-            opts_core::formats::map::TileGrid::measure(&sample, job.manifest.world_coordinates);
-        job.grid = grid;
-        tracing::info!(
-            ?grid,
-            pairs = fit.pairs,
-            median_step_m = ?fit.median_step,
-            mercator_residual_m = ?fit.mercator_residual,
-            sampled_tiles = sample.len(),
-            "tile grid"
-        );
     }
+}
 
-    // Start tile and spawn: a chosen trip's first bus stop, else the chosen `[entrypoints]` record
-    // if it resolves to a placed `entrypoint_*.sco` object, otherwise the first road spline of
-    // the first usable tile.
+/// Tile grid: 300 m, except for maps with world coordinates (Mercator rows when the splines'
+/// border chains agree with them, else the measured pitch).
+fn measure_grid(job: &mut WorldLoadJob) {
+    let mut sample = Vec::new();
+    let keys: Vec<(i32, i32)> = job.manifest.tiles.iter().map(|t| (t.x, t.y)).collect();
+    for key in keys {
+        if let Some(tile) = job.read_tile(key) {
+            sample.push((key, tile.splines));
+        }
+        if sample.len() >= 80 {
+            break;
+        }
+    }
+    let (grid, fit) =
+        opts_core::formats::map::TileGrid::measure(&sample, job.manifest.world_coordinates);
+    job.grid = grid;
+    tracing::info!(
+        ?grid,
+        pairs = fit.pairs,
+        median_step_m = ?fit.median_step,
+        mercator_residual_m = ?fit.mercator_residual,
+        sampled_tiles = sample.len(),
+        "tile grid"
+    );
+}
+
+/// Start tile and spawn: a chosen trip's first bus stop, else the chosen `[entrypoints]` record if
+/// it resolves to a placed `entrypoint_*.sco` object, otherwise the first road spline of the first
+/// usable tile. Sets the job's spawn point and start tile (the floating origin: all scene
+/// coordinates are relative to the start tile's south-west corner).
+fn choose_start(job: &mut WorldLoadJob) -> Result<(), String> {
     let mut keys: Vec<(i32, i32)> = job.manifest.tiles.iter().map(|t| (t.x, t.y)).collect();
     keys.dedup();
     let at_stop = job
@@ -283,6 +287,33 @@ pub fn begin_world_load_at(
     // the start tile's frame.
     job.spawn = Some(spawn);
     job.start_tile = start_tile;
+    Ok(())
+}
+
+/// [`begin_world_load`] for a map date: the Chrono entries active on it are applied to every
+/// tile read (`None`: the base map).
+pub fn begin_world_load_at(
+    config: OmsiSessionConfig,
+    map_date: Option<opts_core::formats::chrono::ChronoDate>,
+) -> Result<WorldLoadJob, String> {
+    let install = install_of(&config);
+    let manifest = read_manifest(&install, &config)?;
+
+    let tile_files: HashMap<(i32, i32), String> = manifest
+        .tiles
+        .iter()
+        .map(|t| ((t.x, t.y), t.file_name.clone()))
+        .collect();
+
+    let mut job = new_job(install, config, manifest, tile_files);
+
+    opts_bevy::scene_trace::begin_session(&job.map_name(), job.install.root());
+    job.init_chrono(map_date);
+
+    measure_grid(&mut job);
+
+    choose_start(&mut job)?;
+    let start_tile = job.start_tile;
 
     for dy in -1..=1 {
         for dx in -1..=1 {

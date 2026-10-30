@@ -43,22 +43,11 @@ pub struct SpawnedVehicle {
     pub camera: CameraSetup,
 }
 
-/// Loads a user vehicle from its `.bus` file and spawns it at the session's spawn point
-/// ([`WorldLoadJob::spawn_point`]), as session vehicle `session_id`. With `activate` it also becomes the
-/// player's vehicle (`PlayerVehicle`, the HUD and `WorldStats` follow it); without, it is built
-/// as a parked session vehicle and the caller switches to it when it wants to.
-#[allow(clippy::too_many_arguments)]
-pub fn load_player_vehicle(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    bindposes: &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
-    session_id: crate::session_vehicles::VehicleId,
-    activate: bool,
-) -> Result<SpawnedVehicle, String> {
+/// Reads the vehicle's `.bus` and its model config: the file the session names (or the first
+/// vehicle of the map's AI lists) and the model it points to.
+fn read_vehicle_files(
+    job: &WorldLoadJob,
+) -> Result<(PathBuf, BusManifest, PathBuf, ModelConfig), String> {
     let bus_path = match job.config.vehicle_path.clone() {
         Some(p) => p,
         None => first_ai_list_vehicle(job)
@@ -81,8 +70,12 @@ pub fn load_player_vehicle(
     let cfg_bytes = std::fs::read(&cfg_path).map_err(|e| format!("{}: {e}", cfg_path.display()))?;
     let model =
         ModelConfig::parse_bytes(&cfg_bytes).map_err(|e| format!("{}: {e}", cfg_path.display()))?;
-    let detail = model.detail_lod().ok_or("model config has no meshes")?;
-    let lod0 = &detail;
+    Ok((bus_path, manifest, cfg_path, model))
+}
+
+/// Makes the model's text and script texture definitions the ones the mesh loader sees, with a
+/// fresh set of canvases.
+fn set_texture_defs(job: &mut WorldLoadJob, model: &ModelConfig) {
     job.vehicle_text_defs = model.text_textures.clone();
     job.vehicle_script_defs = model.script_textures.clone();
     let canvases: Vec<opts_core::formats::script_texture::CpuScriptTexture> = model
@@ -91,6 +84,181 @@ pub fn load_player_vehicle(
         .map(|st| opts_core::formats::script_texture::CpuScriptTexture::new(st.width, st.height))
         .collect();
     job.vehicle_script_textures = std::sync::Arc::new(std::sync::RwLock::new(canvases));
+}
+
+/// The simulation and the markers of the vehicle's root: the controller at the spawn point, the
+/// session and viewpoint keys, the player marker, the body box and, for rail, the rail player.
+fn insert_vehicle_components(
+    commands: &mut Commands,
+    root: Entity,
+    (manifest, bus_path): (&BusManifest, &Path),
+    (session_id, activate): (crate::session_vehicles::VehicleId, bool),
+    (spawn_world, heading_deg): (Vec3, f32),
+    formation_free: bool,
+) {
+    let mut controller = VehicleController::from_manifest(manifest);
+    if super::is_rail(manifest) {
+        // No pedals on rails: drive, the lever at rest (the start-up frees the brake).
+        controller
+            .inputs_mut()
+            .set_gear(opts_sim::GearPosition::Drive);
+    }
+    controller.sim.chassis.position = Vec2::new(spawn_world.x, spawn_world.y);
+    controller.sim.chassis.elevation_z = spawn_world.z;
+    // The simulation uses compass-style heading (clockwise from +Y), like OMSI map headings.
+    controller.sim.chassis.heading_rad = heading_deg.to_radians();
+    commands.entity(root).insert((
+        controller,
+        crate::session_vehicles::SessionVehicle(session_id),
+        InGameEntity,
+    ));
+    // The catalogue identity of the vehicle keys its stored viewpoints.
+    if let Some(key) = crate::viewpoints::key_of_bus_file(bus_path) {
+        commands
+            .entity(root)
+            .insert(crate::viewpoints::ViewpointKey(key));
+    }
+    if let Some(model) = crate::viewpoints::model_of_bus_file(bus_path) {
+        commands
+            .entity(root)
+            .insert(crate::viewpoints::ViewpointModel(model));
+    }
+    if activate {
+        commands.entity(root).insert(PlayerVehicle);
+    }
+    if let Some((size, centre)) = manifest.bounding_box {
+        commands
+            .entity(root)
+            .insert(super::PlayerBox(super::BodyBox::from_bounding_box(
+                size, centre,
+            )));
+    }
+    if super::is_rail(manifest) {
+        // Rail-bound: held on the track, speed from the rail dynamics (see `rail.rs`); the
+        // coupled units are placed on the track too, not by trailer kinematics.
+        let mass = commands_mass(manifest);
+        let mut player = super::RailPlayer::new(mass, manifest.bogie_half_span.unwrap_or(0.0));
+        if !formation_free {
+            player = player.with_snap(super::rail::FORMATION_SNAP_M);
+        }
+        commands
+            .entity(root)
+            .insert((player, opts_bevy::RailControls::default()));
+    }
+}
+
+/// The chase and cockpit camera of the vehicle, from its bounding box; recorded in the job.
+fn set_camera(
+    job: &mut WorldLoadJob,
+    manifest: &BusManifest,
+    (min, max): (Vec3, Vec3),
+    (bevy_pos, rotation): (Vec3, Quat),
+    cockpit_offset: Vec3,
+) -> CameraSetup {
+    tracing::debug!(min = ?min, max = ?max, "vehicle bounding box (Bevy space)");
+    let length = (max.z - min.z).abs().max(1.0);
+    let height = (max.y - min.y).abs().max(1.0);
+    let chase_distance = length * 1.3;
+    let chase_height = height * 1.6;
+    job.camera_std_index = manifest.std_camera_index.unwrap_or(0);
+    let camera = CameraSetup {
+        start: Transform::from_translation(
+            bevy_pos + rotation * Vec3::new(0.0, chase_height, chase_distance),
+        )
+        .looking_at(bevy_pos + Vec3::Y * (height * 0.5), Vec3::Y),
+        chase_distance,
+        chase_height,
+        cockpit_offset,
+    };
+    job.camera = Some(camera);
+    camera
+}
+
+/// The name the vehicle is known by: manufacturer and model, else the file name.
+fn vehicle_display_name(manifest: &BusManifest, bus_path: &Path) -> String {
+    manifest
+        .friendly_name
+        .as_ref()
+        .map(|f| format!("{} {}", f.manufacturer, f.model))
+        .unwrap_or_else(|| {
+            bus_path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned()
+        })
+}
+
+/// What the world statistics say about the new vehicle.
+fn record_vehicle(
+    (job, stats): (&WorldLoadJob, &mut WorldStats),
+    (vehicle_name, activate): (&str, bool),
+    (session_id, mesh_count, vertex_count): (crate::session_vehicles::VehicleId, usize, usize),
+) {
+    if activate {
+        stats.vehicle_name.clone_from(&vehicle_name.to_owned());
+    }
+    stats.vehicle_meshes = mesh_count;
+    stats.vehicle_vertices = vertex_count;
+    stats.scene_vertices += vertex_count;
+    stats.asset_failures = job.cache.stats.failures.len();
+    tracing::info!(
+        vehicle = %vehicle_name,
+        session_id,
+        meshes = mesh_count,
+        vertices = vertex_count,
+        "vehicle meshes loaded"
+    );
+}
+
+/// The scene trace record of the new vehicle.
+fn trace_vehicle(
+    (vehicle_name, bus_path, cfg_path): (&str, &Path, &Path),
+    (root, root_tf, trace_frame): (Entity, &Transform, &super::trace::Frame),
+    (session_id, activate, mesh_count, vertex_count): (
+        crate::session_vehicles::VehicleId,
+        bool,
+        usize,
+        usize,
+    ),
+) {
+    super::trace::spawned(
+        opts_bevy::scene_trace::kind::VEHICLE,
+        vehicle_name,
+        &opts_bevy::scene_trace::relative(bus_path),
+        root,
+        root_tf,
+        trace_frame,
+        "ok",
+        serde_json::json!({
+            "session_id": session_id, "active": activate,
+            "model_cfg": opts_bevy::scene_trace::relative(cfg_path),
+            "meshes": mesh_count, "vertices": vertex_count,
+        }),
+    );
+}
+
+/// Loads a user vehicle from its `.bus` file and spawns it at the session's spawn point
+/// ([`WorldLoadJob::spawn_point`]), as session vehicle `session_id`. With `activate` it also becomes the
+/// player's vehicle (`PlayerVehicle`, the HUD and `WorldStats` follow it); without, it is built
+/// as a parked session vehicle and the caller switches to it when it wants to.
+#[allow(clippy::too_many_arguments)]
+pub fn load_player_vehicle(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    bindposes: &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
+    session_id: crate::session_vehicles::VehicleId,
+    activate: bool,
+) -> Result<SpawnedVehicle, String> {
+    let (bus_path, manifest, cfg_path, model) = read_vehicle_files(job)?;
+    let bus_dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let detail = model.detail_lod().ok_or("model config has no meshes")?;
+    let lod0 = &detail;
+    set_texture_defs(job, &model);
     tracing::info!(path = %cfg_path.display(), lods = model.lods.len(), meshes = lod0.meshes.len(), "vehicle model config parsed");
 
     let model_dir = super::mesh_dir::model_mesh_dir(&job.install, &bus_dir, &cfg_path, &model);
@@ -124,55 +292,14 @@ pub fn load_player_vehicle(
         return Err("no vehicle meshes could be loaded".into());
     }
 
-    let mut controller = VehicleController::from_manifest(&manifest);
-    if super::is_rail(&manifest) {
-        // No pedals on rails: drive, the lever at rest (the start-up frees the brake).
-        controller
-            .inputs_mut()
-            .set_gear(opts_sim::GearPosition::Drive);
-    }
-    controller.sim.chassis.position = Vec2::new(spawn_world.x, spawn_world.y);
-    controller.sim.chassis.elevation_z = spawn_world.z;
-    // The simulation uses compass-style heading (clockwise from +Y), like OMSI map headings.
-    controller.sim.chassis.heading_rad = heading_deg.to_radians();
-    commands.entity(root).insert((
-        controller,
-        crate::session_vehicles::SessionVehicle(session_id),
-        InGameEntity,
-    ));
-    // The catalogue identity of the vehicle keys its stored viewpoints.
-    if let Some(key) = crate::viewpoints::key_of_bus_file(&bus_path) {
-        commands
-            .entity(root)
-            .insert(crate::viewpoints::ViewpointKey(key));
-    }
-    if let Some(model) = crate::viewpoints::model_of_bus_file(&bus_path) {
-        commands
-            .entity(root)
-            .insert(crate::viewpoints::ViewpointModel(model));
-    }
-    if activate {
-        commands.entity(root).insert(PlayerVehicle);
-    }
-    if let Some((size, centre)) = manifest.bounding_box {
-        commands
-            .entity(root)
-            .insert(super::PlayerBox(super::BodyBox::from_bounding_box(
-                size, centre,
-            )));
-    }
-    if super::is_rail(&manifest) {
-        // Rail-bound: held on the track, speed from the rail dynamics (see `rail.rs`); the
-        // coupled units are placed on the track too, not by trailer kinematics.
-        let mass = commands_mass(&manifest);
-        let mut player = super::RailPlayer::new(mass, manifest.bogie_half_span.unwrap_or(0.0));
-        if !job.formation_cars.is_empty() {
-            player = player.with_snap(super::rail::FORMATION_SNAP_M);
-        }
-        commands
-            .entity(root)
-            .insert((player, opts_bevy::RailControls::default()));
-    }
+    insert_vehicle_components(
+        commands,
+        root,
+        (&manifest, &bus_path),
+        (session_id, activate),
+        (spawn_world, heading_deg),
+        job.formation_cars.is_empty(),
+    );
     let script_seed = script_seed(job.install.root(), &bus_path, session_id);
     attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed, None);
     crate::player_sound::attach(job, commands, root, &manifest, &bus_dir);
@@ -226,62 +353,24 @@ pub fn load_player_vehicle(
         }
     }
 
-    tracing::debug!(min = ?min, max = ?max, "vehicle bounding box (Bevy space)");
-    let length = (max.z - min.z).abs().max(1.0);
-    let height = (max.y - min.y).abs().max(1.0);
-    let chase_distance = length * 1.3;
-    let chase_height = height * 1.6;
-    job.camera_std_index = manifest.std_camera_index.unwrap_or(0);
-    let camera = CameraSetup {
-        start: Transform::from_translation(
-            bevy_pos + root_tf.rotation * Vec3::new(0.0, chase_height, chase_distance),
-        )
-        .looking_at(bevy_pos + Vec3::Y * (height * 0.5), Vec3::Y),
-        chase_distance,
-        chase_height,
+    let camera = set_camera(
+        job,
+        &manifest,
+        (min, max),
+        (bevy_pos, root_tf.rotation),
         cockpit_offset,
-    };
-    job.camera = Some(camera);
-
-    let vehicle_name = manifest
-        .friendly_name
-        .as_ref()
-        .map(|f| format!("{} {}", f.manufacturer, f.model))
-        .unwrap_or_else(|| {
-            bus_path
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned()
-        });
-    if activate {
-        stats.vehicle_name.clone_from(&vehicle_name);
-    }
-    stats.vehicle_meshes = mesh_count;
-    stats.vehicle_vertices = vertex_count;
-    stats.scene_vertices += vertex_count;
-    stats.asset_failures = job.cache.stats.failures.len();
-    tracing::info!(
-        vehicle = %vehicle_name,
-        session_id,
-        meshes = mesh_count,
-        vertices = vertex_count,
-        "vehicle meshes loaded"
+    );
+    let vehicle_name = vehicle_display_name(&manifest, &bus_path);
+    record_vehicle(
+        (job, stats),
+        (&vehicle_name, activate),
+        (session_id, mesh_count, vertex_count),
     );
     if opts_bevy::scene_trace::enabled() {
-        super::trace::spawned(
-            opts_bevy::scene_trace::kind::VEHICLE,
-            &vehicle_name,
-            &opts_bevy::scene_trace::relative(&bus_path),
-            root,
-            &root_tf,
-            &trace_frame,
-            "ok",
-            serde_json::json!({
-                "session_id": session_id, "active": activate,
-                "model_cfg": opts_bevy::scene_trace::relative(&cfg_path),
-                "meshes": mesh_count, "vertices": vertex_count,
-            }),
+        trace_vehicle(
+            (&vehicle_name, &bus_path, &cfg_path),
+            (root, &root_tf, &trace_frame),
+            (session_id, activate, mesh_count, vertex_count),
         );
     }
     Ok(SpawnedVehicle {
