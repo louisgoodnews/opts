@@ -210,36 +210,8 @@ mod controls;
 pub use auto::shown_value;
 pub use controls::spawn_control;
 
-/// Spawns the row of `d` below `parent`.
-pub fn spawn_row(c: &mut Commands, parent: Entity, ctx: &Ctx, d: &SettingDescriptor) {
-    let mut cur = ctx.registry.text(ctx.settings, d.key).unwrap_or_default();
-    if ctx.light_locked(d.key) {
-        // Automatic mode: show what the governor applies, not the stored custom value.
-        if let Some(shown) = ctx
-            .light
-            .and_then(|q| crate::settings_registry::lighting::text_for(q, d.key))
-        {
-            cur = shown;
-        }
-    }
-    let row = c
-        .spawn((
-            Node {
-                flex_direction: FlexDirection::Row,
-                flex_wrap: FlexWrap::Wrap,
-                justify_content: JustifyContent::SpaceBetween,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(16.0),
-                row_gap: Val::Px(8.0),
-                padding: UiRect::axes(Val::Px(4.0), Val::Px(10.0)),
-                border: UiRect::bottom(Val::Px(1.0)),
-                ..default()
-            },
-            BorderRole(ColorRole::OutlineVariant),
-            Name::new(d.key),
-            ChildOf(parent),
-        ))
-        .id();
+/// The title, description and notes of a row, in a column that takes the room the controls leave.
+fn spawn_texts(c: &mut Commands, row: Entity, d: &SettingDescriptor) {
     let text = c
         .spawn((
             Node {
@@ -283,19 +255,10 @@ pub fn spawn_row(c: &mut Commands, parent: Entity, ctx: &Ctx, d: &SettingDescrip
             ColorRole::OnSurfaceVariant,
         );
     }
-    let right = c
-        .spawn((
-            Node {
-                flex_direction: FlexDirection::Row,
-                flex_wrap: FlexWrap::Wrap,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(12.0),
-                ..default()
-            },
-            ChildOf(row),
-        ))
-        .id();
-    spawn_control(c, right, ctx, d, &cur);
+}
+
+/// The *Reset* button of a stored setting (disabled with the reason while it is at its default).
+fn spawn_reset(c: &mut Commands, right: Entity, ctx: &Ctx, d: &SettingDescriptor, cur: &str) {
     if d.is_stored() && !matches!(d.available, Available::NotYet(_)) && !ctx.light_locked(d.key) {
         let at_default = cur == d.default;
         let b = ButtonBuilder::text("settings-reset")
@@ -312,4 +275,51 @@ pub fn spawn_row(c: &mut Commands, parent: Entity, ctx: &Ctx, d: &SettingDescrip
                 .insert(DisabledReason(ctx.loc.t("settings-reset-disabled").into()));
         }
     }
+}
+
+/// Spawns the row of `d` below `parent`.
+pub fn spawn_row(c: &mut Commands, parent: Entity, ctx: &Ctx, d: &SettingDescriptor) {
+    let mut cur = ctx.registry.text(ctx.settings, d.key).unwrap_or_default();
+    if ctx.light_locked(d.key) {
+        // Automatic mode: show what the governor applies, not the stored custom value.
+        if let Some(shown) = ctx
+            .light
+            .and_then(|q| crate::settings_registry::lighting::text_for(q, d.key))
+        {
+            cur = shown;
+        }
+    }
+    let row = c
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Row,
+                flex_wrap: FlexWrap::Wrap,
+                justify_content: JustifyContent::SpaceBetween,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(16.0),
+                row_gap: Val::Px(8.0),
+                padding: UiRect::axes(Val::Px(4.0), Val::Px(10.0)),
+                border: UiRect::bottom(Val::Px(1.0)),
+                ..default()
+            },
+            BorderRole(ColorRole::OutlineVariant),
+            Name::new(d.key),
+            ChildOf(parent),
+        ))
+        .id();
+    spawn_texts(c, row, d);
+    let right = c
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Row,
+                flex_wrap: FlexWrap::Wrap,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(12.0),
+                ..default()
+            },
+            ChildOf(row),
+        ))
+        .id();
+    spawn_control(c, right, ctx, d, &cur);
+    spawn_reset(c, right, ctx, d, &cur);
 }

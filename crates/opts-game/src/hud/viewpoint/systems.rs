@@ -37,6 +37,45 @@ pub fn value_text(state: &ViewpointState, row: ViewpointRow, loc: &Localization)
     loc.t_args(key, &[("value".to_owned(), Arg::from(shown))])
 }
 
+/// Marks the selected row, dims the other names and shows the *unsaved* mark when there are edits.
+fn show_row_marks(
+    state: &ViewpointState,
+    markers: &mut Query<(&ViewpointMarker, &mut Visibility), Without<ViewpointUnsaved>>,
+    names: &mut Query<(&ViewpointName, &mut InstrumentInk)>,
+    unsaved: &mut Query<&mut Visibility, (With<ViewpointUnsaved>, Without<ViewpointMarker>)>,
+) {
+    for (m, mut vis) in markers {
+        let want = if m.0 == state.row {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+        if *vis != want {
+            *vis = want;
+        }
+    }
+    for (n, mut ink) in names {
+        let want = if n.0 == state.row {
+            InstrumentInk::Text
+        } else {
+            InstrumentInk::TextDim
+        };
+        if *ink != want {
+            *ink = want;
+        }
+    }
+    for mut vis in unsaved {
+        let want = if state.is_dirty() {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+        if *vis != want {
+            *vis = want;
+        }
+    }
+}
+
 /// Keeps the texts, bars and markers of the open panel in step with the state.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_panel(
@@ -110,36 +149,7 @@ pub fn update_panel(
             node.width = want;
         }
     }
-    for (m, mut vis) in &mut markers {
-        let want = if m.0 == state.row {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
-        if *vis != want {
-            *vis = want;
-        }
-    }
-    for (n, mut ink) in &mut names {
-        let want = if n.0 == state.row {
-            InstrumentInk::Text
-        } else {
-            InstrumentInk::TextDim
-        };
-        if *ink != want {
-            *ink = want;
-        }
-    }
-    for mut vis in &mut unsaved {
-        let want = if state.is_dirty() {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
-        if *vis != want {
-            *vis = want;
-        }
-    }
+    show_row_marks(&state, &mut markers, &mut names, &mut unsaved);
 }
 
 /// The buttons of the panel.

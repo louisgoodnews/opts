@@ -14,17 +14,9 @@ use opts_cli::CliArgs;
 #[derive(Resource, Debug, Clone)]
 pub struct AppArgs(pub CliArgs);
 
-/// Constructs and configures a complete Bevy [`App`] ready for execution.
-///
-/// This function separates application construction from running, allowing both
-/// interactive execution in `main.rs` and headless testing in integration test harnesses.
-pub fn build_app(args: CliArgs) -> App {
-    let mut app = App::new();
-
-    // Store CLI arguments as a resource
-    app.insert_resource(AppArgs(args.clone()));
-
-    // 1. Configure Window and Engine plugins based on headless flag
+/// The engine plugins: a minimal headless set, or the default plugins with the window set up from
+/// the command line.
+fn add_engine_plugins(app: &mut App, args: &CliArgs) {
     if args.headless {
         app.add_plugins(
             MinimalPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
@@ -75,8 +67,11 @@ pub fn build_app(args: CliArgs) -> App {
                 .disable::<LogPlugin>(),
         );
     }
+}
 
-    // 2. Load or update persistent user settings
+/// Loads the user settings (with the map paths of the command line), applies the startup render
+/// options and inserts the fixed time step and the script drive switch.
+fn insert_startup_resources(app: &mut App, args: &CliArgs) {
     let mut settings = GameSettings::load_or_default();
     if let Some(ref path) = args.map_path {
         settings.recent_map_path = Some(path.clone());
@@ -85,7 +80,7 @@ pub fn build_app(args: CliArgs) -> App {
         settings.recent_map_path = Some(path.clone());
         let _ = settings.save();
     }
-    crate::look::apply_startup_render_options(&mut app, &settings, &args);
+    crate::look::apply_startup_render_options(app, &settings, args);
     app.insert_resource(settings);
     app.insert_resource(opts_bevy::ScriptDriveEnabled::default());
     app.insert_resource(crate::in_game::omsi_world::DebugWheelVars(
@@ -94,6 +89,21 @@ pub fn build_app(args: CliArgs) -> App {
     // Fixed simulation step; a long frame replays at most 50 ms of it (no catch-up spiral).
     app.insert_resource(Time::<Fixed>::from_hz(args.physics_hz.clamp(20.0, 1000.0)));
     app.insert_resource(Time::<Virtual>::from_max_delta(Duration::from_millis(50)));
+}
+
+/// Constructs and configures a complete Bevy [`App`] ready for execution.
+///
+/// This function separates application construction from running, allowing both
+/// interactive execution in `main.rs` and headless testing in integration test harnesses.
+pub fn build_app(args: CliArgs) -> App {
+    let mut app = App::new();
+
+    // Store CLI arguments as a resource
+    app.insert_resource(AppArgs(args.clone()));
+
+    add_engine_plugins(&mut app, &args);
+
+    insert_startup_resources(&mut app, &args);
 
     // Remote control (opt-in: `--cli-port`).
     if args.cli_port.is_some() {

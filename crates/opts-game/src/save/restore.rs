@@ -232,29 +232,9 @@ fn toast(world: &mut World, key: &'static str, args: Vec<(&'static str, String)>
     world.flush();
 }
 
-/// Drives a restore forward each frame while a session is up (see the module documentation).
-pub fn drive_restore(world: &mut World) {
-    if !world.contains_resource::<PendingRestore>() {
-        return;
-    }
-    let (stage, hud_up) = {
-        let load = world.resource::<SimulationLoadState>();
-        (load.stage, load.hud_spawned)
-    };
-    if stage == LoadStage::Failed {
-        let id = world.resource::<PendingRestore>().id.clone();
-        world.remove_resource::<PendingRestore>();
-        world.insert_resource(LastRestore(Some(RestoreOutcome::Failed { id })));
-        return;
-    }
-    if !hud_up {
-        return;
-    }
-    if !world.resource::<PendingRestore>().world_applied {
-        run_stage(world, Stage::World);
-        world.resource_mut::<PendingRestore>().world_applied = true;
-        return;
-    }
+/// Waits for the restored vehicles: all spawned, quiet for a few frames, their state applied.
+/// Returns true while it still has to wait; a timeout counts as done and adds a warning.
+fn settle_vehicles(world: &mut World) -> bool {
     let spawning = {
         let reg = world.resource::<SessionVehicles>();
         reg.records()
@@ -282,12 +262,12 @@ pub fn drive_restore(world: &mut World) {
     if !timed_out {
         // Every vehicle exists; give the placement systems a few frames to finish with them.
         if world.resource::<PendingRestore>().quiet_frames < QUIET_FRAMES {
-            return;
+            return true;
         }
         if !world.resource::<PendingRestore>().vehicles_applied {
             run_stage(world, Stage::Vehicles);
             world.resource_mut::<PendingRestore>().vehicles_applied = true;
-            return;
+            return true;
         }
         // Each vehicle takes its state once its scripts have started.
         crate::session_vehicles::state::apply_pending(world);
@@ -297,9 +277,14 @@ pub fn drive_restore(world: &mut World) {
             .iter()
             .any(|r| r.lifecycle == Lifecycle::Alive && r.saved_state.is_some());
         if waiting {
-            return;
+            return true;
         }
     }
+    false
+}
+
+/// The restore is complete: reports the failed vehicles, toasts and records the outcome.
+fn finish_restore(world: &mut World) {
     run_stage(world, Stage::Settled);
     let Some(done) = world.remove_resource::<PendingRestore>() else {
         return;
@@ -334,6 +319,35 @@ pub fn drive_restore(world: &mut World) {
         id: done.id,
         warnings,
     })));
+}
+
+/// Drives a restore forward each frame while a session is up (see the module documentation).
+pub fn drive_restore(world: &mut World) {
+    if !world.contains_resource::<PendingRestore>() {
+        return;
+    }
+    let (stage, hud_up) = {
+        let load = world.resource::<SimulationLoadState>();
+        (load.stage, load.hud_spawned)
+    };
+    if stage == LoadStage::Failed {
+        let id = world.resource::<PendingRestore>().id.clone();
+        world.remove_resource::<PendingRestore>();
+        world.insert_resource(LastRestore(Some(RestoreOutcome::Failed { id })));
+        return;
+    }
+    if !hud_up {
+        return;
+    }
+    if !world.resource::<PendingRestore>().world_applied {
+        run_stage(world, Stage::World);
+        world.resource_mut::<PendingRestore>().world_applied = true;
+        return;
+    }
+    if settle_vehicles(world) {
+        return;
+    }
+    finish_restore(world);
 }
 
 /// Forgets a restore that was abandoned (the user left the loading screen).
