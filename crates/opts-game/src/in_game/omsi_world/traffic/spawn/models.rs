@@ -90,6 +90,23 @@ fn set_unit_defs(
     Some(job.vehicle_script_textures.clone())
 }
 
+
+/// The equipment options of the repaint the head unit gets.
+fn head_setvars_of(
+    variant: &Variant,
+    pick_repaint: &dyn Fn(&crate::new_game_screen::repaints::VehicleRepaints) -> String,
+) -> Vec<(String, String)> {
+    let repaints = &variant.units[0].repaints;
+    let picked = pick_repaint(repaints);
+    let picked = picked.as_str();
+    let name = if picked.is_empty() {
+        repaints.default_name.as_str()
+    } else {
+        picked
+    };
+    repaints.setvars.get(name).cloned().unwrap_or_default()
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn build_unit_models(
     commands: &mut Commands,
@@ -119,17 +136,7 @@ pub(crate) fn build_unit_models(
             .unwrap_or_else(|| repaints.pick(repaint_seed))
             .to_owned()
     };
-    let head_setvars = {
-        let repaints = &variant.units[0].repaints;
-        let picked = pick_repaint(repaints);
-        let picked = picked.as_str();
-        let name = if picked.is_empty() {
-            repaints.default_name.as_str()
-        } else {
-            picked
-        };
-        repaints.setvars.get(name).cloned().unwrap_or_default()
-    };
+    let head_setvars = head_setvars_of(variant, &pick_repaint);
     for (unit, &entity) in variant.units.iter().zip(&entities) {
         let Some(lod) = unit_lod(unit) else {
             failed = Some(true);

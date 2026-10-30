@@ -84,47 +84,41 @@ pub(super) fn spawn_object(
     );
 }
 
-#[allow(clippy::too_many_arguments)]
-fn spawn_object_inner(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    obj: &MapObjectInstance,
-    placement: Placement,
-    terrain: Option<&TileTerrain>,
-    key: (i32, i32),
-    origin: (f32, f32),
-    children: &mut Vec<Entity>,
-    tile: &opts_core::formats::map::MapTile,
-    site: super::trace::Site<'_>,
-) {
-    let t_sco = opts_logging::stream_trace::span("obj.sco");
-    let sco_found = job.sco(&obj.sco_file);
-    drop(t_sco);
-    let Some((sco_path, sco)) = sco_found else {
-        stats.objects_failed += 1;
-        super::trace::warn(|| {
-            format!(
-                "scenery object file not found or unreadable: {}",
-                obj.sco_file
-            )
-        });
-        return;
-    };
+/// Objects that are not drawn like scenery: trees, parking-bay markers (the vehicle parked there
+/// is placed instead), editor-only objects and route helpers. Returns whether the object was
+/// handled.
+fn special_object(
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (obj, placement, terrain, key, origin): (
+        &MapObjectInstance,
+        Placement,
+        Option<&TileTerrain>,
+        (i32, i32),
+        (f32, f32),
+    ),
+    (children, tile, site): (
+        &mut Vec<Entity>,
+        &opts_core::formats::map::MapTile,
+        super::trace::Site<'_>,
+    ),
+    (sco_path, sco): (&Path, &opts_core::formats::scenery::SceneryObject),
+) -> bool {
     if let Some(tree) = &sco.tree {
         super::trace::set_kind(opts_bevy::scene_trace::kind::TREE);
         let _t = opts_logging::stream_trace::span("obj.tree");
         children.extend(spawn_tree(
             job, stats, commands, meshes, materials, images, tree, obj, origin, terrain,
         ));
-        return;
+        return true;
     }
     if sco.carpark_p {
         let Some(parked) = job.parked_vehicle(obj) else {
-            return;
+            return true;
         };
         let mut replaced = obj.clone();
         replaced.sco_file = parked;
@@ -156,12 +150,12 @@ fn spawn_object_inner(
                 },
             );
         }
-        return;
+        return true;
     }
     // An editor-only object draws no mesh; its `[maplight]`s are placed below.
     if sco.only_editor && sco.map_lights.is_empty() && !sco.bus_stop {
         tracing::debug!(sco = %sco_path.display(), "editor-only object skipped");
-        return;
+        return true;
     }
     // Route helpers (`[helparrow]`: arrows over junctions, the next stop's name over the stop) are
     // shown by OMSI only while its route-arrow help is on, along the route being driven
@@ -169,15 +163,24 @@ fn spawn_object_inner(
     // them put stop names and arrows in the air all over the maps.
     if sco.is_help_arrow {
         tracing::debug!(sco = %sco_path.display(), "route helper object not drawn");
-        return;
+        return true;
     }
-    let sco_dir = sco_path.parent().map(Path::to_path_buf).unwrap_or_default();
-    let model_dir = job
-        .install
-        .find_in(&sco_dir, "model")
-        .unwrap_or_else(|| sco_dir.join("model"));
-    let tex_dirs = vec![sco_dir.join("texture"), job.config.map_dir.join("texture")];
+    false
+}
 
+/// Where the object stands: the terrain height at its place (or the absolute one), moved onto the
+/// road for markings and parked cars, and the transform from its OMSI heading, pitch and roll.
+fn object_transform(
+    job: &WorldLoadJob,
+    sco: &opts_core::formats::scenery::SceneryObject,
+    (obj, placement, terrain, origin): (
+        &MapObjectInstance,
+        Placement,
+        Option<&TileTerrain>,
+        (f32, f32),
+    ),
+    on_marker: bool,
+) -> (Transform, f32) {
     // `[absheight]` objects (crossings, bridges, ...) store an absolute elevation.
     let terrain_h = if sco.has_absolute_height() {
         0.0
@@ -196,7 +199,7 @@ fn spawn_object_inner(
     // A parked car stands on the road of its parking bay the same way: the terrain under a bay
     // that was built into a street is not carved to the street, so a car placed by terrain
     // height floated above (or sank into) it (Berlin-Spandau, Westerwaldstraße).
-    let on_road_plane = sco.render_type.as_deref() == Some("on_surface") || site.marker.is_some();
+    let on_road_plane = sco.render_type.as_deref() == Some("on_surface") || on_marker;
     if on_road_plane && !sco.has_absolute_height() && matches!(placement, Placement::Tile) {
         let (x, y) = (origin.0 + obj.position.x, origin.1 + obj.position.y);
         if let Some(road) = job
@@ -207,7 +210,7 @@ fn spawn_object_inner(
             // A parked car keeps the height the map gives above its ground; a marking lies a
             // hair over the road.
             z = road
-                + if site.marker.is_some() {
+                + if on_marker {
                     obj.position.z
                 } else {
                     ON_SURFACE_LIFT_M
@@ -228,22 +231,146 @@ fn spawn_object_inner(
             scale: Vec3::ONE,
         },
     };
+    (transform, terrain_h)
+}
+
+/// An object that draws no mesh but whose `[maplight]`s still light the map (and a bus stop's
+/// marker).
+fn spawn_map_lights_only(
+    commands: &mut Commands,
+    children: &mut Vec<Entity>,
+    (obj, sco, sco_path): (
+        &MapObjectInstance,
+        &opts_core::formats::scenery::SceneryObject,
+        &Path,
+    ),
+    transform: Transform,
+) {
+    // No mesh is drawn, but the `[maplight]`s still light the map (e.g. the
+    // `sodiumlight_4L_break_L_Forum.sco` helpers that light a square from hidden lamps).
+    let root = commands.spawn((transform, Name::new("MapLights"))).id();
+    if sco.bus_stop {
+        // The marker of a bus stop (`[busstop]`): where the bus stops and the passengers wait.
+        commands.entity(root).insert((
+            opts_bevy::bus_stops::BusStopMarker {
+                id_code: obj.id_code,
+            },
+            Name::new("BusStop"),
+        ));
+    }
+    opts_bevy::scenery_runtime::spawn_map_lights(commands, root, &sco);
+    children.push(root);
+    tracing::debug!(sco = %sco_path.display(), "editor-only object: map lights only");
+}
+
+/// An object whose meshes gave no parts: a sound source without geometry becomes a root with its
+/// voices; any other is counted as having no geometry, being protected or having failed.
+fn no_mesh_parts(
+    (job, stats, commands, meshes, materials): (
+        &mut WorldLoadJob,
+        &mut WorldStats,
+        &mut Commands,
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+    ),
+    (obj, sco, sco_path, sco_dir, key): (
+        &MapObjectInstance,
+        &opts_core::formats::scenery::SceneryObject,
+        &Path,
+        &Path,
+        (i32, i32),
+    ),
+    (transform, mesh_parts, template, children): (
+        Transform,
+        Vec<Vec<opts_bevy::ModelPart>>,
+        Option<ScriptTemplate>,
+        &mut Vec<Entity>,
+    ),
+    (hidden_before, protected_before): (usize, usize),
+) {
+    if sco.sound.is_some() && (sco.meshes.is_empty() || sco.is_editor_only()) {
+        // A sound source without geometry (the `Generic` ambient objects: `[onlyeditor]`
+        // mesh, a script that raises the triggers): the root carries the script and the
+        // voices.
+        let name = sco
+            .friendly_name
+            .clone()
+            .unwrap_or_else(|| obj.sco_file.clone());
+        let parent = commands.spawn((transform, Name::new(name))).id();
+        children.push(parent);
+        job.finish_object(
+            commands, meshes, materials, parent, &sco, obj, mesh_parts, template,
+        );
+        crate::scenery_sound::attach(job, commands, parent, &sco, sco_dir);
+        stats.objects_loaded += 1;
+        return;
+    }
+    if sco.meshes.is_empty() || sco.is_editor_only() {
+        tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
+        stats.objects_no_geometry += 1;
+    } else if job.cache.stats.hidden_parts > hidden_before {
+        // Every slot is scaled by a script variable (`[alphascale]`, e.g. a night overlay):
+        // nothing to draw, which is not a failure (P-1014, MI-0029).
+        tracing::debug!(sco = %sco_path.display(), "object has only variable-hidden slots");
+        stats.objects_no_geometry += 1;
+    } else if job.cache.stats.protected_meshes > protected_before {
+        stats.objects_protected += 1;
+        tracing::warn!(sco = %sco_path.display(), tile = ?key, pos = ?obj.position, "object skipped: no mesh has usable geometry");
+    } else {
+        tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), "object has meshes but none could be loaded");
+        stats.objects_failed += 1;
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn spawn_object_inner(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    obj: &MapObjectInstance,
+    placement: Placement,
+    terrain: Option<&TileTerrain>,
+    key: (i32, i32),
+    origin: (f32, f32),
+    children: &mut Vec<Entity>,
+    tile: &opts_core::formats::map::MapTile,
+    site: super::trace::Site<'_>,
+) {
+    let t_sco = opts_logging::stream_trace::span("obj.sco");
+    let sco_found = job.sco(&obj.sco_file);
+    drop(t_sco);
+    let Some((sco_path, sco)) = sco_found else {
+        stats.objects_failed += 1;
+        super::trace::warn(|| {
+            format!(
+                "scenery object file not found or unreadable: {}",
+                obj.sco_file
+            )
+        });
+        return;
+    };
+    if special_object(
+        (job, stats, commands),
+        (meshes, materials, images),
+        (obj, placement, terrain, key, origin),
+        (children, tile, site),
+        (&sco_path, &sco),
+    ) {
+        return;
+    }
+    let sco_dir = sco_path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let model_dir = job
+        .install
+        .find_in(&sco_dir, "model")
+        .unwrap_or_else(|| sco_dir.join("model"));
+    let tex_dirs = vec![sco_dir.join("texture"), job.config.map_dir.join("texture")];
+
+    let (transform, terrain_h) = object_transform(job, &sco, (obj, placement, terrain, origin), site.marker.is_some());
     if sco.only_editor && sco.sound.is_none() {
-        // No mesh is drawn, but the `[maplight]`s still light the map (e.g. the
-        // `sodiumlight_4L_break_L_Forum.sco` helpers that light a square from hidden lamps).
-        let root = commands.spawn((transform, Name::new("MapLights"))).id();
-        if sco.bus_stop {
-            // The marker of a bus stop (`[busstop]`): where the bus stops and the passengers wait.
-            commands.entity(root).insert((
-                opts_bevy::bus_stops::BusStopMarker {
-                    id_code: obj.id_code,
-                },
-                Name::new("BusStop"),
-            ));
-        }
-        opts_bevy::scenery_runtime::spawn_map_lights(commands, root, &sco);
-        children.push(root);
-        tracing::debug!(sco = %sco_path.display(), "editor-only object: map lights only");
+        spawn_map_lights_only(commands, children, (obj, &sco, &sco_path), transform);
         return;
     }
     // `[attachObj]` children of this object are placed relative to it.
@@ -317,38 +444,13 @@ fn spawn_object_inner(
         return;
     };
     if mesh_parts.iter().all(Vec::is_empty) {
-        if sco.sound.is_some() && (sco.meshes.is_empty() || sco.is_editor_only()) {
-            // A sound source without geometry (the `Generic` ambient objects: `[onlyeditor]`
-            // mesh, a script that raises the triggers): the root carries the script and the
-            // voices.
-            let name = sco
-                .friendly_name
-                .clone()
-                .unwrap_or_else(|| obj.sco_file.clone());
-            let parent = commands.spawn((transform, Name::new(name))).id();
-            children.push(parent);
-            job.finish_object(
-                commands, meshes, materials, parent, &sco, obj, mesh_parts, template,
-            );
-            crate::scenery_sound::attach(job, commands, parent, &sco, &sco_dir);
-            stats.objects_loaded += 1;
-            return;
-        }
-        if sco.meshes.is_empty() || sco.is_editor_only() {
-            tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
-            stats.objects_no_geometry += 1;
-        } else if job.cache.stats.hidden_parts > hidden_before {
-            // Every slot is scaled by a script variable (`[alphascale]`, e.g. a night overlay):
-            // nothing to draw, which is not a failure (P-1014, MI-0029).
-            tracing::debug!(sco = %sco_path.display(), "object has only variable-hidden slots");
-            stats.objects_no_geometry += 1;
-        } else if job.cache.stats.protected_meshes > protected_before {
-            stats.objects_protected += 1;
-            tracing::warn!(sco = %sco_path.display(), tile = ?key, pos = ?obj.position, "object skipped: no mesh has usable geometry");
-        } else {
-            tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), "object has meshes but none could be loaded");
-            stats.objects_failed += 1;
-        }
+        let counts = (hidden_before, protected_before);
+        no_mesh_parts(
+            (job, stats, commands, meshes, materials),
+            (obj, &sco, &sco_path, &sco_dir, key),
+            (transform, mesh_parts, template, children),
+            counts,
+        );
         return;
     }
 

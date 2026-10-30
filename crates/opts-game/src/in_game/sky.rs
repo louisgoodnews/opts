@@ -149,6 +149,60 @@ fn set_clear_colour(
     };
 }
 
+/// Rebuilds the sky texture (the blend of the three by the sun's elevation, veiled by fog) and
+/// returns the colour at the horizon and the fog's veil colour.
+fn refresh_texture(
+    sky: &Sky,
+    env: &SessionEnvironment,
+    (fog_on, fog_clear, elevation): (bool, u8, f32),
+    images: &mut Assets<Image>,
+) -> ([f32; 3], [f32; 3]) {
+    let weights = sky.config.sky_weights(elevation);
+    // Colour of the sky at the horizon fills anything the dome does not cover; the fog
+    // takes it too, greyed in thick fog.
+    let horizon = horizon_colour(sky, weights);
+    let conditions = env.conditions();
+    let veil_color = opts_bevy::weather::fog_color(horizon, conditions);
+    let data = blended_sky(
+        sky,
+        weights,
+        |v| {
+            if fog_on {
+                opts_bevy::weather::sky_veil_clear(conditions, v, f32::from(fog_clear) / 32.0)
+            } else {
+                0.0
+            }
+        },
+        veil_color,
+    );
+    if let Some(mut img) = images.get_mut(&sky.image) {
+        img.data = Some(data);
+    }
+    (horizon, veil_color)
+}
+
+/// The clear colour fills what the dome does not cover: the fog colour, towards the horizon
+/// colour as the camera leaves the ground-fog layer.
+fn clear_colour_of(horizon: [f32; 3], veil_color: [f32; 3], fog_on: bool, fog_clear: u8) -> [f32; 3] {
+    let lift = f32::from(fog_clear) / 32.0;
+    let clear_color = if fog_on {
+        [0, 1, 2].map(|c| veil_color[c] + (horizon[c] - veil_color[c]) * lift)
+    } else {
+        horizon
+    };
+    clear_color
+}
+
+/// The sun disc: on the dome in the sun's direction, hidden below the horizon.
+fn place_on_dome(cam: Vec3, dir: Vec3) -> Transform {
+    let mut t = Transform::from_translation(cam + dir * (DOME_RADIUS - 10.0));
+    t.look_at(cam, Vec3::Y);
+    if dir.y <= -0.05 {
+        t.scale = Vec3::ZERO;
+    }
+    t
+}
+
 /// Updates sky colours, sun/moon placement and lighting.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update_sky(
@@ -213,28 +267,9 @@ pub fn update_sky(
         sky.last_hdr = Some(hdr);
         sky.last_fog_clear = fog_clear;
         sky.last_revision = Some(env.revision());
-        let weights = sky.config.sky_weights(elevation);
-        // Colour of the sky at the horizon fills anything the dome does not cover; the fog
-        // takes it too, greyed in thick fog.
-        let horizon = horizon_colour(&sky, weights);
-        let conditions = env.conditions();
         let fog_on = effects.as_ref().is_none_or(|e| e.fog);
-        let veil_color = opts_bevy::weather::fog_color(horizon, conditions);
-        let data = blended_sky(
-            &sky,
-            weights,
-            |v| {
-                if fog_on {
-                    opts_bevy::weather::sky_veil_clear(conditions, v, f32::from(fog_clear) / 32.0)
-                } else {
-                    0.0
-                }
-            },
-            veil_color,
-        );
-        if let Some(mut img) = images.get_mut(&sky.image) {
-            img.data = Some(data);
-        }
+        let (horizon, veil_color) =
+            refresh_texture(&sky, &env, (fog_on, fog_clear, elevation), &mut images);
         let (sun_colour, sun_lux) = sun_light(&sky, &env, elevation);
         for (_, mut light) in &mut sun {
             light.color = sun_colour;
@@ -243,14 +278,7 @@ pub fn update_sky(
         if let Some(ambient) = ambient.as_mut() {
             set_ambient(&sky, ambient, &env, (elevation, ambient_scale));
         }
-        // The clear colour fills what the dome does not cover: the fog colour, towards the
-        // horizon colour as the camera leaves the ground-fog layer.
-        let lift = f32::from(fog_clear) / 32.0;
-        let clear_color = if fog_on {
-            [0, 1, 2].map(|c| veil_color[c] + (horizon[c] - veil_color[c]) * lift)
-        } else {
-            horizon
-        };
+        let clear_color = clear_colour_of(horizon, veil_color, fog_on, fog_clear);
         if let Some(clear) = clear.as_mut() {
             set_clear_colour(clear, look.as_deref(), hdr, clear_color);
         }
@@ -259,16 +287,8 @@ pub fn update_sky(
     for (mut t, _) in &mut sun {
         *t = Transform::from_translation(cam).looking_to(-sun_dir, Vec3::Y);
     }
-    let place = |dir: Vec3| {
-        let mut t = Transform::from_translation(cam + dir * (DOME_RADIUS - 10.0));
-        t.look_at(cam, Vec3::Y);
-        if dir.y <= -0.05 {
-            t.scale = Vec3::ZERO;
-        }
-        t
-    };
     for mut t in &mut sun_disc {
-        *t = place(sun_dir);
+        *t = place_on_dome(cam, sun_dir);
     }
 }
 

@@ -42,6 +42,206 @@ struct StopObject {
     heading: f64,
 }
 
+/// What one planning pass knows about the world.
+struct PlanCtx<'a> {
+    now: f64,
+    centre: DVec2,
+    view: DVec2,
+    graph: &'a opts_traffic::LaneGraph,
+    stops: HashMap<u32, StopObject>,
+    tt: &'a opts_core::formats::timetable::Timetables,
+}
+
+impl PlanCtx<'_> {
+    /// The lane and distance along it where the stop object of `station` stands.
+    fn place(&self, station: u32) -> Option<(LaneId, f64)> {
+        let o = self.stops.get(&station)?;
+        self.graph
+            .nearest_place(o.pos, o.heading, LANE_HEADING_TOL, LANE_REACH_M, |l| {
+                l.kind == LaneKind::Road && l.length() > 4.0
+            })
+            .map(|(lane, s, _)| (lane, s))
+    }
+}
+
+/// Where a run is now: the stop it starts at and, between stops, how far it has come; `None` for
+/// a run that is not about to start or already over.
+fn run_start(ctx: &PlanCtx, schedule: &opts_core::formats::timetable::ActiveSchedule) -> Option<(usize, Option<f64>)> {
+    let phase = run_phase(schedule, ctx.now);
+    Some(match phase {
+        RunPhase::NotStarted { wait_s } if wait_s <= LEAD_S => (0, None),
+        RunPhase::AtStop { index } => (index, None),
+        RunPhase::Between { from, fraction } => (from, Some(fraction)),
+        _ => return None,
+    })
+}
+
+/// Where the vehicle is placed: at the stop, or on the way to the next one; when the stop it
+/// comes from is not on loaded lanes but the next one is, it comes from upstream of that.
+fn spawn_spot(
+    ctx: &PlanCtx,
+    schedule: &opts_core::formats::timetable::ActiveSchedule,
+    (first_stop, offset): (usize, Option<f64>),
+) -> Option<(LaneId, f64, Vec<LaneId>)> {
+    let (graph, now) = (ctx.graph, ctx.now);
+    let a = schedule
+        .stops
+        .get(first_stop)
+        .and_then(|s| ctx.place(s.station_id));
+    Some(match (offset, a) {
+        (None, Some(a)) => (a.0, a.1, vec![]),
+        (None, None) => continue,
+        (Some(fraction), a) => {
+            let Some(b) = schedule
+                .stops
+                .get(first_stop + 1)
+                .and_then(|s| ctx.place(s.station_id))
+            else {
+                return None;
+            };
+            match a {
+                Some(a) => {
+                    let Some((lanes, lengths)) = leg(graph, a, b) else {
+                        return None;
+                    };
+                    let total: f64 = lengths.iter().sum::<f64>()
+                        - a.1
+                        - (lengths.last().copied().unwrap_or(0.0) - b.1);
+                    let Some((i, s)) = place_along(&lengths, a.1, fraction * total.max(0.0))
+                    else {
+                        return None;
+                    };
+                    (lanes[i], s, Vec::new())
+                }
+                None => {
+                    let due = schedule.stops[first_stop + 1].arrival_s;
+                    let back = ((f64::from(due) - now).max(0.0) * UPSTREAM_MS)
+                        .clamp(UPSTREAM_MIN_M, APPEAR_MAX_M);
+                    let Some((lane, s)) = walk_back(graph, b.0, b.1, back) else {
+                        return None;
+                    };
+                    (lane, s, Vec::new())
+                }
+            }
+        }
+    })
+}
+
+/// Whether a place is in the ring around the camera where vehicles appear, and not in plain view.
+fn appears_there(ctx: &PlanCtx, (spawn_lane, spawn_s): (LaneId, f64)) -> bool {
+    let Some(lane) = ctx.graph.lane(spawn_lane) else {
+        return false;
+    };
+    let (centre, view) = (ctx.centre, ctx.view);
+    let at = lane.geometry.point_at(spawn_s);
+    let distance = at.distance(centre);
+    let to = (at - centre).normalize_or_zero();
+    if !(APPEAR_MIN_M..=APPEAR_MAX_M).contains(&distance)
+        || (view.dot(to) > 0.5 && distance < VIEW_CLEAR_M)
+    {
+        continue;
+    }
+    true
+}
+
+/// The route and the stops through everything that is on the loaded map, from where the vehicle
+/// appears: the lanes, the stop points and the planned arrivals.
+fn plan_route(
+    ctx: &PlanCtx,
+    schedule: &opts_core::formats::timetable::ActiveSchedule,
+    (first_stop, offset): (usize, Option<f64>),
+    (spawn_lane, spawn_s, route_from): (LaneId, f64, Vec<LaneId>),
+) -> (Vec<LaneId>, Vec<StopPoint>, Vec<(u32, f64)>) {
+    let (graph, tt) = (ctx.graph, ctx.tt);
+    let mut route = route_from;
+    let mut points = Vec::new();
+    let mut arrivals = Vec::new();
+    let mut prev: Option<(LaneId, f64)> = offset.is_some().then_some((spawn_lane, spawn_s));
+    for (k, st) in schedule
+        .stops
+        .iter()
+        .enumerate()
+        .skip(first_stop + usize::from(offset.is_some()))
+    {
+        let Some(p) = ctx.place(st.station_id) else { break };
+        if let Some(from) = prev {
+            let Some((lanes, _)) = leg(graph, from, p) else {
+                break;
+            };
+            route.extend(lanes.into_iter().skip(1));
+        }
+        let dwell = tt
+            .stop(st.station_id)
+            .map_or(DWELL_MIN_S, |s| f64::from(s.dwell_s))
+            .clamp(DWELL_MIN_S, DWELL_MAX_S);
+        points.push(StopPoint::new(
+            st.station_id,
+            p.0,
+            p.1,
+            dwell,
+            f64::from(st.departure_s),
+        ));
+        arrivals.push((st.station_id, f64::from(st.arrival_s)));
+        prev = Some(p);
+        let _ = k;
+    }
+    (route, points, arrivals)
+}
+
+/// The vehicle slot of the tour's depot group: one that is ready, chosen by the run. Asks for one
+/// to be parsed when none is ready, and gives the run up when none can be.
+fn pick_slot_for(
+    (sched, pool): (&mut ScheduledTraffic, &mut TrafficPool),
+    tt: &opts_core::formats::timetable::Timetables,
+    (run, schedule): (&RunRef, &opts_core::formats::timetable::ActiveSchedule),
+) -> Option<usize> {
+    let Some(tour) = tt.tour(&schedule.line_file, run.tour) else {
+        return None;
+    };
+    let Some(choices) = pool
+        .depots
+        .get(&tour.vehicle_group.to_ascii_lowercase())
+        .cloned()
+    else {
+        sched.runs.entry(run.clone()).or_default().tries = 3;
+        return None;
+    };
+    let ready: Vec<(usize, u32)> = choices
+        .iter()
+        .copied()
+        .filter(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Ready(_)))
+        .collect();
+    if ready.is_empty() {
+        // Ask for one to be parsed; the run is tried again next pass.
+        if let Some((slot, _)) = choices
+            .iter()
+            .find(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Idle))
+        {
+            pool.slots[*slot].state = SlotState::Pending;
+        } else if choices
+            .iter()
+            .all(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Failed))
+        {
+            sched.runs.entry(run.clone()).or_default().tries = 3;
+        }
+        return None;
+    }
+    let total: u32 = ready.iter().map(|(_, n)| n).sum();
+    let mut pick = (run.run as u32 + run.tour as u32 * 7) % total.max(1);
+    let slot = ready
+        .iter()
+        .find(|(_, n)| {
+            if pick < *n {
+                true
+            } else {
+                pick -= n;
+                false
+            }
+        })
+        .map_or(ready[0].0, |(s, _)| *s);
+    Some(slot)
+}
+
 /// Plans the next scheduled vehicle.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn plan_scheduled(
@@ -119,13 +319,13 @@ pub fn plan_scheduled(
     );
     let fwd = cam.forward();
     let view = DVec2::new(f64::from(fwd.x), -f64::from(fwd.z)).normalize_or_zero();
-    let place = |station: u32| -> Option<(LaneId, f64)> {
-        let o = stops.get(&station)?;
-        graph
-            .nearest_place(o.pos, o.heading, LANE_HEADING_TOL, LANE_REACH_M, |l| {
-                l.kind == LaneKind::Road && l.length() > 4.0
-            })
-            .map(|(lane, s, _)| (lane, s))
+    let ctx = PlanCtx {
+        now,
+        centre,
+        view,
+        graph,
+        stops,
+        tt: &tt,
     };
     let mut candidates = sched.active.clone();
     // The runs nearest to the player first: a bus the player can see beats one at the edge.
@@ -138,7 +338,7 @@ pub fn plan_scheduled(
         run.1
             .stops
             .get(idx)
-            .and_then(|s| stops.get(&s.station_id))
+            .and_then(|s| ctx.stops.get(&s.station_id))
             .map_or(f64::MAX, |o| o.pos.distance(centre))
     };
     candidates.sort_by(|a, b| near(a).total_cmp(&near(b)));
@@ -152,151 +352,31 @@ pub fn plan_scheduled(
         if entry.agent.is_some() || entry.tries >= 3 {
             continue;
         }
-        let phase = run_phase(&schedule, now);
-        let (first_stop, offset) = match phase {
-            RunPhase::NotStarted { wait_s } if wait_s <= LEAD_S => (0, None),
-            RunPhase::AtStop { index } => (index, None),
-            RunPhase::Between { from, fraction } => (from, Some(fraction)),
-            _ => continue,
-        };
-        seen[1] += 1;
-        let a = schedule
-            .stops
-            .get(first_stop)
-            .and_then(|s| place(s.station_id));
-        // Where the vehicle is placed: at the stop, or on the way to the next one; when the stop
-        // it comes from is not on loaded lanes but the next one is, it comes from upstream of that.
-        let (spawn_lane, spawn_s, route_from) = match (offset, a) {
-            (None, Some(a)) => (a.0, a.1, vec![]),
-            (None, None) => continue,
-            (Some(fraction), a) => {
-                let Some(b) = schedule
-                    .stops
-                    .get(first_stop + 1)
-                    .and_then(|s| place(s.station_id))
-                else {
-                    continue;
-                };
-                match a {
-                    Some(a) => {
-                        let Some((lanes, lengths)) = leg(graph, a, b) else {
-                            continue;
-                        };
-                        let total: f64 = lengths.iter().sum::<f64>()
-                            - a.1
-                            - (lengths.last().copied().unwrap_or(0.0) - b.1);
-                        let Some((i, s)) = place_along(&lengths, a.1, fraction * total.max(0.0))
-                        else {
-                            continue;
-                        };
-                        (lanes[i], s, Vec::new())
-                    }
-                    None => {
-                        let due = schedule.stops[first_stop + 1].arrival_s;
-                        let back = ((f64::from(due) - now).max(0.0) * UPSTREAM_MS)
-                            .clamp(UPSTREAM_MIN_M, APPEAR_MAX_M);
-                        let Some((lane, s)) = walk_back(graph, b.0, b.1, back) else {
-                            continue;
-                        };
-                        (lane, s, Vec::new())
-                    }
-                }
-            }
-        };
-        seen[2] += 1;
-        let Some(lane) = graph.lane(spawn_lane) else {
+        let Some((first_stop, offset)) = run_start(&ctx, &schedule) else {
             continue;
         };
-        let at = lane.geometry.point_at(spawn_s);
-        let distance = at.distance(centre);
-        let to = (at - centre).normalize_or_zero();
-        if !(APPEAR_MIN_M..=APPEAR_MAX_M).contains(&distance)
-            || (view.dot(to) > 0.5 && distance < VIEW_CLEAR_M)
-        {
+        seen[1] += 1;
+        let Some((spawn_lane, spawn_s, route_from)) = spawn_spot(&ctx, &schedule, (first_stop, offset))
+        else {
+            continue;
+        };
+        seen[2] += 1;
+        if !appears_there(&ctx, (spawn_lane, spawn_s)) {
             continue;
         }
         seen[3] += 1;
-        // The route and the stops through everything that is on the loaded map.
-        let mut route = route_from;
-        let mut points = Vec::new();
-        let mut arrivals = Vec::new();
-        let mut prev: Option<(LaneId, f64)> = offset.is_some().then_some((spawn_lane, spawn_s));
-        for (k, st) in schedule
-            .stops
-            .iter()
-            .enumerate()
-            .skip(first_stop + usize::from(offset.is_some()))
-        {
-            let Some(p) = place(st.station_id) else { break };
-            if let Some(from) = prev {
-                let Some((lanes, _)) = leg(graph, from, p) else {
-                    break;
-                };
-                route.extend(lanes.into_iter().skip(1));
-            }
-            let dwell = tt
-                .stop(st.station_id)
-                .map_or(DWELL_MIN_S, |s| f64::from(s.dwell_s))
-                .clamp(DWELL_MIN_S, DWELL_MAX_S);
-            points.push(StopPoint::new(
-                st.station_id,
-                p.0,
-                p.1,
-                dwell,
-                f64::from(st.departure_s),
-            ));
-            arrivals.push((st.station_id, f64::from(st.arrival_s)));
-            prev = Some(p);
-            let _ = k;
-        }
+        let (route, points, arrivals) = plan_route(
+            &ctx,
+            &schedule,
+            (first_stop, offset),
+            (spawn_lane, spawn_s, route_from),
+        );
         if points.is_empty() {
             continue;
         }
-        // The vehicle: the tour's depot group.
-        let Some(tour) = tt.tour(&schedule.line_file, run.tour) else {
+        let Some(slot) = pick_slot_for((&mut sched, &mut pool), ctx.tt, (&run, &schedule)) else {
             continue;
         };
-        let Some(choices) = pool
-            .depots
-            .get(&tour.vehicle_group.to_ascii_lowercase())
-            .cloned()
-        else {
-            sched.runs.entry(run).or_default().tries = 3;
-            continue;
-        };
-        let ready: Vec<(usize, u32)> = choices
-            .iter()
-            .copied()
-            .filter(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Ready(_)))
-            .collect();
-        if ready.is_empty() {
-            // Ask for one to be parsed; the run is tried again next pass.
-            if let Some((slot, _)) = choices
-                .iter()
-                .find(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Idle))
-            {
-                pool.slots[*slot].state = SlotState::Pending;
-            } else if choices
-                .iter()
-                .all(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Failed))
-            {
-                sched.runs.entry(run).or_default().tries = 3;
-            }
-            continue;
-        }
-        let total: u32 = ready.iter().map(|(_, n)| n).sum();
-        let mut pick = (run.run as u32 + run.tour as u32 * 7) % total.max(1);
-        let slot = ready
-            .iter()
-            .find(|(_, n)| {
-                if pick < *n {
-                    true
-                } else {
-                    pick -= n;
-                    false
-                }
-            })
-            .map_or(ready[0].0, |(s, _)| *s);
         let speed = match (
             offset,
             schedule.stops.get(first_stop),

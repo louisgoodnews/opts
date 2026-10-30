@@ -114,6 +114,18 @@ fn delete_config(env: &mut Env, id: String, commands: &mut Commands) {
     }
 }
 
+/// *Compose a train*: makes sure the head car is set and opens the formation editor.
+fn compose_formation(env: &mut Env, commands: &mut Commands) {
+    super::formation::ensure_head(env.setup, &env.catalogue);
+    super::formation::reopen(
+        commands,
+        &env.formation_modals,
+        &env.loc,
+        &env.catalogue,
+        &env.setup,
+    );
+}
+
 /// Applies the action of an activated wizard button.
 pub fn handle_actions(
     mut activated: MessageReader<Activated>,
@@ -159,16 +171,7 @@ pub fn handle_actions(
                 env.setup.custom_setvars.clear();
                 next(&mut env);
             }
-            PlannerAction::ComposeFormation => {
-                super::formation::ensure_head(&mut env.setup, &env.catalogue);
-                super::formation::reopen(
-                    &mut commands,
-                    &env.formation_modals,
-                    &env.loc,
-                    &env.catalogue,
-                    &env.setup,
-                );
-            }
+            PlannerAction::ComposeFormation => compose_formation(&mut env, &mut commands),
             action @ (PlannerAction::FormationAdd(_)
             | PlannerAction::FormationRemove(_)
             | PlannerAction::FormationUp(_)

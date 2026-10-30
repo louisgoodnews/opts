@@ -191,6 +191,88 @@ fn attach_agent(
     }
 }
 
+/// What the spawned vehicle needs from its variant: sounds, the front door's reach, wheel and
+/// axle geometry, the names and the chain of trailing units.
+struct VariantLook {
+    sound: Option<SoundSet>,
+    door_ahead: f32,
+    unit_sounds: Vec<Option<SoundSet>>,
+    wheel_radius: f32,
+    rear_axle_y: f32,
+    delta_height: f32,
+    name: String,
+    measured: bool,
+    head_bus_path: std::path::PathBuf,
+    chain: Vec<ChainUnit>,
+}
+
+fn variant_look(variant: &Variant, params: &IdmParams, entities: &[Entity]) -> VariantLook {
+    let head = &variant.units[0];
+    let sound = head.sound.clone();
+    let door_ahead = head
+        .front_door_y
+        .map_or(0.0, |y| (head.size.unwrap_or((4.4, 2.2)).1 - y).max(0.0));
+    let unit_sounds: Vec<Option<Arc<crate::vehicle_sound::AiSoundSet>>> = variant
+        .units
+        .iter()
+        .skip(1)
+        .map(|u| u.sound.clone())
+        .collect();
+    let size = head.size.unwrap_or((4.4, 2.2));
+    let heavy = params.class != VehicleClass::Car;
+    let wheel_radius = head
+        .profile
+        .wheel_radius_m
+        .unwrap_or(if heavy { 0.5 } else { 0.31 });
+    let rear_axle_y = size.1 - (params.front_overhang + params.wheelbase) as f32;
+    let delta_height = head.profile.delta_height_m;
+    let name = variant.name.clone();
+    let measured = head.response.is_some();
+    let head_bus_path = head.bus_path.clone();
+    let chain: Vec<ChainUnit> = variant
+        .units
+        .iter()
+        .zip(entities)
+        .skip(1)
+        .map(|(u, &e)| {
+            ChainUnit::new(
+                e,
+                u.hitch,
+                u.joint,
+                u.rear_axle_y,
+                u.max_alpha_deg,
+                u.reversed,
+            )
+        })
+        .collect();
+    VariantLook {
+        sound,
+        door_ahead,
+        unit_sounds,
+        wheel_radius,
+        rear_axle_y,
+        delta_height,
+        name,
+        measured,
+        head_bus_path,
+        chain,
+    }
+}
+
+/// A spawn that did not come to be: the unit roots go and a scheduled run is told.
+fn give_up(
+    commands: &mut Commands,
+    entities: Vec<Entity>,
+    (sched, request): (&mut ScheduledTraffic, Option<&ScheduledRequest>),
+) {
+    for e in entities {
+        commands.entity(e).despawn();
+    }
+    if let Some(r) = request {
+        sched.failed(r);
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn place_and_insert_agent(
     commands: &mut Commands,
@@ -239,57 +321,27 @@ pub(crate) fn place_and_insert_agent(
         .lane(lane_id)
         .is_some_and(|l| !l.rules.allows(params.class))
     {
-        for e in entities {
-            commands.entity(e).despawn();
-        }
-        if let Some(r) = request {
-            sched.failed(r);
-        }
+        give_up(commands, entities, (sched, request));
         return;
     }
     let speed = match request {
         Some(r) => r.speed.min(state.world.lane_cap(&params, lane_id)),
         None => state.world.lane_cap(&params, lane_id) * 0.8,
     };
-    let head = &variant.units[0];
-    let sound = head.sound.clone();
-    let door_ahead = head
-        .front_door_y
-        .map_or(0.0, |y| (head.size.unwrap_or((4.4, 2.2)).1 - y).max(0.0));
-    let unit_sounds: Vec<Option<Arc<crate::vehicle_sound::AiSoundSet>>> = variant
-        .units
-        .iter()
-        .skip(1)
-        .map(|u| u.sound.clone())
-        .collect();
-    let size = head.size.unwrap_or((4.4, 2.2));
-    let heavy = params.class != VehicleClass::Car;
-    let wheel_radius = head
-        .profile
-        .wheel_radius_m
-        .unwrap_or(if heavy { 0.5 } else { 0.31 });
-    let rear_axle_y = size.1 - (params.front_overhang + params.wheelbase) as f32;
-    let delta_height = head.profile.delta_height_m;
-    let name = variant.name.clone();
-    let fallbacks = head.profile.fallbacks.clone();
-    let measured = head.response.is_some();
-    let head_bus_path = head.bus_path.clone();
-    let chain: Vec<ChainUnit> = variant
-        .units
-        .iter()
-        .zip(&entities)
-        .skip(1)
-        .map(|(u, &e)| {
-            ChainUnit::new(
-                e,
-                u.hitch,
-                u.joint,
-                u.rear_axle_y,
-                u.max_alpha_deg,
-                u.reversed,
-            )
-        })
-        .collect();
+    let look = variant_look(variant, &params, &entities);
+    let fallbacks = variant.units[0].profile.fallbacks.clone();
+    let VariantLook {
+        sound,
+        door_ahead,
+        unit_sounds,
+        wheel_radius,
+        rear_axle_y,
+        delta_height,
+        name,
+        measured,
+        head_bus_path,
+        chain,
+    } = look;
     for (unit, &e) in variant.units.iter().zip(&entities) {
         opts_bevy::spawn_vehicle_glows(commands, root, e, &unit.model);
     }
@@ -338,13 +390,6 @@ pub(crate) fn place_and_insert_agent(
                 (sound.as_ref(), &unit_sounds, scripted_head, chain),
             );
         }
-        Err(_) => {
-            for e in entities {
-                commands.entity(e).despawn();
-            }
-            if let Some(r) = request {
-                sched.failed(r);
-            }
-        }
+        Err(_) => give_up(commands, entities, (sched, request)),
     }
 }

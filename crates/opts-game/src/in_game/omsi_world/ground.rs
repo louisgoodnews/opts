@@ -92,6 +92,56 @@ fn read_masks(
     masks
 }
 
+/// The base and the painted layers: (layer number, texture, detail texture). `None` when the base
+/// layer cannot be decoded; another layer that cannot is skipped.
+type DecodedLayers = Vec<(
+    usize,
+    opts_bevy::ground::CpuImage,
+    Option<opts_bevy::ground::CpuImage>,
+)>;
+
+fn decode_layers(
+    job: &mut WorldLoadJob,
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (wanted, dirs): (&[usize], &[PathBuf]),
+) -> Option<DecodedLayers> {
+    use opts_bevy::ground::CpuImage;
+    let mut decoded: DecodedLayers = Vec::new();
+    for &n in wanted {
+        let tex = &job.manifest.ground_textures[n];
+        let (name, detail_name) = (tex.ground_texture.clone(), tex.detail_texture.clone());
+        let mut loader = ContentLoader {
+            install: &job.install,
+            cache: &mut job.cache,
+            meshes,
+            materials,
+            images,
+        };
+        let img = loader
+            .texture(&name, dirs)
+            .and_then(|h| loader.images.get(&h).and_then(CpuImage::from_image));
+        let detail = if detail_name.trim().is_empty() {
+            None
+        } else {
+            loader
+                .texture(&detail_name, dirs)
+                .and_then(|h| loader.images.get(&h).and_then(CpuImage::from_image))
+        };
+        match img {
+            Some(img) => decoded.push((n, img, detail)),
+            None if n == 0 => return None,
+            None => {
+                tracing::warn!(layer = n, texture = %name, "ground layer texture cannot be decoded; layer skipped");
+            }
+        }
+    }
+    Some(decoded)
+}
+
 /// Decodes the base and every painted layer once per map and uploads them as one mipmapped array
 /// (`job.ground_array`). `None` when the base layer cannot be decoded.
 fn build_ground_array(
@@ -121,35 +171,7 @@ fn build_ground_array(
         }
     }
     wanted.sort_unstable();
-    let mut decoded: Vec<(usize, CpuImage, Option<CpuImage>)> = Vec::new();
-    for &n in &wanted {
-        let tex = &job.manifest.ground_textures[n];
-        let (name, detail_name) = (tex.ground_texture.clone(), tex.detail_texture.clone());
-        let mut loader = ContentLoader {
-            install: &job.install,
-            cache: &mut job.cache,
-            meshes,
-            materials,
-            images,
-        };
-        let img = loader
-            .texture(&name, &dirs)
-            .and_then(|h| loader.images.get(&h).and_then(CpuImage::from_image));
-        let detail = if detail_name.trim().is_empty() {
-            None
-        } else {
-            loader
-                .texture(&detail_name, &dirs)
-                .and_then(|h| loader.images.get(&h).and_then(CpuImage::from_image))
-        };
-        match img {
-            Some(img) => decoded.push((n, img, detail)),
-            None if n == 0 => return None,
-            None => {
-                tracing::warn!(layer = n, texture = %name, "ground layer texture cannot be decoded; layer skipped");
-            }
-        }
-    }
+    let decoded = decode_layers(job, (meshes, materials, images), (&wanted, &dirs))?;
     let largest = decoded
         .iter()
         .map(|(_, d, _)| d.width.max(d.height))
