@@ -78,8 +78,7 @@ fn add_resources(app: &mut App) {
 /// The systems that keep the HUD in step with the drive: sampling, layout, texts, fades and the
 /// rebuild when another kind of vehicle becomes active.
 fn add_session_systems(app: &mut App) {
-    app
-            .add_systems(OnEnter(AppState::InGame), reset_session_state)
+    app.add_systems(OnEnter(AppState::InGame), reset_session_state)
         .add_systems(
             Update,
             (door_camera::sync_setting, door_camera::update_overlay)
@@ -119,67 +118,65 @@ fn add_session_systems(app: &mut App) {
 
 /// The viewpoint panel, the control label, the mouse cue, the mirrors and the detail toasts.
 fn add_panel_systems(app: &mut App) {
-    app
-            .add_systems(
-            Update,
-            (
-                viewpoint::update_panel,
-                viewpoint::panel_buttons,
-                viewpoint::panel_tracks,
-            )
-                .chain()
-                .run_if(in_state(AppState::InGame))
-                .run_if(opts_bevy::reporting::not_modal_active)
-                .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
-                .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
+    app.add_systems(
+        Update,
+        (
+            viewpoint::update_panel,
+            viewpoint::panel_buttons,
+            viewpoint::panel_tracks,
         )
-        // The panel is spawned after the frame's input, in `PostUpdate`: a spawn system in
-        // `Update` would add a sync point that reorders the toast systems below.
-        .add_systems(
-            PostUpdate,
-            (control_label::sync_label, mouse_driving::sync_cue)
-                .run_if(in_state(AppState::InGame))
-                .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
-                .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
+            .chain()
+            .run_if(in_state(AppState::InGame))
+            .run_if(opts_bevy::reporting::not_modal_active)
+            .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
+            .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
+    )
+    // The panel is spawned after the frame's input, in `PostUpdate`: a spawn system in
+    // `Update` would add a sync point that reorders the toast systems below.
+    .add_systems(
+        PostUpdate,
+        (control_label::sync_label, mouse_driving::sync_cue)
+            .run_if(in_state(AppState::InGame))
+            .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
+            .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
+    )
+    .add_systems(
+        Update,
+        virtual_mirrors::mirror_clicks
+            .run_if(in_state(AppState::InGame))
+            .run_if(resource_exists::<opts_bevy::mirrors::VirtualMirrors>),
+    )
+    .add_systems(
+        PostUpdate,
+        virtual_mirrors::sync_virtual_mirrors
+            .run_if(in_state(AppState::InGame))
+            .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
+            .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>)
+            .run_if(resource_exists::<opts_bevy::mirrors::VirtualMirrors>)
+            .run_if(resource_exists::<opts_bevy::camera::CameraState>)
+            .run_if(resource_exists::<opts_bevy::camera::CameraAvailability>),
+    )
+    .add_systems(
+        PostUpdate,
+        viewpoint::sync_panel
+            .run_if(in_state(AppState::InGame))
+            .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
+            .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
+    )
+    .add_systems(
+        Update,
+        (
+            details::spawn_details_toasts,
+            // Before the toast's own click handler despawns the toast with the action
+            // button that was clicked.
+            details::open_details.before(opts_gui::components::toast::toast_action_click_system),
+            details::forget_dismissed,
+            details::details_choices,
         )
-        .add_systems(
-            Update,
-            virtual_mirrors::mirror_clicks
-                .run_if(in_state(AppState::InGame))
-                .run_if(resource_exists::<opts_bevy::mirrors::VirtualMirrors>),
-        )
-        .add_systems(
-            PostUpdate,
-            virtual_mirrors::sync_virtual_mirrors
-                .run_if(in_state(AppState::InGame))
-                .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
-                .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>)
-                .run_if(resource_exists::<opts_bevy::mirrors::VirtualMirrors>)
-                .run_if(resource_exists::<opts_bevy::camera::CameraState>)
-                .run_if(resource_exists::<opts_bevy::camera::CameraAvailability>),
-        )
-        .add_systems(
-            PostUpdate,
-            viewpoint::sync_panel
-                .run_if(in_state(AppState::InGame))
-                .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
-                .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
-        )
-        .add_systems(
-            Update,
-            (
-                details::spawn_details_toasts,
-                // Before the toast's own click handler despawns the toast with the action
-                // button that was clicked.
-                details::open_details
-                    .before(opts_gui::components::toast::toast_action_click_system),
-                details::forget_dismissed,
-                details::details_choices,
-            )
-                // In order, with the commands applied in between: `forget_dismissed` must not
-                // see a toast that `spawn_details_toasts` has only just queued as gone.
-                .chain(),
-        );
+            // In order, with the commands applied in between: `forget_dismissed` must not
+            // see a toast that `spawn_details_toasts` has only just queued as gone.
+            .chain(),
+    );
 }
 
 /// Registers the HUD resources, messages and systems.

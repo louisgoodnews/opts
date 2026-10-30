@@ -310,7 +310,6 @@ fn loop_step(
     counted
 }
 
-
 /// An edge-triggered voice: plays its one-shot when its conditions just turned true and the
 /// listener's view lets it be heard.
 fn edge_step(
@@ -326,14 +325,7 @@ fn edge_step(
     }
     if edge && audible_here {
         let level = level(&voice.def, read);
-        fire(
-            commands,
-            loader,
-            stats,
-            entity,
-            voice,
-            level,
-        );
+        fire(commands, loader, stats, entity, voice, level);
     }
 }
 

@@ -255,7 +255,6 @@ fn spawn_panels(
     panels
 }
 
-
 fn populate_notebook_children(
     parent: &mut ChildSpawnerCommands,
     root: Entity,
@@ -287,7 +286,7 @@ fn populate_notebook_children(
             }
         });
 
-    let panels = spawn_panels(parent, root, (tab_count, active));
+    spawn_panels(parent, root, (tab_count, active))
 }
 
 /// System handling clicks on tab headers to switch the active tab.

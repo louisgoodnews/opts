@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// The category buttons that have a visible setting.
 fn spawn_category_buttons(commands: &mut Commands, cat_list: Entity, registry: &SettingsRegistry) {
     for cat in registry.categories() {
@@ -149,7 +148,12 @@ pub fn rebuild_page(
         spawn_search_results(&mut commands, pane, &ctx, (&state.query, notice.as_deref()));
     } else {
         let kind = theme_name_key(theme.kind());
-        spawn_category(&mut commands, pane, &ctx, (state.category, notice.as_deref(), kind));
+        spawn_category(
+            &mut commands,
+            pane,
+            &ctx,
+            (state.category, notice.as_deref(), kind),
+        );
     }
 }
 

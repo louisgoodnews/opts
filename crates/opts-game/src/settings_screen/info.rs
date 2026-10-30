@@ -172,7 +172,6 @@ pub fn fill_content_lines(
     }
 }
 
-
 /// The theme line, which follows the theme while the page is open.
 fn interface_info(c: &mut Commands, pane: Entity, ctx: &Ctx, theme_kind: &str) {
     let now = line(

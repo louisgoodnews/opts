@@ -25,7 +25,6 @@ pub(super) fn script_seed(
         })
 }
 
-
 /// Logs every compile problem once, with its file and line (the diagnostics of one compile are
 /// distinct); a missing file is an error with the position tag, like other missing content.
 fn log_diagnostics(manifest: &BusManifest, diags: &[opts_sim::script::Diagnostic]) {
@@ -59,25 +58,25 @@ fn host_context(
     counts: &opts_bevy::host_callbacks::PassengerCountsHandle,
 ) -> opts_bevy::host_callbacks::VehicleHostContext {
     opts_bevy::host_callbacks::VehicleHostContext {
-            passengers: counts.0.clone(),
-            seed,
-            route: route.clone(),
-            script_textures: job.vehicle_script_textures.clone(),
-            fonts: std::sync::Arc::new(std::sync::RwLock::new(opts_bevy::text_texture::load_fonts(
-                &job.install,
-            ))),
-            font_bitmaps: opts_bevy::script_text::FontBitmapSource::new(&job.install),
-            texture_base_dir: Some(bus_dir.join("Texture")),
-            tickets: std::sync::Arc::new(crate::passengers::ticket_book(
-                &super::passengers::ticket_pack(job),
-            )),
-            coins: std::sync::Arc::new(
-                super::passengers::money_system(job)
-                    .map(|m| m.coins.iter().map(|c| c.value as f32).collect())
-                    .unwrap_or_default(),
-            ),
-            ..Default::default()
-        }
+        passengers: counts.0.clone(),
+        seed,
+        route: route.clone(),
+        script_textures: job.vehicle_script_textures.clone(),
+        fonts: std::sync::Arc::new(std::sync::RwLock::new(opts_bevy::text_texture::load_fonts(
+            &job.install,
+        ))),
+        font_bitmaps: opts_bevy::script_text::FontBitmapSource::new(&job.install),
+        texture_base_dir: Some(bus_dir.join("Texture")),
+        tickets: std::sync::Arc::new(crate::passengers::ticket_book(
+            &super::passengers::ticket_pack(job),
+        )),
+        coins: std::sync::Arc::new(
+            super::passengers::money_system(job)
+                .map(|m| m.coins.iter().map(|c| c.value as f32).collect())
+                .unwrap_or_default(),
+        ),
+        ..Default::default()
+    }
 }
 
 /// The equipment options of the chosen repaint (`[setvar]` of its `.cti` items).
