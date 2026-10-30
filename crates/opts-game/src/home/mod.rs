@@ -193,7 +193,6 @@ fn block_reason_key(block: DriveBlock) -> Option<&'static str> {
     }
 }
 
-
 /// The status chip: refreshing (with the stage), ready with the counts, or nothing found.
 fn update_chips(
     commands: &mut Commands,
@@ -231,7 +230,7 @@ fn update_buttons(
     buttons: &Query<(Entity, &HomeButton)>,
 ) {
     let block = inputs.drive_block();
-    for (entity, button) in &buttons {
+    for (entity, button) in buttons {
         if matches!(button, HomeButton::NewDrive | HomeButton::LoadGame) {
             continue;
         }

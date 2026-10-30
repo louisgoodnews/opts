@@ -71,8 +71,7 @@ fn loudest_loops(world: &mut World) -> Vec<Value> {
         })
         .collect();
     loud.sort_by(|a, b| b.0.total_cmp(&a.0));
-    loud
-        .iter()
+    loud.iter()
         .take(10)
         .map(|(gain, speed, file)| json!({ "file": file, "gain": gain, "speed": speed }))
         .collect()
@@ -95,7 +94,6 @@ fn top_voices(stats: &AudioStats) -> Vec<Value> {
         })
         .collect()
 }
-
 
 fn state(world: &mut World, _: &Value) -> Outcome {
     let settings = world.get_resource::<AudioSettings>().cloned();

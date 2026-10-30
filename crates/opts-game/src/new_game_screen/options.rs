@@ -107,7 +107,6 @@ fn option_control(commands: &mut Commands, item: &SetvarItem) -> Entity {
     }
 }
 
-
 /// One option: a line with its control and, for a choice box or number field, its name.
 fn option_line(commands: &mut Commands, item: &SetvarItem) -> Entity {
     // A row never shrinks below its control (the list scrolls instead), and a choice box or a

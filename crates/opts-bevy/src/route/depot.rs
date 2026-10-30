@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 fn parse_hof(p: &Path) -> Option<HofFile> {
     std::fs::read(p)
         .ok()
@@ -51,27 +50,26 @@ fn shared_candidates<'a>(
     wanted: &std::collections::HashSet<String>,
     vehicle: &std::collections::HashSet<String>,
 ) -> Vec<Candidate<'a>> {
-    own
-            .iter()
-            .filter_map(|f| {
-                // Shared numbers (a line or edition) first, then shared words, then tokens of the
-                // vehicle's folder (the operator: `HHA` in `HH109_Stadtbus_HHA`); then the fewest
-                // numbers and words neither names (`1_HH109-2_HHA` and `1_HH109-VAN_HHA` lose to
-                // `1_HH109_HHA` for `Hamburg109`).
-                let mut rank = [0_i64; 5];
-                for t in name_tokens(&f.0) {
-                    let number = t.chars().all(char::is_numeric);
-                    match (wanted.contains(&t), vehicle.contains(&t), number) {
-                        (true, _, true) => rank[0] += 1,
-                        (true, _, false) => rank[1] += 1,
-                        (false, true, _) => rank[2] += 1,
-                        (false, false, true) => rank[3] -= 1,
-                        (false, false, false) => rank[4] -= 1,
-                    }
+    own.iter()
+        .filter_map(|f| {
+            // Shared numbers (a line or edition) first, then shared words, then tokens of the
+            // vehicle's folder (the operator: `HHA` in `HH109_Stadtbus_HHA`); then the fewest
+            // numbers and words neither names (`1_HH109-2_HHA` and `1_HH109-VAN_HHA` lose to
+            // `1_HH109_HHA` for `Hamburg109`).
+            let mut rank = [0_i64; 5];
+            for t in name_tokens(&f.0) {
+                let number = t.chars().all(char::is_numeric);
+                match (wanted.contains(&t), vehicle.contains(&t), number) {
+                    (true, _, true) => rank[0] += 1,
+                    (true, _, false) => rank[1] += 1,
+                    (false, true, _) => rank[2] += 1,
+                    (false, false, true) => rank[3] -= 1,
+                    (false, false, false) => rank[4] -= 1,
                 }
-                (rank[0] + rank[1] > 0).then_some((rank, f))
-            })
-            .collect()
+            }
+            (rank[0] + rank[1] > 0).then_some((rank, f))
+        })
+        .collect()
 }
 
 /// The last resort: a file of the installation's `Vehicles` folders named like a map.
@@ -83,7 +81,7 @@ fn find_in_install(omsi_root: &Path, maps: &[String]) -> Option<HofFile> {
         ] {
             for (stem, p) in hofs_in(&dir) {
                 if stem == *map || stem.contains(map.as_str()) {
-                    if let Some(h) = parse(&p) {
+                    if let Some(h) = parse_hof(&p) {
                         return Some(h);
                     }
                 }

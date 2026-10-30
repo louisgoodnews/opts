@@ -53,7 +53,6 @@ pub struct PagePane;
 #[derive(Component)]
 pub struct SettingsSearch;
 
-
 /// The title and the search field.
 fn spawn_header(commands: &mut Commands, page: Entity) {
     let header = commands

@@ -82,7 +82,6 @@ pub(crate) struct PoolSetup {
     pub depots: std::collections::HashMap<String, Vec<(usize, u32)>>,
 }
 
-
 /// The depot groups: the vehicles of the timetable's tours (`.bus` and `.ovh`; trains are the
 /// rail pool's). Their slots wait until a run asks for one. Returns the slots of each depot.
 fn add_depot_groups(

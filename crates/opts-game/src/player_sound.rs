@@ -263,7 +263,6 @@ fn variable(scripts: &VehicleScripts, name: &str) -> f32 {
         .map_or(0.0, |e| e.get(&name.to_lowercase()))
 }
 
-
 /// A looping voice of the player's vehicle: drops its emitter when the listener is far away, sets
 /// the gain and speed the emitter follows, and starts the emitter of a loop that begins to sound.
 /// Returns whether the voice has an emitter that keeps playing.
