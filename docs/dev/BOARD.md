@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-29 by Agent (M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-10-30 by Agent (M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -324,7 +324,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🔴 **Structure Audit v2 & Pre-Commit Ratchet Gates** (M-0147, tooling + ci) — **done 2026-10-28**: 350-line file limit, >250-line inline-test rule, >80-line function ratchet (`docs/dev/function-known.txt`), signature allow ratchet (`docs/dev/structure-known.txt`), unit tests, and `pre-commit` + `ci.yml` enforcement; [M-0147](../src/roadmap/phase-15/M-0147.md)
 - [x] 🟠 **Batch 1: Inline Test Extraction Above 250 Lines (101 files, 9,274 test lines)** (M-0148, refactor) — **done 2026-10-28**: extracted inline `#[cfg(test)]` modules from all 101 production files > 250 LOC into `tests.rs` files (0 inline-test violations remaining, `docs/dev/structure-known.txt` reduced from 210 to 121 entries, 2,630 `#[test]` attributes preserved); [M-0148](../src/roadmap/phase-15/M-0148.md)
 - [x] 🟠 **Batch 2: Production File Splits to the 350-Line Ceiling (102 prod + 18 test/example files)** (M-0149, refactor) — **done 2026-10-28**: split all 120 oversized production and test/example files into cohesive submodules <= 330 LOC, emptied `docs/dev/structure-known.txt` (0 files over 350 LOC), preserved public APIs; [M-0149](../src/roadmap/phase-15/M-0149.md)
-- [~] 🟡 **Batch 3: Function Size Ratchet (< 80 Lines, 191 fns) & ECS `SystemParam` Bundling (155 allows)** (M-0150, refactor) — **first batch merged 2026-10-29, second slice (settings registry builders, byte-identical descriptor dump) on `agent/registry-split`** (`agent/m0150-functions`): functions over 80 lines 249 → 172, signature allows 145 → 112, `function-known.txt` reseeded; the rest open. [M-0150](../src/roadmap/phase-15/M-0150.md)
+- [x] 🟡 **Batch 3: Function Size Ratchet (< 80 Lines, 191 fns) & ECS `SystemParam` Bundling (155 allows)** (M-0150, refactor) — **done 2026-10-30** (`agent/fn-ratchet-21`): `function-known.txt` is empty, 0 functions over 80 lines, 0 signature allows; [M-0150](../src/roadmap/phase-15/M-0150.md)
 
 ---
 
@@ -635,3 +635,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0150 eighteenth slice (`agent/fn-ratchet-18`): voice selection, terrain carve, DDS decode, HUD cluster, trace pick, collision boxes, pedestrian spawn, session summary and language list split.
 - `2026-10-30` — M-0150 nineteenth slice (`agent/fn-ratchet-19`): player voices, settings info and page rebuild, HUD plugin registration, vehicle script attach, notebook and precipitation split; 80 functions over 80 lines.
 - `2026-10-30` — M-0150 twentieth slice (`agent/fn-ratchet-20`): first pass over 42 large functions, compiled together; 59 functions over 80 lines (14 second-pass remainders, 7 untouched).
+- `2026-10-30` — M-0150 closing slice (`agent/fn-ratchet-21`): the last 59 functions split and all 110 signature allows replaced by `SystemParam` bundles/aliases; `function-known.txt` empty.

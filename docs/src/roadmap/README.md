@@ -488,7 +488,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Move inline `#[cfg(test)] mod tests` blocks out of the 101 production files > 250 code lines into sibling `tests.rs` files (removing 9,274 test lines from production context, dropping `docs/dev/structure-known.txt` from 210 to 121 entries, and keeping all 2,630 `#[test]` attributes).
 - [x] **✂️ Batch 2: Production File Splits to the 350-Line Ceiling** — [M-0149](phase-15/M-0149.md) — ✅ done 2026-10-28
   - [x] Split the 102 remaining production files > 350 non-test code lines (and 18 oversized test/example files) along concern boundaries into 150–220 line modules.
-- [~] **🧩 Batch 3: Function Size Ratchet (< 80 Lines) & ECS `SystemParam` Bundling** — [M-0150](phase-15/M-0150.md) — 🔄 in progress; first batch 2026-10-29: functions over 80 lines 249 → 172 (production 198 → 128), signature allows 145 → 112
+- [x] **🧩 Batch 3: Function Size Ratchet (< 80 Lines) & ECS `SystemParam` Bundling** — [M-0150](phase-15/M-0150.md) — ✅ done 2026-10-30: `function-known.txt` empty, 0 functions over 80 lines, 0 signature allows.
   - [ ] Decompose the 191 production functions > 80 code lines into ≤ 40-line helpers and replace the 155 `too_many_arguments`/`type_complexity` allows across 113 files with `#[derive(SystemParam)]` structs.
 
 ---
