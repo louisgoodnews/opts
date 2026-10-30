@@ -297,7 +297,9 @@ pub fn prune(cache: &Path, cap_bytes: u64) {
     }
 }
 
+mod config_slot;
 mod slots;
+pub use config_slot::{config_thumb_key, spawn_config_thumb, CONFIG_THUMB_PX};
 pub use slots::{fill_thumbnails, probe_of, source_of, vehicle_preview, Probe};
 
 #[cfg(test)]

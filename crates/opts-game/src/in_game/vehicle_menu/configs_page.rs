@@ -7,12 +7,16 @@ use super::*;
 use crate::bus_config::{BusConfiguration, BusConfigurations};
 use crate::bus_config_spawn::{from_record, spawn_params};
 use crate::new_game_screen::configs::ConfigLibrary;
+use crate::new_game_screen::thumbnails::spawn_config_thumb;
 
 /// One saved configuration as the page shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct ConfigRow {
     pub id: String,
     pub name: String,
+    /// Catalogue id of the vehicle and its class (the picture slot's key and placeholder).
+    pub vehicle_id: String,
+    pub class: String,
     /// Vehicle name, repaint and the number of equipment options.
     pub detail: String,
     /// Why it cannot be spawned (empty: it can).
@@ -69,12 +73,9 @@ fn rows_of(
         .iter()
         .map(|c| {
             let checked = c.check(cat, &repaints);
-            let vehicle = cat
-                .vehicles
-                .iter()
-                .find(|v| v.id == c.vehicle)
-                .map_or_else(|| c.vehicle.clone(), |v| v.full_name.clone());
-            let mut detail = vehicle;
+            let item = cat.vehicles.iter().find(|v| v.id == c.vehicle);
+            let class = item.map(|v| v.class.clone()).unwrap_or_default();
+            let mut detail = item.map_or_else(|| c.vehicle.clone(), |v| v.full_name.clone());
             if !c.repaint.is_empty() {
                 detail = format!("{detail}, {}", c.repaint);
             }
@@ -100,6 +101,8 @@ fn rows_of(
             let row = ConfigRow {
                 id: c.id.clone(),
                 name: c.name.clone(),
+                vehicle_id: c.vehicle.clone(),
+                class,
                 detail,
                 blocked,
                 notice,
@@ -113,70 +116,94 @@ fn rows_of(
 
 /// One saved configuration: name (or the rename field), detail, notices and its buttons.
 fn config_row(list: &mut ChildSpawnerCommands, view: &ConfigsView, row: &ConfigRow) {
-    list.spawn(Node {
-        flex_direction: FlexDirection::Column,
-        row_gap: Val::Px(2.0),
-        width: Val::Percent(100.0),
-        ..default()
-    })
-    .with_children(|r| {
-        let renaming = view.renaming.as_ref().filter(|(id, _)| *id == row.id);
-        match renaming {
-            Some((_, text)) => {
-                label(r, format!("Name: {text}|"), 15.0, ColorRole::Primary);
-            }
-            None => label(r, row.name.clone(), 15.0, ColorRole::Primary),
-        }
-        label(r, row.detail.clone(), 12.0, ColorRole::OnSurfaceVariant);
-        if !row.blocked.is_empty() {
-            label(r, row.blocked.clone(), 12.0, ColorRole::Error);
-        } else if !row.notice.is_empty() {
-            label(r, row.notice.clone(), 12.0, ColorRole::OnSurfaceVariant);
-        }
-        r.spawn(Node {
+    let line = list
+        .spawn(Node {
             flex_direction: FlexDirection::Row,
-            column_gap: Val::Px(6.0),
+            column_gap: Val::Px(10.0),
+            align_items: AlignItems::Center,
+            width: Val::Percent(100.0),
             ..default()
         })
-        .with_children(|buttons| {
-            if renaming.is_some() {
-                let ok = button(buttons, "Save name", true, Action::CommitRename);
-                buttons
-                    .commands()
-                    .entity(ok)
-                    .insert(UiId::new("vehicle.config.rename.save"));
-                button(buttons, "Cancel", false, Action::CancelRename);
-                return;
+        .id();
+    let thumb = spawn_config_thumb(&mut list.commands(), &row.vehicle_id, &row.class);
+    list.commands().entity(line).add_child(thumb);
+    list.commands().entity(line).with_children(|line| {
+        line.spawn(Node {
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(2.0),
+            flex_grow: 1.0,
+            min_width: Val::Px(0.0),
+            ..default()
+        })
+        .with_children(|r| {
+            let renaming = view.renaming.as_ref().filter(|(id, _)| *id == row.id);
+            match renaming {
+                Some((_, text)) => {
+                    label(r, format!("Name: {text}|"), 15.0, ColorRole::Primary);
+                }
+                None => label(r, row.name.clone(), 15.0, ColorRole::Primary),
             }
-            if row.blocked.is_empty() {
-                let b = button(buttons, "Spawn", true, Action::SpawnConfig(row.id.clone()));
-                buttons
-                    .commands()
-                    .entity(b)
-                    .insert(UiId::new(format!("vehicle.config.{}.spawn", row.id)));
+            label(r, row.detail.clone(), 12.0, ColorRole::OnSurfaceVariant);
+            if !row.blocked.is_empty() {
+                label(r, row.blocked.clone(), 12.0, ColorRole::Error);
+            } else if !row.notice.is_empty() {
+                label(r, row.notice.clone(), 12.0, ColorRole::OnSurfaceVariant);
             }
-            let rename = button(
-                buttons,
-                "Rename",
-                false,
-                Action::RenameConfig(row.id.clone()),
-            );
+            config_buttons(r, view, row, renaming.is_some());
+        });
+    });
+}
+
+/// The buttons of a row: rename field's *Save name*/*Cancel*, or *Spawn*, *Rename*, *Delete*.
+fn config_buttons(
+    r: &mut ChildSpawnerCommands,
+    view: &ConfigsView,
+    row: &ConfigRow,
+    renaming: bool,
+) {
+    r.spawn(Node {
+        flex_direction: FlexDirection::Row,
+        column_gap: Val::Px(6.0),
+        ..default()
+    })
+    .with_children(|buttons| {
+        if renaming {
+            let ok = button(buttons, "Save name", true, Action::CommitRename);
             buttons
                 .commands()
-                .entity(rename)
-                .insert(UiId::new(format!("vehicle.config.{}.rename", row.id)));
-            let asked = view.confirm_delete.as_deref() == Some(row.id.as_str());
-            let text = if asked {
-                "Delete? Press again"
-            } else {
-                "Delete"
-            };
-            let b = button(buttons, text, asked, Action::DeleteConfig(row.id.clone()));
+                .entity(ok)
+                .insert(UiId::new("vehicle.config.rename.save"));
+            button(buttons, "Cancel", false, Action::CancelRename);
+            return;
+        }
+        if row.blocked.is_empty() {
+            let b = button(buttons, "Spawn", true, Action::SpawnConfig(row.id.clone()));
             buttons
                 .commands()
                 .entity(b)
-                .insert(UiId::new(format!("vehicle.config.{}.delete", row.id)));
-        });
+                .insert(UiId::new(format!("vehicle.config.{}.spawn", row.id)));
+        }
+        let rename = button(
+            buttons,
+            "Rename",
+            false,
+            Action::RenameConfig(row.id.clone()),
+        );
+        buttons
+            .commands()
+            .entity(rename)
+            .insert(UiId::new(format!("vehicle.config.{}.rename", row.id)));
+        let asked = view.confirm_delete.as_deref() == Some(row.id.as_str());
+        let text = if asked {
+            "Delete? Press again"
+        } else {
+            "Delete"
+        };
+        let b = button(buttons, text, asked, Action::DeleteConfig(row.id.clone()));
+        buttons
+            .commands()
+            .entity(b)
+            .insert(UiId::new(format!("vehicle.config.{}.delete", row.id)));
     });
 }
 

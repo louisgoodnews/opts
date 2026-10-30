@@ -297,6 +297,9 @@ impl Plugin for VehicleMenuPlugin {
             .init_resource::<MenuModalActive>()
             .init_resource::<MenuCommands>()
             .init_resource::<EntryIndex>()
+            .init_resource::<crate::new_game_screen::thumbnails::ThumbnailService>()
+            .init_resource::<crate::new_game_screen::livery::LiveryState>()
+            .init_resource::<crate::new_game_screen::GameCatalogue>()
             .add_systems(
                 Update,
                 (
@@ -307,6 +310,9 @@ impl Plugin for VehicleMenuPlugin {
                     refresh_entries,
                     refresh_session_rows,
                     rebuild_menu,
+                    // The picture slots of the Configurations page (M-0077).
+                    crate::new_game_screen::thumbnails::fill_thumbnails
+                        .run_if(|menu: Res<VehicleMenu>| menu.is_open()),
                     scroll_lists,
                 )
                     .chain()

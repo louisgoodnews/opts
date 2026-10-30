@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-30 by Agent (M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-10-30 by Agent (M-0077 thumbnails, bus configurations done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -186,7 +186,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### Field report 2026-10-13 — Phase 10 and related (planned, from the project lead; [report](../src/quality/field-report-2026-10-13.md))
 - [~] 🔴 **Water: format semantics, parser, rendering** (M-0067, spec + code) — R-02. Water drawn since 2026-10-16; **depth tint done 2026-10-18** (shore fade, darker with depth, looked at on the Lemmental river); open: the per-map water textures (47 maps by fixed name, Q-M08), the `[water]` marker rule and in-tile interpolation (Q-M07, need an in-engine OMSI check).
-- [~] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15. **2026-10-20 on `agent/bus-config-session`: Alt menu *Configurations* page (list, spawn, save current vehicle, delete) and `config.spawn` (protocol 1.18.0); rename added the same day; only thumbnails are open.** In progress 2026-10-18 on `agent/bus-configs`: data model, store, load-time check, `config.*` (protocol 1.9.0) and the wizard's Configurations section done; open: Pause list, rename in the UI, spawn into a session, session save.
+- [x] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15. **2026-10-30 on `agent/m0077-thumbs`: thumbnails (the vehicle's picture or class glyph) in the wizard list and the Alt page; M-0077 complete.** 2026-10-20 on `agent/bus-config-session`: Alt menu *Configurations* page (list, spawn, save current vehicle, delete) and `config.spawn` (protocol 1.18.0); rename added the same day; only thumbnails are open.** In progress 2026-10-18 on `agent/bus-configs`: data model, store, load-time check, `config.*` (protocol 1.9.0) and the wizard's Configurations section done; open: Pause list, rename in the UI, spawn into a session, session save.
 - [x] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21. Core done 2026-10-18 on `agent/tile-loading-controls` (settings, live streaming, load-all during loading, `scene.tiles`). Done 2026-10-29 on `agent/tile-controls`: `estimate_load_all` in `opts-hardware`; the Review-step switch with the estimate, the red memory warning with *Use the tile radius*, and "Automatic (currently N)" on the settings page. The memory per tile is still the unmeasured 120 MiB default.
 - [~] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22. Merged into master (branch `feat/opts-hardware`): Linux verified; macOS/Windows CI-compiled only; open: report-dialog preview checkbox, GPU benchmark.
 - [x] 🟠 **Mesh instancing research** (M-0082, research) — R-23; done 2026-10-13, recommendation: adopt partly ([report](../src/architecture/instancing-research.md)); `research/mesh-instancing` merged 2026-10-17 (`44ef86d9`).
@@ -636,3 +636,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0150 nineteenth slice (`agent/fn-ratchet-19`): player voices, settings info and page rebuild, HUD plugin registration, vehicle script attach, notebook and precipitation split; 80 functions over 80 lines.
 - `2026-10-30` — M-0150 twentieth slice (`agent/fn-ratchet-20`): first pass over 42 large functions, compiled together; 59 functions over 80 lines (14 second-pass remainders, 7 untouched).
 - `2026-10-30` — M-0150 closing slice (`agent/fn-ratchet-21`): the last 59 functions split and all 110 signature allows replaced by `SystemParam` bundles/aliases; `function-known.txt` empty.
+- `2026-10-30` — M-0077 closed (`agent/m0077-thumbs`): preset thumbnails in the wizard's Configurations list and the Alt-menu page (vehicle preview image, class glyph otherwise).

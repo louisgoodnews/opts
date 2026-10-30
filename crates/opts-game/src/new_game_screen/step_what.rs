@@ -25,7 +25,7 @@ pub fn class_key(class: &str) -> Option<&'static str> {
     }
 }
 
-fn class_glyph(class: &str) -> &'static str {
+pub(super) fn class_glyph(class: &str) -> &'static str {
     match class {
         "road" => glyphs::BUS,
         "rail" => glyphs::TRAIN,
