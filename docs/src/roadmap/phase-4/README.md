@@ -20,7 +20,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0038 — Scrambled-Mesh Completion (`opts-core`, `opts-bevy`)](M-0038.md) — 🟡 Engineering complete (async decoding, parameters, cache policy); generator research open
 - [M-0039 — Text Textures for Signs, Stops and Displays](M-0039.md) — 🟢 Complete (`[texttexture]` rendering for static strings)
 
-- [M-0045 — Script-Driven Vehicle Animation, Lights and Doors](M-0045.md) — 🟡 Animation, visibility, lights, key and hot-spot triggers done; in-game screenshot check open
+- [M-0045 — Script-Driven Vehicle Animation, Lights and Doors](M-0045.md) — 🟡 Animation, visibility, lights, key and hot-spot triggers done; `delay` damping done; in-game screenshot check open
 - [M-0046 — World Loader in `opts-bevy`](M-0046.md) — ⏳ Planned (extraction refactor)
 - [M-0049 — AI Road Traffic (`opts-traffic`, `opts-bevy`)](M-0049.md) — 🟡 Running in game (lights, right of way, lane changes); debug tooling, speed limits, scheduled AI open
 - [M-0050 — Pedestrians](M-0050.md) — 🟡 Walking pedestrians done; crossings, stops and boarding open

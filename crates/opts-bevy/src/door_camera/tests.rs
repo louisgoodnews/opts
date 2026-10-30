@@ -104,6 +104,7 @@ mod detection {
             factor: 1.0,
             translate: false,
             maxspeed: None,
+            delay: None,
         }
     }
 

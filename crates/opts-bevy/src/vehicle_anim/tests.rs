@@ -1,12 +1,13 @@
 use super::*;
 
-fn spin(var: &str) -> AnimStep {
+pub(super) fn spin(var: &str) -> AnimStep {
     AnimStep {
         frame: Mat4::from_translation(Vec3::new(1.2, 2.9, 0.5)),
         variable: var.into(),
         factor: 57.295_78,
         translate: false,
         maxspeed: None,
+        delay: None,
     }
 }
 
@@ -36,6 +37,7 @@ fn suspension_with_rot_y_minus_90_moves_the_wheel_up() {
         factor: 1.0,
         translate: true,
         maxspeed: None,
+        delay: None,
     };
     let m = animation_matrix(&[step], |_| 0.1);
     let p = m.transform_point3(Vec3::ZERO);
@@ -54,6 +56,7 @@ fn first_step_is_innermost() {
         factor: 1.0,
         translate: true,
         maxspeed: None,
+        delay: None,
     };
     let m = animation_matrix(&[spin("w"), raise], |_| 1.0);
     let hub = bevy(Vec3::new(1.2, 2.9, 0.5));

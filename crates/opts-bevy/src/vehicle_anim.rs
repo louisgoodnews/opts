@@ -18,8 +18,12 @@
 //! * several `[newanim]` blocks apply in declaration order, the first innermost (wheel: spin,
 //!   then suspension, then steering);
 //! * `maxspeed` limits how fast the animation follows its variable, in variable units per second
-//!   (the wiki: `maxspeed` = 1 ÷ duration in seconds); the first update snaps to the value.
-//!   `delay` (damping near the end) is not applied yet ❓.
+//!   (the wiki: `maxspeed` = 1 ÷ duration in seconds); the first update snaps to the value;
+//! * `delay` damps the approach to the target: a first-order lag with rate `delay` per second
+//!   (time constant `1 ÷ delay` s, the wiki's "1 ÷ x before the end"), evaluated exactly in `dt`
+//!   (`shown += (target - shown) · (1 - e^(-delay·dt))`), so the curve does not depend on the frame
+//!   rate. `maxspeed` then limits the resulting step. The units of `delay` are not verified against
+//!   OMSI ❓ (see `model_cfg.md`).
 
 use bevy::math::{Mat4, Vec3, Vec4};
 use bevy::prelude::*;
@@ -41,6 +45,8 @@ pub struct AnimStep {
     pub translate: bool,
     /// Largest change of the variable per second (`maxspeed`); `None` follows it at once.
     pub maxspeed: Option<f32>,
+    /// Damping rate per second (`delay`, time constant `1 ÷ delay`); `None` follows undamped.
+    pub delay: Option<f32>,
 }
 
 /// Animation and visibility rules of one mesh, driven by the vehicle's script variables.
@@ -240,6 +246,7 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
             factor: a_factor,
             translate,
             maxspeed: anim.maxspeed.filter(|v| *v > 0.0),
+            delay: anim.delay.filter(|v| *v > 0.0),
         }
     };
     // Translation first would move the rotation axis; rotation is the inner step.
@@ -301,22 +308,33 @@ impl MeshAnimation {
         })
     }
 
-    /// Moves the shown values towards `targets` (one per step) over `dt` seconds, limited by each
-    /// step's `maxspeed`; the first call adopts the targets.
+    /// Moves the shown values towards `targets` (one per step) over `dt` seconds: first damped by
+    /// each step's `delay` (exponential approach), then limited by its `maxspeed`; the first call
+    /// adopts the targets.
     pub fn follow(&mut self, targets: &[f32], dt: f32) {
         if self.shown.len() != targets.len() {
             self.shown = targets.to_vec();
             return;
         }
         for ((shown, target), step) in self.shown.iter_mut().zip(targets).zip(&self.steps) {
-            *shown = match step.maxspeed {
-                Some(speed) => {
-                    let max = speed * dt;
-                    *shown + (target - *shown).clamp(-max, max)
-                }
-                None => *target,
-            };
+            *shown = step.follow(*shown, *target, dt);
         }
+    }
+}
+
+impl AnimStep {
+    /// The value shown after `dt` seconds of following `target` from `shown`.
+    #[must_use]
+    pub fn follow(&self, shown: f32, target: f32, dt: f32) -> f32 {
+        let mut delta = target - shown;
+        if let Some(rate) = self.delay {
+            delta *= 1.0 - (-rate * dt.max(0.0)).exp();
+        }
+        if let Some(speed) = self.maxspeed {
+            let max = speed * dt;
+            delta = delta.clamp(-max, max);
+        }
+        shown + delta
     }
 }
 
@@ -447,5 +465,7 @@ impl Plugin for VehicleAnimationPlugin {
     }
 }
 
+#[cfg(test)]
+mod delay_tests;
 #[cfg(test)]
 mod tests;
