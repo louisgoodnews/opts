@@ -104,7 +104,6 @@ fn disc(
     )
 }
 
-
 /// The empty, repeating sky texture `update_sky` fills.
 fn sky_texture(w: u32, h: u32) -> Image {
     let mut sky_image = Image::new_fill(

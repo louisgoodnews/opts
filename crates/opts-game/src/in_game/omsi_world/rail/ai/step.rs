@@ -33,7 +33,6 @@ fn ahead_gap(
     nearest_gap(obstacles, owner, origin, dir, 60.0)
 }
 
-
 /// What a train must not run into: every unit of the player's traction (its last unit's rear
 /// counts, not just the head) and of the other trains.
 fn collect_obstacles(
@@ -43,7 +42,7 @@ fn collect_obstacles(
     units: &Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
 ) -> Vec<Obstacle> {
     let mut obstacles: Vec<Obstacle> = Vec::new();
-    for (g, body, composition) in &players {
+    for (g, body, composition) in players {
         let at = g.compute_transform();
         obstacles.push(Obstacle::new(Entity::PLACEHOLDER, &at, body.map(|b| b.0)));
         for p in composition.iter().flat_map(|c| c.followers.iter()) {
@@ -56,7 +55,7 @@ fn collect_obstacles(
             }
         }
     }
-    for (owner, t) in &trains {
+    for (owner, t) in trains {
         for p in t.composition.parts() {
             if let Ok((tf, ..)) = units.get(p.entity) {
                 obstacles.push(Obstacle::new(owner, tf, p.body));
@@ -69,7 +68,7 @@ fn collect_obstacles(
 /// Puts every unit of a train on the track at its offset, shows it and turns its wheels.
 fn place_units(
     t: &AiTrain,
-    net: &RailNet,
+    net: &PedestrianNet,
     units: &mut Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
 ) {
     let angle = t.wheel_angle;

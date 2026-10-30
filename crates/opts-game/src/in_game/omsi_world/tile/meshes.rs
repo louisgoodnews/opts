@@ -11,7 +11,6 @@ pub(super) type CrossingBend = (
     std::sync::Arc<opts_core::formats::scenery::BaseSurface>,
 );
 
-
 /// The texture overrides of one `[mesh]` of a scenery object: the textures, alpha and light maps
 /// of its materials, and the rendered text of its text textures.
 fn texture_overrides(

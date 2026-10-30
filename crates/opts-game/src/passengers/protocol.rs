@@ -6,10 +6,13 @@ use opts_bevy::PlayerVehicle;
 
 use super::PassengerRig;
 
-
 /// Applies the request's side effects: the mass count override, forced boarding at an entry and
 /// arriving at the stop. Fails when the player's vehicle has no passenger cabin.
-fn apply_request(world: &mut World, params: &serde_json::Value) -> Result<(), RpcError> {
+fn apply_request(
+    world: &mut World,
+    params: &serde_json::Value,
+) -> Result<(), opts_cli::protocol::RpcError> {
+    use opts_cli::protocol::{code, RpcError};
     let spawn = params.get("spawn").and_then(serde_json::Value::as_u64);
     if let Some(n) = params.get("mass_count").and_then(serde_json::Value::as_i64) {
         world.insert_resource(super::PassengerCountOverride(
@@ -42,11 +45,14 @@ fn apply_request(world: &mut World, params: &serde_json::Value) -> Result<(), Rp
     Ok(())
 }
 
+/// The nearest bus stop: distance (m), id code, position and heading (deg).
+type NearestStop = (f32, u64, Vec3, f32);
+
 /// The `vehicle.passengers` reply: the cabin, the stops around and every passenger.
 fn state_json(
     world: &World,
     rig: &PassengerRig,
-    (stops_in_world, here, nearest): (usize, Option<Vec3>, Option<(f32, u64, Vec3, f32)>),
+    (stops_in_world, here, nearest): (usize, Option<Vec3>, Option<NearestStop>),
 ) -> serde_json::Value {
     let sim = &rig.sim;
     let forced = world
@@ -125,11 +131,7 @@ pub fn command(
             .map(|(p, id, hd)| (Vec2::new(p.x - h.x, p.z - h.z).length(), *id, *p, *hd))
             .min_by(|a, b| a.0.total_cmp(&b.0))
     });
-    Outcome::ok(state_json(
-        world,
-        rig,
-        (spots.len(), here, nearest),
-    ))
+    Outcome::ok(state_json(world, rig, (spots.len(), here, nearest)))
 }
 
 /// Registers the protocol command.

@@ -232,7 +232,6 @@ fn toast(world: &mut World, key: &'static str, args: Vec<(&'static str, String)>
     world.flush();
 }
 
-
 /// Waits for the restored vehicles: all spawned, quiet for a few frames, their state applied.
 /// Returns true while it still has to wait; a timeout counts as done and adds a warning.
 fn settle_vehicles(world: &mut World) -> bool {
