@@ -32,7 +32,7 @@ use crate::new_game_screen::types::{GameCatalogue, NewGameSetup, VehicleItem};
 use crate::session_vehicles::{
     ops, DespawnReason, EntrySel, SessionVehicles, SpawnParams, VehicleId,
 };
-use opts_core::setvars::SetvarKind;
+use opts_core::setvars::{Respawn, SetvarKind};
 
 /// AI vehicles closer than this to an entry point block it (m).
 const ENTRY_BLOCK_RADIUS_M: f32 = 12.0;

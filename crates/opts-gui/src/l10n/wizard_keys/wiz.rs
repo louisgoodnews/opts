@@ -304,3 +304,5 @@ pub const WIZ_LOAD_ALL_NO_PROFILE: &str = "wiz-load-all-no-profile";
 pub const WIZ_LOAD_ALL_TOO_LARGE: &str = "wiz-load-all-too-large";
 /// `wiz-load-all-use-radius`.
 pub const WIZ_LOAD_ALL_USE_RADIUS: &str = "wiz-load-all-use-radius";
+/// `wiz-setvar-respawn`.
+pub const WIZ_SETVAR_RESPAWN: &str = "wiz-setvar-respawn";

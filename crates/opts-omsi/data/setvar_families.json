@@ -261,6 +261,7 @@
      "name": "air_conditioning",
      "values": "0-3",
      "meaning": "roof A/C variant",
+     "respawn": false,
      "group": "climate"
     },
     {
@@ -1362,6 +1363,7 @@
      "name": "sv_display_color",
      "values": "0|1",
      "meaning": "0 orange, 1 white (restart vehicle after changing)",
+     "respawn": true,
      "group": "display"
     },
     {
@@ -1560,12 +1562,14 @@
      "name": "engine_sv_req",
      "values": "0-2, series dependent",
      "meaning": "engine: Tector 7 320, Cursor 9 360, Cursor 9 400 (POP T7=0,C9=1; LINE T7=1,C9=0; HV T7=1,C9=0,C9-400=2; PRO C9=0,C9-400=1); diesel only; restart",
+     "respawn": true,
      "group": "drivetrain"
     },
     {
      "name": "gearbox_sv_req",
      "values": "0-2, series dependent",
      "meaning": "gearbox: POP/LINE EcoShift=0, DIWA=1, Ecolife=2; HV/PRO/CNG DIWA=0, Ecolife=1, EcoShift=2; restart",
+     "respawn": true,
      "group": "drivetrain"
     }
    ]

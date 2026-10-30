@@ -243,3 +243,4 @@ wiz-trip-stops = { $count } Haltestellen bis { $last }
 wiz-trip-tour = Umlauf { $tour }
 wiz-trip-start-hint = Der Bus steht an der ersten Haltestelle statt am Startpunkt und folgt dieser Fahrt.
 wiz-review-trip-from = ab { $stop }
+wiz-setvar-respawn = Neustart des Fahrzeugs nötig

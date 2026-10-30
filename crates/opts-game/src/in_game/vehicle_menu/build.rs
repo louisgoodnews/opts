@@ -180,12 +180,28 @@ pub(super) fn build_config(
 /// One row per option: the label with a stepper (choices and numbers) or a toggle (switches).
 /// `live` makes the controls change the driven vehicle at once (the Setvars page) instead of the
 /// choices of the vehicle that is about to be spawned.
+/// The marker of an option that only takes effect when the vehicle is built again.
+pub(super) fn respawn_marker() -> String {
+    opts_gui::l10n::Localization::detect().t(opts_gui::l10n::wizard_keys::wiz::WIZ_SETVAR_RESPAWN)
+}
+
 pub(super) fn setvar_rows(
     list: &mut ChildSpawnerCommands,
     items: &[crate::new_game_screen::setvars_discovery::SetvarItem],
     live: bool,
 ) {
+    let grouped = items.iter().any(|i| i.group.is_some());
+    let mut group: Option<&str> = Some("");
     for item in items {
+        if grouped && group != Some(item.group.as_deref().unwrap_or("other")) {
+            let name = item.group.as_deref().unwrap_or("other");
+            group = Some(name);
+            let mut title = name.to_string();
+            if let Some(first) = title.get_mut(..1) {
+                first.make_ascii_uppercase();
+            }
+            label(list, title, 13.0, ColorRole::Primary);
+        }
         let step = |delta: i32| {
             if live {
                 Action::LiveStep(item.name.clone(), delta)
@@ -212,6 +228,9 @@ pub(super) fn setvar_rows(
                 12.0,
                 ColorRole::OnSurface,
             );
+            if item.respawn == Respawn::Required {
+                label(row, respawn_marker(), 11.0, ColorRole::Error);
+            }
             match item.kind {
                 SetvarKind::Choice | SetvarKind::Number => {
                     row.spawn(Node {

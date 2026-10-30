@@ -13,7 +13,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page
 3. [M-0109 — Quality-of-Life Suite](M-0109.md) — ✅ Done 2026-10-29; one checklist: door camera, smooth driver view (after the jitter fix), UI scale presets, UI font settings.
 4. [M-0108 — Full-Size In-Game Map and In-Game Map Switching](M-0108.md) — ✅ Done 2026-10-19; F6 map (the whole map), Alt menu *Change map*.
 5. [M-0115 — Tunnel Detection and Spatial Zones](M-0115.md) — 📝 Proposed; zone abstraction for reverb and light-room ambience.
-6. [M-0110 — Setvar Runtime Editor and CTI Value Types](M-0110.md) — 🟡 In progress since 2026-10-20: Alt menu *Setvars* page done; extends M-0078 and M-0077.
+6. [M-0110 — Setvar Runtime Editor and CTI Value Types](M-0110.md) — ✅ Done 2026-10-30: Alt menu *Setvars* page with group headings and respawn marker; extends M-0078 and M-0077.
 7. [M-0111 — AI Traffic Depth](M-0111.md) — 📝 Proposed; audit first, then obstacles, conservative lane changes, traffic-light compliance with `[rowdy_factor]`.
 8. [M-0114 — Hybrid Tile and Object Streaming](M-0114.md) — 📝 Proposed; speed-adaptive streaming policy.
 9. [M-0116 — Real Weather Research](M-0116.md) — 📝 Proposed; research only, a document and a decision.

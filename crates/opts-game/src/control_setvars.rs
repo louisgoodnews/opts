@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use opts_bevy::control::params::opt_bool;
 use opts_bevy::control::state::{ControlRegistry, Outcome};
 use opts_cli::protocol::{code, RpcError};
-use opts_core::setvars::{SetvarCatalogue, SetvarEntry, SetvarKind};
+use opts_core::setvars::{Respawn, SetvarCatalogue, SetvarEntry, SetvarKind};
 use serde_json::{json, Map, Value};
 
 use crate::in_game::omsi_world::WorldLoadJob;
@@ -142,6 +142,14 @@ fn kind_name(k: SetvarKind) -> &'static str {
     }
 }
 
+fn respawn_name(r: Respawn) -> &'static str {
+    match r {
+        Respawn::Required => "required",
+        Respawn::Live => "live",
+        Respawn::Unknown => "unknown",
+    }
+}
+
 /// The repaint whose values are the defaults: the chosen one, else the vehicle's default.
 fn repaint_of(src: &Source) -> &str {
     if src.repaint.is_empty() {
@@ -176,6 +184,7 @@ fn describe(src: &Source, e: &SetvarEntry) -> Value {
             "documented": e.evidence.documented,
         },
         "range_unverified": e.range_unverified,
+        "respawn": respawn_name(e.respawn),
     })
 }
 
