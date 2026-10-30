@@ -80,7 +80,7 @@ pub use pedestrians::{
     PedestrianNetwork, PedestrianPool, PedestrianSettings,
 };
 pub use rail::{
-    configure_rail, is_rail, load_rail_variants, move_ai_trains, points_ahead,
+    click_points_system, configure_rail, is_rail, load_rail_variants, move_ai_trains, points_ahead,
     points_visual_system, rail_player_pose, rail_player_step, set_points_system, spawn_ai_trains,
     spawn_scheduled_trains, step_rail_scripts, switch_hint_system, way_by_id, way_id, AiTrain,
     BikeAiPool, BikeNetwork, BikeSettings, Part, RailAiPool, RailNetwork, RailPlayer, RailSettings,

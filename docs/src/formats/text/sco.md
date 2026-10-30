@@ -418,7 +418,7 @@ the open lanes. Trains that approach (150 m) ask for the lane their route or bra
 position follows when no train is on the points (`set_points_system`); the object's `Switch`
 variable is written from the position so the tongue meshes turn (`points_visual_system`). A train
 that finds the points set against it (another vehicle holds them) takes the open way. The click
-(`toggle_switch`) is not wired to the position yet, and trailing movements (entering the points
+(`toggle_switch`, 2026-10-30): a mesh with `[mouseevent]` gets a `SceneryMouseTrigger`; a left click within 60 m (cockpit controls first) sends `SceneryClicked`, and the points system throws the shared position (round robin over the positions) unless a vehicle is on the points; the object's own script is not run, the position drives `Switch`. Trailing movements (entering the points
 from a branch) do not set them.
 
 #### `[path]` parameters

@@ -314,7 +314,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Define the `SurfaceGrip` model and its inputs from the weather state** (M-0117) — [Weather Effects on Driving and Exhaust](../src/roadmap/phase-11/M-0117.md)
 - [x] 🟡 **Add the timetable reader API for non-player vehicles (M-0099 is done: `opts_core::formats::timetable::Timetables`)** (M-0112) — [Scheduled AI Traffic](../src/roadmap/phase-11/M-0112.md)
 - [x] 🟡 **Census of switch definitions in the installed maps' tiles** (M-0113) — [Track Switch Interaction](../src/roadmap/phase-11/M-0113.md) — census done 2026-10-24 (`02d7a627`); first slice: points hint, `rail.switch`, points as shared state (`b107c9e7`, `58a0e72c`).
-- [~] 🟡 **Track switches: scenario verification; the player clicks a tongue to set the points** (M-0113) — scenario verification done 2026-10-29 on `agent/rail-points-scenario` (both intents, held points: the train takes the open way); the tongue click is open
+- [x] 🟡 **Track switches: scenario verification; the player clicks a tongue to set the points** (M-0113) — scenario verification done 2026-10-29 on `agent/rail-points-scenario` (both intents, held points: the train takes the open way); tongue click done 2026-10-30 on `agent/m0113-click` (`SceneryMouseTrigger`, `SceneryClicked`, `click_points_system`)
 
 #### M-0120–M-0124 — Phase 12: Visual Fidelity & Advanced Physics (proposed 2026-10-18, approved 2026-10-20)
 - [ ] 🟡 **Audit what renders today for overlays and light maps on MAN NG272 (screenshots at day and night)** (M-0120) — [Material Overlays and Light Maps](../src/roadmap/phase-12/M-0120.md)
@@ -607,6 +607,7 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0053 plan step 8 done (`agent/articulation-doc`): `articulation.md` rewritten and checked against the code.
 - `2026-10-30` — M-0110 done (`agent/m0110-respawn`): per-option `respawn` metadata (`required`/`live`/`unknown`, from vendor data only), *needs respawn* marker and group headings on the Alt menu *Setvars* page, `vehicle.setvars` field `respawn`, protocol 1.31.
 - `2026-10-29` — M-0113 scenario verification done (`agent/rail-points-scenario`): tests drive a train through the points with both intents and with held points; the click on the tongue stays open.
+- `2026-10-30` — M-0113 complete (`agent/m0113-click`): the player clicks a points tongue (`toggle_switch`) through the cockpit's mesh ray cast; the shared position is thrown unless a vehicle is on the points.
 - `2026-10-29` — M-0074 intake rule written (`agent/intake-rule`): `CONTRIBUTING.md` section and a pointer in the prompt workflow.
 - `2026-10-29` — M-0109 complete (`agent/driver-view-measure`): the smooth-driver-view measurement (1.9 mm of 2 mm over a 60 s drive) closed the item without a smoothing setting.
 - `2026-10-29` — M-0124: corpus audit, setting-Off test and source report done (`agent/pax-mass-rest`); only the per-unit load of consists is open.

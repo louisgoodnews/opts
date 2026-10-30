@@ -158,6 +158,10 @@ keys! {
     ALERT_SWITCH_LEFT = "hud-alert-switch-left",
     /// Alert: points ahead, the way is to the right (`distance`).
     ALERT_SWITCH_RIGHT = "hud-alert-switch-right",
+    /// Alert: the player threw the points by a click (`position`).
+    ALERT_POINTS_THROWN = "hud-alert-points-thrown",
+    /// Alert: the clicked points have a vehicle on them and stay as they are.
+    ALERT_POINTS_OCCUPIED = "hud-alert-points-occupied",
     /// Viewpoint editor: title.
     VIEWPOINT_TITLE = "hud-viewpoint-title",
     /// Viewpoint editor: the vehicle's view being edited (`index`, `total`).

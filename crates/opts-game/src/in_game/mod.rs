@@ -254,6 +254,8 @@ fn add_late_systems(app: &mut App) {
             .before(omsi_world::move_ai_trains)
             .run_if(in_state(AppState::InGame)),
     );
+    // Also added by the vehicle trigger plugin; adding it here keeps headless apps without it valid.
+    app.add_message::<opts_bevy::SceneryClicked>();
     app.add_systems(
         Update,
         (
@@ -261,6 +263,7 @@ fn add_late_systems(app: &mut App) {
             omsi_world::switch_hint_system,
             omsi_world::set_points_system.before(omsi_world::move_ai_trains),
             omsi_world::points_visual_system,
+            omsi_world::click_points_system.before(omsi_world::set_points_system),
         )
             .run_if(in_state(AppState::InGame)),
     );

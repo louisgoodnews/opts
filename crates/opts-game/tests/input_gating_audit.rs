@@ -62,6 +62,9 @@ const REVIEWED: &[&str] = &[
     "opts-bevy/src/reporting/trigger.rs",
     "opts-bevy/src/vehicle_sim.rs",
     "opts-bevy/src/vehicle_triggers.rs",
+    // Left click on scenery hot-spots (M-0113); registered in `VehicleTriggerPlugin` with
+    // `not_modal_active`.
+    "opts-bevy/src/vehicle_triggers/scenery_click.rs",
     "opts-game/src/in_game/hud.rs",
     "opts-game/src/in_game/loading_pipeline.rs",
     "opts-game/src/in_game/mod.rs",
