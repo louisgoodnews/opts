@@ -287,3 +287,6 @@ pub(super) fn spawn_follower(
         .extend(manifest.driver_cameras.iter().cloned().map(|c| (seg, c)));
     true
 }
+
+#[cfg(test)]
+mod tests;
