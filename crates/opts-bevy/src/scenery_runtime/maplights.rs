@@ -268,6 +268,42 @@ pub struct MapLightPoolParams<'w, 's> {
     >,
 }
 
+/// The lamps that get a pooled light: the nearest to the camera within the budget and radius,
+/// with hysteresis, leaving out the lamps above the player's vehicle in the interior view.
+fn choose_lamps(p: &MapLightPoolParams, cam: Vec3, interior: bool) -> Vec<Entity> {
+    let hide_over = interior && p.settings.exclude_over_vehicle;
+    let candidates: Vec<(Entity, f32)> = p
+        .lamps
+        .iter()
+        .filter(|(_, _, t)| {
+            !hide_over
+                || !p.vehicle.iter().any(|(g, fp)| {
+                    crate::light_rooms::over_vehicle(
+                        t.translation(),
+                        g,
+                        fp,
+                        crate::light_rooms::FOOTPRINT_MARGIN_M,
+                    )
+                })
+        })
+        .map(|(e, _, t)| (e, t.translation().distance(cam)))
+        .collect();
+    let current: Vec<Entity> = p
+        .pool
+        .slots
+        .iter()
+        .filter(|s| s.active)
+        .filter_map(|s| s.target)
+        .collect();
+    choose_nearest(
+        &candidates,
+        &current,
+        p.settings.pool_size,
+        p.settings.radius_m,
+        p.settings.hysteresis_m,
+    )
+}
+
 /// Hands the pool's lights to the nearest lamps, fades them and switches them by night.
 pub fn map_light_pool_system(
     mut commands: Commands,
@@ -304,39 +340,7 @@ pub fn map_light_pool_system(
     if p.pool.since_assign_s >= p.settings.interval_s {
         p.pool.since_assign_s = 0.0;
         let chosen = match camera.filter(|_| p.clock.night) {
-            Some(cam) => {
-                let hide_over = interior && p.settings.exclude_over_vehicle;
-                let candidates: Vec<(Entity, f32)> = p
-                    .lamps
-                    .iter()
-                    .filter(|(_, _, t)| {
-                        !hide_over
-                            || !p.vehicle.iter().any(|(g, fp)| {
-                                crate::light_rooms::over_vehicle(
-                                    t.translation(),
-                                    g,
-                                    fp,
-                                    crate::light_rooms::FOOTPRINT_MARGIN_M,
-                                )
-                            })
-                    })
-                    .map(|(e, _, t)| (e, t.translation().distance(cam)))
-                    .collect();
-                let current: Vec<Entity> = p
-                    .pool
-                    .slots
-                    .iter()
-                    .filter(|s| s.active)
-                    .filter_map(|s| s.target)
-                    .collect();
-                choose_nearest(
-                    &candidates,
-                    &current,
-                    p.settings.pool_size,
-                    p.settings.radius_m,
-                    p.settings.hysteresis_m,
-                )
-            }
+            Some(cam) => choose_lamps(&p, cam, interior),
             None => Vec::new(),
         };
         assign(&mut p.pool.slots, &chosen);

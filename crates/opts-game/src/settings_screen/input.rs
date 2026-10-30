@@ -13,6 +13,9 @@ use crate::settings_registry::{Apply, Category, ChangeSource, SettingKind, Setti
 use super::page::{SettingsPageState, SettingsSearch};
 use super::rows::label;
 
+mod ops;
+use ops::{run_op, select_category};
+
 /// A combo box that sets a text setting: the stored text of each option, in order.
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct SettingCombo {
@@ -264,32 +267,8 @@ pub fn handle_page_input(
             SettingOp::Reset { key } => {
                 change_from_page(&mut api, &mut commands, &mut pending, key, None);
             }
-            SettingOp::Run { key } => {
-                if api
-                    .registry
-                    .get(key)
-                    .is_some_and(|d| matches!(d.kind, SettingKind::Binding))
-                {
-                    // A key binding: the next key press is the new key (`capture_rebind`).
-                    state.rebinding = if state.rebinding == Some(*key) {
-                        None
-                    } else {
-                        Some(*key)
-                    };
-                    state.notice = state.rebinding.map(|_| loc.t("settings-rebind-prompt"));
-                    state.dirty = true;
-                } else {
-                    actions.write(SettingActionRequested { key });
-                }
-            }
-            SettingOp::Category(cat) => {
-                if state.category != *cat || !state.query.is_empty() {
-                    state.category = *cat;
-                    state.query.clear();
-                    state.clear_search_field = true;
-                    state.dirty = true;
-                }
-            }
+            SettingOp::Run { key } => run_op(key, &mut state, &api, &mut actions, &loc),
+            SettingOp::Category(cat) => select_category(&mut state, *cat),
         }
     }
 }
