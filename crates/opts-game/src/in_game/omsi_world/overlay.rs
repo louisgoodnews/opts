@@ -74,6 +74,36 @@ pub fn toggle_developer_detail(
     }
 }
 
+/// The long page (Shift+F10): load counters, the camera and vehicle positions and asset problems.
+fn details_text(stats: &WorldStats) -> String {
+    format!(
+        "[F10] map: {} (start tile {:?})\n{}\n{}\ntiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {} | load problems: {}\nkeyed meshes decoded exactly: {}",
+        stats.map_name,
+        stats.start_tile,
+        format_pos("camera ", stats.position.camera, &stats.grid),
+        stats.position.vehicle.map_or_else(
+            || "vehicle: N/A".to_string(),
+            |(p, h)| format!("{} heading {h:.0}°", format_pos("vehicle", Some(p), &stats.grid)),
+        ),
+        stats.tiles_loaded,
+        stats.tiles_missing,
+        stats.objects_loaded,
+        stats.trees_loaded,
+        stats.objects_protected,
+        stats.objects_failed,
+        stats.objects_no_geometry,
+        stats.splines_loaded,
+        stats.splines_failed,
+        if stats.vehicle_name.is_empty() { "N/A" } else { &stats.vehicle_name },
+        stats.vehicle_meshes,
+        stats.vehicle_vertices,
+        stats.scene_vertices,
+        stats.asset_failures,
+        stats.load_problems,
+        stats.meshes_exact,
+    )
+}
+
 /// Refreshes the developer panel text while it is visible.
 #[allow(clippy::too_many_arguments)]
 pub fn update_debug_overlay(
@@ -138,32 +168,7 @@ pub fn update_debug_overlay(
             continue;
         }
         text.0.push('\n');
-        text.0.push_str(&format!(
-            "[F10] map: {} (start tile {:?})\n{}\n{}\ntiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {} | load problems: {}\nkeyed meshes decoded exactly: {}",
-            stats.map_name,
-            stats.start_tile,
-            format_pos("camera ", stats.position.camera, &stats.grid),
-            stats.position.vehicle.map_or_else(
-                || "vehicle: N/A".to_string(),
-                |(p, h)| format!("{} heading {h:.0}°", format_pos("vehicle", Some(p), &stats.grid)),
-            ),
-            stats.tiles_loaded,
-            stats.tiles_missing,
-            stats.objects_loaded,
-            stats.trees_loaded,
-            stats.objects_protected,
-            stats.objects_failed,
-            stats.objects_no_geometry,
-            stats.splines_loaded,
-            stats.splines_failed,
-            if stats.vehicle_name.is_empty() { "N/A" } else { &stats.vehicle_name },
-            stats.vehicle_meshes,
-            stats.vehicle_vertices,
-            stats.scene_vertices,
-            stats.asset_failures,
-            stats.load_problems,
-            stats.meshes_exact,
-        ));
+        text.0.push_str(&details_text(&stats));
         if let Ok((c, _)) = vehicle.single() {
             text.0.push('\n');
             text.0
