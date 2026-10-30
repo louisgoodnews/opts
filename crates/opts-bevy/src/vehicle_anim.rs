@@ -466,4 +466,6 @@ impl Plugin for VehicleAnimationPlugin {
 }
 
 #[cfg(test)]
+mod delay_tests;
+#[cfg(test)]
 mod tests;
