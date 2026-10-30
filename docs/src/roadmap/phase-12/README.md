@@ -10,7 +10,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 12); this page
 
 1. [M-0120 — Material Overlays and Light Maps](M-0120.md) — 📝 Proposed; verify and complete dirt, rain and condensation overlays, `[matl_lightmap]` and `[matl_nightmap]` end to end.
 2. [M-0121 — Wetness and Snow on Vehicles and Scenery](M-0121.md) — 📝 Proposed; texture `[moisture]`, `[visible] snow_visible` and snow textures; builds on M-0120 and the existing ground wetness.
-3. [M-0124 — Passenger Load Physics](M-0124.md) — 📝 Proposed; dynamic mass; independent of the graphics work, but waits for [M-0073](../phase-10/M-0073.md) and [M-0101](../phase-4/M-0101.md).
+3. [M-0124 — Passenger Load Physics](M-0124.md) — ✅ Done 2026-10-30; dynamic mass; independent of the graphics work, but waits for [M-0073](../phase-10/M-0073.md) and [M-0101](../phase-4/M-0101.md).
 4. [M-0123 — Fuel and Battery State](M-0123.md) — 📝 Proposed; script-driven consumption, torque cut, HUD, setting, session save.
 5. [M-0122 — Graphics Overhaul](M-0122.md) — 📝 Proposed; last on purpose: the audit, ambient occlusion, anti-aliasing and bloom decisions are judged on a scene that already has dirt, light maps and wetness, and after the open Phase 8 items it depends on.
 

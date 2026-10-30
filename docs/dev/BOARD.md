@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-30 by Agent (M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-10-30 by Agent (M-0124 per-unit passenger load done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -315,7 +315,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### M-0120–M-0124 — Phase 12: Visual Fidelity & Advanced Physics (proposed 2026-10-18, approved 2026-10-20)
 - [ ] 🟡 **Audit what renders today for overlays and light maps on MAN NG272 (screenshots at day and night)** (M-0120) — [Material Overlays and Light Maps](../src/roadmap/phase-12/M-0120.md)
 - [ ] 🟡 **Count `[moisture]` and `[puddles]` over the installed textures and parse them per texture** (M-0121) — [Wetness and Snow on Vehicles and Scenery](../src/roadmap/phase-12/M-0121.md)
-- [~] 🟡 **Specify the passenger-count source and the dynamic-mass input of the M-0073 mass model** (M-0124) — [Passenger Load Physics](../src/roadmap/phase-12/M-0124.md) — first slice 2026-10-24: passengers' mass moved by the player's vehicle, `gameplay.passenger_weight` / `passenger_mass_kg`, `vehicle.passengers mass_count` override, axle loads and ride height (`0be322cb`, `3b5a9adc`, `e2714c7d`); save field done 2026-10-29; corpus audit, source report (`mass.source`; no debug panel exists) and setting-Off test done 2026-10-29 on `agent/pax-mass-rest`; open: per-unit load for consists.
+- [x] 🟡 **Specify the passenger-count source and the dynamic-mass input of the M-0073 mass model** (M-0124) — [Passenger Load Physics](../src/roadmap/phase-12/M-0124.md) — first slice 2026-10-24: passengers' mass moved by the player's vehicle, `gameplay.passenger_weight` / `passenger_mass_kg`, `vehicle.passengers mass_count` override, axle loads and ride height (`0be322cb`, `3b5a9adc`, `e2714c7d`); save field done 2026-10-29; corpus audit, source report (`mass.source`; no debug panel exists) and setting-Off test done 2026-10-29 on `agent/pax-mass-rest`; per-unit load for consists done 2026-10-30 on `agent/m0124-unit-load`.
 - [x] 🟡 **Passenger load: a save field of its own** (M-0124) — done 2026-10-29 on `agent/pax-mass-save`: save section `passenger_load` for the `vehicle.passengers mass_count` override; a drive starts without an override, so old saves restore with the real passengers
 - [ ] 🟡 **Resolve the ❓ in M-0123: tank content unit, state-of-charge variable, who raises `veh_tank`** (M-0123) — [Fuel and Battery State](../src/roadmap/phase-12/M-0123.md)
 - [ ] 🟡 **Decide the anti-aliasing path (MSAA vs SMAA vs TAA) against M-0059 foliage coverage** (M-0122) — [Graphics Overhaul](../src/roadmap/phase-12/M-0122.md)
@@ -636,3 +636,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0150 nineteenth slice (`agent/fn-ratchet-19`): player voices, settings info and page rebuild, HUD plugin registration, vehicle script attach, notebook and precipitation split; 80 functions over 80 lines.
 - `2026-10-30` — M-0150 twentieth slice (`agent/fn-ratchet-20`): first pass over 42 large functions, compiled together; 59 functions over 80 lines (14 second-pass remainders, 7 untouched).
 - `2026-10-30` — M-0150 closing slice (`agent/fn-ratchet-21`): the last 59 functions split and all 110 signature allows replaced by `SystemParam` bundles/aliases; `function-known.txt` empty.
+- `2026-10-30` — M-0124 per-unit passenger load for consists done (`agent/m0124-unit-load`): each unit carries its own people; milestone complete.

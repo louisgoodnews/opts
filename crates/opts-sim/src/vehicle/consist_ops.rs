@@ -78,6 +78,30 @@ impl VehicleSimulation {
         self.chassis.total_mass_kg
             + self.trailer_loads.iter().map(|u| u.mass_kg).sum::<f32>()
             + self.passenger_mass_kg
+            + self.following_passenger_mass_kg()
+    }
+
+    /// Mass of the people on board the following units (kg); entries without a unit do not
+    /// count.
+    #[must_use]
+    pub fn following_passenger_mass_kg(&self) -> f32 {
+        self.unit_passenger_mass_kg
+            .iter()
+            .take(self.trailer_loads.len())
+            .map(|m| m.max(0.0))
+            .sum()
+    }
+
+    /// Sets the mass of the people on board each unit of the consist (kg; entry 0 is the head,
+    /// entry `k` the following unit `k - 1`). Units beyond the list carry nobody, entries beyond
+    /// the units are dropped (M-0124).
+    pub fn set_unit_passenger_masses(&mut self, masses_kg: &[f32]) {
+        self.passenger_mass_kg = masses_kg.first().copied().unwrap_or(0.0);
+        let followers = self.trailer_loads.len();
+        let rest = masses_kg.get(1..).unwrap_or(&[]);
+        self.unit_passenger_mass_kg = (0..followers)
+            .map(|k| rest.get(k).copied().unwrap_or(0.0))
+            .collect();
     }
 
     /// Gives the body the weight of the people on board, shared over the head's axles as a load
@@ -166,13 +190,18 @@ impl VehicleSimulation {
     /// `F = Σ_{j≥k} mⱼ (a + sign(v)·Crr·g)`. `None` for a missing unit.
     #[must_use]
     pub fn hitch_force_n(&self, k: usize) -> Option<f32> {
-        let behind: f32 = self
+        let rest = self
             .trailer_loads
             .get(k..)
-            .filter(|rest| !rest.is_empty())?
+            .filter(|rest| !rest.is_empty())?;
+        let people: f32 = self
+            .unit_passenger_mass_kg
             .iter()
-            .map(|u| u.mass_kg)
+            .skip(k)
+            .take(rest.len())
+            .map(|m| m.max(0.0))
             .sum();
+        let behind: f32 = rest.iter().map(|u| u.mass_kg).sum::<f32>() + people;
         let v = self.chassis.forward_speed_m_s();
         let direction = if v.abs() > 0.01 { v.signum() } else { 0.0 };
         let a = self.chassis.local_acceleration.y;
