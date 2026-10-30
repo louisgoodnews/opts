@@ -88,6 +88,52 @@ fn start(world: &mut World, params: &Value) -> Outcome {
     }
 }
 
+/// Refuses to start when the disk has less free space than the recording limits require.
+fn check_free_disk(
+    state: &CaptureState,
+    root: &std::path::Path,
+    limits: &CaptureLimits,
+) -> Result<(), RpcError> {
+    if let Some(free) = (state.free_space)(root) {
+        let need = limits.min_free_disk_mb * 1024 * 1024;
+        if free < need {
+            return Err(CaptureError::Failed(format!(
+                "not enough free disk space for a recording: {} MiB free, at least {} MiB required",
+                free / (1024 * 1024),
+                limits.min_free_disk_mb
+            ))
+            .into());
+        }
+    }
+    Ok(())
+}
+
+/// The output path and the sidecar path of a recording named `stem`.
+fn output_paths(
+    root: &std::path::Path,
+    stem: String,
+    format: RecFormat,
+) -> Result<(std::path::PathBuf, std::path::PathBuf), RpcError> {
+    let paths = match format {
+        RecFormat::Av1 => {
+            let file = if stem.ends_with(".ivf") {
+                stem
+            } else {
+                format!("{stem}.ivf")
+            };
+            let out = storage::resolve_name(root, &file)?;
+            let side = super::screenshot::sidecar_path(&out);
+            (out, side)
+        }
+        RecFormat::PngSequence => {
+            let out = storage::resolve_dir(root, &format!("{stem}_rec"))?;
+            let side = out.join("manifest.json");
+            (out, side)
+        }
+    };
+    Ok(paths)
+}
+
 fn try_start(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     let limits = world
         .get_resource::<CaptureLimits>()
@@ -105,35 +151,12 @@ fn try_start(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     let (output, sidecar, session) = {
         let mut state = world.get_resource_or_insert_with(CaptureState::default);
         let root = state.ensure_root()?;
-        if let Some(free) = (state.free_space)(&root) {
-            let need = limits.min_free_disk_mb * 1024 * 1024;
-            if free < need {
-                return Err(CaptureError::Failed(format!(
-                    "not enough free disk space for a recording: {} MiB free, at least {} MiB required",
-                    free / (1024 * 1024),
-                    limits.min_free_disk_mb
-                ))
-                .into());
-            }
-        }
-        let stem = name.unwrap_or_else(|| state.next_stem());
-        let (output, sidecar) = match plan.format {
-            RecFormat::Av1 => {
-                let file = if stem.ends_with(".ivf") {
-                    stem
-                } else {
-                    format!("{stem}.ivf")
-                };
-                let out = storage::resolve_name(&root, &file)?;
-                let side = super::screenshot::sidecar_path(&out);
-                (out, side)
-            }
-            RecFormat::PngSequence => {
-                let out = storage::resolve_dir(&root, &format!("{stem}_rec"))?;
-                let side = out.join("manifest.json");
-                (out, side)
-            }
-        };
+        check_free_disk(&state, &root, &limits)?;
+        let (output, sidecar) = output_paths(
+            &root,
+            name.unwrap_or_else(|| state.next_stem()),
+            plan.format,
+        )?;
         (output, sidecar, state.session_id.clone())
     };
     let (id, guard) = world

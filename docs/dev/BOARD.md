@@ -623,3 +623,4 @@ The agent should check these during P-001 audits:
 - `2026-10-29` — M-0150 seventh slice (`agent/fn-ratchet-7`): light cone pool, capture worker and by-material submesh builder split; 149 functions over 80 lines.
 - `2026-10-29` — Priority list synced: M-0080 done, M-0150 counts (`agent/prio-sync`).
 - `2026-10-30` — M-0150 eighth slice (`agent/fn-ratchet-8`): configurations section, wizard chrome refresh and overlay info lines split; 146 functions over 80 lines.
+- `2026-10-30` — M-0150 ninth slice (`agent/fn-ratchet-9`): DDS decoding, burst start and recording start split; 143 functions over 80 lines.
