@@ -260,6 +260,7 @@ fn bellows_beta_moves_the_follower_end_like_the_follower_body() {
         factor: 1.0,
         translate: false,
         maxspeed: None,
+        delay: None,
     };
     let beta = joint_beta_deg(0.0, p);
     let end_by_bellows =
@@ -287,6 +288,7 @@ fn bellows_gamma_rolls_the_follower_end_like_the_follower_body() {
         factor: 1.0,
         translate: false,
         maxspeed: None,
+        delay: None,
     };
     let gamma = (r - 0.0).to_degrees();
     let by_bellows = animation_matrix(&[step], |_| gamma).transform_point3(Vec3::X);

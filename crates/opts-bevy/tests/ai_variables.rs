@@ -36,6 +36,7 @@ fn a_wheel_turns_with_its_variable_and_a_visible_rule_follows_it() {
                     factor: 57.295_78,
                     translate: false,
                     maxspeed: None,
+                    delay: None,
                 }],
                 visible: Vec::new(),
                 shown: Vec::new(),

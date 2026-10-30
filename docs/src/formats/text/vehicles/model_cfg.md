@@ -214,7 +214,7 @@ Evidence from the model authors' own comments in `model_SD77.cfg` (wheels) and t
 - Sign: a wheel's top must move forward while `Wheel_Rotation_*` grows, i.e. `anim_rot` turns by `-variable × factor` degrees in the right-handed sense about the frame's X axis; `origin_rot_*` turn the same (left-handed) way, so in right-handed vehicle axes their angles are negated too (suspension `-90`: X points down, steering `+90`: up; a positive `Axle_Steering` is a right turn). Evidence and census: [animation axes](../../../architecture/animation-axes.md#conventions-in-force-one-handedness-2026-10-26) (2026-10-26).
 - Several `[newanim]` blocks: the first declared is innermost (wheel: spin, suspension, steering).
 
-- `maxspeed` limits how fast the animation follows its variable, in variable units per second (📚 `maxspeed` = 1 ÷ duration in seconds). OPTS snaps to the value on the first frame; `delay` (damping) is not applied yet ❓.
+- `maxspeed` limits how fast the animation follows its variable, in variable units per second (📚 `maxspeed` = 1 ÷ duration in seconds). OPTS snaps to the value on the first frame. `delay` (damping, 📚 "1 ÷ x before the end") is applied as a first-order lag with rate `delay` per second: `shown += (target - shown)·(1 - e^(-delay·dt))`, exact in `dt` and so independent of the frame rate, then limited by `maxspeed` (2026-10-30). Reading `delay` as a rate (time constant `1 ÷ delay` s) is an interpretation of the wiki's one line; OMSI's exact curve is not verified ❓.
 
 Implementation: `opts_bevy::vehicle_anim`; unit tests cover the wheel, suspension, ordering and `maxspeed` cases.
 
