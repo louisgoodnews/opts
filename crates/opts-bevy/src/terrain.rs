@@ -228,38 +228,40 @@ fn clip_to_triangle(subject: &[Vec2], clip: [Vec2; 3]) -> Vec<Vec2> {
     poly
 }
 
-/// Lowers the terrain under drawn ground surfaces so it never covers them
-/// (`docs/src/architecture/terrain-carving.md` §4).
-///
-/// For every surface triangle and every terrain triangle it overlaps (the mesh's own split), the
-/// lowest surface height on their overlap minus [`CARVE_EPSILON_M`] caps the terrain triangle's
-/// three vertices. A cap that would lower a vertex by more than [`CARVE_COVER_M`] is not applied
-/// (buried content). Terrain triangles one cell beyond the tile's border take part too, so a
-/// border vertex gets the same caps on both tiles that share it. Heights are only ever lowered;
-/// the mesh topology is unchanged.
-#[must_use]
-pub fn carve_terrain(
-    terrain: &TileTerrain,
-    surfaces: &[GroundTriangle],
-) -> (TileTerrain, CarveStats) {
-    let n = terrain.grid.grid_cells as usize;
-    let dim = n + 1;
-    let mut out = terrain.clone();
-    let mut stats = CarveStats::default();
-    if n == 0 || terrain.grid.heights.len() < dim * dim {
-        return (out, stats);
+/// What the carve learns from the surface triangles, per grid vertex: the height it must stay
+/// below (`cap`), whether the terrain is far above and left alone (`guarded`) and whether a
+/// surface lies over it (`covered`).
+struct Carving {
+    cap: Vec<f32>,
+    guarded: Vec<bool>,
+    covered: Vec<bool>,
+    n: usize,
+    dim: usize,
+    cell: f32,
+}
+
+impl Carving {
+    fn new(n: usize, cell: f32) -> Self {
+        let dim = n + 1;
+        Self {
+            cap: vec![f32::INFINITY; dim * dim],
+            guarded: vec![false; dim * dim],
+            covered: vec![false; dim * dim],
+            n,
+            dim,
+            cell,
+        }
     }
-    let cell = terrain.cell;
-    let raw = &terrain.grid.heights;
-    let mut cap = vec![f32::INFINITY; dim * dim];
-    let mut guarded = vec![false; dim * dim];
-    let mut covered = vec![false; dim * dim];
-    let ring = -1_i64..=n as i64;
-    for tri in surfaces {
+
+    /// Takes one surface triangle into account: marks the vertices under it and caps the ones its
+    /// overlap with the terrain's cells reaches.
+    fn add(&mut self, tri: &GroundTriangle, raw: &[f32]) {
+        let (n, dim, cell) = (self.n, self.dim, self.cell);
+        let ring = -1_i64..=n as i64;
         let p = tri.map(|v| v.truncate());
         let area = cross2(p[0], p[1], p[2]);
         if area.abs() < 1e-8 {
-            continue;
+            return;
         }
         // Counter-clockwise for the clipper; the height plane follows the vertices.
         let (p, h) = if area > 0.0 {
@@ -285,7 +287,7 @@ pub fn carve_terrain(
             for i in i0.max(0)..=(i1 + 1).min(n as i64) {
                 let x = Vec2::new(i as f32 * cell, j as f32 * cell);
                 if (0..3).all(|e| cross2(p[e], p[(e + 1) % 3], x) >= 0.0) {
-                    covered[j as usize * dim + i as usize] = true;
+                    self.covered[j as usize * dim + i as usize] = true;
                 }
             }
         }
@@ -315,20 +317,49 @@ pub fn carve_terrain(
                         }
                         let k = b as usize * dim + a as usize;
                         if raw[k] - m > CARVE_COVER_M {
-                            guarded[k] = true;
-                        } else if m < cap[k] {
-                            cap[k] = m;
+                            self.guarded[k] = true;
+                        } else if m < self.cap[k] {
+                            self.cap[k] = m;
                         }
                     }
                 }
             }
         }
     }
+}
+
+/// Lowers the terrain under drawn ground surfaces so it never covers them
+/// (`docs/src/architecture/terrain-carving.md` §4).
+///
+/// For every surface triangle and every terrain triangle it overlaps (the mesh's own split), the
+/// lowest surface height on their overlap minus [`CARVE_EPSILON_M`] caps the terrain triangle's
+/// three vertices. A cap that would lower a vertex by more than [`CARVE_COVER_M`] is not applied
+/// (buried content). Terrain triangles one cell beyond the tile's border take part too, so a
+/// border vertex gets the same caps on both tiles that share it. Heights are only ever lowered;
+/// the mesh topology is unchanged.
+#[must_use]
+pub fn carve_terrain(
+    terrain: &TileTerrain,
+    surfaces: &[GroundTriangle],
+) -> (TileTerrain, CarveStats) {
+    let n = terrain.grid.grid_cells as usize;
+    let dim = n + 1;
+    let mut out = terrain.clone();
+    let mut stats = CarveStats::default();
+    if n == 0 || terrain.grid.heights.len() < dim * dim {
+        return (out, stats);
+    }
+    let cell = terrain.cell;
+    let raw = &terrain.grid.heights;
+    let mut cv = Carving::new(n, cell);
+    for tri in surfaces {
+        cv.add(tri, raw);
+    }
     for (k, h) in out.grid.heights.iter_mut().enumerate().take(dim * dim) {
-        if cap[k] < *h {
-            *h = cap[k];
+        if cv.cap[k] < *h {
+            *h = cv.cap[k];
             stats.lowered += 1;
-        } else if guarded[k] {
+        } else if cv.guarded[k] {
             stats.guarded += 1;
         }
     }
@@ -337,13 +368,13 @@ pub fn carve_terrain(
     // reach out from under the surface then start at the surface's height at its edge, not 10-25
     // cm lower. A bigger gap is content (a bridge, a cutting) and stays.
     for (k, h) in out.grid.heights.iter_mut().enumerate().take(dim * dim) {
-        if covered[k]
-            && !guarded[k]
-            && cap[k].is_finite()
-            && *h < cap[k]
-            && cap[k] - *h <= ALIGN_MAX_M
+        if cv.covered[k]
+            && !cv.guarded[k]
+            && cv.cap[k].is_finite()
+            && *h < cv.cap[k]
+            && cv.cap[k] - *h <= ALIGN_MAX_M
         {
-            *h = cap[k];
+            *h = cv.cap[k];
             stats.raised += 1;
         }
     }
@@ -352,14 +383,22 @@ pub fn carve_terrain(
     stats.aligned = align::align_vertices(
         outer.iter().map(|(a, b, _)| (*a, *b)).collect(),
         &mut out.grid.heights,
-        &cap,
-        &covered,
-        &guarded,
+        &cv.cap,
+        &cv.covered,
+        &cv.guarded,
         n,
         cell,
     );
     // … and the terrain just outside every edge is at the edge's height.
-    stats.fitted = align::fit_edges(&outer, &mut out.grid.heights, raw, &cap, &guarded, n, cell);
+    stats.fitted = align::fit_edges(
+        &outer,
+        &mut out.grid.heights,
+        raw,
+        &cv.cap,
+        &cv.guarded,
+        n,
+        cell,
+    );
     (out, stats)
 }
 

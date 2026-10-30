@@ -2,6 +2,60 @@
 
 use super::*;
 
+/// The notes under a language pack: how much of it is translated, by whom, and its gaps, age and
+/// problems.
+fn pack_notes(c: &mut Commands, col: Entity, l: &opts_gui::l10n::LanguageInfo) {
+    let percent = l.percent().round() as usize;
+    if l.authors.is_empty() {
+        note(
+            c,
+            col,
+            "set-lang-info-unsigned",
+            vec![("percent".into(), percent.into())],
+            ColorRole::OnSurfaceVariant,
+        );
+    } else {
+        note(
+            c,
+            col,
+            "set-lang-info",
+            vec![
+                ("percent".into(), percent.into()),
+                ("authors".into(), l.authors.join(", ").into()),
+            ],
+            ColorRole::OnSurfaceVariant,
+        );
+    }
+    let gaps = l.missing + l.copied;
+    if gaps > 0 {
+        note(
+            c,
+            col,
+            "set-lang-gaps",
+            vec![("count".into(), gaps.into())],
+            ColorRole::OnSurfaceVariant,
+        );
+    }
+    if l.outdated {
+        note(
+            c,
+            col,
+            "set-lang-outdated",
+            Vec::new(),
+            ColorRole::OnSurfaceVariant,
+        );
+    }
+    if l.errors > 0 {
+        note(
+            c,
+            col,
+            "set-lang-problems",
+            vec![("count".into(), l.errors.into())],
+            ColorRole::Error,
+        );
+    }
+}
+
 /// The languages of the interface: one button each (named in its own language), and below a
 /// pack's button how complete it is, who made it and what is wrong with it. Right-to-left packs
 /// are shown but cannot be chosen.
@@ -45,55 +99,7 @@ pub(super) fn language_list(
             note(c, col, "set-lang-rtl", Vec::new(), ColorRole::Error);
         }
         if l.from_pack {
-            let percent = l.percent().round() as usize;
-            if l.authors.is_empty() {
-                note(
-                    c,
-                    col,
-                    "set-lang-info-unsigned",
-                    vec![("percent".into(), percent.into())],
-                    ColorRole::OnSurfaceVariant,
-                );
-            } else {
-                note(
-                    c,
-                    col,
-                    "set-lang-info",
-                    vec![
-                        ("percent".into(), percent.into()),
-                        ("authors".into(), l.authors.join(", ").into()),
-                    ],
-                    ColorRole::OnSurfaceVariant,
-                );
-            }
-            let gaps = l.missing + l.copied;
-            if gaps > 0 {
-                note(
-                    c,
-                    col,
-                    "set-lang-gaps",
-                    vec![("count".into(), gaps.into())],
-                    ColorRole::OnSurfaceVariant,
-                );
-            }
-            if l.outdated {
-                note(
-                    c,
-                    col,
-                    "set-lang-outdated",
-                    Vec::new(),
-                    ColorRole::OnSurfaceVariant,
-                );
-            }
-            if l.errors > 0 {
-                note(
-                    c,
-                    col,
-                    "set-lang-problems",
-                    vec![("count".into(), l.errors.into())],
-                    ColorRole::Error,
-                );
-            }
+            pack_notes(c, col, &l);
         }
         if !l.missing_fonts.is_empty() {
             note(
