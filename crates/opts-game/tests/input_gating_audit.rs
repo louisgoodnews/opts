@@ -67,6 +67,7 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/in_game/mod.rs",
     "opts-game/src/in_game/omsi_world/overlay.rs",
     "opts-game/src/help/mod.rs",
+    "opts-game/src/help/params.rs",
     "opts-game/src/hud/tests.rs",
     // Test module (split out of `hud/tests.rs`): presses the keys to test the systems above.
     "opts-game/src/hud/tests/alerts.rs",
@@ -76,6 +77,7 @@ const REVIEWED: &[&str] = &[
     // `MenuModalActive` (through `FullMapState::holds_input`), so all gated input stands still.
     "opts-game/src/hud/fullmap/mod.rs",
     "opts-game/src/pause/mod.rs",
+    "opts-game/src/pause/params.rs",
     "opts-game/src/shell/footer.rs",
     "opts-game/src/new_game_screen/picker_systems.rs",
     "opts-game/src/new_game_screen/scroll_systems.rs",
