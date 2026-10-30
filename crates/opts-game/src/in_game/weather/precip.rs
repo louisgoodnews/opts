@@ -207,6 +207,113 @@ fn quad_mesh(quads: usize) -> (Mesh, Vec<u32>) {
     (mesh, indices)
 }
 
+/// Materials and mesh, once; a changed budget builds the mesh again.
+fn ensure_assets(
+    state: &mut PrecipState,
+    (images, meshes, materials): (
+        &mut Assets<Image>,
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+    ),
+    budget: usize,
+) {
+    if state.rain.is_none() {
+        let streak = images.add(texture(4, 32, |u, v| {
+            (1.0 - (2.0 * u - 1.0).abs()).powf(0.7) * (std::f32::consts::PI * v).sin().powf(1.4)
+        }));
+        let flake = images.add(texture(16, 16, |u, v| {
+            let d = ((u - 0.5).powi(2) + (v - 0.5).powi(2)).sqrt() * 2.0;
+            (1.0 - d).clamp(0.0, 1.0).powf(0.6)
+        }));
+        state.rain = Some(materials.add(material(streak, base_colour(PrecipKind::Rain, 1.0))));
+        state.snow = Some(materials.add(material(flake, base_colour(PrecipKind::Snow, 1.0))));
+    }
+    if state.mesh.is_none() || state.allocated != budget {
+        let (mesh, indices) = quad_mesh(budget);
+        match state.mesh.clone() {
+            Some(handle) => {
+                let _ = meshes.insert(&handle, mesh);
+            }
+            None => state.mesh = Some(meshes.add(mesh)),
+        }
+        state.seeds = (0..budget as u32).map(seed_of).collect();
+        state.indices = indices;
+        state.allocated = budget;
+        state.drawn = 0;
+    }
+}
+
+/// Places the quads of the visible particles around the camera and updates the index range when
+/// their number changed.
+fn write_geometry(
+    state: &mut PrecipState,
+    meshes: &mut Assets<Mesh>,
+    mesh_handle: &Handle<Mesh>,
+    plan: &PrecipPlan,
+    (t, cam): (f64, &GlobalTransform),
+) {
+    let quads = (plan.quads as usize).min(state.allocated);
+    let drawn_changed = state.drawn != quads;
+    let (right, up, cam_pos) = (cam.right().as_vec3(), cam.up().as_vec3(), cam.translation());
+    let seeds = std::mem::take(&mut state.seeds);
+    let indices = std::mem::take(&mut state.indices);
+    if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
+        if let Some(VertexAttributeValues::Float32x3(positions)) =
+            mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
+        {
+            for (q, seed) in seeds.iter().take(quads).enumerate() {
+                let p = particle_position(*seed, t, plan, cam_pos);
+                let corners = if plan.kind == PrecipKind::Rain {
+                    rain_corners(p, plan, cam_pos, right)
+                } else {
+                    flake_corners(p, plan, right, up)
+                };
+                for (k, c) in corners.iter().enumerate() {
+                    positions[q * 4 + k] = c.to_array();
+                }
+            }
+        }
+        if drawn_changed {
+            mesh.insert_indices(Indices::U32(indices[..quads * 6].to_vec()));
+        }
+    }
+    state.seeds = seeds;
+    state.indices = indices;
+    state.drawn = quads;
+}
+
+/// Spawns the precipitation layer when it does not exist, shows it and gives it the material of
+/// the current kind of precipitation.
+fn sync_layer(
+    commands: &mut Commands,
+    layer: &mut Query<(&mut Visibility, &mut MeshMaterial3d<StandardMaterial>), With<PrecipLayer>>,
+    mesh_handle: &Handle<Mesh>,
+    want_material: &Handle<StandardMaterial>,
+) {
+    if layer.is_empty() {
+        commands.spawn((
+            Mesh3d(mesh_handle.clone()),
+            MeshMaterial3d(want_material.clone()),
+            Transform::IDENTITY,
+            Visibility::Visible,
+            NoFrustumCulling,
+            NotShadowCaster,
+            NotShadowReceiver,
+            PrecipLayer,
+            InGameEntity,
+            Name::new("Precipitation"),
+        ));
+    }
+    for (mut v, mut m) in layer {
+        if *v != Visibility::Visible {
+            *v = Visibility::Visible;
+        }
+        if m.0 != *want_material {
+            m.0 = want_material.clone();
+        }
+    }
+}
+
 /// Draws, updates and hides the precipitation.
 #[allow(clippy::too_many_arguments)]
 pub fn update_precipitation(
@@ -239,31 +346,11 @@ pub fn update_precipitation(
     };
     let budget = effects.precipitation.budget() as usize;
 
-    // Materials and mesh, once; a changed budget builds the mesh again.
-    if state.rain.is_none() {
-        let streak = images.add(texture(4, 32, |u, v| {
-            (1.0 - (2.0 * u - 1.0).abs()).powf(0.7) * (std::f32::consts::PI * v).sin().powf(1.4)
-        }));
-        let flake = images.add(texture(16, 16, |u, v| {
-            let d = ((u - 0.5).powi(2) + (v - 0.5).powi(2)).sqrt() * 2.0;
-            (1.0 - d).clamp(0.0, 1.0).powf(0.6)
-        }));
-        state.rain = Some(materials.add(material(streak, base_colour(PrecipKind::Rain, 1.0))));
-        state.snow = Some(materials.add(material(flake, base_colour(PrecipKind::Snow, 1.0))));
-    }
-    if state.mesh.is_none() || state.allocated != budget {
-        let (mesh, indices) = quad_mesh(budget);
-        match state.mesh.clone() {
-            Some(handle) => {
-                let _ = meshes.insert(&handle, mesh);
-            }
-            None => state.mesh = Some(meshes.add(mesh)),
-        }
-        state.seeds = (0..budget as u32).map(seed_of).collect();
-        state.indices = indices;
-        state.allocated = budget;
-        state.drawn = 0;
-    }
+    ensure_assets(
+        &mut state,
+        (&mut images, &mut meshes, &mut materials),
+        budget,
+    );
     let mesh_handle = state.mesh.clone().unwrap_or_default();
     let want_material = if plan.kind == PrecipKind::Snow {
         state.snow.clone()
@@ -272,29 +359,7 @@ pub fn update_precipitation(
     }
     .unwrap_or_default();
 
-    // The layer entity.
-    if layer.is_empty() {
-        commands.spawn((
-            Mesh3d(mesh_handle.clone()),
-            MeshMaterial3d(want_material.clone()),
-            Transform::IDENTITY,
-            Visibility::Visible,
-            NoFrustumCulling,
-            NotShadowCaster,
-            NotShadowReceiver,
-            PrecipLayer,
-            InGameEntity,
-            Name::new("Precipitation"),
-        ));
-    }
-    for (mut v, mut m) in &mut layer {
-        if *v != Visibility::Visible {
-            *v = Visibility::Visible;
-        }
-        if m.0 != want_material {
-            m.0 = want_material.clone();
-        }
-    }
+    sync_layer(&mut commands, &mut layer, &mesh_handle, &want_material);
     // Colour follows the daylight.
     let tint = weather_look(env.conditions(), [0.0; 3], env.sun_alt_deg()).precip;
     if state.kind != Some(plan.kind) || (state.tint - tint).abs() > 0.01 {
@@ -311,35 +376,13 @@ pub fn update_precipitation(
     state.kind = Some(plan.kind);
 
     // Geometry.
-    let quads = (plan.quads as usize).min(state.allocated);
-    let drawn_changed = state.drawn != quads;
-    let t = time.elapsed_secs_f64();
-    let (right, up, cam_pos) = (cam.right().as_vec3(), cam.up().as_vec3(), cam.translation());
-    let seeds = std::mem::take(&mut state.seeds);
-    let indices = std::mem::take(&mut state.indices);
-    if let Some(mut mesh) = meshes.get_mut(&mesh_handle) {
-        if let Some(VertexAttributeValues::Float32x3(positions)) =
-            mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
-        {
-            for (q, seed) in seeds.iter().take(quads).enumerate() {
-                let p = particle_position(*seed, t, &plan, cam_pos);
-                let corners = if plan.kind == PrecipKind::Rain {
-                    rain_corners(p, &plan, cam_pos, right)
-                } else {
-                    flake_corners(p, &plan, right, up)
-                };
-                for (k, c) in corners.iter().enumerate() {
-                    positions[q * 4 + k] = c.to_array();
-                }
-            }
-        }
-        if drawn_changed {
-            mesh.insert_indices(Indices::U32(indices[..quads * 6].to_vec()));
-        }
-    }
-    state.seeds = seeds;
-    state.indices = indices;
-    state.drawn = quads;
+    write_geometry(
+        &mut state,
+        &mut meshes,
+        &mesh_handle,
+        &plan,
+        (time.elapsed_secs_f64(), cam),
+    );
 }
 
 #[cfg(test)]
