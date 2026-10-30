@@ -73,9 +73,8 @@ fn handle(world: &mut World, params: &Value) -> Outcome {
     }
 }
 
-fn start(world: &mut World, params: &Value) -> Result<Burst, RpcError> {
-    let count = u64_param(params, "count")?;
-    let interval_ms = u64_param(params, "interval_ms")?;
+/// The count, the interval and their product must stay inside the limits.
+fn check_limits(count: u64, interval_ms: u64) -> Result<(), RpcError> {
     if !(1..=MAX_COUNT).contains(&count) {
         return Err(RpcError::invalid_params(format!(
             "`count` must be 1..={MAX_COUNT}"
@@ -91,6 +90,11 @@ fn start(world: &mut World, params: &Value) -> Result<Burst, RpcError> {
             "`count` x `interval_ms` may not exceed {MAX_TOTAL_MS} ms (the reply must arrive within the control server's deferred-reply limit)"
         )));
     }
+    Ok(())
+}
+
+/// The format, JPEG quality, metadata flag and folder name of the request.
+fn still_options(params: &Value) -> Result<(StillFormat, u8, bool, Option<String>), RpcError> {
     let format = match opt_str(params, "format")? {
         Some(f) => StillFormat::parse(f)?,
         None => StillFormat::Png,
@@ -102,6 +106,14 @@ fn start(world: &mut World, params: &Value) -> Result<Burst, RpcError> {
     };
     let with_meta = opt_bool(params, "metadata")?.unwrap_or(true);
     let dir_name = opt_str(params, "dir")?.map(str::to_string);
+    Ok((format, quality, with_meta, dir_name))
+}
+
+fn start(world: &mut World, params: &Value) -> Result<Burst, RpcError> {
+    let count = u64_param(params, "count")?;
+    let interval_ms = u64_param(params, "interval_ms")?;
+    check_limits(count, interval_ms)?;
+    let (format, quality, with_meta, dir_name) = still_options(params)?;
     let backend = world
         .get_resource::<CaptureBackend>()
         .copied()

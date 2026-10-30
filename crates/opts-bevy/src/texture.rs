@@ -124,36 +124,12 @@ pub fn dropped_dds_chains() -> u64 {
     DROPPED_DDS_CHAINS.load(std::sync::atomic::Ordering::Relaxed)
 }
 
-/// Decodes a DirectDraw Surface (`.dds`) buffer into a Bevy [`Image`].
-///
-/// Supports DXT1 (BC1), DXT3 (BC2), DXT5 (BC3), uncompressed 32-bit RGBA/BGRA,
-/// 24-bit RGB, and 8-bit A8 alpha mask textures.
-///
-/// # Errors
-/// Returns [`TextureError::DdsDecode`] or [`TextureError::UnsupportedFormat`] if
-/// the header or pixel format is invalid.
-pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
-    if bytes.is_empty() {
-        return Err(TextureError::EmptyBuffer);
-    }
-
-    let mut cursor = std::io::Cursor::new(bytes);
-    let dds = Dds::read(&mut cursor).map_err(|e| TextureError::DdsDecode(e.to_string()))?;
-
-    let width = dds.header.width;
-    let height = dds.header.height;
-    if width == 0 || height == 0 {
-        return Err(TextureError::DdsDecode("zero width or height".into()));
-    }
-
-    // Determine texture format and prepare data buffer
-    let (format, data) = parse_dds_format_and_data(&dds)?;
-
-    // Block-compressed textures must have dimensions that are multiples of the 4×4 block size
-    // (wgpu rejects the texture otherwise and the validation error is fatal). The data already
-    // holds whole blocks, so rounding the extent up keeps the layout valid at the cost of a
-    // sub-percent UV scale (e.g. 533 → 536 rows).
-    let (width, height) = if matches!(
+/// Block-compressed textures must have dimensions that are multiples of the 4×4 block size
+/// (wgpu rejects the texture otherwise and the validation error is fatal). The data already
+/// holds whole blocks, so rounding the extent up keeps the layout valid at the cost of a
+/// sub-percent UV scale (e.g. 533 → 536 rows).
+fn rounded_extent(format: TextureFormat, width: u32, height: u32) -> (u32, u32) {
+    if matches!(
         format,
         TextureFormat::Bc1RgbaUnormSrgb
             | TextureFormat::Bc2RgbaUnormSrgb
@@ -162,19 +138,19 @@ pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
         (width.div_ceil(4) * 4, height.div_ceil(4) * 4)
     } else {
         (width, height)
-    };
-    let extent = Extent3d {
-        width,
-        height,
-        depth_or_array_layers: 1,
-    };
+    }
+}
 
-    let mut image = Image::default();
-    image.texture_descriptor.size = extent;
-    image.texture_descriptor.format = format;
-    image.texture_descriptor.dimension = TextureDimension::D2;
-    let mut mips = dds.header.mip_map_count.unwrap_or(1).max(1);
-    let mut data = data;
+/// Makes the data match the mip chain the GPU upload expects for the (rounded) extent: re-lays out
+/// a block-compressed chain stored for the file's own size, pads or cuts to the expected length,
+/// and keeps only the base level when the chain does not fit. Returns the data and the level
+/// count.
+fn fit_mip_chain(
+    mut data: Vec<u8>,
+    format: TextureFormat,
+    file_size: (u32, u32),
+    ((width, height), mut mips): ((u32, u32), u32),
+) -> Result<(Vec<u8>, u32), TextureError> {
     // The GPU upload slices the buffer by the mip sizes derived from the (possibly rounded)
     // extent; when that disagrees with the file's chain, keep only the base level.
     let (block_width, block_height, block_bytes) = match format {
@@ -186,14 +162,10 @@ pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
     };
     // Block-compressed files with a size that is not a multiple of 4 store their chain for the
     // file's own size; re-lay it out for the rounded extent the GPU expects.
-    if mips > 1 && block_width == 4 && (dds.header.width, dds.header.height) != (width, height) {
-        if let Some(chain) = dds_chain::relayout_chain(
-            &data,
-            (dds.header.width, dds.header.height),
-            (width, height),
-            mips,
-            block_bytes,
-        ) {
+    if mips > 1 && block_width == 4 && file_size != (width, height) {
+        if let Some(chain) =
+            dds_chain::relayout_chain(&data, file_size, (width, height), mips, block_bytes)
+        {
             data = chain;
         }
     }
@@ -229,6 +201,56 @@ pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
     } else if data.len() > expected {
         data.truncate(expected);
     }
+    Ok((data, mips))
+}
+
+/// Decodes a DirectDraw Surface (`.dds`) buffer into a Bevy [`Image`].
+///
+/// Supports DXT1 (BC1), DXT3 (BC2), DXT5 (BC3), uncompressed 32-bit RGBA/BGRA,
+/// 24-bit RGB, and 8-bit A8 alpha mask textures.
+///
+/// # Errors
+/// Returns [`TextureError::DdsDecode`] or [`TextureError::UnsupportedFormat`] if
+/// the header or pixel format is invalid.
+pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
+    if bytes.is_empty() {
+        return Err(TextureError::EmptyBuffer);
+    }
+
+    let mut cursor = std::io::Cursor::new(bytes);
+    let dds = Dds::read(&mut cursor).map_err(|e| TextureError::DdsDecode(e.to_string()))?;
+
+    let width = dds.header.width;
+    let height = dds.header.height;
+    if width == 0 || height == 0 {
+        return Err(TextureError::DdsDecode("zero width or height".into()));
+    }
+
+    // Determine texture format and prepare data buffer
+    let (format, data) = parse_dds_format_and_data(&dds)?;
+
+    // Block-compressed textures must have dimensions that are multiples of the 4×4 block size
+    // (wgpu rejects the texture otherwise and the validation error is fatal). The data already
+    // holds whole blocks, so rounding the extent up keeps the layout valid at the cost of a
+    // sub-percent UV scale (e.g. 533 → 536 rows).
+    let (width, height) = rounded_extent(format, width, height);
+    let extent = Extent3d {
+        width,
+        height,
+        depth_or_array_layers: 1,
+    };
+
+    let mut image = Image::default();
+    image.texture_descriptor.size = extent;
+    image.texture_descriptor.format = format;
+    image.texture_descriptor.dimension = TextureDimension::D2;
+    let mips = dds.header.mip_map_count.unwrap_or(1).max(1);
+    let (data, mips) = fit_mip_chain(
+        data,
+        format,
+        (dds.header.width, dds.header.height),
+        ((width, height), mips),
+    )?;
     image.texture_descriptor.mip_level_count = mips;
     image.asset_usage = RenderAssetUsages::default();
     image.data = Some(data);
