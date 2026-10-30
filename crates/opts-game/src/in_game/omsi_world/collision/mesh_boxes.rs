@@ -25,28 +25,14 @@ const MAX_BOXES: usize = 600;
 /// Height tolerance for merging neighbouring columns (m).
 const SAME_Y_M: f32 = 0.05;
 
-/// The boxes `(lo, hi)` of a triangle mesh in its local axes (x right, y up, z back).
-#[must_use]
-pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
-    let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
-    for p in positions {
-        lo = lo.min(*p);
-        hi = hi.max(*p);
-    }
-    if lo.x > hi.x {
-        return Vec::new();
-    }
-    let whole = vec![(lo, hi)];
-    if (hi.x - lo.x).max(hi.z - lo.z) < SPLIT_MIN_EXTENT_M || indices.len() < 3 {
-        return whole;
-    }
-    let cell =
-        ((hi.x - lo.x).max(hi.z - lo.z) / CELLS_ACROSS).clamp(CELL_RANGE_M.0, CELL_RANGE_M.1);
-    let cols_x = ((hi.x - lo.x) / cell).ceil().max(1.0) as usize;
-    let cols_z = ((hi.z - lo.z) / cell).ceil().max(1.0) as usize;
-    if cols_x * cols_z > 40_000 {
-        return whole;
-    }
+/// The height span of every triangle (cut into pieces no longer than the cell) in each cell of the
+/// grid over the footprint.
+fn fill_cells(
+    positions: &[Vec3],
+    indices: &[u32],
+    (lo, cell): (Vec3, f32),
+    (cols_x, cols_z): (usize, usize),
+) -> Vec<Vec<(f32, f32)>> {
     let mut cells: Vec<Vec<(f32, f32)>> = vec![Vec::new(); cols_x * cols_z];
     let mut stack: Vec<[Vec3; 3]> = Vec::new();
     for t in indices.chunks_exact(3) {
@@ -80,7 +66,11 @@ pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
             }
         }
     }
-    // Per column: the merged height intervals.
+    cells
+}
+
+/// Per column: the merged height intervals, none thinner than the minimum thickness.
+fn merge_columns(cells: Vec<Vec<(f32, f32)>>) -> Vec<Vec<(f32, f32)>> {
     let mut columns: Vec<Vec<(f32, f32)>> = Vec::with_capacity(cells.len());
     for mut spans in cells {
         spans.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -98,7 +88,14 @@ pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
         }
         columns.push(merged);
     }
-    // Merge equal columns along x into runs, then runs with equal extent along z.
+    columns
+}
+
+/// A rectangle of cells with one height span: (z0, z1, x0, x1, y0, y1).
+type Rect = (usize, usize, usize, usize, f32, f32);
+
+/// Merges equal columns along x into runs, then runs with equal extent along z.
+fn merge_rects(columns: &[Vec<(f32, f32)>], (cols_x, cols_z): (usize, usize)) -> Vec<Rect> {
     let mut runs: Vec<(usize, usize, usize, f32, f32)> = Vec::new(); // (z, x0, x1, y0, y1)
     for cz in 0..cols_z {
         for cx in 0..cols_x {
@@ -116,7 +113,7 @@ pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
             }
         }
     }
-    let mut rects: Vec<(usize, usize, usize, usize, f32, f32)> = Vec::new(); // (z0, z1, x0, x1, y0, y1)
+    let mut rects: Vec<Rect> = Vec::new();
     for (z, x0, x1, y0, y1) in runs {
         let above = rects.iter_mut().find(|r| {
             r.1 + 1 == z
@@ -130,6 +127,34 @@ pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
             None => rects.push((z, z, x0, x1, y0, y1)),
         }
     }
+    rects
+}
+
+/// The boxes `(lo, hi)` of a triangle mesh in its local axes (x right, y up, z back).
+#[must_use]
+pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
+    let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
+    for p in positions {
+        lo = lo.min(*p);
+        hi = hi.max(*p);
+    }
+    if lo.x > hi.x {
+        return Vec::new();
+    }
+    let whole = vec![(lo, hi)];
+    if (hi.x - lo.x).max(hi.z - lo.z) < SPLIT_MIN_EXTENT_M || indices.len() < 3 {
+        return whole;
+    }
+    let cell =
+        ((hi.x - lo.x).max(hi.z - lo.z) / CELLS_ACROSS).clamp(CELL_RANGE_M.0, CELL_RANGE_M.1);
+    let cols_x = ((hi.x - lo.x) / cell).ceil().max(1.0) as usize;
+    let cols_z = ((hi.z - lo.z) / cell).ceil().max(1.0) as usize;
+    if cols_x * cols_z > 40_000 {
+        return whole;
+    }
+    let cells = fill_cells(positions, indices, (lo, cell), (cols_x, cols_z));
+    let columns = merge_columns(cells);
+    let rects = merge_rects(&columns, (cols_x, cols_z));
     if rects.len() > MAX_BOXES {
         return whole;
     }

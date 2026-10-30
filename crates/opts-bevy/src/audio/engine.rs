@@ -137,7 +137,6 @@ type EmitterQuery<'w, 's> = Query<
     ),
 >;
 
-
 /// One emitter's level for this frame: entity, gain, distance (when it has a position) and
 /// position.
 type EmitterLevel = (Entity, f32, Option<f32>, Option<Vec3>);
@@ -149,25 +148,25 @@ fn emitter_levels(
     emitters: &EmitterQuery,
 ) -> Vec<EmitterLevel> {
     emitters
-            .iter()
-            .map(|(entity, e, tf, _, _)| {
-                let (distance, spatial_gain) = match (&e.spatial, listener_pos, tf) {
-                    (Some(curve), Some(l), Some(t)) => {
-                        let d = l.distance(t.translation());
-                        (Some(d), curve.gain(d))
-                    }
-                    // A spatial source with no listener or no position cannot be heard.
-                    (Some(_), _, _) => (None, 0.0),
-                    (None, _, _) => (None, 1.0),
-                };
-                let gain = if e.muted {
-                    0.0
-                } else {
-                    e.gain * spatial_gain * settings.bus_gain(e.bus)
-                };
-                (entity, gain, distance, tf.map(GlobalTransform::translation))
-            })
-            .collect()
+        .iter()
+        .map(|(entity, e, tf, _, _)| {
+            let (distance, spatial_gain) = match (&e.spatial, listener_pos, tf) {
+                (Some(curve), Some(l), Some(t)) => {
+                    let d = l.distance(t.translation());
+                    (Some(d), curve.gain(d))
+                }
+                // A spatial source with no listener or no position cannot be heard.
+                (Some(_), _, _) => (None, 0.0),
+                (None, _, _) => (None, 1.0),
+            };
+            let gain = if e.muted {
+                0.0
+            } else {
+                e.gain * spatial_gain * settings.bus_gain(e.bus)
+            };
+            (entity, gain, distance, tf.map(GlobalTransform::translation))
+        })
+        .collect()
 }
 
 /// Gives a new voice to an emitter: the player with the clip, the loop mode, volume, speed and the
@@ -191,7 +190,20 @@ fn start_voice(commands: &mut Commands, entity: Entity, e: &SoundEmitter, gain: 
         },
         Voice { gain },
     ));
+}
 
+/// Takes the voice away from an emitter that lost its slot or fell silent; a one-shot is dropped.
+fn stop_voice(commands: &mut Commands, entity: Entity, e: &SoundEmitter) {
+    commands.entity(entity).remove::<(
+        AudioPlayer<PcmClip>,
+        PlaybackSettings,
+        AudioSink,
+        SpatialAudioSink,
+        Voice,
+    )>();
+    if e.despawn_when_done && !e.looping {
+        commands.entity(entity).despawn();
+    }
 }
 
 /// Decides every frame which emitters are heard: computes their level, gives the loudest ones
@@ -248,18 +260,7 @@ pub fn select_voices(
                 }
             }
             // Lost the slot or fell silent: stop the voice.
-            (false, true, true) => {
-                commands.entity(*entity).remove::<(
-                    AudioPlayer<PcmClip>,
-                    PlaybackSettings,
-                    AudioSink,
-                    SpatialAudioSink,
-                    Voice,
-                )>();
-                if e.despawn_when_done && !e.looping {
-                    commands.entity(*entity).despawn();
-                }
-            }
+            (false, true, true) => stop_voice(&mut commands, *entity, e),
             // Never had a voice and has none: a one-shot nobody can hear is dropped at once.
             (false, false, _) => {
                 if e.despawn_when_done && !e.looping {

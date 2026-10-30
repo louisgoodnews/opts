@@ -632,3 +632,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0150 fifteenth slice (`agent/fn-ratchet-15`): ten more `opts-game` functions split (passenger protocol, scenery mesh load, sky, AI trains, save restore, app build, settings row, viewpoint panel, formation catalogue, AI scripts); 111 functions over 80 lines.
 - `2026-10-30` — M-0150 sixteenth slice (`agent/fn-ratchet-16`): depot search, audio state, home status, settings page, wizard options, player voices, save overlay, traffic groups and environment page split.
 - `2026-10-30` — M-0150 seventeenth slice (`agent/fn-ratchet-17`): key code table, UI conditions, init stage, pedestrians, vehicle texture overrides, puddles, configurations and AI script runner split; 96 functions over 80 lines.
+- `2026-10-30` — M-0150 eighteenth slice (`agent/fn-ratchet-18`): voice selection, terrain carve, DDS decode, HUD cluster, trace pick, collision boxes, pedestrian spawn, session summary and language list split.

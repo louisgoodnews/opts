@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// The hint pill, when the profile has hint widgets.
 fn hints_pill(
     cluster: &mut ChildSpawnerCommands,

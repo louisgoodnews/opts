@@ -96,6 +96,78 @@ pub fn load_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
     }
 }
 
+/// The 16 alpha values of a BC2 (explicit 4-bit) or BC3 (interpolated) block; opaque for BC1.
+fn block_alpha(block: &[u8], kind: u8) -> [u8; 16] {
+    let mut alpha = [255u8; 16];
+    match kind {
+        2 => {
+            for i in 0..16 {
+                let nib = (block[i / 2] >> (4 * (i % 2))) & 15;
+                alpha[i] = nib * 17;
+            }
+        }
+        3 => {
+            let (a0, a1) = (u16::from(block[0]), u16::from(block[1]));
+            let mut table = [0u16; 8];
+            table[0] = a0;
+            table[1] = a1;
+            if a0 > a1 {
+                for k in 0..6u16 {
+                    table[2 + k as usize] = ((6 - k) * a0 + (k + 1) * a1) / 7;
+                }
+            } else {
+                for k in 0..4u16 {
+                    table[2 + k as usize] = ((4 - k) * a0 + (k + 1) * a1) / 5;
+                }
+                table[7] = 255;
+            }
+            let mut bits = 0u64;
+            for (i, b) in block[2..8].iter().enumerate() {
+                bits |= u64::from(*b) << (8 * i);
+            }
+            for (i, a) in alpha.iter_mut().enumerate() {
+                *a = table[((bits >> (3 * i)) & 7) as usize] as u8;
+            }
+        }
+        _ => {}
+    }
+    alpha
+}
+
+/// The four colours a BC block's 2-bit indices choose from (the fourth is transparent in a BC1
+/// block with `c0 <= c1`).
+fn colour_palette(colour: &[u8], kind: u8) -> [[u32; 4]; 4] {
+    let c0 = u16::from_le_bytes([colour[0], colour[1]]);
+    let c1 = u16::from_le_bytes([colour[2], colour[3]]);
+    let expand = |c: u16| {
+        let (r, g, b) = (
+            u32::from((c >> 11) & 31),
+            u32::from((c >> 5) & 63),
+            u32::from(c & 31),
+        );
+        [r * 255 / 31, g * 255 / 63, b * 255 / 31]
+    };
+    let (p0, p1) = (expand(c0), expand(c1));
+    let mut palette = [[0u32; 4]; 4];
+    palette[0] = [p0[0], p0[1], p0[2], 255];
+    palette[1] = [p1[0], p1[1], p1[2], 255];
+    if c0 > c1 || kind != 1 {
+        for k in 0..3 {
+            palette[2][k] = (2 * p0[k] + p1[k]) / 3;
+            palette[3][k] = (p0[k] + 2 * p1[k]) / 3;
+        }
+        palette[2][3] = 255;
+        palette[3][3] = 255;
+    } else {
+        for k in 0..3 {
+            palette[2][k] = (p0[k] + p1[k]) / 2;
+        }
+        palette[2][3] = 255;
+        palette[3] = [0, 0, 0, 0];
+    }
+    palette
+}
+
 /// Decodes a block-compressed (BC1/BC2/BC3) or plain RGBA8 image to RGBA8 pixels.
 ///
 /// Used where texel values are needed on the CPU (transparency maps composed into a paint
@@ -135,67 +207,8 @@ pub fn decode_to_rgba8(image: &Image) -> Option<Image> {
         for bx in 0..bw {
             let block = &data[(by * bw + bx) * block_bytes..][..block_bytes];
             let colour = &block[block_bytes - 8..];
-            let mut alpha = [255u8; 16];
-            match kind {
-                2 => {
-                    for i in 0..16 {
-                        let nib = (block[i / 2] >> (4 * (i % 2))) & 15;
-                        alpha[i] = nib * 17;
-                    }
-                }
-                3 => {
-                    let (a0, a1) = (u16::from(block[0]), u16::from(block[1]));
-                    let mut table = [0u16; 8];
-                    table[0] = a0;
-                    table[1] = a1;
-                    if a0 > a1 {
-                        for k in 0..6u16 {
-                            table[2 + k as usize] = ((6 - k) * a0 + (k + 1) * a1) / 7;
-                        }
-                    } else {
-                        for k in 0..4u16 {
-                            table[2 + k as usize] = ((4 - k) * a0 + (k + 1) * a1) / 5;
-                        }
-                        table[7] = 255;
-                    }
-                    let mut bits = 0u64;
-                    for (i, b) in block[2..8].iter().enumerate() {
-                        bits |= u64::from(*b) << (8 * i);
-                    }
-                    for (i, a) in alpha.iter_mut().enumerate() {
-                        *a = table[((bits >> (3 * i)) & 7) as usize] as u8;
-                    }
-                }
-                _ => {}
-            }
-            let c0 = u16::from_le_bytes([colour[0], colour[1]]);
-            let c1 = u16::from_le_bytes([colour[2], colour[3]]);
-            let expand = |c: u16| {
-                let (r, g, b) = (
-                    u32::from((c >> 11) & 31),
-                    u32::from((c >> 5) & 63),
-                    u32::from(c & 31),
-                );
-                [r * 255 / 31, g * 255 / 63, b * 255 / 31]
-            };
-            let (p0, p1) = (expand(c0), expand(c1));
-            let mut palette = [[0u32; 4]; 4];
-            palette[0] = [p0[0], p0[1], p0[2], 255];
-            palette[1] = [p1[0], p1[1], p1[2], 255];
-            if c0 > c1 || kind != 1 {
-                for k in 0..3 {
-                    palette[2][k] = (2 * p0[k] + p1[k]) / 3;
-                    palette[3][k] = (p0[k] + 2 * p1[k]) / 3;
-                }
-                palette[2][3] = 255;
-                palette[3][3] = 255;
-            } else {
-                for k in 0..3 {
-                    palette[2][k] = (p0[k] + p1[k]) / 2;
-                }
-                palette[2][3] = 255;
-                palette[3] = [0, 0, 0, 0];
-            }
+            let alpha = block_alpha(block, kind);
+            let palette = colour_palette(colour, kind);
             let idx = u32::from_le_bytes([colour[4], colour[5], colour[6], colour[7]]);
             for i in 0..16 {
                 let (x, y) = (bx * 4 + i % 4, by * 4 + i / 4);

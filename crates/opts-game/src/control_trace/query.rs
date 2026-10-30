@@ -8,18 +8,15 @@ fn tile_at(world: &World, x: f32, z: f32) -> Option<(i32, i32)> {
     Some(stats.grid.key_at(Vec2::new(x, -z), stats.start_tile))
 }
 
-/// `trace.pick {x?, y?, crosshair?, limit?}`: what is under a screen pixel (as in a screenshot)
-/// or under the crosshair (the centre of the view; the default).
-pub(super) fn pick(world: &mut World, params: &Value) -> Outcome {
-    if !st::enabled() {
-        return Outcome::err(not_on());
-    }
+/// The pixel (the middle of the view without `x` and `y`), the view size and the world ray through
+/// it, from the active camera.
+fn pick_ray(world: &mut World, params: &Value) -> Result<(Vec2, UVec2, Vec3, Vec3), RpcError> {
     let point = match (opt_f64(params, "x"), opt_f64(params, "y")) {
         (Ok(Some(x)), Ok(Some(y))) => Some((x as f32, y as f32)),
         (Ok(None), Ok(None)) => None,
-        (Err(e), _) | (_, Err(e)) => return Outcome::err(e),
+        (Err(e), _) | (_, Err(e)) => return Err(e),
         _ => {
-            return Outcome::err(RpcError::invalid_params(
+            return Err(RpcError::invalid_params(
                 "give both `x` and `y`, or neither",
             ))
         }
@@ -30,10 +27,10 @@ pub(super) fn pick(world: &mut World, params: &Value) -> Outcome {
         .filter(|(c, _, _)| c.is_active)
         .max_by_key(|(c, _, _)| c.order)
     else {
-        return Outcome::err(RpcError::new(code::NOT_READY, "there is no active camera"));
+        return Err(RpcError::new(code::NOT_READY, "there is no active camera"));
     };
     let Some(size) = camera.physical_viewport_size() else {
-        return Outcome::err(RpcError::new(
+        return Err(RpcError::new(
             code::NOT_READY,
             "the camera has no viewport yet",
         ));
@@ -47,7 +44,7 @@ pub(super) fn pick(world: &mut World, params: &Value) -> Outcome {
         || physical.x > size.x as f32
         || physical.y > size.y as f32
     {
-        return Outcome::err(RpcError::invalid_params(format!(
+        return Err(RpcError::invalid_params(format!(
             "the point lies outside the {}x{} view",
             size.x, size.y
         )));
@@ -56,13 +53,53 @@ pub(super) fn pick(world: &mut World, params: &Value) -> Outcome {
     let ray = match camera.viewport_to_world(gt, logical) {
         Ok(r) => r,
         Err(e) => {
-            return Outcome::err(RpcError::new(
+            return Err(RpcError::new(
                 code::FAILED,
                 format!("no ray for the point: {e}"),
             ))
         }
     };
-    let (origin, dir) = (ray.origin, *ray.direction);
+    Ok((physical, size, ray.origin, *ray.direction))
+}
+
+/// The parents of a hit; one that has a record of its own is returned in full.
+fn full_parents(
+    records: &[opts_bevy::scene_trace::TraceRecord],
+    r: &opts_bevy::scene_trace::TraceRecord,
+) -> Vec<Value> {
+    r.parents
+        .iter()
+        .map(|p| {
+            let full = records.iter().find(|c| {
+                c.kind == p.kind
+                    && c.tile == p.tile
+                    && c.index == p.index
+                    && p.index.is_some()
+                    && c.list.as_deref()
+                        == Some(if p.kind == "spline" {
+                            "splines"
+                        } else {
+                            "objects"
+                        })
+            });
+            full.map_or_else(
+                || serde_json::to_value(p).unwrap_or(Value::Null),
+                record_json,
+            )
+        })
+        .collect()
+}
+
+/// `trace.pick {x?, y?, crosshair?, limit?}`: what is under a screen pixel (as in a screenshot)
+/// or under the crosshair (the centre of the view; the default).
+pub(super) fn pick(world: &mut World, params: &Value) -> Outcome {
+    if !st::enabled() {
+        return Outcome::err(not_on());
+    }
+    let (physical, size, origin, dir) = match pick_ray(world, params) {
+        Ok(r) => r,
+        Err(e) => return Outcome::err(e),
+    };
     let records = st::query(&TraceQuery {
         limit: usize::MAX / 2,
         ..TraceQuery::default()
@@ -98,30 +135,7 @@ pub(super) fn pick(world: &mut World, params: &Value) -> Outcome {
         "ground": ground,
     });
     if let Some(r) = best {
-        // A parent that has a record of its own is returned in full.
-        let parents: Vec<Value> = r
-            .parents
-            .iter()
-            .map(|p| {
-                let full = records.iter().find(|c| {
-                    c.kind == p.kind
-                        && c.tile == p.tile
-                        && c.index == p.index
-                        && p.index.is_some()
-                        && c.list.as_deref()
-                            == Some(if p.kind == "spline" {
-                                "splines"
-                            } else {
-                                "objects"
-                            })
-                });
-                full.map_or_else(
-                    || serde_json::to_value(p).unwrap_or(Value::Null),
-                    record_json,
-                )
-            })
-            .collect();
-        out["parents"] = Value::Array(parents);
+        out["parents"] = Value::Array(full_parents(&records, r));
     }
     if let Some(mut o) = world.get_resource_mut::<TraceOverlay>() {
         o.picked = best.map(|r| r.id);
