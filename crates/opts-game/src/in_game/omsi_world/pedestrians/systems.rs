@@ -12,6 +12,85 @@ pub(crate) fn passenger_factor(curve: &[(f32, f32)], hour: f32) -> f32 {
     profile.at(hour).max(0.0)
 }
 
+/// Draws one of the loaded characters, weighted by its share of the `humans.txt` lines.
+fn draw_character(pool: &PedestrianPool, loaded: &[usize], rng: &mut u32) -> usize {
+    let weights: Vec<usize> = loaded
+        .iter()
+        .map(|&i| {
+            pool.entries
+                .iter()
+                .filter(|e| e.eq_ignore_ascii_case(&pool.slots[i].0))
+                .count()
+                .max(1)
+        })
+        .collect();
+    let mut pick =
+        (opts_sim::pedestrian::net::next_f32(rng) * weights.iter().sum::<usize>() as f32) as usize;
+    let mut chosen = loaded[0];
+    for (k, w) in weights.iter().enumerate() {
+        if pick < *w {
+            chosen = loaded[k];
+            break;
+        }
+        pick -= w;
+    }
+    chosen
+}
+
+/// The walking speed (m/s): children and the very old walk more slowly, and everybody a little
+/// differently.
+fn walking_speed(age: Option<u32>, rng: &mut u32) -> f32 {
+    let base = match age {
+        Some(a) if a < 14 => 1.0,
+        Some(a) if a > 70 => 0.9,
+        _ => 1.25,
+    };
+    base + 0.3 * opts_sim::pedestrian::net::next_f32(rng)
+}
+
+/// Spawns the character as a standing human on the walker's path and records it in the scene trace.
+fn spawn_walker(
+    commands: &mut Commands,
+    bindposes: &mut Assets<SkinnedMeshInverseBindposes>,
+    net: &PedestrianNet,
+    v: &Variant,
+    walker: Walker,
+) {
+    let leg_m = rest_pivots(&v.profile)[0].y.max(0.3);
+    let root = spawn_human(
+        commands,
+        bindposes,
+        &v.profile,
+        &v.parts,
+        &v.name,
+        HumanPose::Standing,
+    );
+    if opts_bevy::scene_trace::enabled() {
+        let frame = super::super::trace::human_frame(&v.name);
+        let tf = Transform::from_translation(
+            walker
+                .pose(net)
+                .map(|(p, _)| omsi_to_bevy_pos(p))
+                .unwrap_or_default(),
+        );
+        super::super::trace::spawned(
+            opts_bevy::scene_trace::kind::HUMAN,
+            &v.name,
+            &v.name,
+            root,
+            &tf,
+            &frame,
+            "ok",
+            serde_json::json!({}),
+        );
+    }
+    commands.entity(root).insert((
+        Pedestrian { walker, leg_m },
+        Visibility::default(),
+        InGameEntity,
+    ));
+}
+
 /// Spawns pedestrians on lanes around the camera up to the density-derived target.
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_pedestrians(
@@ -65,76 +144,19 @@ pub fn spawn_pedestrians(
         pool.rng = rng;
         return;
     };
-    let weights: Vec<usize> = loaded
-        .iter()
-        .map(|&i| {
-            pool.entries
-                .iter()
-                .filter(|e| e.eq_ignore_ascii_case(&pool.slots[i].0))
-                .count()
-                .max(1)
-        })
-        .collect();
-    let mut pick = (opts_sim::pedestrian::net::next_f32(&mut rng)
-        * weights.iter().sum::<usize>() as f32) as usize;
-    let mut chosen = loaded[0];
-    for (k, w) in weights.iter().enumerate() {
-        if pick < *w {
-            chosen = loaded[k];
-            break;
-        }
-        pick -= w;
-    }
-    // Children and the very old walk more slowly.
+    let chosen = draw_character(&pool, &loaded, &mut rng);
     let age = pool.slots[chosen]
         .1
         .as_ref()
         .and_then(|v| v.profile.age_years);
-    let base = match age {
-        Some(a) if a < 14 => 1.0,
-        Some(a) if a > 70 => 0.9,
-        _ => 1.25,
-    };
-    let speed = base + 0.3 * opts_sim::pedestrian::net::next_f32(&mut rng);
+    let speed = walking_speed(age, &mut rng);
     let walker = Walker::new(&net.0, lane, s, speed, &mut rng);
     pool.rng = rng;
     let Some(walker) = walker else { return };
     let Some(v) = pool.slots[chosen].1.as_ref() else {
         return;
     };
-    let leg_m = rest_pivots(&v.profile)[0].y.max(0.3);
-    let root = spawn_human(
-        &mut commands,
-        &mut bindposes,
-        &v.profile,
-        &v.parts,
-        &v.name,
-        HumanPose::Standing,
-    );
-    if opts_bevy::scene_trace::enabled() {
-        let frame = super::super::trace::human_frame(&v.name);
-        let tf = Transform::from_translation(
-            walker
-                .pose(&net.0)
-                .map(|(p, _)| omsi_to_bevy_pos(p))
-                .unwrap_or_default(),
-        );
-        super::super::trace::spawned(
-            opts_bevy::scene_trace::kind::HUMAN,
-            &v.name,
-            &v.name,
-            root,
-            &tf,
-            &frame,
-            "ok",
-            serde_json::json!({}),
-        );
-    }
-    commands.entity(root).insert((
-        Pedestrian { walker, leg_m },
-        Visibility::default(),
-        InGameEntity,
-    ));
+    spawn_walker(&mut commands, &mut bindposes, &net.0, v, walker);
 }
 
 /// Walks the pedestrians, poses them and removes finished or distant ones.
