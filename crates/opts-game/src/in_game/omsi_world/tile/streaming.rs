@@ -16,32 +16,25 @@ pub fn load_next_tile(
 ) {
     let mut budget = FrameBudget::new(std::time::Duration::MAX);
     advance_tile_loading(
-        job,
-        stats,
-        commands,
-        meshes,
-        materials,
-        images,
+        (job, stats, commands),
+        (meshes, materials, images),
         ground_materials,
-        &mut budget,
-        1,
+        (&mut budget, 1),
     );
 }
 
 /// Works on tile builds until `budget` is used up or `max_tiles` tiles are finished: continues the
 /// build that is in progress, else starts the next queued tile. Returns the number of tiles
 /// finished. With an unlimited budget this is [`load_next_tile`].
-#[allow(clippy::too_many_arguments)]
 pub fn advance_tile_loading(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
     mut ground_materials: Option<&mut Assets<GroundMaterial>>,
-    budget: &mut FrameBudget,
-    max_tiles: usize,
+    (budget, max_tiles): (&mut FrameBudget, usize),
 ) -> usize {
     let mut finished = 0;
     while finished < max_tiles {
@@ -55,12 +48,8 @@ pub fn advance_tile_loading(
             }
         }
         let done = tile_build::advance(
-            job,
-            stats,
-            commands,
-            meshes,
-            materials,
-            images,
+            (job, stats, commands),
+            (meshes, materials, images),
             ground_materials.as_deref_mut(),
             budget,
         );
@@ -83,7 +72,6 @@ pub struct TileRoot(pub (i32, i32));
 /// thrashing at borders); in *load all* mode every tile is wanted and none is despawned
 /// ([`tile_loading`], M-0080). Parsed objects and textures stay cached, so revisiting a tile is
 /// cheap.
-#[allow(clippy::too_many_arguments)]
 pub fn stream_world_tiles(
     job: Option<ResMut<WorldLoadJob>>,
     state: Res<crate::in_game::types::SimulationLoadState>,
@@ -139,15 +127,10 @@ pub fn stream_world_tiles(
             (FrameBudget::new(job.stream_budget), usize::MAX)
         };
         advance_tile_loading(
-            &mut job,
-            &mut stats,
-            &mut commands,
-            meshes,
-            materials,
-            images,
+            (&mut job, &mut stats, &mut commands),
+            (meshes, materials, images),
             assets.ground_materials.as_deref_mut(),
-            &mut budget,
-            max_tiles,
+            (&mut budget, max_tiles),
         );
     }
 }

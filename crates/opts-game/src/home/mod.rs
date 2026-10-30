@@ -6,6 +6,7 @@
 
 mod hero;
 mod model;
+mod params;
 mod status;
 use status::{update_banners, update_buttons, update_chips};
 mod view;
@@ -20,6 +21,7 @@ use opts_gui::prelude::*;
 use opts_gui::theme::LayoutClass;
 
 pub use hero::{cover_rect, HeroImage, HeroPending};
+pub use params::{HomeFacts, HomeWidgets};
 pub use model::{stage_key, CatalogueStatus, DriveBlock, HomeBanner, HomeInputs};
 
 use crate::app_state::AppState;
@@ -196,20 +198,25 @@ fn block_reason_key(block: DriveBlock) -> Option<&'static str> {
 }
 
 /// Keeps the status chip, the drive buttons and the banners in step with the installation.
-#[allow(clippy::too_many_arguments)]
 pub fn sync_home_status(
     mut commands: Commands,
     time: Res<Time>,
-    service: Option<Res<CatalogueService>>,
-    lists: Res<GameCatalogue>,
-    facts: Res<crate::content_facts::ContentFactsStore>,
-    loc: Res<Localization>,
+    installation: HomeFacts,
     mut since: Local<Option<f32>>,
     mut last: Local<Option<(HomeInputs, String)>>,
-    mut chips: Query<(Entity, &mut L10nKey), With<StatusChip>>,
-    buttons: Query<(Entity, &HomeButton)>,
-    fresh: Query<(), Added<StatusChip>>,
+    widgets: HomeWidgets,
 ) {
+    let HomeFacts {
+        service,
+        lists,
+        facts,
+        loc,
+    } = installation;
+    let HomeWidgets {
+        mut chips,
+        buttons,
+        fresh,
+    } = widgets;
     if !fresh.is_empty() {
         // The page was (re)built: its chip, buttons and banners start from scratch.
         *last = None;

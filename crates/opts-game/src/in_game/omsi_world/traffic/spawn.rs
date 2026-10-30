@@ -2,11 +2,13 @@
 
 mod agent;
 mod models;
+mod params;
 
 use super::variants::{baseline_targets, group_lane_metres, pick_slot, time_factor};
 use super::*;
 use agent::place_and_insert_agent;
 use models::build_unit_models;
+use params::{SpawnContext, SpawnLocals, SpawnStores};
 
 /// What the unscheduled traffic aims for.
 struct DensityPlan {
@@ -202,17 +204,10 @@ fn finish_spawn(
     };
     let fleet = &pool.slots[slot].fleet;
     let models = match build_unit_models(
-        commands,
-        job,
-        meshes,
-        materials,
-        images,
-        variant,
-        at,
-        fleet,
-        repaint_seed,
-        chrono.as_deref(),
-        request.is_some(),
+        (commands, job),
+        (meshes, materials, images),
+        (variant, at, fleet),
+        (repaint_seed, chrono.as_deref(), request.is_some()),
     ) {
         Ok(m) => m,
         Err(unusable) => {
@@ -227,15 +222,9 @@ fn finish_spawn(
         }
     };
     place_and_insert_agent(
-        commands,
-        job,
-        state,
-        pool,
-        sched,
-        slot,
-        lane_id,
-        s,
-        at,
+        (commands, job),
+        (state, pool, sched),
+        (slot, lane_id, s, at),
         request.as_ref(),
         models,
         &mut rng,
@@ -257,25 +246,33 @@ fn mark_unusable(pool: &mut TrafficPool, slot: usize, unusable: bool) {
 }
 
 /// Spawns vehicles on lanes around the camera up to the density-derived target.
-#[allow(clippy::too_many_arguments)]
 pub fn spawn_traffic(
     time: Res<Time>,
-    mut elapsed: Local<f32>,
-    mut since_log: Local<f32>,
-    mut rejected: Local<[u32; 5]>,
+    locals: SpawnLocals,
     mut commands: Commands,
     job: Option<ResMut<WorldLoadJob>>,
-    mut state: ResMut<TrafficState>,
-    mut pool: ResMut<TrafficPool>,
-    settings: Res<TrafficSettings>,
-    mut sched: ResMut<ScheduledTraffic>,
-    env: Option<Res<opts_bevy::SessionEnvironment>>,
-    chrono: Option<Res<crate::in_game::omsi_world::ChronoState>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
+    ctx: SpawnContext,
+    stores: SpawnStores,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
 ) {
+    let SpawnLocals {
+        mut elapsed,
+        mut since_log,
+        mut rejected,
+    } = locals;
+    let SpawnContext {
+        mut state,
+        mut pool,
+        settings,
+        mut sched,
+        env,
+        chrono,
+    } = ctx;
+    let SpawnStores {
+        mut meshes,
+        mut materials,
+        mut images,
+    } = stores;
     *elapsed += time.delta_secs();
     if *elapsed < SPAWN_INTERVAL_S || settings.baseline == 0 {
         return;

@@ -45,27 +45,32 @@ pub(super) use attached::place_attached_objects;
 const ON_SURFACE_LIFT_M: f32 = 0.01;
 
 /// Places one scenery object (or tree) of a tile; the scene trace sees what came of it.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn spawn_object(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    obj: &MapObjectInstance,
-    placement: Placement,
-    terrain: Option<&TileTerrain>,
-    key: (i32, i32),
-    origin: (f32, f32),
-    children: &mut Vec<Entity>,
-    tile: &opts_core::formats::map::MapTile,
-    site: super::trace::Site<'_>,
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (obj, placement, terrain, key, origin): (
+        &MapObjectInstance,
+        Placement,
+        Option<&TileTerrain>,
+        (i32, i32),
+        (f32, f32),
+    ),
+    (children, tile, site): (
+        &mut Vec<Entity>,
+        &opts_core::formats::map::MapTile,
+        super::trace::Site<'_>,
+    ),
 ) {
     if !opts_bevy::scene_trace::enabled() {
         spawn_object_inner(
-            job, stats, commands, meshes, materials, images, obj, placement, terrain, key, origin,
-            children, tile, site,
+            (job, stats, commands),
+            (meshes, materials, images),
+            (obj, placement, terrain, key, origin),
+            (children, tile, site),
         );
         return;
     }
@@ -74,13 +79,21 @@ pub(super) fn spawn_object(
     let first = children.len();
     super::trace::begin_frame();
     spawn_object_inner(
-        job, stats, commands, meshes, materials, images, obj, placement, terrain, key, origin,
-        children, tile, site,
+        (job, stats, commands),
+        (meshes, materials, images),
+        (obj, placement, terrain, key, origin),
+        (children, tile, site),
     );
     let frame = super::trace::end_frame();
     let entity = children.get(first).copied();
     super::trace::object(
-        job, stats, before, frame, obj, site, tile, key, origin, entity, started,
+        job,
+        stats,
+        (before, started),
+        frame,
+        (obj, site),
+        (tile, key, origin),
+        entity,
     );
 }
 
@@ -112,7 +125,9 @@ fn special_object(
         super::trace::set_kind(opts_bevy::scene_trace::kind::TREE);
         let _t = opts_logging::stream_trace::span("obj.tree");
         children.extend(spawn_tree(
-            job, stats, commands, meshes, materials, images, tree, obj, origin, terrain,
+            (job, stats, commands),
+            (meshes, materials, images),
+            (tree, obj, origin, terrain),
         ));
         return true;
     }
@@ -131,23 +146,17 @@ fn special_object(
                 super::traffic::register_parked_object(job, commands, key, origin, &replaced);
             }
             spawn_object(
-                job,
-                stats,
-                commands,
-                meshes,
-                materials,
-                images,
-                &replaced,
-                placement,
-                terrain,
-                key,
-                origin,
-                children,
-                tile,
-                super::trace::Site {
-                    marker: Some(&obj.sco_file),
-                    ..site
-                },
+                (job, stats, commands),
+                (meshes, materials, images),
+                (&replaced, placement, terrain, key, origin),
+                (
+                    children,
+                    tile,
+                    super::trace::Site {
+                        marker: Some(&obj.sco_file),
+                        ..site
+                    },
+                ),
             );
         }
         return true;
@@ -299,7 +308,13 @@ fn no_mesh_parts(
         let parent = commands.spawn((transform, Name::new(name))).id();
         children.push(parent);
         job.finish_object(
-            commands, meshes, materials, parent, &sco, obj, mesh_parts, template,
+            commands,
+            meshes,
+            materials,
+            parent,
+            (&sco, obj),
+            mesh_parts,
+            template,
         );
         crate::scenery_sound::attach(job, commands, parent, &sco, sco_dir);
         stats.objects_loaded += 1;
@@ -322,22 +337,25 @@ fn no_mesh_parts(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn spawn_object_inner(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    obj: &MapObjectInstance,
-    placement: Placement,
-    terrain: Option<&TileTerrain>,
-    key: (i32, i32),
-    origin: (f32, f32),
-    children: &mut Vec<Entity>,
-    tile: &opts_core::formats::map::MapTile,
-    site: super::trace::Site<'_>,
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (obj, placement, terrain, key, origin): (
+        &MapObjectInstance,
+        Placement,
+        Option<&TileTerrain>,
+        (i32, i32),
+        (f32, f32),
+    ),
+    (children, tile, site): (
+        &mut Vec<Entity>,
+        &opts_core::formats::map::MapTile,
+        super::trace::Site<'_>,
+    ),
 ) {
     let t_sco = opts_logging::stream_trace::span("obj.sco");
     let sco_found = job.sco(&obj.sco_file);
@@ -412,8 +430,11 @@ fn spawn_object_inner(
             u64::from(key.1 as u32),
         ]);
         spawn_vehicle_model(
-            job, stats, commands, meshes, materials, images, &sco_path, &sco_dir, cfg_rel,
-            transform, seed, children,
+            (job, stats, commands),
+            (meshes, materials, images),
+            (&sco_path, &sco_dir, cfg_rel),
+            (transform, seed),
+            children,
         );
         return;
     }
@@ -429,17 +450,9 @@ fn spawn_object_inner(
         .unwrap_or_default();
     let Some(mesh_parts) = load_sco_meshes(
         job,
-        meshes,
-        materials,
-        images,
-        &sco,
-        &sco_path,
-        &model_dir,
-        &tex_dirs,
-        obj,
-        key,
-        &string_names,
-        bend.as_ref(),
+        (meshes, materials, images),
+        (&sco, &sco_path, &model_dir, &tex_dirs),
+        (obj, key, &string_names, bend.as_ref()),
     ) else {
         return;
     };
@@ -484,7 +497,13 @@ fn spawn_object_inner(
         .map(|p| p.vertices)
         .sum::<usize>();
     job.finish_object(
-        commands, meshes, materials, parent, &sco, obj, mesh_parts, template,
+        commands,
+        meshes,
+        materials,
+        parent,
+        (&sco, obj),
+        mesh_parts,
+        template,
     );
     crate::scenery_sound::attach(job, commands, parent, &sco, &sco_dir);
     stats.objects_loaded += 1;

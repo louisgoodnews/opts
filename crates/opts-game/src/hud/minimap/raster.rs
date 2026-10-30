@@ -319,13 +319,11 @@ pub fn render_with_unit(
         MapRoute::default(),
         markers,
         colors,
-        unit,
-        north_mark,
+        (unit, north_mark),
     );
 }
 
 /// [`render_with_unit`] with the player's route drawn over the roads and under the markers.
-#[allow(clippy::too_many_arguments)]
 pub fn render_routed(
     canvas: &mut Canvas,
     view: MapView,
@@ -333,8 +331,7 @@ pub fn render_routed(
     route: MapRoute,
     markers: &[MapMarker],
     colors: &MapColors,
-    unit: f32,
-    north_mark: bool,
+    (unit, north_mark): (f32, bool),
 ) {
     canvas.clear(colors.ground);
     let proj = Projection::new(canvas.size, view);

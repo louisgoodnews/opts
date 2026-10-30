@@ -71,20 +71,20 @@ fn texture_overrides(
 
 /// Loads the mesh parts of a scenery object's `[mesh]` records; `None` when a required `.o3d` file
 /// is missing.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn load_sco_meshes(
     job: &mut WorldLoadJob,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    sco: &SceneryObject,
-    sco_path: &Path,
-    model_dir: &Path,
-    tex_dirs: &[PathBuf],
-    obj: &MapObjectInstance,
-    key: (i32, i32),
-    string_names: &[String],
-    bend: Option<&CrossingBend>,
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (sco, sco_path, model_dir, tex_dirs): (&SceneryObject, &Path, &Path, &[PathBuf]),
+    (obj, key, string_names, bend): (
+        &MapObjectInstance,
+        (i32, i32),
+        &[String],
+        Option<&CrossingBend>,
+    ),
 ) -> Option<Vec<Vec<ModelPart>>> {
     let mut mesh_parts = Vec::with_capacity(sco.meshes.len());
     for (mesh_index, mesh_def) in sco.meshes.iter().enumerate() {
@@ -174,19 +174,15 @@ fn read_model_config(
 
 /// Places a parked/static vehicle object: its `[model]` is a vehicle-style model config; the first
 /// level of detail of [`lod_preference`] that loads anything is drawn.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn spawn_vehicle_model(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    sco_path: &Path,
-    sco_dir: &Path,
-    cfg_rel: &str,
-    transform: Transform,
-    repaint_seed: u64,
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (sco_path, sco_dir, cfg_rel): (&Path, &Path, &str),
+    (transform, repaint_seed): (Transform, u64),
     children: &mut Vec<Entity>,
 ) {
     let Some((cfg_path, model)) = read_model_config(job, stats, (sco_path, sco_dir, cfg_rel))

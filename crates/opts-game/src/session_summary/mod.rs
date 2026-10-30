@@ -2,6 +2,7 @@
 //! distance, top speed, problems logged with a *Report* button, and *Drive again*, *Change
 //! vehicle*, *Home*. Only measures that exist are shown.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_bevy::reporting::{request_report, ReportModalData, ReportModalState};
 use opts_gui::interaction::activation::Activated;
@@ -215,21 +216,42 @@ pub fn clear_summary(mut commands: Commands, cards: Query<Entity, With<SummaryCa
     }
 }
 
+/// The report dialog's data and state, with the clock its request reads.
+#[derive(SystemParam)]
+pub struct SummaryReport<'w> {
+    time: Res<'w, Time<Virtual>>,
+    report: ResMut<'w, ReportModalData>,
+    state: Res<'w, State<ReportModalState>>,
+    next: ResMut<'w, NextState<ReportModalState>>,
+}
+
+/// Where the card's buttons send the player.
+#[derive(SystemParam)]
+pub struct SummaryOut<'w> {
+    start: MessageWriter<'w, StartDrive>,
+    navigate: MessageWriter<'w, Navigate>,
+}
+
 /// The buttons of the card.
-#[allow(clippy::too_many_arguments)]
 pub fn summary_actions(
     mut commands: Commands,
     mut activated: MessageReader<Activated>,
     actions: Query<&SummaryAction>,
     cards: Query<Entity, With<SummaryCard>>,
     last: Option<Res<LastSession>>,
-    time: Res<Time<Virtual>>,
-    mut report: ResMut<ReportModalData>,
-    report_state: Res<State<ReportModalState>>,
-    mut report_next: ResMut<NextState<ReportModalState>>,
-    mut start: MessageWriter<StartDrive>,
-    mut navigate: MessageWriter<Navigate>,
+    dialog: SummaryReport,
+    out: SummaryOut,
 ) {
+    let SummaryReport {
+        time,
+        mut report,
+        state: report_state,
+        next: mut report_next,
+    } = dialog;
+    let SummaryOut {
+        mut start,
+        mut navigate,
+    } = out;
     for Activated(entity) in activated.read() {
         let Ok(action) = actions.get(*entity) else {
             continue;

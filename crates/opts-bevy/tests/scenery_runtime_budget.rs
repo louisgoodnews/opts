@@ -48,6 +48,57 @@ const SCRIPT: &str = "\
 {end}
 ";
 
+/// Spawns [`HEADS`] signal heads, each with its own fork of the script and the shared program.
+fn spawn_heads(
+    commands: &mut Commands,
+    (meshes, materials): (&mut Assets<Mesh>, &mut Assets<StandardMaterial>),
+    (sco, template, program): (&SceneryObject, &std::sync::Mutex<ScriptEngine>, &SignalProgram),
+) {
+    let material = materials.add(StandardMaterial::default());
+    let mut lights = SceneryLightAssets::default();
+    for i in 0..HEADS {
+        let mesh_parts = sco
+            .meshes
+            .iter()
+            .map(|_| {
+                vec![ModelPart {
+                    mesh: meshes.add(Cuboid::new(0.2, 0.2, 0.2)),
+                    material: material.clone(),
+                    vertices: 24,
+                    light_variable: None,
+                    alpha_variable: None,
+                    image: None,
+                    free_texture: None,
+                    pivot: None,
+                }]
+            })
+            .collect();
+        let root = commands
+            .spawn((
+                Transform::from_xyz((i % 100) as f32 * 10.0, 0.0, (i / 100) as f32 * 10.0),
+                Visibility::Inherited,
+            ))
+            .id();
+        let input = SceneryObjectInput {
+            sco,
+            mesh_parts,
+            scripts: Some(SceneryScripts::new(
+                template.lock().expect("template").fork(),
+                &[],
+                &[],
+                Vec::new(),
+            )),
+            signal: Some(program.clone()),
+        };
+        let mut assets = SceneryBuildAssets {
+            meshes: &mut *meshes,
+            materials: &mut *materials,
+            lights: &mut lights,
+        };
+        build_scenery_object(commands, root, input, &mut assets);
+    }
+}
+
 #[test]
 fn thousands_of_signal_heads_fit_the_frame_budget() {
     let mut app = App::new();
@@ -73,49 +124,11 @@ fn thousands_of_signal_heads_fit_the_frame_budget() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<StandardMaterial>>| {
-            let material = materials.add(StandardMaterial::default());
-            let mut lights = SceneryLightAssets::default();
-            for i in 0..HEADS {
-                let mesh_parts = sco
-                    .meshes
-                    .iter()
-                    .map(|_| {
-                        vec![ModelPart {
-                            mesh: meshes.add(Cuboid::new(0.2, 0.2, 0.2)),
-                            material: material.clone(),
-                            vertices: 24,
-                            light_variable: None,
-                            alpha_variable: None,
-                            image: None,
-                            free_texture: None,
-                            pivot: None,
-                        }]
-                    })
-                    .collect();
-                let root = commands
-                    .spawn((
-                        Transform::from_xyz((i % 100) as f32 * 10.0, 0.0, (i / 100) as f32 * 10.0),
-                        Visibility::Inherited,
-                    ))
-                    .id();
-                let input = SceneryObjectInput {
-                    sco: &sco,
-                    mesh_parts,
-                    scripts: Some(SceneryScripts::new(
-                        template.lock().expect("template").fork(),
-                        &[],
-                        &[],
-                        Vec::new(),
-                    )),
-                    signal: Some(program.clone()),
-                };
-                let mut assets = SceneryBuildAssets {
-                    meshes: &mut meshes,
-                    materials: &mut materials,
-                    lights: &mut lights,
-                };
-                build_scenery_object(&mut commands, root, input, &mut assets);
-            }
+            spawn_heads(
+                &mut commands,
+                (&mut *meshes, &mut *materials),
+                (&sco, &template, &program),
+            );
         },
     );
     app.update();

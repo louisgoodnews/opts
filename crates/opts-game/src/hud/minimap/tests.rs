@@ -329,8 +329,7 @@ fn the_route_is_drawn_over_the_roads_in_its_own_colour_with_its_stops() {
         },
         &[],
         &colors,
-        1.0,
-        false,
+        (1.0, false),
     );
     let (x, y) = (canvas.size / 4, canvas.size / 2);
     assert_eq!(canvas.get(x + 30, y)[..3], colors.route[..3]);

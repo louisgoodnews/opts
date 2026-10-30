@@ -270,18 +270,28 @@ fn apply(
     }
 }
 
+/// The world side of the formation actions: the load job, the vehicle registry and the library.
+#[derive(bevy::ecs::system::SystemParam)]
+pub(super) struct FormationWorld<'w> {
+    job: Option<Res<'w, WorldLoadJob>>,
+    registry: ResMut<'w, SessionVehicles>,
+    library: Option<Res<'w, FormationLibrary>>,
+}
+
 /// The buttons and the remote commands.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn formation_actions(
     mut clicks: MessageReader<ButtonClicked>,
     acts: Query<&Act>,
     mut remote: ResMut<FormationCommands>,
     mut ed: ResMut<FormationEditor>,
     mut menu: ResMut<VehicleMenu>,
-    job: Option<Res<WorldLoadJob>>,
-    mut registry: ResMut<SessionVehicles>,
-    library: Option<Res<FormationLibrary>>,
+    world: FormationWorld,
 ) {
+    let FormationWorld {
+        job,
+        mut registry,
+        library,
+    } = world;
     let store = library.as_deref().and_then(|l| l.0.as_ref());
     let mut todo: Vec<Act> = clicks
         .read()

@@ -90,18 +90,20 @@ fn spawn_overlay(commands: &mut Commands) {
 }
 
 /// Esc closes the overlay; its buttons close it or open the report dialog.
-#[allow(clippy::too_many_arguments)]
 pub fn overlay_actions(
     mut commands: Commands,
     mut activated: MessageReader<Activated>,
     mut cancels: MessageReader<ModalEvent>,
     actions: Query<&OverlayAction>,
     overlays: Query<Entity, With<HelpOverlay>>,
-    time: Res<Time<Virtual>>,
-    mut data: ResMut<opts_bevy::reporting::ReportModalData>,
-    state: Res<State<opts_bevy::reporting::ReportModalState>>,
-    mut next: ResMut<NextState<opts_bevy::reporting::ReportModalState>>,
+    request: super::ReportRequest,
 ) {
+    let super::ReportRequest {
+        time,
+        mut data,
+        state,
+        mut next,
+    } = request;
     let mut close = false;
     let mut report = false;
     for ModalEvent::CancelRequested(modal) in cancels.read() {

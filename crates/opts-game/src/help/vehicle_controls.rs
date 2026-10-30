@@ -141,24 +141,16 @@ fn cockpit_spots(p: &mut ChildSpawnerCommands, names: &[String]) {
 }
 
 /// Builds the lists the first time and again when a setting or the vehicle's controls change.
-#[allow(clippy::too_many_arguments)]
 pub fn fill_vehicle_controls(
     mut commands: Commands,
     settings: Res<GameSettings>,
     registry: Option<Res<SettingsRegistry>>,
     lists: Query<(Entity, Option<&Children>), With<VehicleControlsList>>,
     added: Query<(), Added<VehicleControlsList>>,
-    spots: Query<&MouseTrigger>,
-    players: Query<Entity, With<PlayerVehicle>>,
-    rail: Query<
-        (),
-        (
-            With<PlayerVehicle>,
-            With<crate::in_game::omsi_world::RailPlayer>,
-        ),
-    >,
+    probe: super::VehicleProbe,
     mut shown: Local<Vec<String>>,
 ) {
+    let super::VehicleProbe { spots, players, rail } = probe;
     if lists.is_empty() {
         return;
     }

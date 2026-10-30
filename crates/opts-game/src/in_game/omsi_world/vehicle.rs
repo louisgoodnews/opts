@@ -226,8 +226,7 @@ fn trace_vehicle(
         opts_bevy::scene_trace::kind::VEHICLE,
         vehicle_name,
         &opts_bevy::scene_trace::relative(bus_path),
-        root,
-        root_tf,
+        (root, root_tf),
         trace_frame,
         "ok",
         serde_json::json!({
@@ -314,16 +313,14 @@ fn seat_driver(
     (bus_dir, manifest, cockpit_offset): (&Path, &BusManifest, Vec3),
 ) {
     match load_driver_human(
-        job,
-        commands,
-        meshes,
-        materials,
-        images,
-        bindposes,
+        (job, commands),
+        (meshes, materials, images, bindposes),
         root,
-        bus_dir,
-        manifest.passengercabin_cfg.as_deref(),
-        cockpit_offset,
+        (
+            bus_dir,
+            manifest.passengercabin_cfg.as_deref(),
+            cockpit_offset,
+        ),
     ) {
         Ok(name) => tracing::info!(human = %name, "player character seated at the driver position"),
         Err(e) => {
@@ -336,17 +333,15 @@ fn seat_driver(
 /// ([`WorldLoadJob::spawn_point`]), as session vehicle `session_id`. With `activate` it also becomes the
 /// player's vehicle (`PlayerVehicle`, the HUD and `WorldStats` follow it); without, it is built
 /// as a parked session vehicle and the caller switches to it when it wants to.
-#[allow(clippy::too_many_arguments)]
 pub fn load_player_vehicle(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    bindposes: &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
-    session_id: crate::session_vehicles::VehicleId,
-    activate: bool,
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images, bindposes): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+        &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
+    ),
+    (session_id, activate): (crate::session_vehicles::VehicleId, bool),
 ) -> Result<SpawnedVehicle, String> {
     let (bus_path, manifest, cfg_path, model) = read_vehicle_files(job)?;
     let bus_dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();

@@ -82,7 +82,14 @@ fn key(window: Entity, code: KeyCode, logical: Key) -> KeyboardInput {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[derive(bevy::ecs::system::SystemParam)]
+struct ScriptOut<'w, 's> {
+    keys: MessageWriter<'w, KeyboardInput>,
+    clicks: MessageWriter<'w, ButtonClicked>,
+    exit: MessageWriter<'w, AppExit>,
+    commands: Commands<'w, 's>,
+}
+
 fn script(
     mut s: ResMut<Script>,
     state: Res<State<ReportModalState>>,
@@ -90,15 +97,12 @@ fn script(
     window: Query<Entity, With<PrimaryWindow>>,
     report_btn: Query<Entity, With<ReportButton>>,
     dir: Res<ReportsDir>,
-    mut keys: MessageWriter<KeyboardInput>,
-    mut clicks: MessageWriter<ButtonClicked>,
-    mut exit: MessageWriter<AppExit>,
-    mut commands: Commands,
+    mut out: ScriptOut,
 ) {
     s.frame += 1;
     let Ok(w) = window.single() else { return };
     if s.frame == 40 {
-        keys.write(key(w, KeyCode::F1, Key::F1));
+        out.keys.write(key(w, KeyCode::F1, Key::F1));
     }
     if *state.get() == ReportModalState::Open && s.open_frame.is_none() {
         s.open_frame = Some(s.frame);
@@ -114,16 +118,16 @@ fn script(
         let f = s.frame - of;
         if f == 10 {
             for ch in ["G", "r", "ö", "ß", "e", " ", "✓"] {
-                keys.write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
+                out.keys.write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
             }
-            keys.write(key(w, KeyCode::Enter, Key::Enter));
+            out.keys.write(key(w, KeyCode::Enter, Key::Enter));
             for ch in ["Z", "w", "e", "i", "t", "e"] {
-                keys.write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
+                out.keys.write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
             }
         }
         if f == 40 {
             if let Ok(path) = std::env::var("OPTS_EXAMPLE_MODAL_SHOT") {
-                commands
+                out.commands
                     .spawn(bevy::render::view::screenshot::Screenshot::window(w))
                     .observe(bevy::render::view::screenshot::save_to_disk(path));
             }
@@ -135,7 +139,7 @@ fn script(
                 error!("SIMULATION DID NOT PAUSE");
             }
             if let Ok(b) = report_btn.single() {
-                clicks.write(ButtonClicked(b));
+                out.clicks.write(ButtonClicked(b));
                 s.clicked = true;
             }
         }
@@ -150,6 +154,6 @@ fn script(
         }
     }
     if s.done_frame.is_some_and(|d| s.frame > d + 20) {
-        exit.write(AppExit::Success);
+        out.exit.write(AppExit::Success);
     }
 }

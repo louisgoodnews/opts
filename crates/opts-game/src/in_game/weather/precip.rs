@@ -14,7 +14,6 @@ use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use opts_bevy::weather::{precip_plan, weather_look, PrecipPlan};
-use opts_bevy::{SessionEnvironment, WeatherEffects};
 use opts_core::formats::weather::PrecipKind;
 
 use crate::in_game::types::{InGameCamera, InGameEntity};
@@ -315,19 +314,20 @@ fn sync_layer(
 }
 
 /// Draws, updates and hides the precipitation.
-#[allow(clippy::too_many_arguments)]
 pub fn update_precipitation(
-    time: Res<Time<Real>>,
-    env: Res<SessionEnvironment>,
-    effects: Res<WeatherEffects>,
+    scene: super::WeatherScene,
+    assets: super::WeatherAssets,
     mut state: ResMut<PrecipState>,
-    mut images: ResMut<Assets<Image>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     cameras: Query<&GlobalTransform, With<InGameCamera>>,
     mut layer: Query<(&mut Visibility, &mut MeshMaterial3d<StandardMaterial>), With<PrecipLayer>>,
     mut commands: Commands,
 ) {
+    let super::WeatherScene { time, env, effects } = scene;
+    let super::WeatherAssets {
+        mut images,
+        mut meshes,
+        mut materials,
+    } = assets;
     let plan = precip_plan(
         &effects.scaled(env.conditions()),
         effects.precipitation.budget(),

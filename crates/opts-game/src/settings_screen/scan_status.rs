@@ -344,19 +344,21 @@ type ChipParts<'w, 's> = (
 /// Recomputes the verdict when its inputs change (the facts arrived, a scan started or ended, the
 /// language changed) and at least every few seconds (the age of the last scan moves), and updates
 /// the chip. While the background facts are not there yet the chip says it is checking.
-#[allow(clippy::too_many_arguments)]
 pub fn refresh_scan_chip(
     time: Res<Time>,
-    loc: Res<Localization>,
-    settings: Option<Res<GameSettings>>,
-    service: Option<Res<CatalogueService>>,
-    facts: Res<ContentFactsStore>,
+    chip: chip_facts::ChipFacts,
     fresh: Query<(), Added<ScanChip>>,
     mut since: Local<f32>,
     mut last: Local<Option<(Option<ScanInputs>, String)>>,
     mut parts: ChipParts,
     mut reasons: ReasonQuery,
 ) {
+    let chip_facts::ChipFacts {
+        loc,
+        settings,
+        service,
+        facts,
+    } = chip;
     *since += time.delta_secs();
     let rebuilt = !fresh.is_empty();
     let Some(settings) = settings else { return };
@@ -427,6 +429,8 @@ pub fn refresh_scan_chip(
         )];
     }
 }
+
+mod chip_facts;
 
 #[cfg(test)]
 mod tests;

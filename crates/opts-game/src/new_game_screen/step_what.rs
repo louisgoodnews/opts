@@ -231,17 +231,14 @@ fn formation_entry(commands: &mut Commands, vehicle: &VehicleItem) -> Vec<Entity
 }
 
 /// The detail of a chosen vehicle.
-#[allow(clippy::too_many_arguments)]
 pub fn fill_what_detail(
     commands: &mut Commands,
     detail: Entity,
-    loc: &Localization,
-    notes: &[Note],
+    (loc, notes): (&Localization, &[Note]),
     setup: &NewGameSetup,
     liveries: &mut LiveryState,
     vehicle: &VehicleItem,
-    library: &ConfigLibrary,
-    catalogue: &super::types::GameCatalogue,
+    (library, catalogue): (&ConfigLibrary, &super::types::GameCatalogue),
 ) {
     let header = vehicle_header(commands, vehicle);
     let mut kids = vec![header];

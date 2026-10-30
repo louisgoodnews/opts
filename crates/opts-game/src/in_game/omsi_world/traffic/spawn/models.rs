@@ -107,19 +107,15 @@ fn head_setvars_of(
     repaints.setvars.get(name).cloned().unwrap_or_default()
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn build_unit_models(
-    commands: &mut Commands,
-    job: &mut WorldLoadJob,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    variant: &Variant,
-    at: DVec2,
-    fleet: &[FleetEntry],
-    repaint_seed: u64,
-    chrono: Option<&ChronoState>,
-    is_scheduled: bool,
+    (commands, job): (&mut Commands, &mut WorldLoadJob),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (variant, at, fleet): (&Variant, DVec2, &[FleetEntry]),
+    (repaint_seed, chrono, is_scheduled): (u64, Option<&ChronoState>, bool),
 ) -> Result<SpawnedModels, bool> {
     let origin = Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3()));
     let entities = spawn_unit_roots(commands, variant, origin);

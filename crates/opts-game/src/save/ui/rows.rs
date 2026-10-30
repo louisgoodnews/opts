@@ -1,5 +1,6 @@
 //! The rows of the save list.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_gui::l10n::{L10nArgs, L10nKey, Localization};
 use opts_gui::prelude::*;
@@ -225,18 +226,29 @@ fn spawn_row(
     });
 }
 
+/// What the rows are worked out from.
+#[derive(SystemParam)]
+pub struct SaveListFacts<'w> {
+    storage: Res<'w, SaveStorage>,
+    registry: Res<'w, SaveRegistry>,
+    job: Option<Res<'w, WorldLoadJob>>,
+    state: Res<'w, State<crate::app_state::AppState>>,
+}
+
 /// Rebuilds the rows when the list changed.
-#[allow(clippy::too_many_arguments)]
 pub fn rebuild_list(
     mut commands: Commands,
     mut ui: ResMut<SavesUi>,
-    storage: Res<SaveStorage>,
-    registry: Res<SaveRegistry>,
+    facts: SaveListFacts,
     loc: Res<Localization>,
-    job: Option<Res<WorldLoadJob>>,
-    state: Res<State<crate::app_state::AppState>>,
     lists: Query<Entity, With<SavesList>>,
 ) {
+    let SaveListFacts {
+        storage,
+        registry,
+        job,
+        state,
+    } = facts;
     if !ui.dirty {
         return;
     }

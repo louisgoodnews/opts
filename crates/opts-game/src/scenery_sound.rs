@@ -15,6 +15,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_bevy::audio::{Distance, SoundBus, SoundEmitter};
 use opts_bevy::scenery_runtime::{HostValues, SceneryClock};
@@ -221,20 +222,29 @@ fn edge_step(
     }
 }
 
+/// The clip loader and the counters of the scenery voices.
+#[derive(SystemParam)]
+pub struct SceneryVoiceState<'w> {
+    loader: ResMut<'w, ClipLoader>,
+    stats: ResMut<'w, SceneryAudioStats>,
+}
+
 /// Starts and stops the looping emitters of continuous voices by distance, four times a second,
 /// gates them by their conditions and plays the `[noloop]` voices whose conditions just turned
 /// true.
-#[allow(clippy::too_many_arguments)]
 pub fn stream_scenery_voices(
     time: Res<Time>,
     clock: Res<SceneryClock>,
     listener: Query<&GlobalTransform, With<MainCamera>>,
     mut voices: VoiceQuery,
-    mut loader: ResMut<ClipLoader>,
-    mut stats: ResMut<SceneryAudioStats>,
+    state: SceneryVoiceState,
     mut since: Local<f32>,
     mut commands: Commands,
 ) {
+    let SceneryVoiceState {
+        mut loader,
+        mut stats,
+    } = state;
     *since += time.delta_secs();
     if *since < 0.25 {
         return;

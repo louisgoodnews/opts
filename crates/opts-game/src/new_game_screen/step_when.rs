@@ -320,17 +320,16 @@ pub fn spawn_when(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
 type NewWhenParts = Or<(Added<WhenValue>, Added<TimeSourceLabel>)>;
 
 /// Keeps the stepper values and the era hint current.
-#[allow(clippy::too_many_arguments)]
 pub fn refresh_when(
     setup: Res<NewGameSetup>,
     state: Res<PlannerState>,
-    loc: Res<Localization>,
-    catalogue: Res<super::types::GameCatalogue>,
+    lookup: super::TextsAndCatalogue,
     mut values: Query<(&WhenValue, &mut Text)>,
     mut hints: Query<(&mut Node, &mut L10nArgs), With<EraHint>>,
     mut sources: Query<(&TimeSourceLabel, &mut Node), Without<EraHint>>,
     added: Query<(), NewWhenParts>,
 ) {
+    let super::TextsAndCatalogue { loc, catalogue } = lookup;
     if !setup.is_changed() && !state.is_changed() && added.is_empty() {
         return;
     }

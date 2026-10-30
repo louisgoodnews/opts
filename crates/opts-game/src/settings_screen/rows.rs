@@ -131,16 +131,13 @@ fn mark(c: &mut Commands, e: Entity, u: &Usable) {
 }
 
 /// A button of a row (`role` is the last part of its id).
-#[allow(clippy::too_many_arguments)]
 fn button(
     c: &mut Commands,
     parent: Entity,
     d: &SettingDescriptor,
     role: String,
-    label_key: Option<&'static str>,
-    text: &str,
-    selected: bool,
-    op: SettingOp,
+    (label_key, text): (Option<&'static str>, &str),
+    (selected, op): (bool, SettingOp),
     u: &Usable,
 ) -> Entity {
     let mut b = ButtonBuilder::outlined("");

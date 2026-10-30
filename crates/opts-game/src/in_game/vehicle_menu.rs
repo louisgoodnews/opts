@@ -327,19 +327,29 @@ fn reset_menu(
     active.0 = false;
 }
 
-#[allow(clippy::too_many_arguments)]
+/// The optional gates that keep the menu's input gate up or block it from opening.
+#[derive(bevy::ecs::system::SystemParam)]
+struct ToggleGates<'w> {
+    report: Option<Res<'w, ModalActive>>,
+    pause: Option<Res<'w, crate::pause::Pause>>,
+    fullmap: Option<Res<'w, crate::hud::fullmap::FullMapState>>,
+}
+
 /// Left Alt opens and closes the menu; Escape steps back (the modals emit it).
 fn toggle_menu(
     keys: Res<ButtonInput<KeyCode>>,
     load: Res<SimulationLoadState>,
-    report: Option<Res<ModalActive>>,
     mut menu: ResMut<VehicleMenu>,
     mut active: ResMut<MenuModalActive>,
     mut cancels: MessageReader<ModalEvent>,
     mut grace: Local<u8>,
-    pause: Option<Res<crate::pause::Pause>>,
-    fullmap: Option<Res<crate::hud::fullmap::FullMapState>>,
+    gates: ToggleGates,
 ) {
+    let ToggleGates {
+        report,
+        pause,
+        fullmap,
+    } = gates;
     let mut step_back = false;
     for ModalEvent::CancelRequested(_) in cancels.read() {
         step_back = true;

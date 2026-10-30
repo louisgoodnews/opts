@@ -331,5 +331,6 @@ pub fn spawn_panel(commands: &mut Commands, palette: &InstrumentPalette) {
         });
 }
 
+mod params;
 mod systems;
 pub use systems::{panel_buttons, panel_tracks, sync_panel, update_panel, value_text};

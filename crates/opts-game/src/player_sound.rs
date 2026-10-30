@@ -17,6 +17,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_bevy::audio::{Distance, SoundBus, SoundEmitter};
 use opts_bevy::{omsi_to_bevy_pos, MainCamera, VehicleScripts};
@@ -329,19 +330,35 @@ fn edge_step(
     }
 }
 
+/// The camera mode and the listener's place.
+#[derive(SystemParam)]
+pub struct PlayerListener<'w, 's> {
+    camera: Option<Res<'w, opts_bevy::CameraState>>,
+    listener: Query<'w, 's, &'static GlobalTransform, With<MainCamera>>,
+}
+
+/// The clip loader and the counters of the player's voices.
+#[derive(SystemParam)]
+pub struct PlayerVoiceState<'w> {
+    loader: ResMut<'w, ClipLoader>,
+    stats: ResMut<'w, PlayerAudioStats>,
+}
+
 /// Updates the loops and the `[noloop]` edges twenty times a second.
-#[allow(clippy::too_many_arguments)]
 pub fn stream_player_voices(
     time: Res<Time>,
-    camera: Option<Res<opts_bevy::CameraState>>,
-    listener: Query<&GlobalTransform, With<MainCamera>>,
+    ears: PlayerListener,
     mut voices: VoiceQuery,
     vehicles: Query<(&VehicleScripts, &GlobalTransform)>,
-    mut loader: ResMut<ClipLoader>,
-    mut stats: ResMut<PlayerAudioStats>,
+    state: PlayerVoiceState,
     mut since: Local<f32>,
     mut commands: Commands,
 ) {
+    let PlayerListener { camera, listener } = ears;
+    let PlayerVoiceState {
+        mut loader,
+        mut stats,
+    } = state;
     *since += time.delta_secs();
     if *since < 0.05 {
         return;

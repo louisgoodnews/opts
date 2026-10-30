@@ -131,22 +131,31 @@ pub fn place_camera_label(
     }
 }
 
+type RootNodes<'w, 's> =
+    Query<'w, 's, &'static mut Node, (With<HudRoot>, Without<MapBox>, Without<ReadoutBox>)>;
+type MapNodes<'w, 's> =
+    Query<'w, 's, &'static mut Node, (With<MapBox>, Without<HudRoot>, Without<ReadoutBox>)>;
+type ReadoutNodes<'w, 's> =
+    Query<'w, 's, (&'static ReadoutBox, &'static mut Node), (Without<HudRoot>, Without<MapBox>)>;
+type ClusterNodes<'w, 's> = Query<
+    'w,
+    's,
+    &'static mut Node,
+    (
+        With<ClusterBox>,
+        Without<HudRoot>,
+        Without<MapBox>,
+        Without<ReadoutBox>,
+    ),
+>;
+
 /// Applies the layout to the HUD's nodes (cheap: only differing values are written).
-#[allow(clippy::type_complexity)]
 pub fn apply(
     layout: Res<HudLayout>,
-    mut roots: Query<&mut Node, (With<HudRoot>, Without<MapBox>, Without<ReadoutBox>)>,
-    mut maps: Query<&mut Node, (With<MapBox>, Without<HudRoot>, Without<ReadoutBox>)>,
-    mut readouts: Query<(&ReadoutBox, &mut Node), (Without<HudRoot>, Without<MapBox>)>,
-    mut clusters: Query<
-        &mut Node,
-        (
-            With<ClusterBox>,
-            Without<HudRoot>,
-            Without<MapBox>,
-            Without<ReadoutBox>,
-        ),
-    >,
+    mut roots: RootNodes,
+    mut maps: MapNodes,
+    mut readouts: ReadoutNodes,
+    mut clusters: ClusterNodes,
 ) {
     for mut node in &mut clusters {
         let want = Val::Px(layout.cluster_max_width());

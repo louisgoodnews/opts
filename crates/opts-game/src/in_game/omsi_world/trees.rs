@@ -13,18 +13,19 @@ use super::{WorldLoadJob, WorldStats};
 
 /// Spawns a `[tree]` billboard. The instance's string variables carry
 /// `[texture, height, width/height ratio]`; the `.sco` ranges are the fallback.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn spawn_tree(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    tree: &ScoTree,
-    obj: &MapObjectInstance,
-    origin: (f32, f32),
-    terrain: Option<&TileTerrain>,
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (tree, obj, origin, terrain): (
+        &ScoTree,
+        &MapObjectInstance,
+        (f32, f32),
+        Option<&TileTerrain>,
+    ),
 ) -> Option<Entity> {
     let var = |i: usize| {
         obj.string_vars

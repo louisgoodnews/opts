@@ -61,10 +61,8 @@ fn route_scheduled(
             commands,
             root,
             head_bus_path,
-            canvases,
-            &r.run,
-            seed,
-            head_setvars,
+            (canvases, &r.run),
+            (seed, head_setvars),
         );
         if let (true, Some(set)) = (scripted, sound) {
             crate::player_sound::attach_defs(commands, root, None, &set.scripted);
@@ -113,8 +111,7 @@ fn trace_spawned(
             opts_bevy::scene_trace::kind::TRAFFIC,
             name,
             name,
-            root,
-            origin,
+            (root, origin),
             trace_frame,
             "ok",
             serde_json::json!({
@@ -273,17 +270,10 @@ fn give_up(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn place_and_insert_agent(
-    commands: &mut Commands,
-    job: &mut WorldLoadJob,
-    state: &mut TrafficState,
-    pool: &mut TrafficPool,
-    sched: &mut ScheduledTraffic,
-    slot: usize,
-    lane_id: LaneId,
-    s: f64,
-    at: DVec2,
+    (commands, job): (&mut Commands, &mut WorldLoadJob),
+    (state, pool, sched): (&mut TrafficState, &mut TrafficPool, &mut ScheduledTraffic),
+    (slot, lane_id, s, at): (usize, LaneId, f64, DVec2),
     request: Option<&ScheduledRequest>,
     models: SpawnedModels,
     rng: &mut Rng,

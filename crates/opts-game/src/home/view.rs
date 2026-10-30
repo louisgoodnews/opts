@@ -100,7 +100,6 @@ pub(super) fn map_names(record: &DriveRecord, lists: &GameCatalogue) -> (String,
         )
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn spawn_home(
     mut commands: Commands,
     shell: Res<ShellContent>,

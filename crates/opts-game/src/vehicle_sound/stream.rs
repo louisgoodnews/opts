@@ -1,5 +1,7 @@
 //! Stand-in gear model, AI variable publication, and 5 Hz voice streaming for AI traffic sounds.
 
+use bevy::ecs::system::SystemParam;
+
 use super::*;
 
 /// The stand-in gear model of a vehicle class: idle and shift speed (rpm) and the speeds (km/h)
@@ -131,8 +133,14 @@ pub(super) fn ai_loop(def: &SoundDef, vars: &AiVariables) -> (f32, f32) {
     crate::sound_logic::loop_voice(def, |n| vars.get(n))
 }
 
+/// The clip loader and the counters of the AI voices.
+#[derive(SystemParam)]
+pub struct AiVoiceState<'w> {
+    loader: ResMut<'w, ClipLoader>,
+    stats: ResMut<'w, AiAudioStats>,
+}
+
 /// Starts, updates and stops the emitters of AI voices five times a second.
-#[allow(clippy::too_many_arguments)]
 pub fn stream_ai_voices(
     time: Res<Time>,
     listener: Query<&GlobalTransform, With<MainCamera>>,
@@ -144,11 +152,14 @@ pub fn stream_ai_voices(
         Option<&mut SoundEmitter>,
     )>,
     vehicles: Query<&AiVariables>,
-    mut loader: ResMut<ClipLoader>,
-    mut stats: ResMut<AiAudioStats>,
+    state: AiVoiceState,
     mut since: Local<f32>,
     mut commands: Commands,
 ) {
+    let AiVoiceState {
+        mut loader,
+        mut stats,
+    } = state;
     *since += time.delta_secs();
     if *since < 0.2 {
         return;

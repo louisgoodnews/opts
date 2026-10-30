@@ -83,61 +83,34 @@ fn lantern() -> ScoLight {
     }
 }
 
+fn scn(label: &'static str, layout: Layout, fade: bool, eye: Eye) -> Scn {
+    Scn {
+        label,
+        layout,
+        fade,
+        eye,
+    }
+}
+
+fn scenarios() -> Vec<Scn> {
+    vec![
+        scn("base", Layout::None, true, Eye::Street),
+        scn("road_on", Layout::Road, true, Eye::Street),
+        scn("road_off", Layout::Road, false, Eye::Street),
+        scn("dense_on", Layout::Dense, true, Eye::Street),
+        scn("dense_off", Layout::Dense, false, Eye::Street),
+        scn("inside_along_on", Layout::Road, true, Eye::InsideAlong),
+        scn("inside_down_on", Layout::Road, true, Eye::InsideDown),
+        scn("inside_along_off", Layout::Road, false, Eye::InsideAlong),
+    ]
+}
+
 fn main() {
     let shots = std::env::args()
         .position(|a| a == "--shots")
         .and_then(|i| std::env::args().nth(i + 1))
         .map(PathBuf::from);
-    let scenarios = vec![
-        Scn {
-            label: "base",
-            layout: Layout::None,
-            fade: true,
-            eye: Eye::Street,
-        },
-        Scn {
-            label: "road_on",
-            layout: Layout::Road,
-            fade: true,
-            eye: Eye::Street,
-        },
-        Scn {
-            label: "road_off",
-            layout: Layout::Road,
-            fade: false,
-            eye: Eye::Street,
-        },
-        Scn {
-            label: "dense_on",
-            layout: Layout::Dense,
-            fade: true,
-            eye: Eye::Street,
-        },
-        Scn {
-            label: "dense_off",
-            layout: Layout::Dense,
-            fade: false,
-            eye: Eye::Street,
-        },
-        Scn {
-            label: "inside_along_on",
-            layout: Layout::Road,
-            fade: true,
-            eye: Eye::InsideAlong,
-        },
-        Scn {
-            label: "inside_down_on",
-            layout: Layout::Road,
-            fade: true,
-            eye: Eye::InsideDown,
-        },
-        Scn {
-            label: "inside_along_off",
-            layout: Layout::Road,
-            fade: false,
-            eye: Eye::InsideAlong,
-        },
-    ];
+    let scenarios = scenarios();
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
@@ -199,6 +172,94 @@ fn setup(
     ));
 }
 
+/// Sets the current scenario up: despawns the old lamps, applies the quality settings, spawns the
+/// new lamps and places the camera.
+fn setup_scenario(
+    commands: &mut Commands,
+    probe: &mut Probe,
+    lamps: &Query<Entity, With<Lamp>>,
+    camera: &mut Query<&mut Transform, With<opts_bevy::MainCamera>>,
+) {
+    let idx = probe.idx;
+    for e in lamps.iter() {
+        commands.entity(e).despawn();
+    }
+    let (layout, fade, eye) = {
+        let s = &probe.scenarios[idx];
+        (s.layout, s.fade, s.eye)
+    };
+    let mut q = ladder_preset(0);
+    q.cone_depth_fade = fade;
+    q.headlight_cones = false;
+    commands.insert_resource(LightQualityInput {
+        mode: LightMode::Custom,
+        custom: q,
+    });
+    let shape = lantern_cone_shape(&lantern()).expect("lantern cone");
+    let (spacing, count) = match layout {
+        Layout::None => (0.0, 0),
+        Layout::Road => (20.0, 64),
+        Layout::Dense => (2.5, 64),
+    };
+    for i in 0..count {
+        let root = commands
+            .spawn((
+                Transform::from_xyz(4.0, 0.0, -10.0 - spacing * i as f32),
+                Visibility::Inherited,
+                Lamp,
+            ))
+            .id();
+        spawn_light_cone(
+            commands,
+            root,
+            LightCone {
+                kind: ConeKind::Lantern,
+                shape,
+                level: ConeLevel::Fixed(0.8),
+            },
+        );
+    }
+    if let Ok(mut t) = camera.single_mut() {
+        let apex = Vec3::new(4.0, 0.0, -10.0) + shape.apex;
+        *t = match eye {
+            Eye::Street => Transform::from_xyz(0.0, 1.7, 5.0).looking_to(Vec3::NEG_Z, Vec3::Y),
+            // Just below the lamp head, inside the cone.
+            Eye::InsideAlong => Transform::from_translation(apex + Vec3::new(-0.2, -1.0, 0.0))
+                .looking_to(Vec3::NEG_Z, Vec3::Y),
+            Eye::InsideDown => Transform::from_translation(apex + Vec3::new(-0.2, -1.0, 0.0))
+                .looking_to(Vec3::new(0.0, -1.0, -0.3), Vec3::NEG_Z),
+        };
+    }
+}
+
+/// Mean, peak and centre luminance of a captured frame, as one report line.
+fn frame_line(label: &str, img: &image::RgbaImage) -> String {
+    let (w, h) = img.dimensions();
+    let luma = |p: &image::Rgba<u8>| {
+        (0.2126 * f32::from(p[0]) + 0.7152 * f32::from(p[1]) + 0.0722 * f32::from(p[2])) / 255.0
+    };
+    let (mut sum, mut peak, mut peak_ch) = (0.0f32, 0.0f32, 0.0f32);
+    for p in img.pixels() {
+        let l = luma(p);
+        sum += l;
+        peak = peak.max(l);
+        peak_ch = peak_ch.max(f32::from(p[0].max(p[1]).max(p[2])) / 255.0);
+    }
+    let mut centre = 0.0f32;
+    let mut n = 0.0f32;
+    for y in (h / 2 - 20)..(h / 2 + 20) {
+        for x in (w / 2 - 20)..(w / 2 + 20) {
+            centre += luma(img.get_pixel(x, y));
+            n += 1.0;
+        }
+    }
+    format!(
+        "{label}: mean {:.4} peak_luma {peak:.3} peak_channel {peak_ch:.3} centre_mean {:.4}",
+        sum / (w * h) as f32,
+        centre / n
+    )
+}
+
 fn drive(
     mut commands: Commands,
     time: Res<Time>,
@@ -217,56 +278,7 @@ fn drive(
     }
     let idx = probe.idx;
     if probe.started_s < 0.0 {
-        // Set the scenario up.
-        for e in &lamps {
-            commands.entity(e).despawn();
-        }
-        let (layout, fade, eye) = {
-            let s = &probe.scenarios[idx];
-            (s.layout, s.fade, s.eye)
-        };
-        let mut q = ladder_preset(0);
-        q.cone_depth_fade = fade;
-        q.headlight_cones = false;
-        commands.insert_resource(LightQualityInput {
-            mode: LightMode::Custom,
-            custom: q,
-        });
-        let shape = lantern_cone_shape(&lantern()).expect("lantern cone");
-        let (spacing, count) = match layout {
-            Layout::None => (0.0, 0),
-            Layout::Road => (20.0, 64),
-            Layout::Dense => (2.5, 64),
-        };
-        for i in 0..count {
-            let root = commands
-                .spawn((
-                    Transform::from_xyz(4.0, 0.0, -10.0 - spacing * i as f32),
-                    Visibility::Inherited,
-                    Lamp,
-                ))
-                .id();
-            spawn_light_cone(
-                &mut commands,
-                root,
-                LightCone {
-                    kind: ConeKind::Lantern,
-                    shape,
-                    level: ConeLevel::Fixed(0.8),
-                },
-            );
-        }
-        if let Ok(mut t) = camera.single_mut() {
-            let apex = Vec3::new(4.0, 0.0, -10.0) + shape.apex;
-            *t = match eye {
-                Eye::Street => Transform::from_xyz(0.0, 1.7, 5.0).looking_to(Vec3::NEG_Z, Vec3::Y),
-                // Just below the lamp head, inside the cone.
-                Eye::InsideAlong => Transform::from_translation(apex + Vec3::new(-0.2, -1.0, 0.0))
-                    .looking_to(Vec3::NEG_Z, Vec3::Y),
-                Eye::InsideDown => Transform::from_translation(apex + Vec3::new(-0.2, -1.0, 0.0))
-                    .looking_to(Vec3::new(0.0, -1.0, -0.3), Vec3::NEG_Z),
-            };
-        }
+        setup_scenario(&mut commands, &mut probe, &lamps, &mut camera);
         probe.started_s = now;
         probe.shot_taken = false;
         return;
@@ -282,31 +294,7 @@ fn drive(
         shot.observe(
             move |cap: On<ScreenshotCaptured>, mut probe: ResMut<Probe>| {
                 let img = cap.image.clone().try_into_dynamic().expect("image").to_rgba8();
-                let (w, h) = img.dimensions();
-                let luma = |p: &image::Rgba<u8>| {
-                    (0.2126 * f32::from(p[0]) + 0.7152 * f32::from(p[1]) + 0.0722 * f32::from(p[2]))
-                        / 255.0
-                };
-                let (mut sum, mut peak, mut peak_ch) = (0.0f32, 0.0f32, 0.0f32);
-                for p in img.pixels() {
-                    let l = luma(p);
-                    sum += l;
-                    peak = peak.max(l);
-                    peak_ch = peak_ch.max(f32::from(p[0].max(p[1]).max(p[2])) / 255.0);
-                }
-                let mut centre = 0.0f32;
-                let mut n = 0.0f32;
-                for y in (h / 2 - 20)..(h / 2 + 20) {
-                    for x in (w / 2 - 20)..(w / 2 + 20) {
-                        centre += luma(img.get_pixel(x, y));
-                        n += 1.0;
-                    }
-                }
-                probe.lines.push(format!(
-                    "{label}: mean {:.4} peak_luma {peak:.3} peak_channel {peak_ch:.3} centre_mean {:.4}",
-                    sum / (w * h) as f32,
-                    centre / n
-                ));
+                probe.lines.push(frame_line(label, &img));
                 probe.idx += 1;
                 probe.started_s = -1.0;
             },

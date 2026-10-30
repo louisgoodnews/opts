@@ -5,6 +5,61 @@ mod vehicle_rig;
 
 use vehicle_rig::{load, run, DT};
 
+/// Collects every `.bus` file below `dir`.
+fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            walk(&path, out);
+        } else if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("bus"))
+        {
+            out.push(path);
+        }
+    }
+}
+
+/// Runs one bus through the set-up and formats its `SWEEP` line (`None`: not loadable, no engine).
+fn sweep_line(
+    root: &std::path::Path,
+    path: &std::path::Path,
+    setup: &opts_bevy::vehicle_setup::VehicleSetup,
+) -> Option<String> {
+    let rel = path
+        .strip_prefix(root)
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+    let mut e = load(&rel)?;
+    if !opts_bevy::vehicle_setup::has_engine(&e) {
+        return None;
+    }
+    let mut run_ = opts_bevy::vehicle_setup::SetupRun::default();
+    let mut now = 0.0;
+    let mut starter_seen = 0.0_f32;
+    while now < 40.0 {
+        let done = run_.advance(&mut e, setup, now);
+        e.run_frame(DT, false);
+        starter_seen = starter_seen.max(e.get("engine_starter"));
+        now += DT;
+        if done && now > 5.0 && opts_bevy::vehicle_setup::ready(&e) {
+            break;
+        }
+    }
+    run(&mut e, 2.0);
+    Some(format!(
+        "SWEEP\t{rel}\t{}\t{}\t{:.0}\t{:.2}\t{}\t{}\t{:.0}",
+        opts_bevy::vehicle_setup::recipe_for(&e).name,
+        u8::from(opts_bevy::vehicle_setup::ready(&e)),
+        e.get("engine_n"),
+        e.get("elec_busbar_main"),
+        starter_seen,
+        e.get("antrieb_getr_gangwahl"),
+        e.get("engine_tank_content")
+    ))
+}
+
 /// Sweep (M-0141): every player bus of the installation through the game's own set-up
 /// ([`opts_bevy::vehicle_setup::SetupRun`]) at the default degree (engine running); prints one
 /// tab-separated line per vehicle: path, recipe, ready to drive (`vehicle_setup::ready`: the
@@ -17,19 +72,6 @@ fn sweep_setup_starts_every_bus() {
     let Some(root) = std::env::var_os("OMSI_PATH").map(std::path::PathBuf::from) else {
         return;
     };
-    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
-        for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                walk(&path, out);
-            } else if path
-                .extension()
-                .is_some_and(|e| e.eq_ignore_ascii_case("bus"))
-            {
-                out.push(path);
-            }
-        }
-    }
     let mut buses = Vec::new();
     walk(&root.join("Vehicles"), &mut buses);
     buses.retain(|p| {
@@ -54,38 +96,9 @@ fn sweep_setup_starts_every_bus() {
             scope.spawn(|| loop {
                 let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 let Some(path) = buses.get(i) else { break };
-                let rel = path
-                    .strip_prefix(&root)
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string();
-                let Some(mut e) = load(&rel) else { continue };
-                if !opts_bevy::vehicle_setup::has_engine(&e) {
-                    continue;
+                if let Some(line) = sweep_line(&root, path, &setup) {
+                    lines.lock().unwrap().push(line);
                 }
-                let mut run_ = opts_bevy::vehicle_setup::SetupRun::default();
-                let mut now = 0.0;
-                let mut starter_seen = 0.0_f32;
-                while now < 40.0 {
-                    let done = run_.advance(&mut e, &setup, now);
-                    e.run_frame(DT, false);
-                    starter_seen = starter_seen.max(e.get("engine_starter"));
-                    now += DT;
-                    if done && now > 5.0 && opts_bevy::vehicle_setup::ready(&e) {
-                        break;
-                    }
-                }
-                run(&mut e, 2.0);
-                lines.lock().unwrap().push(format!(
-                    "SWEEP\t{rel}\t{}\t{}\t{:.0}\t{:.2}\t{}\t{}\t{:.0}",
-                    opts_bevy::vehicle_setup::recipe_for(&e).name,
-                    u8::from(opts_bevy::vehicle_setup::ready(&e)),
-                    e.get("engine_n"),
-                    e.get("elec_busbar_main"),
-                    starter_seen,
-                    e.get("antrieb_getr_gangwahl"),
-                    e.get("engine_tank_content")
-                ));
             });
         }
     });

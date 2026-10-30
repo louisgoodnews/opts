@@ -127,17 +127,30 @@ fn lookup_action(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+/// What [`parse_remote_commands`] reads and changes besides the command queue.
+pub(super) struct RemoteCtx<'a, 'w, 's> {
+    pub(super) menu: &'a mut VehicleMenu,
+    pub(super) formation_commands: &'a mut super::super::super::formation_menu::FormationCommands,
+    pub(super) catalogue: Option<&'a GameCatalogue>,
+    pub(super) job: Option<&'a WorldLoadJob>,
+    pub(super) registry: &'a SessionVehicles,
+    pub(super) commands: &'a mut Commands<'w, 's>,
+}
+
+/// Turns the queued control protocol lines into menu actions (pushed on `todo`).
 pub(super) fn parse_remote_commands(
     remote: &mut MenuCommands,
-    menu: &mut VehicleMenu,
-    formation_commands: &mut super::super::super::formation_menu::FormationCommands,
-    catalogue: Option<&GameCatalogue>,
-    job: Option<&WorldLoadJob>,
-    registry: &SessionVehicles,
-    commands: &mut Commands,
+    ctx: RemoteCtx,
     todo: &mut Vec<Action>,
 ) {
+    let RemoteCtx {
+        menu,
+        formation_commands,
+        catalogue,
+        job,
+        registry,
+        commands,
+    } = ctx;
     for line in std::mem::take(&mut remote.0) {
         let (word, rest) = line.split_once(' ').unwrap_or((line.as_str(), ""));
         let rest = rest.trim().to_lowercase();

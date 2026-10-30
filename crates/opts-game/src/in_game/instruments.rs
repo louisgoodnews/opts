@@ -45,22 +45,34 @@ fn faded(color: Color, fade: Option<&Ref<InstrumentFade>>) -> Color {
     }
 }
 
+/// Instrument texts with their ink, fade and colour.
+type TextQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Ref<'static, InstrumentInk>,
+        Option<Ref<'static, InstrumentFade>>,
+        &'static mut TextColor,
+    ),
+>;
+/// Instrument panels with their fade and background / border colours.
+type PanelQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Ref<'static, InstrumentPanel>,
+        Option<Ref<'static, InstrumentFade>>,
+        &'static mut BackgroundColor,
+        &'static mut BorderColor,
+    ),
+>;
+
 /// Paints instrument panels and texts from the active palette.
-#[allow(clippy::type_complexity)]
 pub fn sync_instrument_tokens(
     theme: Res<MaterialTheme>,
     variant: Res<InstrumentVariant>,
-    mut texts: Query<(
-        Ref<InstrumentInk>,
-        Option<Ref<InstrumentFade>>,
-        &mut TextColor,
-    )>,
-    mut panels: Query<(
-        Ref<InstrumentPanel>,
-        Option<Ref<InstrumentFade>>,
-        &mut BackgroundColor,
-        &mut BorderColor,
-    )>,
+    mut texts: TextQuery,
+    mut panels: PanelQuery,
 ) {
     let changed = theme.is_changed() || variant.is_changed();
     let palette = theme.instrument(*variant);

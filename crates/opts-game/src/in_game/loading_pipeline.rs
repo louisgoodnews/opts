@@ -134,15 +134,14 @@ fn stage_terrain(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         // builds (M-0089).
         let mut budget = FrameBudget::new(tile_loading::LOADING_BUDGET);
         advance_tile_loading(
-            job,
-            stats,
-            commands,
-            &mut assets.meshes,
-            &mut assets.materials,
-            &mut assets.images,
+            (job, stats, commands),
+            (
+                &mut assets.meshes,
+                &mut assets.materials,
+                &mut assets.images,
+            ),
             assets.ground_materials.as_deref_mut(),
-            &mut budget,
-            usize::MAX,
+            (&mut budget, usize::MAX),
         );
     }
     (state.tiles_done, state.tiles_total) = job.tile_counts();
@@ -256,7 +255,6 @@ type OutcomeButton = (
 
 /// Handles the buttons of the loading screen: cancel, details, continue, retry, choose another,
 /// back.
-#[allow(clippy::too_many_arguments)]
 pub fn handle_loading_interactions(
     mut activated: MessageReader<Activated>,
     cancel: Query<(), With<CancelLoadingBtn>>,

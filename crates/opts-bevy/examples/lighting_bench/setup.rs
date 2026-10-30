@@ -14,8 +14,25 @@ pub(super) fn setup(
     let mut rng = Rng(0x1234_5678_9abc_def1);
     let cone_handle = meshes.add(cone_mesh());
 
-    // Facade textures: brick-ish with window grid; 6 variants.
-    let facade: Vec<Handle<StandardMaterial>> = (0..6)
+    let facade = facade_materials(&mut materials, &mut images);
+    spawn_boxes(&mut commands, &mut meshes, &facade, &mut rng);
+    spawn_road(&mut commands, &mut meshes, &mut materials, &mut images);
+    spawn_trees(&mut commands, &mut meshes, &mut materials, &mut images, &mut rng);
+    spawn_lights(&mut commands);
+    let target = spawn_camera(&mut commands, &mut images, win.0);
+    commands.insert_resource(Assets3 {
+        cone: cone_handle,
+        target,
+        quad: meshes.add(Rectangle::new(1.0, 1.0)),
+    });
+}
+
+/// Facade textures: brick-ish with window grid; 6 variants.
+fn facade_materials(
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+) -> Vec<Handle<StandardMaterial>> {
+    (0..6)
         .map(|v| {
             let tint = [
                 [200u8, 160, 140],
@@ -50,9 +67,16 @@ pub(super) fn setup(
                 ..default()
             })
         })
-        .collect();
+        .collect()
+}
 
-    // Boxes: ~300, a street canyon along -Z (x = +-9..40), a few lower annexes.
+/// Boxes: ~300, a street canyon along -Z (x = +-9..40), a few lower annexes.
+fn spawn_boxes(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    facade: &[Handle<StandardMaterial>],
+    rng: &mut Rng,
+) {
     let box_meshes: Vec<Handle<Mesh>> = (0..12)
         .map(|i| {
             let w = 8.0 + (i % 4) as f32 * 2.0;
@@ -83,8 +107,15 @@ pub(super) fn setup(
             }
         }
     }
+}
 
-    // Ground and road.
+/// Ground and road.
+fn spawn_road(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+) {
     let road = rgba_image(256, |x, y| {
         let n = hash(x, y, 77) * 0.2 + 0.8;
         let line = (x / 4) % 64 == 31 && (y / 16) % 2 == 0;
@@ -102,8 +133,16 @@ pub(super) fn setup(
         Transform::from_xyz(0.0, 0.0, -150.0),
         NotShadowCaster,
     ));
+}
 
-    // Trees: 100 alpha-masked quads (two crossing quads would be 200; use one).
+/// Trees: 100 alpha-masked quads (two crossing quads would be 200; use one).
+fn spawn_trees(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    rng: &mut Rng,
+) {
     let tree_mats: Vec<Handle<StandardMaterial>> = (0..2)
         .map(|v| {
             let img = rgba_image(256, |x, y| {
@@ -140,7 +179,9 @@ pub(super) fn setup(
             )),
         ));
     }
+}
 
+fn spawn_lights(commands: &mut Commands) {
     // Street lamps: 48 map point lights (as MapLightPool: r = 4.5 m, 10 klx at r).
     let lumens = 4.0 * std::f32::consts::PI * 4.5 * 4.5 * 10_000.0;
     for i in 0..48 {
@@ -191,8 +232,14 @@ pub(super) fn setup(
         Transform::default().looking_to(Vec3::NEG_Y, Vec3::Z),
         Sun,
     ));
+}
 
-    // Camera.
+/// Camera; returns the offscreen render target, if any.
+fn spawn_camera(
+    commands: &mut Commands,
+    images: &mut Assets<Image>,
+    window_mode: bool,
+) -> Option<Handle<Image>> {
     let mut cam = commands.spawn((
         Camera3d::default(),
         opts_bevy::MainCamera,
@@ -203,7 +250,7 @@ pub(super) fn setup(
         Cam,
     ));
     let mut target = None;
-    if !win.0 {
+    if !window_mode {
         let mut image = Image::new_fill(
             Extent3d {
                 width: W,
@@ -223,9 +270,5 @@ pub(super) fn setup(
         target = Some(handle);
     }
     let _ = RenderLayers::layer(0);
-    commands.insert_resource(Assets3 {
-        cone: cone_handle,
-        target,
-        quad: meshes.add(Rectangle::new(1.0, 1.0)),
-    });
+    target
 }

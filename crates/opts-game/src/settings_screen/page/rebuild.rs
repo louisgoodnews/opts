@@ -86,23 +86,25 @@ fn spawn_category(
 }
 
 /// Fills the category list and the pane.
-#[allow(clippy::too_many_arguments)]
 pub fn rebuild_page(
     mut commands: Commands,
     mut state: ResMut<SettingsPageState>,
-    theme: Res<MaterialTheme>,
-    registry: Res<SettingsRegistry>,
-    settings: Res<GameSettings>,
-    caps: Res<SettingsCapabilities>,
-    facts: Res<crate::content_facts::ContentFactsStore>,
-    loc: Res<Localization>,
-    hardware: Option<Res<crate::hardware::HardwareState>>,
-    light: Option<Res<opts_bevy::light_quality::LightQuality>>,
-    fonts: Option<Res<crate::ui_typography::FontChoices>>,
+    inputs: super::params::RebuildFacts,
     focused: Query<&UiId, With<opts_gui::interaction::state::Focused>>,
     cats: Query<(Entity, Option<&Children>), With<PageCategories>>,
     panes: Query<(Entity, Option<&Children>), With<PagePane>>,
 ) {
+    let super::params::RebuildFacts {
+        theme,
+        registry,
+        settings,
+        caps,
+        facts,
+        loc,
+        hardware,
+        light,
+        fonts,
+    } = inputs;
     let (Ok((cat_list, cat_kids)), Ok((pane, pane_kids))) = (cats.single(), panes.single()) else {
         return;
     };

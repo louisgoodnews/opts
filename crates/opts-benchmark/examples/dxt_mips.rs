@@ -57,7 +57,23 @@ fn main() -> anyhow::Result<()> {
         .position(|a| a == "--list")
         .and_then(|i| args.get(i + 1));
 
-    let candidates = match list {
+    let candidates = pick_candidates(&root, sample, list)?;
+
+    let mut t = Totals::default();
+    for path in &candidates {
+        measure(&mut t, path);
+    }
+    report(&t);
+    Ok(())
+}
+
+/// The files to measure: the ones named in `list`, else every n-th chainless DXT file.
+fn pick_candidates(
+    root: &Path,
+    sample: usize,
+    list: Option<&String>,
+) -> anyhow::Result<Vec<PathBuf>> {
+    Ok(match list {
         Some(file) => std::fs::read_to_string(file)?
             .lines()
             .filter(|l| !l.trim().is_empty())
@@ -65,7 +81,7 @@ fn main() -> anyhow::Result<()> {
             .collect::<Vec<_>>(),
         None => {
             let mut all = Vec::new();
-            walk(&root, &mut all);
+            walk(root, &mut all);
             all.sort();
             let started = Instant::now();
             let chainless: Vec<PathBuf> = all.into_iter().filter(|p| is_chainless_dxt(p)).collect();
@@ -77,97 +93,107 @@ fn main() -> anyhow::Result<()> {
             let step = (chainless.len() / sample.max(1)).max(1);
             chainless.into_iter().step_by(step).take(sample).collect()
         }
+    })
+}
+
+/// Decodes one texture, builds its chain and measures the encoders on levels 1..; skips files
+/// that are not a single-level DXT1/3/5 texture.
+fn measure(t: &mut Totals, path: &Path) {
+    let Ok(bytes) = std::fs::read(path) else {
+        return;
     };
+    let Ok(image) = dds_to_bevy_image(&bytes) else {
+        return;
+    };
+    let format = image.texture_descriptor.format;
+    let tex_format = match format {
+        TextureFormat::Bc1RgbaUnormSrgb => texpresso::Format::Bc1,
+        TextureFormat::Bc2RgbaUnormSrgb => texpresso::Format::Bc2,
+        TextureFormat::Bc3RgbaUnormSrgb => texpresso::Format::Bc3,
+        _ => return,
+    };
+    if image.texture_descriptor.mip_level_count != 1 {
+        return;
+    }
+    let (w, h) = (image.width(), image.height());
+    if w.max(h) < 2 {
+        return;
+    }
 
-    let mut t = Totals::default();
-    for path in &candidates {
-        let Ok(bytes) = std::fs::read(path) else {
-            continue;
-        };
-        let Ok(image) = dds_to_bevy_image(&bytes) else {
-            continue;
-        };
-        let format = image.texture_descriptor.format;
-        let tex_format = match format {
-            TextureFormat::Bc1RgbaUnormSrgb => texpresso::Format::Bc1,
-            TextureFormat::Bc2RgbaUnormSrgb => texpresso::Format::Bc2,
-            TextureFormat::Bc3RgbaUnormSrgb => texpresso::Format::Bc3,
-            _ => continue,
-        };
-        if image.texture_descriptor.mip_level_count != 1 {
-            continue;
-        }
-        let (w, h) = (image.width(), image.height());
-        if w.max(h) < 2 {
-            continue;
-        }
+    let started = Instant::now();
+    let Some(mut rgba) = decode_to_rgba8(&image) else {
+        return;
+    };
+    t.decode_s += started.elapsed().as_secs_f64();
+    let cutout = rgba.data.as_deref().is_some_and(looks_like_cutout);
+    let started = Instant::now();
+    generate_mip_chain(
+        &mut rgba,
+        MipOptions {
+            alpha_cutoff: cutout.then_some(0.5),
+            weight_colour_by_alpha: false,
+        },
+    );
+    t.chain_s += started.elapsed().as_secs_f64();
+    let chain = rgba.data.as_deref().unwrap_or_default();
+    let has_alpha = chain[..(w * h * 4) as usize]
+        .chunks_exact(4)
+        .any(|p| p[3] < 255);
+    if tex_format == texpresso::Format::Bc1 && has_alpha {
+        t.bc1_with_alpha += 1;
+    }
+    t.textures += 1;
+    t.base_pixels += u64::from(w) * u64::from(h);
+    encode_levels(t, tex_format, chain, (w, h), has_alpha);
+}
 
-        let started = Instant::now();
-        let Some(mut rgba) = decode_to_rgba8(&image) else {
-            continue;
-        };
-        t.decode_s += started.elapsed().as_secs_f64();
-        let cutout = rgba.data.as_deref().is_some_and(looks_like_cutout);
-        let started = Instant::now();
-        generate_mip_chain(
-            &mut rgba,
-            MipOptions {
-                alpha_cutoff: cutout.then_some(0.5),
-                weight_colour_by_alpha: false,
-            },
-        );
-        t.chain_s += started.elapsed().as_secs_f64();
-        let chain = rgba.data.as_deref().unwrap_or_default();
-        let has_alpha = chain[..(w * h * 4) as usize]
-            .chunks_exact(4)
-            .any(|p| p[3] < 255);
-        if tex_format == texpresso::Format::Bc1 && has_alpha {
-            t.bc1_with_alpha += 1;
-        }
-
-        let bc1 = tex_format == texpresso::Format::Bc1;
-        t.textures += 1;
-        t.base_pixels += u64::from(w) * u64::from(h);
-        let mut offset = (w * h * 4) as usize;
-        for level in 1..full_chain_levels(w, h) {
-            let (lw, lh) = level_size(w, h, level);
-            let (lw, lh) = (lw as usize, lh as usize);
-            let src = &chain[offset..offset + lw * lh * 4];
-            offset += lw * lh * 4;
-            t.chain_pixels += (lw * lh) as u64;
-            for e in 0..ENCODERS.len() {
-                let started = Instant::now();
-                let params = texpresso::Params {
-                    algorithm: if e == 0 {
-                        texpresso::Algorithm::RangeFit
-                    } else {
-                        texpresso::Algorithm::ClusterFit
-                    },
-                    ..Default::default()
-                };
-                let mut blocks = vec![0u8; tex_format.compressed_size(lw, lh)];
-                tex_format.compress(src, lw, lh, params, &mut blocks);
-                t.encode_s[e] += started.elapsed().as_secs_f64();
-                let mut decoded = vec![0u8; lw * lh * 4];
-                tex_format.decompress(&blocks, lw, lh, &mut decoded);
-                for (a, b) in src.chunks_exact(4).zip(decoded.chunks_exact(4)) {
-                    for c in 0..3 {
-                        let d = f64::from(a[c]) - f64::from(b[c]);
-                        t.sq_err[e] += d * d;
-                    }
-                    if has_alpha {
-                        let d = f64::from(a[3]) - f64::from(b[3]);
-                        t.alpha_sq_err[usize::from(!bc1)][e] += d * d;
-                    }
+/// Re-encodes levels 1.. of the chain with every encoder and accumulates time and error.
+fn encode_levels(
+    t: &mut Totals,
+    tex_format: texpresso::Format,
+    chain: &[u8],
+    size: (u32, u32),
+    has_alpha: bool,
+) {
+    let (w, h) = size;
+    let bc1 = tex_format == texpresso::Format::Bc1;
+    let mut offset = (w * h * 4) as usize;
+    for level in 1..full_chain_levels(w, h) {
+        let (lw, lh) = level_size(w, h, level);
+        let (lw, lh) = (lw as usize, lh as usize);
+        let src = &chain[offset..offset + lw * lh * 4];
+        offset += lw * lh * 4;
+        t.chain_pixels += (lw * lh) as u64;
+        for e in 0..ENCODERS.len() {
+            let started = Instant::now();
+            let params = texpresso::Params {
+                algorithm: if e == 0 {
+                    texpresso::Algorithm::RangeFit
+                } else {
+                    texpresso::Algorithm::ClusterFit
+                },
+                ..Default::default()
+            };
+            let mut blocks = vec![0u8; tex_format.compressed_size(lw, lh)];
+            tex_format.compress(src, lw, lh, params, &mut blocks);
+            t.encode_s[e] += started.elapsed().as_secs_f64();
+            let mut decoded = vec![0u8; lw * lh * 4];
+            tex_format.decompress(&blocks, lw, lh, &mut decoded);
+            for (a, b) in src.chunks_exact(4).zip(decoded.chunks_exact(4)) {
+                for c in 0..3 {
+                    let d = f64::from(a[c]) - f64::from(b[c]);
+                    t.sq_err[e] += d * d;
+                }
+                if has_alpha {
+                    let d = f64::from(a[3]) - f64::from(b[3]);
+                    t.alpha_sq_err[usize::from(!bc1)][e] += d * d;
                 }
             }
-            if has_alpha {
-                t.alpha_samples[usize::from(!bc1)] += (lw * lh) as u64;
-            }
+        }
+        if has_alpha {
+            t.alpha_samples[usize::from(!bc1)] += (lw * lh) as u64;
         }
     }
-    report(&t);
-    Ok(())
 }
 
 fn report(t: &Totals) {

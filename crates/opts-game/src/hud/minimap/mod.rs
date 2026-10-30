@@ -211,6 +211,7 @@ pub fn ensure_image(
     }
 }
 
+mod params;
 mod redraw;
 pub use redraw::{avoid_viewpoint_panel, redraw, update_caption, Scene};
 

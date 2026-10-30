@@ -196,27 +196,28 @@ fn record(
 }
 
 /// Redraws the map at most 10 times per second.
-#[allow(clippy::too_many_arguments)]
 pub fn redraw(
     time: Res<Time<Real>>,
     mut state: ResMut<MiniMapState>,
-    mut canvas: ResMut<MiniMapCanvas>,
-    handle: Res<MiniMapImage>,
-    mut images: ResMut<Assets<Image>>,
-    variant: Res<InstrumentVariant>,
-    theme: Option<Res<MaterialTheme>>,
-    vehicles: Query<(
-        &GlobalTransform,
-        Option<&SessionVehicle>,
-        Has<PlayerVehicle>,
-    )>,
-    cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    traffic: Option<Res<TrafficState>>,
-    route: Option<Res<super::super::route_path::PlayerRoutePath>>,
-    scheduled: Option<Res<super::super::route_path::ScheduledVehicles>>,
-    fixture: Option<Res<FixtureRoads>>,
-    hud: Option<Res<super::super::HudValues>>,
+    texture: super::params::MiniTexture,
+    look: super::params::MapLook,
+    poses: super::params::MapPoses,
+    sources: super::params::MiniSources,
 ) {
+    let super::params::MiniTexture {
+        mut canvas,
+        handle,
+        mut images,
+    } = texture;
+    let super::params::MapLook { variant, theme } = look;
+    let super::params::MapPoses { vehicles, cameras } = poses;
+    let super::params::MiniSources {
+        traffic,
+        route,
+        scheduled,
+        fixture,
+        hud,
+    } = sources;
     state.since += time.delta_secs();
     if !state.config.enabled || state.since < UPDATE_INTERVAL.as_secs_f32() {
         return;
@@ -268,8 +269,7 @@ pub fn redraw(
         },
         &markers,
         &colors,
-        canvas.size as f32 / 176.0,
-        true,
+        (canvas.size as f32 / 176.0, true),
     );
     upload(&mut images, handle, canvas);
     record(

@@ -9,7 +9,7 @@ use opts_gui::l10n::fluent::Arg;
 use opts_gui::l10n::Localization;
 
 use super::alerts::{AlertQueue, AlertSeverity};
-use super::build::{AlertPill, HudRow, HudSlot, HudText, HudWidgetNode, Part};
+use super::build::{AlertPill, HudText, Part};
 use super::fade::{FadeKind, HudFade};
 use super::keys;
 use super::layout::HudLayout;
@@ -22,6 +22,7 @@ use crate::settings::GameSettings;
 use opts_bevy::{SessionEnvironment, WeatherCatalogue};
 
 mod texts;
+use super::params::{DisplayNodes, DisplayRows, DisplaySlots, TextEnv};
 use texts::{camera_label_text, clock_line, controls_hint, session_info_text};
 
 /// The last camera state that the label announced, and what it says.
@@ -81,20 +82,22 @@ fn set_text(text: &mut Text, new: String) {
 }
 
 /// Writes the value and caption texts of the widgets.
-#[allow(clippy::too_many_arguments)]
 pub fn update_texts(
-    values: Res<HudValues>,
-    settings: Res<GameSettings>,
-    session: Res<InGameSessionInfo>,
-    env: Option<Res<SessionEnvironment>>,
-    weather: Option<Res<WeatherCatalogue>>,
-    loc: Res<Localization>,
-    label: Res<CameraLabel>,
-    layout: Res<HudLayout>,
-    place: Res<crate::session_vehicles::PlaceLabel>,
-    action_keys: Option<Res<opts_bevy::ActionKeys>>,
+    facts: TextEnv,
     mut texts: Query<(&HudText, &mut Text, Option<&mut InstrumentInk>)>,
 ) {
+    let TextEnv {
+        values,
+        settings,
+        session,
+        env,
+        weather,
+        loc,
+        label,
+        layout,
+        place,
+        action_keys,
+    } = facts;
     let unit = SpeedUnit::parse(settings.raw("interface.units").as_deref());
     let fallback = SessionEnvironment::default();
     let env = env.as_deref().unwrap_or(&fallback);
@@ -158,17 +161,13 @@ pub fn update_texts(
 
 /// Shows, hides and removes widgets: the user's switch, the vehicle kind, the engine speed and the
 /// camera mode. A row or slot without a visible widget is removed from the layout.
-#[allow(clippy::type_complexity)]
 pub fn update_widget_display(
     values: Res<HudValues>,
     settings: Res<GameSettings>,
     layout: Res<HudLayout>,
-    mut nodes: Query<
-        (&HudWidgetNode, &mut Node, Option<&mut Visibility>),
-        (Without<HudSlot>, Without<HudRow>),
-    >,
-    mut slots: Query<(&HudSlot, &mut Node), (Without<HudWidgetNode>, Without<HudRow>)>,
-    mut rows: Query<(&HudRow, &mut Node), (Without<HudWidgetNode>, Without<HudSlot>)>,
+    mut nodes: DisplayNodes,
+    mut slots: DisplaySlots,
+    mut rows: DisplayRows,
 ) {
     let mut any_slot: HashMap<Slot, bool> = HashMap::new();
     let mut any_row: HashMap<Row, bool> = HashMap::new();

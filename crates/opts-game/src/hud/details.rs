@@ -114,17 +114,19 @@ pub fn forget_dismissed(mut store: ResMut<DetailsStore>, toasts: Query<Entity>) 
 }
 
 /// Copy and Report.
-#[allow(clippy::too_many_arguments)]
 pub fn details_choices(
     mut choices: MessageReader<DialogChoice>,
     mut store: ResMut<DetailsStore>,
     clipboard: Option<NonSendMut<TextClipboard>>,
-    time: Res<Time<Virtual>>,
-    data: Option<ResMut<opts_bevy::reporting::ReportModalData>>,
-    state: Option<Res<State<opts_bevy::reporting::ReportModalState>>>,
-    next: Option<ResMut<NextState<opts_bevy::reporting::ReportModalState>>>,
+    report: super::params::OptionalReport,
     mut commands: Commands,
 ) {
+    let super::params::OptionalReport {
+        time,
+        data,
+        state,
+        next,
+    } = report;
     let mut clipboard = clipboard;
     let (mut data, mut next) = (data, next);
     for c in choices.read().filter(|c| c.tag == TAG) {

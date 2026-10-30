@@ -70,69 +70,44 @@ fn restore(app: &mut App, file: &SaveFile) -> opts_game::save::registry::Restore
     plan
 }
 
-#[test]
-fn every_section_round_trips() {
-    let mut app = session_world();
-    {
-        let w = app.world_mut();
-        let mut setup = w.resource_mut::<NewGameSetup>();
-        setup.selected_map = "Berlin-Spandau".into();
-        setup.selected_entry_point = "Depot".into();
-        setup.weather_preset = "Rain".into();
-        (setup.year, setup.month, setup.day, setup.hour, setup.minute) = (1990, 3, 4, 17, 45);
-        let mut info = w.resource_mut::<InGameSessionInfo>();
-        info.map_name = "Berlin-Spandau".into();
-        info.entry_point = "Depot".into();
-        info.start_hour = 17;
-        info.start_minute = 45;
-        info.sim_elapsed_seconds = 1234.5;
-        w.resource_mut::<PlayClock>().played_s = 99.5;
-        let mut cam = w.resource_mut::<CameraState>();
-        cam.mode = CameraMode::Cockpit;
-        cam.previous_mode = CameraMode::External;
-        cam.sub_camera_index = 2;
-        cam.external_zoom = 14.0;
-        cam.view_yaw = 0.3;
-        w.resource_mut::<CameraAvailability>().cockpit = true;
-        let mut stats = w.resource_mut::<SessionStats>();
-        (stats.duration_s, stats.distance_m, stats.max_speed_m_s) = (80.0, 912.0, 13.5);
-        w.resource_mut::<RemoteControls>().odometer_m = 912.25;
-        let mut time = w.resource_mut::<Time<Virtual>>();
-        time.set_relative_speed(4.0);
-        time.pause();
-        let mut reg = w.resource_mut::<SessionVehicles>();
-        reg.request_spawn(SpawnParams {
-            name: "Bus A".into(),
-            bus_file: "/nonexistent/a.bus".into(),
-            ..Default::default()
-        });
-    }
-    let file = capture(&mut app);
-    for id in [
-        "session",
-        "time",
-        "weather",
-        "session_vehicles",
-        "active_vehicle",
-        "camera",
-        "counters",
-        "simulation",
-    ] {
-        assert!(file.sections.contains_key(id), "{id} not captured");
-    }
-    // The file survives a trip through text.
-    let file = SaveFile::decode(&file.encode().expect("encode")).expect("decode");
+/// Fills every resource the sections own with distinctive values.
+fn set_session_state(app: &mut App) {
+    let w = app.world_mut();
+    let mut setup = w.resource_mut::<NewGameSetup>();
+    setup.selected_map = "Berlin-Spandau".into();
+    setup.selected_entry_point = "Depot".into();
+    setup.weather_preset = "Rain".into();
+    (setup.year, setup.month, setup.day, setup.hour, setup.minute) = (1990, 3, 4, 17, 45);
+    let mut info = w.resource_mut::<InGameSessionInfo>();
+    info.map_name = "Berlin-Spandau".into();
+    info.entry_point = "Depot".into();
+    info.start_hour = 17;
+    info.start_minute = 45;
+    info.sim_elapsed_seconds = 1234.5;
+    w.resource_mut::<PlayClock>().played_s = 99.5;
+    let mut cam = w.resource_mut::<CameraState>();
+    cam.mode = CameraMode::Cockpit;
+    cam.previous_mode = CameraMode::External;
+    cam.sub_camera_index = 2;
+    cam.external_zoom = 14.0;
+    cam.view_yaw = 0.3;
+    w.resource_mut::<CameraAvailability>().cockpit = true;
+    let mut stats = w.resource_mut::<SessionStats>();
+    (stats.duration_s, stats.distance_m, stats.max_speed_m_s) = (80.0, 912.0, 13.5);
+    w.resource_mut::<RemoteControls>().odometer_m = 912.25;
+    let mut time = w.resource_mut::<Time<Virtual>>();
+    time.set_relative_speed(4.0);
+    time.pause();
+    let mut reg = w.resource_mut::<SessionVehicles>();
+    reg.request_spawn(SpawnParams {
+        name: "Bus A".into(),
+        bus_file: "/nonexistent/a.bus".into(),
+        ..Default::default()
+    });
+}
 
-    // A different session: everything the sections own differs.
-    let mut other = session_world();
-    {
-        let w = other.world_mut();
-        w.resource_mut::<CameraAvailability>().cockpit = true;
-        w.resource_mut::<InGameSessionInfo>().sim_elapsed_seconds = 1.0;
-    }
-    let plan = restore(&mut other, &file);
-    assert!(plan.warnings.is_empty() && plan.unknown.is_empty());
-    let w = other.world();
+/// Asserts that `w` holds the values [`set_session_state`] wrote, as restored from a save.
+fn assert_restored_session(w: &World) {
     let setup = w.resource::<NewGameSetup>();
     assert_eq!(
         (
@@ -173,6 +148,39 @@ fn every_section_round_trips() {
         Lifecycle::Spawning,
         "rebuilt by the spawner"
     );
+}
+
+#[test]
+fn every_section_round_trips() {
+    let mut app = session_world();
+    set_session_state(&mut app);
+    let file = capture(&mut app);
+    for id in [
+        "session",
+        "time",
+        "weather",
+        "session_vehicles",
+        "active_vehicle",
+        "camera",
+        "counters",
+        "simulation",
+    ] {
+        assert!(file.sections.contains_key(id), "{id} not captured");
+    }
+    // The file survives a trip through text.
+    let file = SaveFile::decode(&file.encode().expect("encode")).expect("decode");
+
+    // A different session: everything the sections own differs.
+    let mut other = session_world();
+    {
+        let w = other.world_mut();
+        w.resource_mut::<CameraAvailability>().cockpit = true;
+        w.resource_mut::<InGameSessionInfo>().sim_elapsed_seconds = 1.0;
+    }
+    let plan = restore(&mut other, &file);
+    assert!(plan.warnings.is_empty() && plan.unknown.is_empty());
+    let w = other.world();
+    assert_restored_session(w);
 }
 
 #[test]

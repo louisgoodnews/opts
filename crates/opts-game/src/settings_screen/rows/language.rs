@@ -84,13 +84,14 @@ pub(super) fn language_list(
             col,
             d,
             format!("option-{}", l.code),
-            None,
-            &l.native_name,
-            l.code == cur,
-            SettingOp::Set {
-                key: d.key,
-                value: l.code.clone(),
-            },
+            (None, &l.native_name),
+            (
+                l.code == cur,
+                SettingOp::Set {
+                    key: d.key,
+                    value: l.code.clone(),
+                },
+            ),
             u,
         );
         if !l.selectable {

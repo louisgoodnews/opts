@@ -3,18 +3,14 @@
 use super::flow::choose_in_what;
 use super::*;
 
-#[test]
-fn the_equipment_dialog_offers_a_control_that_fits_each_option_and_writes_the_choices() {
+/// Opens the equipment dialog on a vehicle whose repaints carry a switch, a choice and a number.
+fn open_equipment_dialog(app: &mut App) {
     use bevy::ecs::system::RunSystemOnce;
     use opts_game::new_game_screen::livery::LiveryState;
-    use opts_game::new_game_screen::options::{
-        open_options, OptionChoice, OptionNumber, OptionSwitch,
-    };
+    use opts_game::new_game_screen::options::open_options;
     use opts_game::new_game_screen::repaints::VehicleRepaints;
-    use opts_gui::interaction::events::{ComboboxSelected, SwitchToggled, TextChanged};
     use opts_gui::l10n::Localization;
 
-    let mut app = wizard("options-dialog");
     let mut reps = VehicleRepaints {
         default_name: "Red".into(),
         ..VehicleRepaints::default()
@@ -44,24 +40,14 @@ fn the_equipment_dialog_offers_a_control_that_fits_each_option_and_writes_the_ch
     for _ in 0..3 {
         app.update();
     }
+}
 
-    let switch = find_entity(app.world_mut(), "wizard.what.option.vis-x").expect("a switch");
-    assert!(app.world().get::<OptionSwitch>(switch).is_some());
-    let combo = find_entity(app.world_mut(), "wizard.what.option.display-ext").expect("a choice");
-    let choice = app
-        .world()
-        .get::<OptionChoice>(combo)
-        .expect("a choice box")
-        .clone();
-    assert_eq!(
-        choice.values,
-        vec![2, 5],
-        "what the repaints give; 0 only when the repaint leaves it unset"
-    );
-    assert_eq!(choice.default, 2);
-    let field = find_entity(app.world_mut(), "wizard.what.option.vehicle-id").expect("a number");
-    assert!(app.world().get::<OptionNumber>(field).is_some());
-
+/// Writes through the dialog's controls: a choice, a number and a switch.
+fn exercise_option_controls(
+    app: &mut App,
+    (switch, combo, field): (Entity, Entity, Entity),
+) {
+    use opts_gui::interaction::events::{ComboboxSelected, SwitchToggled, TextChanged};
     // Choosing the second value (5) writes it; choosing the default again removes the override.
     app.world_mut().write_message(ComboboxSelected {
         entity: combo,
@@ -124,6 +110,33 @@ fn the_equipment_dialog_offers_a_control_that_fits_each_option_and_writes_the_ch
             .get("vis_x"),
         Some(&0)
     );
+}
+
+#[test]
+fn the_equipment_dialog_offers_a_control_that_fits_each_option_and_writes_the_choices() {
+    use opts_game::new_game_screen::options::{OptionChoice, OptionNumber, OptionSwitch};
+
+    let mut app = wizard("options-dialog");
+    open_equipment_dialog(&mut app);
+
+    let switch = find_entity(app.world_mut(), "wizard.what.option.vis-x").expect("a switch");
+    assert!(app.world().get::<OptionSwitch>(switch).is_some());
+    let combo = find_entity(app.world_mut(), "wizard.what.option.display-ext").expect("a choice");
+    let choice = app
+        .world()
+        .get::<OptionChoice>(combo)
+        .expect("a choice box")
+        .clone();
+    assert_eq!(
+        choice.values,
+        vec![2, 5],
+        "what the repaints give; 0 only when the repaint leaves it unset"
+    );
+    assert_eq!(choice.default, 2);
+    let field = find_entity(app.world_mut(), "wizard.what.option.vehicle-id").expect("a number");
+    assert!(app.world().get::<OptionNumber>(field).is_some());
+
+    exercise_option_controls(&mut app, (switch, combo, field));
     cleanup("options-dialog");
 }
 

@@ -11,7 +11,7 @@ use bevy::math::Affine2;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use opts_bevy::weather::{cloud_drift, weather_look};
-use opts_bevy::{SessionEnvironment, WeatherCatalogue, WeatherEffects};
+use opts_bevy::WeatherCatalogue;
 
 use crate::in_game::types::{InGameCamera, InGameEntity};
 
@@ -140,24 +140,42 @@ fn spawn_plane(
     ));
 }
 
-/// Spawns, moves, textures and removes the cloud disc.
-#[allow(clippy::too_many_arguments)]
-pub fn update_clouds(
-    time: Res<Time<Real>>,
-    env: Res<SessionEnvironment>,
-    effects: Res<WeatherEffects>,
-    weather: Res<WeatherCatalogue>,
-    mut state: ResMut<CloudState>,
-    mut images: ResMut<Assets<Image>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    cameras: Query<&GlobalTransform, With<InGameCamera>>,
-    mut planes: Query<
-        (Entity, &mut Transform, &MeshMaterial3d<StandardMaterial>),
+/// What [`update_clouds`] reads and moves besides the weather: the catalogue, camera and planes.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct CloudInputs<'w, 's> {
+    weather: Res<'w, WeatherCatalogue>,
+    cameras: Query<'w, 's, &'static GlobalTransform, With<InGameCamera>>,
+    planes: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static mut Transform,
+            &'static MeshMaterial3d<StandardMaterial>,
+        ),
         With<CloudPlane>,
     >,
+}
+
+/// Spawns, moves, textures and removes the cloud disc.
+pub fn update_clouds(
+    scene: super::WeatherScene,
+    assets: super::WeatherAssets,
+    inputs: CloudInputs,
+    mut state: ResMut<CloudState>,
     mut commands: Commands,
 ) {
+    let super::WeatherScene { time, env, effects } = scene;
+    let super::WeatherAssets {
+        mut images,
+        mut meshes,
+        mut materials,
+    } = assets;
+    let CloudInputs {
+        weather,
+        cameras,
+        mut planes,
+    } = inputs;
     let conditions = env.conditions();
     let layer = conditions
         .cloud

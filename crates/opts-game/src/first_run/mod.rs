@@ -168,7 +168,6 @@ fn select_title() -> &'static str {
 }
 
 /// Takes the dialog's answer, saves a valid folder and starts the catalogue.
-#[allow(clippy::too_many_arguments)]
 pub fn poll_folder_pick(
     mut commands: Commands,
     picker: Option<Res<FolderPicker>>,
@@ -267,8 +266,15 @@ pub fn adopt_root(
     commands.run_system_cached(start_catalogue_service);
 }
 
+/// The messages the first-run dialogs send onwards.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct FirstRunOut<'w> {
+    navigate: MessageWriter<'w, Navigate>,
+    start: MessageWriter<'w, StartDrive>,
+    exit: MessageWriter<'w, AppExit>,
+}
+
 /// Reacts to the buttons of the first-run dialogs.
-#[allow(clippy::too_many_arguments)]
 pub fn first_run_choices(
     mut commands: Commands,
     mut choices: MessageReader<DialogChoice>,
@@ -276,10 +282,13 @@ pub fn first_run_choices(
     mut settings: ResMut<GameSettings>,
     mut loc: ResMut<opts_gui::l10n::Localization>,
     setup: Res<NewGameSetup>,
-    mut navigate: MessageWriter<Navigate>,
-    mut start: MessageWriter<StartDrive>,
-    mut exit: MessageWriter<AppExit>,
+    out: FirstRunOut,
 ) {
+    let FirstRunOut {
+        mut navigate,
+        mut start,
+        mut exit,
+    } = out;
     for choice in choices.read().filter(|c| c.tag == DIALOG_TAG) {
         match (choice.choice, first_run.step.clone()) {
             (view::LANGUAGE, _) => {

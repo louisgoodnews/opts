@@ -22,7 +22,6 @@ use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
 use opts_bevy::reflections::Wetness;
 use opts_bevy::weather::SurfaceState;
-use opts_bevy::{SessionEnvironment, WeatherEffects};
 
 use crate::in_game::omsi_world::GroundIndex;
 use crate::in_game::types::{InGameCamera, InGameEntity};
@@ -190,22 +189,34 @@ fn spawn_new(
     }
 }
 
+/// What [`update_puddles`] reads besides the weather: wetness, the ground and the camera.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct PuddleInputs<'w, 's> {
+    wetness: Res<'w, Wetness>,
+    ground: Option<Res<'w, GroundIndex>>,
+    cameras: Query<'w, 's, &'static GlobalTransform, With<InGameCamera>>,
+}
+
 /// Adds, keeps and removes the puddles.
-#[allow(clippy::too_many_arguments)]
 pub fn update_puddles(
-    time: Res<Time<Real>>,
-    env: Res<SessionEnvironment>,
-    effects: Res<WeatherEffects>,
-    wetness: Res<Wetness>,
-    ground: Option<Res<GroundIndex>>,
-    cameras: Query<&GlobalTransform, With<InGameCamera>>,
+    scene: super::WeatherScene,
+    assets: super::WeatherAssets,
+    inputs: PuddleInputs,
     mut state: ResMut<PuddleState>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
     puddles: Query<(Entity, &Puddle)>,
     mut commands: Commands,
 ) {
+    let super::WeatherScene { time, env, effects } = scene;
+    let super::WeatherAssets {
+        mut images,
+        mut meshes,
+        mut materials,
+    } = assets;
+    let PuddleInputs {
+        wetness,
+        ground,
+        cameras,
+    } = inputs;
     state.timer += time.delta_secs();
     if state.timer < TICK_S {
         return;

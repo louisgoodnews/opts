@@ -87,7 +87,6 @@ fn scrape_velocity(ch: &mut opts_sim::vehicle::chassis::ChassisState, normals: &
 }
 
 /// Pushes the player's vehicle out of everything it overlaps (fixed step, after the physics).
-#[allow(clippy::too_many_arguments)]
 pub fn player_collisions(
     mut logged: Local<u32>,
     index: Res<CollisionIndex>,

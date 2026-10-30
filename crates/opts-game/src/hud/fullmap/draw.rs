@@ -195,27 +195,28 @@ fn record_redraw(
 
 /// Redraws the map: at once after a change of the view, while a vehicle moves at most ten times
 /// a second, otherwise twice a second.
-#[allow(clippy::too_many_arguments)]
 pub fn redraw(
     time: Res<Time<Real>>,
     mut state: ResMut<FullMapState>,
-    mut canvas: ResMut<FullMapCanvas>,
-    mut handle: ResMut<FullMapImage>,
-    mut images: ResMut<Assets<Image>>,
-    variant: Res<InstrumentVariant>,
-    theme: Option<Res<MaterialTheme>>,
-    vehicles: Query<(
-        &GlobalTransform,
-        Option<&SessionVehicle>,
-        Has<PlayerVehicle>,
-    )>,
-    cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    traffic: Option<Res<TrafficState>>,
-    fixture: Option<Res<FixtureRoads>>,
+    texture: super::params::MapTexture,
+    look: super::params::MapLook,
+    poses: super::params::MapPoses,
+    sources: super::params::MapSources,
     mut overview: ResMut<OverviewRoads>,
-    route: Res<super::super::route_path::PlayerRoutePath>,
-    scheduled: Res<super::super::route_path::ScheduledVehicles>,
 ) {
+    let super::params::MapTexture {
+        mut canvas,
+        mut handle,
+        mut images,
+    } = texture;
+    let super::params::MapLook { variant, theme } = look;
+    let super::params::MapPoses { vehicles, cameras } = poses;
+    let super::params::MapSources {
+        traffic,
+        fixture,
+        route,
+        scheduled,
+    } = sources;
     overview.poll();
     state.since += time.delta_secs();
     let markers = gather_markers(&vehicles, &cameras);
@@ -277,8 +278,7 @@ pub fn redraw(
         },
         &drawn_markers,
         &colors,
-        MARKER_UNIT,
-        false,
+        (MARKER_UNIT, false),
     );
     if let Some(mut image) = images.get_mut(handle) {
         match image.data.as_mut() {

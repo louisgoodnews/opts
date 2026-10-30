@@ -30,18 +30,19 @@ pub(super) fn attachment_transform(
 /// Places the tile's `[attachObj]` children on their parents (objects, spline attachments or other
 /// children placed before them, all on this tile). Chains are resolved in rounds; a child whose
 /// parent never appears or whose parent has no such attachment point is logged at WARN.
-#[allow(clippy::too_many_arguments)]
 pub(in super::super::super) fn place_attached_objects(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    tile: &opts_core::formats::map::MapTile,
-    terrain: Option<&TileTerrain>,
-    key: (i32, i32),
-    origin: (f32, f32),
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (tile, terrain, key, origin): (
+        &opts_core::formats::map::MapTile,
+        Option<&TileTerrain>,
+        (i32, i32),
+        (f32, f32),
+    ),
     children: &mut Vec<Entity>,
 ) {
     let mut pending: Vec<usize> = (0..tile.attached_objects.len()).collect();
@@ -80,24 +81,18 @@ pub(in super::super::super) fn place_attached_objects(
                 string_vars: a.string_vars.clone(),
             };
             spawn_object(
-                job,
-                stats,
-                commands,
-                meshes,
-                materials,
-                images,
-                &obj,
-                Placement::OnParent(transform),
-                terrain,
-                key,
-                origin,
-                children,
-                tile,
-                super::super::trace::Site {
-                    list: "attached objects",
-                    index: i,
-                    marker: None,
-                },
+                (job, stats, commands),
+                (meshes, materials, images),
+                (&obj, Placement::OnParent(transform), terrain, key, origin),
+                (
+                    children,
+                    tile,
+                    super::super::trace::Site {
+                        list: "attached objects",
+                        index: i,
+                        marker: None,
+                    },
+                ),
             );
         }
         pending = next;

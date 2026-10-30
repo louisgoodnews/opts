@@ -5,7 +5,6 @@ use super::*;
 #[test]
 #[ignore = "census of the engine sounds of a vehicle's sound.cfg; prints"]
 fn census_engine_sounds() {
-    use opts_game::sound_logic::{playback_of, Playback};
     let Some(root) = std::env::var_os("OMSI_PATH").map(std::path::PathBuf::from) else {
         return;
     };
@@ -21,74 +20,80 @@ fn census_engine_sounds() {
             "Vehicles/HB76_MAN_LionsCity/MAN_NG313_main.bus",
         ),
     ] {
-        let Some(bus_path) = install.find_file(rel) else {
-            continue;
-        };
-        let bus_dir = bus_path.parent().unwrap().to_path_buf();
-        let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).unwrap()).unwrap();
-        let Some(cfg) = manifest
-            .sound_cfg
-            .as_ref()
-            .and_then(|r| install.find_in(&bus_dir, r))
-        else {
-            println!("SND {label}: no sound.cfg");
-            continue;
-        };
-        let text: String = std::fs::read(&cfg)
-            .unwrap()
-            .iter()
-            .map(|&b| b as char)
-            .collect();
-        let config = opts_core::formats::sound::SoundConfig::parse(&text);
-        let e = load(rel).unwrap();
-        println!(
-            "SND {label}: {} definitions in {}",
-            config.sounds.len(),
-            cfg.display()
-        );
-        let mut counts = std::collections::BTreeMap::<&str, usize>::new();
-        for d in &config.sounds {
-            let vars: Vec<&str> = d
-                .pitch_variable
-                .iter()
-                .map(String::as_str)
-                .chain(d.conditions.iter().map(|c| c.variable.as_str()))
-                .chain(d.volcurves.iter().map(|c| c.variable.as_str()))
-                .collect();
-            let engine_related = vars.iter().any(|v| {
-                let v = v.to_lowercase();
-                v.contains("engine")
-                    || v.contains("antrieb")
-                    || v.contains("gear")
-                    || v.contains("throttle")
-                    || v.contains("motor")
-            });
-            let playback = playback_of(d);
-            let unknown: Vec<&&str> = vars
-                .iter()
-                .filter(|v| !e.writes(v) && !matches!(**v, "velocity" | "throttle" | "brake"))
-                .collect();
-            *counts
-                .entry(match playback {
-                    Playback::Loop => "loop",
-                    Playback::OnEdge => "edge",
-                    Playback::OnTrigger => "trigger",
-                    Playback::Unsupported => "unsupported",
-                })
-                .or_default() += 1;
-            let warn = d.file.to_lowercase().contains("warn");
-            if engine_related || warn {
-                println!(
-                    "SND   {} | {:?} | pitch {:?} ref {} x{} | cond {:?} | vol {:?} | {:?} | vars not written by scripts: {:?}",
-                    d.file, d.kind, d.pitch_variable, d.pitch_reference, d.pitch_scale,
-                    d.conditions.iter().map(|c| format!("{} m{} {}", c.variable, c.mode, c.value)).collect::<Vec<_>>(),
-                    d.volcurves.iter().map(|c| c.variable.clone()).collect::<Vec<_>>(),
-                    playback, unknown
-                );
-            }
-        }
-        println!("SND {label}: by kind {counts:?}");
+        census_vehicle(&install, label, rel);
     }
+}
+
+/// Census of one reference vehicle's sound.cfg (skips vehicles that are not installed).
+fn census_vehicle(install: &opts_bevy::OmsiInstall, label: &str, rel: &str) {
+    use opts_game::sound_logic::{playback_of, Playback};
+    let Some(bus_path) = install.find_file(rel) else {
+        return;
+    };
+    let bus_dir = bus_path.parent().unwrap().to_path_buf();
+    let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).unwrap()).unwrap();
+    let Some(cfg) = manifest
+        .sound_cfg
+        .as_ref()
+        .and_then(|r| install.find_in(&bus_dir, r))
+    else {
+        println!("SND {label}: no sound.cfg");
+        return;
+    };
+    let text: String = std::fs::read(&cfg)
+        .unwrap()
+        .iter()
+        .map(|&b| b as char)
+        .collect();
+    let config = opts_core::formats::sound::SoundConfig::parse(&text);
+    let e = load(rel).unwrap();
+    println!(
+        "SND {label}: {} definitions in {}",
+        config.sounds.len(),
+        cfg.display()
+    );
+    let mut counts = std::collections::BTreeMap::<&str, usize>::new();
+    for d in &config.sounds {
+        let vars: Vec<&str> = d
+            .pitch_variable
+            .iter()
+            .map(String::as_str)
+            .chain(d.conditions.iter().map(|c| c.variable.as_str()))
+            .chain(d.volcurves.iter().map(|c| c.variable.as_str()))
+            .collect();
+        let engine_related = vars.iter().any(|v| {
+            let v = v.to_lowercase();
+            v.contains("engine")
+                || v.contains("antrieb")
+                || v.contains("gear")
+                || v.contains("throttle")
+                || v.contains("motor")
+        });
+        let playback = playback_of(d);
+        let unknown: Vec<&&str> = vars
+            .iter()
+            .filter(|v| !e.writes(v) && !matches!(**v, "velocity" | "throttle" | "brake"))
+            .collect();
+        *counts
+            .entry(match playback {
+                Playback::Loop => "loop",
+                Playback::OnEdge => "edge",
+                Playback::OnTrigger => "trigger",
+                Playback::Unsupported => "unsupported",
+            })
+            .or_default() += 1;
+        let warn = d.file.to_lowercase().contains("warn");
+        if engine_related || warn {
+            println!(
+                "SND   {} | {:?} | pitch {:?} ref {} x{} | cond {:?} | vol {:?} | {:?} | vars not written by scripts: {:?}",
+                d.file, d.kind, d.pitch_variable, d.pitch_reference, d.pitch_scale,
+                d.conditions.iter().map(|c| format!("{} m{} {}", c.variable, c.mode, c.value)).collect::<Vec<_>>(),
+                d.volcurves.iter().map(|c| c.variable.clone()).collect::<Vec<_>>(),
+                playback, unknown
+            );
+        }
+    }
+    println!("SND {label}: by kind {counts:?}");
 }
 
 #[test]

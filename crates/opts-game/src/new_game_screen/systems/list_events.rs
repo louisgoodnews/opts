@@ -103,13 +103,11 @@ fn vehicle_selected(commands: &mut Commands, s: &mut ListState, (id, detail): (&
     fill_what_detail(
         commands,
         detail,
-        &s.loc,
-        &s.state.notes,
+        (&s.loc, &s.state.notes),
         &s.setup,
         &mut s.liveries,
         vehicle,
-        &s.library,
-        &s.catalogue,
+        (&s.library, &s.catalogue),
     );
 }
 

@@ -145,7 +145,6 @@ fn route_stops(
         .collect()
 }
 
-#[allow(clippy::type_complexity)]
 fn update_route_path(
     time: Res<Time<Real>>,
     mut path: ResMut<PlayerRoutePath>,

@@ -242,19 +242,31 @@ fn pick_slot_for(
     Some(slot)
 }
 
+/// The clock, settings and scene queries the planner reads.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct PlanInputs<'w, 's> {
+    time: Res<'w, Time<Real>>,
+    env: Option<Res<'w, opts_bevy::SessionEnvironment>>,
+    settings: Res<'w, TrafficSettings>,
+    markers: Query<'w, 's, (&'static BusStopMarker, &'static GlobalTransform)>,
+    camera: Query<'w, 's, &'static GlobalTransform, With<opts_bevy::MainCamera>>,
+}
+
 /// Plans the next scheduled vehicle.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn plan_scheduled(
-    time: Res<Time<Real>>,
-    env: Option<Res<opts_bevy::SessionEnvironment>>,
     job: Option<ResMut<WorldLoadJob>>,
     state: Res<TrafficState>,
     mut pool: ResMut<TrafficPool>,
     mut sched: ResMut<ScheduledTraffic>,
-    settings: Res<TrafficSettings>,
-    markers: Query<(&BusStopMarker, &GlobalTransform)>,
-    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
+    inputs: PlanInputs,
 ) {
+    let PlanInputs {
+        time,
+        env,
+        settings,
+        markers,
+        camera,
+    } = inputs;
     sched.timer += time.delta_secs();
     if sched.timer < PLAN_EVERY_S {
         return;

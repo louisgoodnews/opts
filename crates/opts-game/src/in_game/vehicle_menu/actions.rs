@@ -4,7 +4,7 @@ mod remote;
 
 use super::route_page::{clear_route, jump_to_entry, pick_route, pick_route_text, pick_run};
 use super::*;
-use remote::parse_remote_commands;
+use remote::{parse_remote_commands, RemoteCtx};
 
 /// What the action handlers of the menu read and change.
 struct MenuCtx<'a> {
@@ -13,7 +13,7 @@ struct MenuCtx<'a> {
     registry: &'a mut SessionVehicles,
     catalogue: Option<&'a GameCatalogue>,
     job: Option<&'a WorldLoadJob>,
-    library: &'a mut Option<ResMut<'a, crate::new_game_screen::configs::ConfigLibrary>>,
+    library: &'a mut Option<&'a mut crate::new_game_screen::configs::ConfigLibrary>,
     fallback: &'a mut Option<crate::new_game_screen::configs::ConfigLibrary>,
 }
 
@@ -367,19 +367,32 @@ fn pick_action(action: Action, c: &mut MenuCtx) -> Option<Action> {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+/// The resources the menu actions read and change besides the menu itself.
+#[derive(bevy::ecs::system::SystemParam)]
+pub(super) struct MenuWorld<'w> {
+    catalogue: Option<Res<'w, GameCatalogue>>,
+    job: Option<Res<'w, WorldLoadJob>>,
+    registry: ResMut<'w, SessionVehicles>,
+    remote: ResMut<'w, MenuCommands>,
+    formation_commands: ResMut<'w, super::super::formation_menu::FormationCommands>,
+    library: Option<ResMut<'w, crate::new_game_screen::configs::ConfigLibrary>>,
+}
+
 pub(super) fn menu_actions(
     mut clicks: MessageReader<ButtonClicked>,
     actions: Query<&Action>,
     mut menu: ResMut<VehicleMenu>,
-    catalogue: Option<Res<GameCatalogue>>,
-    job: Option<Res<WorldLoadJob>>,
     mut commands: Commands,
-    mut registry: ResMut<SessionVehicles>,
-    mut remote: ResMut<MenuCommands>,
-    mut formation_commands: ResMut<super::super::formation_menu::FormationCommands>,
-    mut library: Option<ResMut<crate::new_game_screen::configs::ConfigLibrary>>,
+    world: MenuWorld,
 ) {
+    let MenuWorld {
+        catalogue,
+        job,
+        mut registry,
+        mut remote,
+        mut formation_commands,
+        mut library,
+    } = world;
     // The wizard's list when the game has one (one list for the screens and the protocol), else
     // one read from the file when first needed.
     let mut fallback: Option<crate::new_game_screen::configs::ConfigLibrary> = None;
@@ -389,14 +402,19 @@ pub(super) fn menu_actions(
         .collect();
     parse_remote_commands(
         &mut remote,
-        &mut menu,
-        &mut formation_commands,
-        catalogue.as_deref(),
-        job.as_deref(),
-        &registry,
-        &mut commands,
+        RemoteCtx {
+            menu: &mut menu,
+            formation_commands: &mut formation_commands,
+            catalogue: catalogue.as_deref(),
+            job: job.as_deref(),
+            registry: &registry,
+            commands: &mut commands,
+        },
         &mut todo,
     );
+    // Fresh `Commands` and plain borrows, so `MenuCtx`'s single lifetime fits.
+    let mut commands = commands.reborrow();
+    let mut library = library.as_deref_mut();
     let mut ctx = MenuCtx {
         menu: &mut menu,
         commands: &mut commands,
@@ -430,8 +448,8 @@ pub(super) fn menu_actions(
 }
 
 /// The configuration list the menu works on: the game's own, else one read from the file.
-fn lib_of<'a>(
-    library: &'a mut Option<ResMut<crate::new_game_screen::configs::ConfigLibrary>>,
+fn lib_of<'a, 'b>(
+    library: &'a mut Option<&'b mut crate::new_game_screen::configs::ConfigLibrary>,
     fallback: &'a mut Option<crate::new_game_screen::configs::ConfigLibrary>,
 ) -> &'a mut crate::new_game_screen::configs::ConfigLibrary {
     match library {

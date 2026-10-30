@@ -69,16 +69,13 @@ pub(in crate::in_game::omsi_world) fn next_doors(
 /// Loads the head unit's scripts into an engine, with the depot and the timetable of `run` as
 /// callbacks, and puts them on the vehicle `root`. `canvases` are the script textures the model's
 /// materials show. Returns whether the vehicle has scripts.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn attach(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
     root: Entity,
     bus_path: &Path,
-    canvases: Arc<RwLock<Vec<CpuScriptTexture>>>,
-    run: &RunRef,
-    seed: u64,
-    setvars: &[(String, String)],
+    (canvases, run): (Arc<RwLock<Vec<CpuScriptTexture>>>, &RunRef),
+    (seed, setvars): (u64, &[(String, String)]),
 ) -> bool {
     let Some((scripts, vehicle_route)) = engine_for(job, bus_path, canvases, run, seed, setvars)
     else {

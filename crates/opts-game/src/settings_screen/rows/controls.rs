@@ -42,13 +42,14 @@ fn enum_control(
             group,
             d,
             format!("option-{}", o.value),
-            Some(o.label_key),
-            "",
-            o.value == cur,
-            SettingOp::Set {
-                key,
-                value: o.value.to_string(),
-            },
+            (Some(o.label_key), ""),
+            (
+                o.value == cur,
+                SettingOp::Set {
+                    key,
+                    value: o.value.to_string(),
+                },
+            ),
             u,
         );
     }
@@ -66,13 +67,14 @@ fn stepper_control(
         group,
         d,
         "down".into(),
-        Some("settings-step-down"),
-        "",
-        false,
-        SettingOp::Step {
-            key: d.key,
-            dir: -1,
-        },
+        (Some("settings-step-down"), ""),
+        (
+            false,
+            SettingOp::Step {
+                key: d.key,
+                dir: -1,
+            },
+        ),
         u,
     );
     super::auto::value_text(c, group, ctx, d, cur);
@@ -81,10 +83,8 @@ fn stepper_control(
         group,
         d,
         "up".into(),
-        Some("settings-step-up"),
-        "",
-        false,
-        SettingOp::Step { key: d.key, dir: 1 },
+        (Some("settings-step-up"), ""),
+        (false, SettingOp::Step { key: d.key, dir: 1 }),
         u,
     );
     // Preset chips: one click to a usual value; the one that matches is marked.
@@ -94,13 +94,14 @@ fn stepper_control(
             group,
             d,
             format!("preset-{preset}"),
-            None,
-            &format!("{preset}{}", d.preset_suffix),
-            *preset == cur,
-            SettingOp::Set {
-                key: d.key,
-                value: (*preset).to_string(),
-            },
+            (None, &format!("{preset}{}", d.preset_suffix)),
+            (
+                *preset == cur,
+                SettingOp::Set {
+                    key: d.key,
+                    value: (*preset).to_string(),
+                },
+            ),
             u,
         );
     }
@@ -120,14 +121,15 @@ fn binding_control(
         group,
         d,
         "change".into(),
-        Some(if waiting {
-            "settings-rebind-wait"
-        } else {
-            "settings-rebind-change"
-        }),
-        "",
-        waiting,
-        SettingOp::Run { key: d.key },
+        (
+            Some(if waiting {
+                "settings-rebind-wait"
+            } else {
+                "settings-rebind-change"
+            }),
+            "",
+        ),
+        (waiting, SettingOp::Run { key: d.key }),
         u,
     );
 }
@@ -156,10 +158,8 @@ fn path_control(
             group,
             d,
             "choose".into(),
-            Some("settings-choose"),
-            "",
-            false,
-            SettingOp::Run { key: d.key },
+            (Some("settings-choose"), ""),
+            (false, SettingOp::Run { key: d.key }),
             u,
         );
     }
@@ -219,13 +219,14 @@ fn text_control(
                     group,
                     d,
                     "option-builtin".into(),
-                    Some("settings-theme-file-builtin"),
-                    "",
-                    sel,
-                    SettingOp::Set {
-                        key: d.key,
-                        value: n,
-                    },
+                    (Some("settings-theme-file-builtin"), ""),
+                    (
+                        sel,
+                        SettingOp::Set {
+                            key: d.key,
+                            value: n,
+                        },
+                    ),
                     u,
                 );
             } else {
@@ -235,13 +236,14 @@ fn text_control(
                     group,
                     d,
                     id,
-                    None,
-                    &n.clone(),
-                    sel,
-                    SettingOp::Set {
-                        key: d.key,
-                        value: n,
-                    },
+                    (None, &n.clone()),
+                    (
+                        sel,
+                        SettingOp::Set {
+                            key: d.key,
+                            value: n,
+                        },
+                    ),
                     u,
                 );
             }
@@ -263,10 +265,8 @@ fn action_control(
         group,
         d,
         "run".into(),
-        Some(d.label_key),
-        "",
-        false,
-        SettingOp::Run { key: d.key },
+        (Some(d.label_key), ""),
+        (false, SettingOp::Run { key: d.key }),
         u,
     );
 }

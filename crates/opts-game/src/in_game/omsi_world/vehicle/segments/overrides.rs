@@ -146,17 +146,14 @@ fn script_image_for(
 }
 
 /// Builds the texture overrides of `mesh_def`.
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn build_overrides(
-    job: &WorldLoadJob,
-    commands: &mut Commands,
-    images: &mut Assets<Image>,
-    mesh_def: &ModelMesh,
-    owner: Entity,
-    root: Entity,
+    (job, commands, images): (&WorldLoadJob, &mut Commands, &mut Assets<Image>),
+    (mesh_def, owner, root): (&ModelMesh, Entity, Entity),
     tex_dirs: &[PathBuf],
-    text_images: &mut std::collections::HashMap<usize, Handle<Image>>,
-    script_images: &mut std::collections::HashMap<usize, Handle<Image>>,
+    (text_images, script_images): (
+        &mut std::collections::HashMap<usize, Handle<Image>>,
+        &mut std::collections::HashMap<usize, Handle<Image>>,
+    ),
 ) -> Vec<TextureOverride> {
     mesh_def
         .materials

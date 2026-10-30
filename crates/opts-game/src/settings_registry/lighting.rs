@@ -218,7 +218,6 @@ pub fn copy_level_to_custom(
 }
 
 /// Opens the governor only in a drive that is running: not paused, not loading.
-#[allow(clippy::type_complexity)]
 pub fn update_governor_gate(
     state: Option<Res<State<crate::app_state::AppState>>>,
     time: Option<Res<Time<Virtual>>>,

@@ -203,23 +203,42 @@ fn place_on_dome(cam: Vec3, dir: Vec3) -> Transform {
     t
 }
 
-/// Updates sky colours, sun/moon placement and lighting.
-#[allow(clippy::type_complexity, clippy::too_many_arguments)]
-pub fn update_sky(
-    env: Res<SessionEnvironment>,
-    effects: Option<Res<opts_bevy::WeatherEffects>>,
-    fog_view: Option<Res<opts_bevy::weather::GroundFogView>>,
-    mut commands: Commands,
-    sky: Option<ResMut<Sky>>,
-    mut images: ResMut<Assets<Image>>,
-    mut clear: Option<ResMut<ClearColor>>,
-    mut ambient: Option<ResMut<GlobalAmbientLight>>,
-    look: Option<Res<crate::look::ActiveLook>>,
-    settings: Option<Res<crate::settings::GameSettings>>,
-    cameras: Query<&GlobalTransform, (With<opts_bevy::MainCamera>, Without<SkyDome>)>,
-    mut sun: Query<(&mut Transform, &mut DirectionalLight), (With<SunLight>, Without<SkyDome>)>,
-    mut sun_disc: Query<
-        &mut Transform,
+/// Optional read-only inputs of [`update_sky`].
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct SkyInputs<'w> {
+    effects: Option<Res<'w, opts_bevy::WeatherEffects>>,
+    fog_view: Option<Res<'w, opts_bevy::weather::GroundFogView>>,
+    look: Option<Res<'w, crate::look::ActiveLook>>,
+    settings: Option<Res<'w, crate::settings::GameSettings>>,
+}
+
+/// What [`update_sky`] repaints: the sky texture, the clear colour and the ambient light.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct SkyTargets<'w> {
+    images: ResMut<'w, Assets<Image>>,
+    clear: Option<ResMut<'w, ClearColor>>,
+    ambient: Option<ResMut<'w, GlobalAmbientLight>>,
+}
+
+/// The queries of [`update_sky`].
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct SkyQueries<'w, 's> {
+    cameras: Query<
+        'w,
+        's,
+        &'static GlobalTransform,
+        (With<opts_bevy::MainCamera>, Without<SkyDome>),
+    >,
+    sun: Query<
+        'w,
+        's,
+        (&'static mut Transform, &'static mut DirectionalLight),
+        (With<SunLight>, Without<SkyDome>),
+    >,
+    sun_disc: Query<
+        'w,
+        's,
+        &'static mut Transform,
         (
             With<SunDisc>,
             Without<SkyDome>,
@@ -227,7 +246,29 @@ pub fn update_sky(
             Without<MoonDisc>,
         ),
     >,
+}
+
+/// Updates sky colours, sun/moon placement and lighting.
+pub fn update_sky(
+    env: Res<SessionEnvironment>,
+    mut commands: Commands,
+    sky: Option<ResMut<Sky>>,
+    inputs: SkyInputs,
+    mut targets: SkyTargets,
+    mut queries: SkyQueries,
 ) {
+    let SkyInputs {
+        effects,
+        fog_view,
+        look,
+        settings,
+    } = inputs;
+    let SkyTargets {
+        images,
+        clear,
+        ambient,
+    } = &mut *targets;
+    let (cameras, sun, sun_disc) = (&queries.cameras, &mut queries.sun, &mut queries.sun_disc);
     let Some(mut sky) = sky else { return };
     let Some(cam) = cameras.iter().next().map(GlobalTransform::translation) else {
         return;
@@ -269,9 +310,9 @@ pub fn update_sky(
         sky.last_revision = Some(env.revision());
         let fog_on = effects.as_ref().is_none_or(|e| e.fog);
         let (horizon, veil_color) =
-            refresh_texture(&sky, &env, (fog_on, fog_clear, elevation), &mut images);
+            refresh_texture(&sky, &env, (fog_on, fog_clear, elevation), images);
         let (sun_colour, sun_lux) = sun_light(&sky, &env, elevation);
-        for (_, mut light) in &mut sun {
+        for (_, mut light) in sun.iter_mut() {
             light.color = sun_colour;
             light.illuminance = sun_lux;
         }
@@ -284,10 +325,10 @@ pub fn update_sky(
         }
         commands.insert_resource(SkyHorizon(horizon));
     }
-    for (mut t, _) in &mut sun {
+    for (mut t, _) in sun.iter_mut() {
         *t = Transform::from_translation(cam).looking_to(-sun_dir, Vec3::Y);
     }
-    for mut t in &mut sun_disc {
+    for mut t in sun_disc.iter_mut() {
         *t = place_on_dome(cam, sun_dir);
     }
 }

@@ -30,6 +30,7 @@ mod systems;
 pub(crate) mod texts;
 pub(crate) mod ui;
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_gui::interaction::focus::FocusEvent;
 use opts_gui::l10n::Localization;
@@ -144,20 +145,40 @@ impl Plugin for NewGameMenuPlugin {
     }
 }
 
+/// What a step is built from (read-only).
+#[derive(SystemParam)]
+struct WizardRead<'w> {
+    loc: Res<'w, Localization>,
+    catalogue: Res<'w, GameCatalogue>,
+    weather: Res<'w, opts_bevy::WeatherCatalogue>,
+    trips: Res<'w, trips::TripState>,
+}
+
+/// The texts and the catalogue, for the systems that only need those two.
+#[derive(SystemParam)]
+pub struct TextsAndCatalogue<'w> {
+    /// The texts.
+    pub loc: Res<'w, Localization>,
+    /// The maps and vehicles read.
+    pub catalogue: Res<'w, GameCatalogue>,
+}
+
 /// Entering the wizard: first step, the last drive's choices (once per session), the frame.
-#[allow(clippy::too_many_arguments)]
 fn enter_wizard(
     mut commands: Commands,
     shell: Res<ShellContent>,
-    loc: Res<Localization>,
-    catalogue: Res<GameCatalogue>,
-    weather: Res<opts_bevy::WeatherCatalogue>,
+    read: WizardRead,
     mut setup: ResMut<NewGameSetup>,
     mut history: ResMut<PlannerHistory>,
     mut state: ResMut<PlannerState>,
-    trips: Res<trips::TripState>,
     mut events: MessageWriter<FocusEvent>,
 ) {
+    let WizardRead {
+        loc,
+        catalogue,
+        weather,
+        trips,
+    } = read;
     let notes = history.apply_last(&mut setup, &catalogue);
     // A remembered drive brings its date and time: choosing a map keeps them.
     if history.history.last().is_some() && !catalogue.maps.is_empty() {
@@ -207,19 +228,21 @@ fn build_step(
 }
 
 /// A step change replaces the body.
-#[allow(clippy::too_many_arguments)]
 fn rebuild_body(
     mut state: ResMut<PlannerState>,
     body: Query<Entity, With<PlannerBody>>,
-    loc: Res<Localization>,
-    catalogue: Res<GameCatalogue>,
-    weather: Res<opts_bevy::WeatherCatalogue>,
+    read: WizardRead,
     setup: Res<NewGameSetup>,
     history: Res<PlannerHistory>,
-    trips: Res<trips::TripState>,
     mut commands: Commands,
     mut built_with: Local<(usize, usize, usize)>,
 ) {
+    let WizardRead {
+        loc,
+        catalogue,
+        weather,
+        trips,
+    } = read;
     let Ok(body) = body.single() else {
         return;
     };

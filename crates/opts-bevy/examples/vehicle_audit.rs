@@ -6,7 +6,7 @@
 //! Usage: `find <omsi> -name '*.bus' | cargo run --release -p opts-bevy --example vehicle_audit -- <omsi root>`.
 
 use std::io::BufRead;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use bevy::math::Vec3;
 use bevy::mesh::VertexAttributeValues as V;
@@ -31,6 +31,38 @@ fn bounds(path: &Path, bytes: &[u8]) -> Option<(Vec3, Vec3)> {
     (lo.x <= hi.x).then_some((lo, hi))
 }
 
+/// Parses a vehicle's `.bus` and `model.cfg`; returns the model and the directory of its config.
+fn load_vehicle(install: &OmsiInstall, bus_path: &Path) -> Option<(ModelConfig, PathBuf)> {
+    let bytes = std::fs::read(bus_path).ok()?;
+    let bus = BusManifest::parse_bytes(&bytes).ok()?;
+    let cfg_rel = bus.model_cfg.clone()?;
+    let bus_dir = bus_path.parent().unwrap_or(Path::new("."));
+    let cfg_path = install.find_in(bus_dir, &cfg_rel)?;
+    let model = ModelConfig::parse_bytes(&std::fs::read(&cfg_path).unwrap_or_default()).ok()?;
+    let model_dir = cfg_path.parent().unwrap_or(Path::new(".")).to_path_buf();
+    Some((model, model_dir))
+}
+
+/// Whether any mesh of the file has an unreadable (scrambled) vertex layout.
+fn is_scrambled(path: &Path, data: &[u8]) -> bool {
+    parse_mesh_file(path, data).ok().is_some_and(|m| {
+        m.iter()
+            .any(|o| o.vertex_layout() == opts_core::formats::o3d::VertexLayout::Unreadable)
+    })
+}
+
+/// Prints the totals (vehicles, wheels, ok wheels, scrambled) and the sorted mismatches.
+fn report(bad: &mut Vec<String>, totals: (usize, usize, usize, usize)) {
+    let (vehicles, wheels, ok_wheels, skipped_scrambled) = totals;
+    println!("vehicles {vehicles}, wheel meshes checked {wheels}, within 0.35 m (height/forward) of their pivot {ok_wheels}, scrambled (skipped) {skipped_scrambled}");
+    bad.sort();
+    bad.dedup();
+    for b in bad.iter().take(60) {
+        println!("MISMATCH {b}");
+    }
+    println!("mismatches: {}", bad.len());
+}
+
 fn main() {
     let root = std::env::args().nth(1).expect("OMSI root");
     let install = OmsiInstall::new(&root);
@@ -38,27 +70,12 @@ fn main() {
     let mut bad: Vec<String> = Vec::new();
     for line in std::io::stdin().lock().lines().map_while(Result::ok) {
         let bus_path = Path::new(&line);
-        let Ok(bytes) = std::fs::read(bus_path) else {
-            continue;
-        };
-        let Ok(bus) = BusManifest::parse_bytes(&bytes) else {
-            continue;
-        };
-        let Some(cfg_rel) = bus.model_cfg.clone() else {
-            continue;
-        };
-        let bus_dir = bus_path.parent().unwrap_or(Path::new("."));
-        let Some(cfg_path) = install.find_in(bus_dir, &cfg_rel) else {
-            continue;
-        };
-        let Ok(model) = ModelConfig::parse_bytes(&std::fs::read(&cfg_path).unwrap_or_default())
-        else {
+        let Some((model, model_dir)) = load_vehicle(&install, bus_path) else {
             continue;
         };
         let Some(lod0) = model.lods.first() else {
             continue;
         };
-        let model_dir = cfg_path.parent().unwrap_or(Path::new("."));
         vehicles += 1;
         for mesh in &lod0.meshes {
             let is_wheel = mesh.anims.iter().any(|a| {
@@ -72,17 +89,14 @@ fn main() {
             let Some(pivot) = mesh.anims.iter().find_map(|a| a.origin_trans) else {
                 continue;
             };
-            let Some(path) = install.find_in(model_dir, &mesh.path) else {
+            let Some(path) = install.find_in(&model_dir, &mesh.path) else {
                 continue;
             };
             let Ok(data) = std::fs::read(&path) else {
                 continue;
             };
             // Scrambled meshes are skipped by the engine, so their placement is moot.
-            if parse_mesh_file(&path, &data).ok().is_some_and(|m| {
-                m.iter()
-                    .any(|o| o.vertex_layout() == opts_core::formats::o3d::VertexLayout::Unreadable)
-            }) {
+            if is_scrambled(&path, &data) {
                 skipped_scrambled += 1;
                 continue;
             }
@@ -111,11 +125,5 @@ fn main() {
             }
         }
     }
-    println!("vehicles {vehicles}, wheel meshes checked {wheels}, within 0.35 m (height/forward) of their pivot {ok_wheels}, scrambled (skipped) {skipped_scrambled}");
-    bad.sort();
-    bad.dedup();
-    for b in bad.iter().take(60) {
-        println!("MISMATCH {b}");
-    }
-    println!("mismatches: {}", bad.len());
+    report(&mut bad, (vehicles, wheels, ok_wheels, skipped_scrambled));
 }

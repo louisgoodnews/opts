@@ -6,6 +6,7 @@
 //! The shell acts only when none of these was in play at the start of the frame, so one press
 //! never does two things. In a drive the pause overlay owns Esc (the pause overlay).
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_bevy::reporting::{MenuModalActive, ModalActive};
 use opts_gui::components::combobox::M3Combobox;
@@ -45,18 +46,29 @@ impl EscGate {
     }
 }
 
+/// What can own the Back press besides the screen.
+#[derive(SystemParam)]
+pub struct EscProbes<'w, 's> {
+    modals: Query<'w, 's, (), With<ModalRoot>>,
+    combos: Query<'w, 's, &'static M3Combobox>,
+    text: Query<'w, 's, (), (With<Focused>, TextEntry)>,
+    toast: Query<'w, 's, (), (With<Focused>, With<ToastActionButton>)>,
+}
+
 /// Snapshots the state of the screen at the start of the frame.
-#[allow(clippy::too_many_arguments)]
 pub fn compute_esc_gate(
-    modals: Query<(), With<ModalRoot>>,
+    probes: EscProbes,
     report: Option<Res<ModalActive>>,
     menu: Option<Res<MenuModalActive>>,
-    combos: Query<&M3Combobox>,
-    text: Query<(), (With<Focused>, TextEntry)>,
-    toast: Query<(), (With<Focused>, With<ToastActionButton>)>,
     viewpoint: Option<Res<opts_bevy::ViewpointState>>,
     mut gate: ResMut<EscGate>,
 ) {
+    let EscProbes {
+        modals,
+        combos,
+        text,
+        toast,
+    } = probes;
     *gate = EscGate {
         overlay_open: !modals.is_empty()
             || report.is_some_and(|m| m.0)

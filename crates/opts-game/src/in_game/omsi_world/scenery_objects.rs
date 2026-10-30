@@ -219,15 +219,13 @@ impl WorldLoadJob {
 
     /// Hangs a placed object's parts under `root`: flat as before, or as a runtime hierarchy
     /// when the object has LOD groups, rules, lights, light maps or scripts.
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn finish_object(
         &mut self,
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<StandardMaterial>,
         root: Entity,
-        sco: &SceneryObject,
-        obj: &MapObjectInstance,
+        (sco, obj): (&SceneryObject, &MapObjectInstance),
         mesh_parts: Vec<Vec<ModelPart>>,
         template: Option<Arc<ScriptTemplate>>,
     ) {

@@ -7,6 +7,7 @@
 
 pub mod environment;
 pub mod light_row;
+mod params;
 pub mod stats;
 
 use bevy::app::AppExit;
@@ -28,7 +29,6 @@ use crate::settings_screen::SettingsOverlay;
 use crate::shell::dialog::{
     spawn_confirm_dialog, DialogButtonSpec, DialogButtonStyle, DialogChoice, DialogSpec, CANCEL,
 };
-use crate::shell::esc::EscGate;
 use crate::shell::keys;
 
 /// Tag of the leave confirmation.
@@ -175,18 +175,19 @@ pub(crate) fn close_pause(
 }
 
 /// Esc (or Start) in a running drive opens the overlay; during loading Esc cancels the load.
-#[allow(clippy::too_many_arguments)]
 pub fn pause_input(
     mut commands: Commands,
-    mut actions: MessageReader<UiAction>,
-    mut requests: MessageReader<PauseRequest>,
-    gate: Res<EscGate>,
-    keys: Res<ButtonInput<KeyCode>>,
-    load: Res<SimulationLoadState>,
+    signals: params::PauseSignals,
+    input: params::PauseGate,
     mut pause: ResMut<Pause>,
     mut time: ResMut<Time<Virtual>>,
     mut next: ResMut<NextState<AppState>>,
 ) {
+    let params::PauseSignals {
+        mut actions,
+        mut requests,
+    } = signals;
+    let params::PauseGate { gate, keys, load } = input;
     let mut open = requests.read().count() > 0;
     for action in actions.read() {
         match action {
@@ -229,20 +230,25 @@ pub fn pause_cancel(
 }
 
 /// The overlay's entries.
-#[allow(clippy::too_many_arguments)]
 pub fn pause_items(
     mut commands: Commands,
-    mut activated: MessageReader<Activated>,
-    items: Query<&PauseItem>,
-    disabled: Query<(), With<opts_gui::interaction::state::Disabled>>,
+    clicks: params::PauseClicks,
     mut pause: ResMut<Pause>,
-    mut time: ResMut<Time<Virtual>>,
-    rebuild: Option<Res<opts_bevy::ChronoRebuild>>,
+    clock: params::PauseClock,
     mut menu: ResMut<VehicleMenu>,
-    mut report: ResMut<ReportModalData>,
-    report_state: Res<State<ReportModalState>>,
-    mut report_next: ResMut<NextState<ReportModalState>>,
+    dialog: params::ReportAccess,
 ) {
+    let params::PauseClicks {
+        mut activated,
+        items,
+        disabled,
+    } = clicks;
+    let params::PauseClock { mut time, rebuild } = clock;
+    let params::ReportAccess {
+        report: mut report,
+        state: report_state,
+        next: mut report_next,
+    } = dialog;
     for Activated(entity) in activated.read() {
         let Ok(which) = items.get(*entity) else {
             continue;

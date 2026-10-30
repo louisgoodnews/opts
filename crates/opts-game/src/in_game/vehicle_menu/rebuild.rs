@@ -126,22 +126,44 @@ fn select_page(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+/// What the menu pages are built from.
+#[derive(bevy::ecs::system::SystemParam)]
+pub(super) struct RebuildData<'w, 's> {
+    theme: Option<Res<'w, MaterialTheme>>,
+    catalogue: Option<Res<'w, GameCatalogue>>,
+    setup: Option<Res<'w, NewGameSetup>>,
+    registry: Res<'w, SessionVehicles>,
+    index: Res<'w, EntryIndex>,
+    job: Option<Res<'w, WorldLoadJob>>,
+    routes: Query<
+        'w,
+        's,
+        &'static opts_bevy::route::VehicleRoute,
+        With<opts_bevy::PlayerVehicle>,
+    >,
+    env: Option<Res<'w, opts_bevy::environment::SessionEnvironment>>,
+    session: Option<Res<'w, super::super::types::InGameSessionInfo>>,
+}
+
+/// Rebuilds the menu page when it or the data it shows changed.
 pub(super) fn rebuild_menu(
     mut menu: ResMut<VehicleMenu>,
     mut commands: Commands,
     roots: Roots,
     scrolls: Query<(&ListScroll, &ScrollPosition)>,
-    theme: Option<Res<MaterialTheme>>,
-    catalogue: Option<Res<GameCatalogue>>,
-    setup: Option<Res<NewGameSetup>>,
-    registry: Res<SessionVehicles>,
-    index: Res<EntryIndex>,
-    job: Option<Res<WorldLoadJob>>,
-    routes: Query<&opts_bevy::route::VehicleRoute, With<opts_bevy::PlayerVehicle>>,
-    env: Option<Res<opts_bevy::environment::SessionEnvironment>>,
-    session: Option<Res<super::super::types::InGameSessionInfo>>,
+    data: RebuildData,
 ) {
+    let RebuildData {
+        theme,
+        catalogue,
+        setup,
+        registry,
+        index,
+        job,
+        routes,
+        env,
+        session,
+    } = data;
     let want = (menu.page, menu.config_open);
     // The Setvars page also follows changes made outside it (the control protocol).
     let shown_now = registry.active().map(|r| r.setvars.clone());

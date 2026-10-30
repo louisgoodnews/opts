@@ -2,8 +2,15 @@
 
 use super::*;
 
+/// Optional inputs of [`setup_in_game_session`]: the shell look, the catalogue and the CLI args.
+#[derive(bevy::ecs::system::SystemParam)]
+pub(crate) struct SessionSetupInputs<'w> {
+    shell: Option<Res<'w, crate::shell::ShellContent>>,
+    catalogue: Option<Res<'w, crate::new_game_screen::types::GameCatalogue>>,
+    args: Option<Res<'w, crate::AppArgs>>,
+}
+
 /// Initializes simulation resources and spawns the loading screen on entering [`AppState::InGame`].
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn setup_in_game_session(
     mut commands: Commands,
     mut load_state: ResMut<SimulationLoadState>,
@@ -11,10 +18,13 @@ pub(crate) fn setup_in_game_session(
     mut report: ResMut<load_report::LoadReport>,
     mut environment: MessageWriter<opts_bevy::EnvironmentChange>,
     setup: Res<NewGameSetup>,
-    shell: Option<Res<crate::shell::ShellContent>>,
-    catalogue: Option<Res<crate::new_game_screen::types::GameCatalogue>>,
-    args: Option<Res<crate::AppArgs>>,
+    inputs: SessionSetupInputs,
 ) {
+    let SessionSetupInputs {
+        shell,
+        catalogue,
+        args,
+    } = inputs;
     tracing::info!(
         map = ?setup.selected_map,
         vehicle = ?setup.selected_vehicle,
