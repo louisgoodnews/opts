@@ -46,6 +46,47 @@ pub struct BodyMotion {
     rise: f32,
 }
 
+
+/// The longitudinal positions of the front and rear axle (a short default pitch base without
+/// axles) and the widest track (2 m when none is known).
+fn axle_extent(axles: &[opts_sim::vehicle::axle::AxleState]) -> (f32, f32, f32) {
+    let axles = &controller.sim.axles;
+    let track = axles
+        .iter()
+        .map(|a| a.config.track_width_m)
+        .fold(0.0_f32, f32::max);
+    let ends = axles
+        .iter()
+        .map(|a| a.config.longitudinal_m)
+        .fold((f32::MIN, f32::MAX), |(hi, lo), l| (hi.max(l), lo.min(l)));
+    let (hi, lo) = ends;
+    (
+        (hi > f32::MIN).then_some(hi).unwrap_or(PITCH_BASE_M * 0.5),
+        (lo < f32::MAX).then_some(lo).unwrap_or(-PITCH_BASE_M * 0.5),
+        if track > 0.5 { track } else { 2.0 },
+    )
+}
+
+/// The fine unevenness of the road texture under every wheel shakes the body on its springs
+/// (M-0146).
+fn add_unevenness(
+    sim: &mut opts_sim::vehicle::VehicleSimulation,
+    index: &GroundIndex,
+    (px, py, sin, cos): (f32, f32, f32, f32),
+    z: f32,
+) {
+    for (a, axle) in sim.axles.iter().enumerate() {
+        let lon = axle.config.longitudinal_m;
+        let half = axle.config.track_width_m.max(0.5) * 0.5;
+        for (k, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
+            let lat = side * half;
+            let wx = px + sin * lon + cos * lat;
+            let wy = py + cos * lon - sin * lat;
+            sim.wheel_ground_m[a * 2 + k] += index.unevenness_at(wx, wy, z);
+        }
+    }
+}
+
 /// Puts the player's vehicle on the ground: the height under each of its four wheel positions
 /// gives elevation, pitch and roll. Wheels over a drop carry nothing; when all wheels leave the
 /// ground the vehicle falls under gravity instead of snapping down.
@@ -59,27 +100,7 @@ pub fn follow_ground(
     motions.retain(|e, _| vehicles.contains(*e));
     for (entity, mut controller, mut tf) in &mut vehicles {
         let motion = motions.entry(entity).or_default();
-        let (front, rear, track) = {
-            let axles = &controller.sim.axles;
-            let track = axles
-                .iter()
-                .map(|a| a.config.track_width_m)
-                .fold(0.0_f32, f32::max);
-            let ends = axles
-                .iter()
-                .map(|a| a.config.longitudinal_m)
-                .fold((f32::MIN, f32::MAX), |(hi, lo), l| (hi.max(l), lo.min(l)));
-            let (hi, lo) = ends;
-            (
-                (hi > f32::MIN).then_some(hi),
-                (lo < f32::MAX).then_some(lo),
-                if track > 0.5 { track } else { 2.0 },
-            )
-        };
-        let (front, rear) = (
-            front.unwrap_or(PITCH_BASE_M * 0.5),
-            rear.unwrap_or(-PITCH_BASE_M * 0.5),
-        );
+        let (front, rear, track) = axle_extent(&controller.sim.axles);
         let ch = &mut controller.sim.chassis;
         let (px, py) = (ch.position.x, ch.position.y);
         let h = ch.heading_rad;
@@ -170,18 +191,7 @@ pub fn follow_ground(
             sim.wheel_ground_m[last] = -twist;
             sim.wheel_ground_m[last + 1] = twist;
         }
-        // The fine unevenness of the road texture under every wheel shakes the body on its
-        // springs (M-0146).
-        for (a, axle) in sim.axles.iter().enumerate() {
-            let lon = axle.config.longitudinal_m;
-            let half = axle.config.track_width_m.max(0.5) * 0.5;
-            for (k, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
-                let lat = side * half;
-                let wx = px + sin * lon + cos * lat;
-                let wy = py + cos * lon - sin * lat;
-                sim.wheel_ground_m[a * 2 + k] += index.unevenness_at(wx, wy, z);
-            }
-        }
+        add_unevenness(sim, &index, (px, py, sin, cos), z);
         tf.translation.y = sim.chassis.elevation_z + heave;
         tf.rotation = Quat::from_rotation_y(-h)
             * Quat::from_rotation_x(motion.pitch + spring_pitch)

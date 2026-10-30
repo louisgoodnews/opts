@@ -126,6 +126,70 @@ const RETIRE_AFTER_S: f64 = 8.0;
 /// other vehicle.
 const RETIRE_FAR_M: f64 = 80.0;
 
+
+/// `OPTS_DBG_OBSTACLES`: logs the obstacles and every agent that is near one.
+fn log_obstacles(world: &opts_traffic::TrafficWorld) {
+    if std::env::var_os("OPTS_DBG_OBSTACLES").is_none() {
+        return;
+    }
+    tracing::info!(
+        obstacles = world.obstacles().len(),
+        lanes_blocked = world.phantom_count(),
+        agents = world.agents().len(),
+        lanes = world.graph().len(),
+        "traffic obstacles"
+    );
+    for a in world.agents() {
+        let Some((pos, h)) = a.pose(world.graph()) else {
+            continue;
+        };
+        for o in world.obstacles() {
+            let d = pos.distance(o.centre);
+            if d < 25.0 {
+                tracing::info!(
+                    id = a.id.0,
+                    lane = a.lane.0,
+                    s = a.s,
+                    speed = a.speed,
+                    accel = a.accel,
+                    waiting = a.waiting_s,
+                    ignore_until = a.ignore_conflicts_until,
+                    dist = d,
+                    heading = h,
+                    agent_at = ?pos,
+                    bus_at = ?o.centre,
+                    bus_len = o.length,
+                    "agent near obstacle"
+                );
+            }
+        }
+    }
+}
+
+/// A scheduled vehicle that finished its run is removed when nobody is near enough to see it go.
+fn retire_scheduled(
+    state: &mut TrafficState,
+    sched: &mut ScheduledTraffic,
+    camera: &Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
+) {
+    let now = state.world.clock();
+    for id in sched.take_retired(now) {
+        let near = state
+            .world
+            .agent(id)
+            .and_then(|a| a.pose(state.world.graph()))
+            .is_some_and(|(p, _)| {
+                camera.single().is_ok_and(|c| {
+                    let c = c.translation();
+                    DVec2::new(f64::from(c.x), -f64::from(c.z)).distance(p) < RETIRE_FAR_M
+                })
+            });
+        if !near {
+            state.world.despawn(id);
+        }
+    }
+}
+
 /// Steps the agents, places the vehicle models and removes finished or distant ones.
 pub fn move_traffic(
     time: Res<Time>,
@@ -165,56 +229,8 @@ pub fn move_traffic(
             }
         }
     }
-    let now = state.world.clock();
-    for id in sched.take_retired(now) {
-        let near = state
-            .world
-            .agent(id)
-            .and_then(|a| a.pose(state.world.graph()))
-            .is_some_and(|(p, _)| {
-                camera.single().is_ok_and(|c| {
-                    let c = c.translation();
-                    DVec2::new(f64::from(c.x), -f64::from(c.z)).distance(p) < RETIRE_FAR_M
-                })
-            });
-        if !near {
-            state.world.despawn(id);
-        }
-    }
-    if std::env::var_os("OPTS_DBG_OBSTACLES").is_some() {
-        tracing::info!(
-            obstacles = state.world.obstacles().len(),
-            lanes_blocked = state.world.phantom_count(),
-            agents = state.world.agents().len(),
-            lanes = state.world.graph().len(),
-            "traffic obstacles"
-        );
-        for a in state.world.agents() {
-            let Some((pos, h)) = a.pose(state.world.graph()) else {
-                continue;
-            };
-            for o in state.world.obstacles() {
-                let d = pos.distance(o.centre);
-                if d < 25.0 {
-                    tracing::info!(
-                        id = a.id.0,
-                        lane = a.lane.0,
-                        s = a.s,
-                        speed = a.speed,
-                        accel = a.accel,
-                        waiting = a.waiting_s,
-                        ignore_until = a.ignore_conflicts_until,
-                        dist = d,
-                        heading = h,
-                        agent_at = ?pos,
-                        bus_at = ?o.centre,
-                        bus_len = o.length,
-                        "agent near obstacle"
-                    );
-                }
-            }
-        }
-    }
+    retire_scheduled(&mut state, &mut sched, &camera);
+    log_obstacles(&state.world);
     let cam = camera.single().ok().map(GlobalTransform::translation);
     let mut far = Vec::new();
     for (entity, mut v, mut transform, mut visibility, chain) in &mut vehicles {
