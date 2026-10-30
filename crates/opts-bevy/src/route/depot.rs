@@ -2,6 +2,97 @@
 
 use super::*;
 
+
+fn parse_hof(p: &Path) -> Option<HofFile> {
+    std::fs::read(p)
+        .ok()
+        .and_then(|b| HofFile::parse_bytes(&b).ok())
+}
+
+/// The `.hof` files of a folder as (lower-case stem, path), sorted.
+fn hofs_in(dir: &Path) -> Vec<(String, std::path::PathBuf)> {
+    let mut v: Vec<_> = std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("hof")))
+        .map(|p| {
+            let stem = p
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_ascii_lowercase();
+            (stem, p)
+        })
+        .collect();
+    v.sort();
+    v
+}
+
+/// A candidate file with its rank.
+type Candidate<'a> = ([i64; 5], &'a (String, std::path::PathBuf));
+
+/// The best parsed file among `candidates`, by `rank`, then the number of routes, then the longer
+/// name.
+fn best_of(candidates: Vec<Candidate>) -> Option<HofFile> {
+    candidates
+        .into_iter()
+        .filter_map(|(rank, (stem, p))| {
+            parse_hof(p).map(|h| ((rank, h.routes.len(), stem.len()), h))
+        })
+        .max_by_key(|(key, _)| *key)
+        .map(|(_, h)| h)
+}
+
+/// The files that share numbers or words with the map names or the vehicle folder, ranked.
+fn shared_candidates<'a>(
+    own: &'a [(String, std::path::PathBuf)],
+    wanted: &std::collections::HashSet<String>,
+    vehicle: &std::collections::HashSet<String>,
+) -> Vec<Candidate<'a>> {
+    own
+            .iter()
+            .filter_map(|f| {
+                // Shared numbers (a line or edition) first, then shared words, then tokens of the
+                // vehicle's folder (the operator: `HHA` in `HH109_Stadtbus_HHA`); then the fewest
+                // numbers and words neither names (`1_HH109-2_HHA` and `1_HH109-VAN_HHA` lose to
+                // `1_HH109_HHA` for `Hamburg109`).
+                let mut rank = [0_i64; 5];
+                for t in name_tokens(&f.0) {
+                    let number = t.chars().all(char::is_numeric);
+                    match (wanted.contains(&t), vehicle.contains(&t), number) {
+                        (true, _, true) => rank[0] += 1,
+                        (true, _, false) => rank[1] += 1,
+                        (false, true, _) => rank[2] += 1,
+                        (false, false, true) => rank[3] -= 1,
+                        (false, false, false) => rank[4] -= 1,
+                    }
+                }
+                (rank[0] + rank[1] > 0).then_some((rank, f))
+            })
+            .collect()
+}
+
+/// The last resort: a file of the installation's `Vehicles` folders named like a map.
+fn find_in_install(omsi_root: &Path, maps: &[String]) -> Option<HofFile> {
+    for map in maps {
+        for dir in [
+            omsi_root.join("Vehicles"),
+            omsi_root.join("Vehicles/.hof Dateien"),
+        ] {
+            for (stem, p) in hofs_in(&dir) {
+                if stem == *map || stem.contains(map.as_str()) {
+                    if let Some(h) = parse(&p) {
+                        return Some(h);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Finds the depot (`.hof`) for a vehicle. `map_names` are the map's names to match, most
 /// telling first (its friendly name, then its folder name). For each name in turn: a file of the
 /// vehicle's folder named like it, then one whose name contains it (or the other way round);
@@ -19,46 +110,11 @@ pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_names: &[&str]) -> Optio
         .map(|n| n.trim().to_ascii_lowercase())
         .filter(|n| !n.is_empty())
         .collect();
-    let parse = |p: &Path| {
-        std::fs::read(p)
-            .ok()
-            .and_then(|b| HofFile::parse_bytes(&b).ok())
-    };
-    let hofs_in = |dir: &Path| -> Vec<(String, std::path::PathBuf)> {
-        let mut v: Vec<_> = std::fs::read_dir(dir)
-            .into_iter()
-            .flatten()
-            .flatten()
-            .map(|e| e.path())
-            .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("hof")))
-            .map(|p| {
-                let stem = p
-                    .file_stem()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_ascii_lowercase();
-                (stem, p)
-            })
-            .collect();
-        v.sort();
-        v
-    };
-    // The best parsed file among `candidates`, by `rank`, then the number of routes, then the
-    // longer name.
-    let best = |candidates: Vec<([i64; 5], &(String, std::path::PathBuf))>| {
-        candidates
-            .into_iter()
-            .filter_map(|(rank, (stem, p))| {
-                parse(p).map(|h| ((rank, h.routes.len(), stem.len()), h))
-            })
-            .max_by_key(|(key, _)| *key)
-            .map(|(_, h)| h)
-    };
     let own = hofs_in(bus_dir);
     for map in &maps {
         for (stem, p) in &own {
             if stem == map {
-                if let Some(h) = parse(p) {
+                if let Some(h) = parse_hof(p) {
                     return Some(h);
                 }
             }
@@ -68,7 +124,7 @@ pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_names: &[&str]) -> Optio
             .filter(|(stem, _)| stem.contains(map.as_str()) || map.contains(stem.as_str()))
             .map(|f| ([0; 5], f))
             .collect();
-        if let Some(h) = best(named) {
+        if let Some(h) = best_of(named) {
             return Some(h);
         }
     }
@@ -79,48 +135,14 @@ pub fn find_depot(bus_dir: &Path, omsi_root: &Path, map_names: &[&str]) -> Optio
         .map(|n| n.to_string_lossy().to_ascii_lowercase())
         .unwrap_or_default();
     let vehicle: std::collections::HashSet<String> = name_tokens(&folder).collect();
-    let shared = own
-        .iter()
-        .filter_map(|f| {
-            // Shared numbers (a line or edition) first, then shared words, then tokens of the
-            // vehicle's folder (the operator: `HHA` in `HH109_Stadtbus_HHA`); then the fewest
-            // numbers and words neither names (`1_HH109-2_HHA` and `1_HH109-VAN_HHA` lose to
-            // `1_HH109_HHA` for `Hamburg109`).
-            let mut rank = [0_i64; 5];
-            for t in name_tokens(&f.0) {
-                let number = t.chars().all(char::is_numeric);
-                match (wanted.contains(&t), vehicle.contains(&t), number) {
-                    (true, _, true) => rank[0] += 1,
-                    (true, _, false) => rank[1] += 1,
-                    (false, true, _) => rank[2] += 1,
-                    (false, false, true) => rank[3] -= 1,
-                    (false, false, false) => rank[4] -= 1,
-                }
-            }
-            (rank[0] + rank[1] > 0).then_some((rank, f))
-        })
-        .collect();
-    if let Some(h) = best(shared) {
+    let shared = shared_candidates(&own, &wanted, &vehicle);
+    if let Some(h) = best_of(shared) {
         return Some(h);
     }
-    if let Some(h) = own.iter().find_map(|(_, p)| parse(p)) {
+    if let Some(h) = own.iter().find_map(|(_, p)| parse_hof(p)) {
         return Some(h);
     }
-    for map in &maps {
-        for dir in [
-            omsi_root.join("Vehicles"),
-            omsi_root.join("Vehicles/.hof Dateien"),
-        ] {
-            for (stem, p) in hofs_in(&dir) {
-                if stem == *map || stem.contains(map.as_str()) {
-                    if let Some(h) = parse(&p) {
-                        return Some(h);
-                    }
-                }
-            }
-        }
-    }
-    None
+    find_in_install(omsi_root, &maps)
 }
 
 /// The word and number tokens of a lower-case name: runs of letters (two or more) and runs of

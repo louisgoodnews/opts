@@ -107,6 +107,70 @@ fn option_control(commands: &mut Commands, item: &SetvarItem) -> Entity {
     }
 }
 
+
+/// One option: a line with its control and, for a choice box or number field, its name.
+fn option_line(commands: &mut Commands, item: &SetvarItem) -> Entity {
+    // A row never shrinks below its control (the list scrolls instead), and a choice box or a
+    // number field gets its name as a label beside it: the box shows only the value.
+    let line = commands
+        .spawn(Node {
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::Center,
+            width: Val::Percent(100.0),
+            min_height: Val::Px(56.0),
+            flex_shrink: 0.0,
+            ..row(12.0)
+        })
+        .id();
+    let control = option_control(commands, item);
+    if !matches!(item.kind, SetvarKind::Switch | SetvarKind::Fraction) {
+        let label = commands
+            .spawn((
+                plain(
+                    item.label.clone(),
+                    TypeScale::BodyMedium,
+                    ColorRole::OnSurface,
+                ),
+                Node {
+                    flex_grow: 1.0,
+                    flex_shrink: 1.0,
+                    ..default()
+                },
+            ))
+            .id();
+        commands.entity(line).add_child(label);
+    }
+    commands.entity(line).add_child(control);
+    line
+}
+
+/// The footer with *Reset* and *Done*.
+fn options_footer(commands: &mut Commands) -> Entity {
+    let footer = commands
+        .spawn(Node {
+            justify_content: JustifyContent::FlexEnd,
+            ..row(12.0)
+        })
+        .id();
+    let reset = action_button(
+        commands,
+        "wiz-options-reset",
+        Emphasis::Quiet,
+        PlannerAction::ResetOptions,
+        "wizard.what.options.reset".into(),
+    );
+    let done = action_button(
+        commands,
+        "wiz-options-done",
+        Emphasis::Primary,
+        PlannerAction::CloseOptions,
+        "wizard.what.options.done".into(),
+    );
+    commands.entity(done).insert(DefaultFocus);
+    commands.entity(footer).add_children(&[reset, done]);
+    footer
+}
+
 /// Opens the dialog for the chosen vehicle (nothing without discovered options).
 pub fn open_options(
     commands: &mut Commands,
@@ -156,61 +220,10 @@ pub fn open_options(
         .id();
     opts_gui::patterns::scroll::wheel_scroll(commands, list);
     for item in &items {
-        // A row never shrinks below its control (the list scrolls instead), and a choice box or a
-        // number field gets its name as a label beside it: the box shows only the value.
-        let line = commands
-            .spawn(Node {
-                justify_content: JustifyContent::SpaceBetween,
-                align_items: AlignItems::Center,
-                width: Val::Percent(100.0),
-                min_height: Val::Px(56.0),
-                flex_shrink: 0.0,
-                ..row(12.0)
-            })
-            .id();
-        let control = option_control(commands, item);
-        if !matches!(item.kind, SetvarKind::Switch | SetvarKind::Fraction) {
-            let label = commands
-                .spawn((
-                    plain(
-                        item.label.clone(),
-                        TypeScale::BodyMedium,
-                        ColorRole::OnSurface,
-                    ),
-                    Node {
-                        flex_grow: 1.0,
-                        flex_shrink: 1.0,
-                        ..default()
-                    },
-                ))
-                .id();
-            commands.entity(line).add_child(label);
-        }
-        commands.entity(line).add_child(control);
+        let line = option_line(commands, item);
         commands.entity(list).add_child(line);
     }
-    let footer = commands
-        .spawn(Node {
-            justify_content: JustifyContent::FlexEnd,
-            ..row(12.0)
-        })
-        .id();
-    let reset = action_button(
-        commands,
-        "wiz-options-reset",
-        Emphasis::Quiet,
-        PlannerAction::ResetOptions,
-        "wizard.what.options.reset".into(),
-    );
-    let done = action_button(
-        commands,
-        "wiz-options-done",
-        Emphasis::Primary,
-        PlannerAction::CloseOptions,
-        "wizard.what.options.done".into(),
-    );
-    commands.entity(done).insert(DefaultFocus);
-    commands.entity(footer).add_children(&[reset, done]);
+    let footer = options_footer(commands);
     commands
         .entity(content)
         .add_children(&[title, sub, list, footer]);
