@@ -104,31 +104,8 @@ fn disc(
     )
 }
 
-/// Loads `envir.cfg` and spawns the dome, sun light, sun and moon discs.
-///
-/// # Errors
-/// Returns a message when the configuration or a sky texture cannot be read; the caller falls
-/// back to the plain default light so a broken install still renders.
-pub fn spawn_sky(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    root: &Path,
-) -> Result<(), String> {
-    let path = opts_bevy::install::OmsiInstall::new(root)
-        .find_file("envir.cfg")
-        .ok_or("envir.cfg not found")?;
-    let config = EnvirConfig::parse(&std::fs::read(&path).map_err(|e| e.to_string())?)?;
-    let mut cpu = Vec::new();
-    for rel in config.sky_textures.iter().take(3) {
-        let img = load_texture(root, rel)?;
-        cpu.push(
-            CpuImage::from_image(&img).ok_or_else(|| format!("{rel}: unsupported pixel format"))?,
-        );
-    }
-    let textures: [CpuImage; 3] = cpu.try_into().map_err(|_| "need three sky textures")?;
-    let (w, h) = (textures[0].width as u32, textures[0].height as u32);
+/// The empty, repeating sky texture `update_sky` fills.
+fn sky_texture(w: u32, h: u32) -> Image {
     let mut sky_image = Image::new_fill(
         Extent3d {
             width: w,
@@ -148,20 +125,16 @@ pub fn spawn_sky(
             min_filter: bevy::image::ImageFilterMode::Linear,
             ..default()
         });
-    let image = images.add(sky_image);
+    sky_image
+}
 
-    // The texture is filled by `update_sky` on its first run.
-    let sky = Sky {
-        config,
-        textures,
-        image: image.clone(),
-        last_refresh: f64::NEG_INFINITY,
-        last_revision: None,
-        last_hdr: None,
-        last_fog_clear: 0,
-    };
-
-    let image = sky.image.clone();
+/// The dome with the sky texture and the directional sunlight.
+fn spawn_dome_and_sun(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    image: Handle<Image>,
+) {
     commands.spawn((
         (
             Mesh3d(meshes.add(dome_mesh())),
@@ -189,6 +162,48 @@ pub fn spawn_sky(
         InGameEntity,
         Name::new("Sun_Light"),
     ));
+}
+
+/// Loads `envir.cfg` and spawns the dome, sun light, sun and moon discs.
+///
+/// # Errors
+/// Returns a message when the configuration or a sky texture cannot be read; the caller falls
+/// back to the plain default light so a broken install still renders.
+pub fn spawn_sky(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    root: &Path,
+) -> Result<(), String> {
+    let path = opts_bevy::install::OmsiInstall::new(root)
+        .find_file("envir.cfg")
+        .ok_or("envir.cfg not found")?;
+    let config = EnvirConfig::parse(&std::fs::read(&path).map_err(|e| e.to_string())?)?;
+    let mut cpu = Vec::new();
+    for rel in config.sky_textures.iter().take(3) {
+        let img = load_texture(root, rel)?;
+        cpu.push(
+            CpuImage::from_image(&img).ok_or_else(|| format!("{rel}: unsupported pixel format"))?,
+        );
+    }
+    let textures: [CpuImage; 3] = cpu.try_into().map_err(|_| "need three sky textures")?;
+    let (w, h) = (textures[0].width as u32, textures[0].height as u32);
+    let sky_image = sky_texture(w, h);
+    let image = images.add(sky_image);
+
+    // The texture is filled by `update_sky` on its first run.
+    let sky = Sky {
+        config,
+        textures,
+        image: image.clone(),
+        last_refresh: f64::NEG_INFINITY,
+        last_revision: None,
+        last_hdr: None,
+        last_fog_clear: 0,
+    };
+
+    spawn_dome_and_sun(commands, meshes, materials, sky.image.clone());
     let sun_tex = load_texture(root, "Texture/sonne.bmp").ok();
     let moon_tex = load_texture(root, "Texture/mond.bmp").ok();
     let (mesh, material) = disc(meshes, materials, sun_tex, images, 160.0);

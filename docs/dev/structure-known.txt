@@ -3,3 +3,4 @@
 # Format: <path> <lines of code>  # <reason or planned milestone>. A known file may only shrink;
 # a new file over 350 lines (or > 250 lines with inline tests) fails `structure_audit.py check`.
 # Regenerate (keeping the reasons) with `python3 scripts/structure_audit.py seed`.
+crates/opts-game/src/in_game/omsi_world/traffic/ai_script.rs 255  # planned: M-0148 batch 1 (extract 19 inline test lines to tests.rs)

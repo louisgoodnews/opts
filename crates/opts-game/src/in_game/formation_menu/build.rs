@@ -158,7 +158,8 @@ pub(super) fn build_formation(commands: &mut Commands, ed: &FormationEditor, ent
     });
 }
 
-fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
+/// The three tabs that choose which list the column shows.
+fn list_tabs(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
     c.spawn(Node {
         flex_direction: FlexDirection::Row,
         column_gap: Val::Px(8.0),
@@ -187,17 +188,10 @@ fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
         );
         id(&mut tabs.commands(), saved, "formation.list.saved");
     });
-    let shown = ed.shown_list();
-    label(
-        c,
-        match ed.list {
-            ListKind::Cars => format!("Rail vehicles ({} of {})", shown.len(), ed.cars.len()),
-            ListKind::Presets => format!("Consists ({} of {})", shown.len(), ed.presets.len()),
-            ListKind::Saved => format!("Saved trains ({} of {})", shown.len(), ed.saved.len()),
-        },
-        15.0,
-        ColorRole::Primary,
-    );
+}
+
+/// The search box above the list.
+fn search_field(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
     c.spawn((
         Node {
             width: Val::Percent(100.0),
@@ -217,6 +211,22 @@ fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
         };
         label(f, text, 13.0, ColorRole::OnSurface);
     });
+}
+
+fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
+    list_tabs(c, ed);
+    let shown = ed.shown_list();
+    label(
+        c,
+        match ed.list {
+            ListKind::Cars => format!("Rail vehicles ({} of {})", shown.len(), ed.cars.len()),
+            ListKind::Presets => format!("Consists ({} of {})", shown.len(), ed.presets.len()),
+            ListKind::Saved => format!("Saved trains ({} of {})", shown.len(), ed.saved.len()),
+        },
+        15.0,
+        ColorRole::Primary,
+    );
+    search_field(c, ed);
     scroll_list(c, 0, ed.scroll[0], |list| {
         if shown.is_empty() {
             label(list, "Nothing matches.", 12.0, ColorRole::OnSurfaceVariant);
