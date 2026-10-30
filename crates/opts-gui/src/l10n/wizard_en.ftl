@@ -243,3 +243,4 @@ wiz-trip-stops = { $count } stops to { $last }
 wiz-trip-tour = Tour { $tour }
 wiz-trip-start-hint = The bus starts at the first stop instead of the start point and follows this trip.
 wiz-review-trip-from = from { $stop }
+wiz-setvar-respawn = needs respawn

@@ -66,12 +66,14 @@ fn a_documented_range_widens_the_choice_and_flags_a_narrower_document() {
                 values: "0-2".into(),
                 meaning: "IBIS language".into(),
                 group: "display".into(),
+                respawn: None,
             },
             CuratedSetvar {
                 name: "wheels".into(),
                 values: "0|1".into(),
                 meaning: String::new(),
                 group: String::new(),
+                respawn: None,
             },
         ],
     };
@@ -134,6 +136,7 @@ fn a_documented_name_no_repaint_sets_is_offered_when_the_vehicle_declares_it() {
             values: "0|1".into(),
             meaning: "ramp variant".into(),
             group: "doors".into(),
+            respawn: None,
         }],
     };
     let c = SetvarCatalogue::build(
@@ -184,6 +187,7 @@ fn labels_use_a_short_meaning_and_demote_a_long_one_to_the_description() {
         values: "0-3".into(),
         meaning: "second A/C unit; only on articulated versions (unit on trailer)".into(),
         group: "climate".into(),
+        respawn: None,
     };
     let (label, description) = labels("air_conditioning_2", Some(&long));
     assert_eq!(label, "Air conditioning 2");
@@ -244,4 +248,59 @@ fn the_shipped_data_file_is_sound() {
         .filter(|s| parse_range(&s.values).is_some())
         .count();
     assert!(plain > 400, "only {plain} plain ranges");
+}
+
+#[test]
+fn the_respawn_marker_comes_from_the_documented_data_and_never_from_a_guess() {
+    let doc = |name: &str, respawn| CuratedSetvar {
+        name: name.into(),
+        values: "0|1".into(),
+        meaning: String::new(),
+        group: String::new(),
+        respawn,
+    };
+    let family = CuratedFamily {
+        id: "f".into(),
+        title: "F".into(),
+        folders: vec![],
+        setvars: vec![
+            doc("engine", Some(true)),
+            doc("roof", Some(false)),
+            doc("seats", None),
+        ],
+    };
+    let observed = [sv("a", "engine", "1"), sv("a", "extra", "1")];
+    let decl = declared(&[
+        ("engine", "l"),
+        ("roof", "l"),
+        ("seats", "l"),
+        ("extra", "l"),
+    ]);
+    let c = SetvarCatalogue::build(&observed, &decl, Some(&family));
+    let at = |n: &str| c.get(n).expect(n).respawn;
+    assert_eq!(at("engine"), Respawn::Required);
+    assert_eq!(at("roof"), Respawn::Live);
+    assert_eq!(at("seats"), Respawn::Unknown);
+    assert_eq!(at("extra"), Respawn::Unknown, "undocumented stays unknown");
+}
+
+#[test]
+fn the_shipped_vendor_data_marks_the_documented_restart_options() {
+    let iveco = curated_families()
+        .iter()
+        .find(|f| f.id == "iveco-interurbain")
+        .expect("family");
+    for name in ["sv_display_color", "engine_sv_req", "gearbox_sv_req"] {
+        let s = iveco.setvars.iter().find(|s| s.name == name).expect(name);
+        assert_eq!(s.respawn, Some(true), "{name}");
+    }
+    let marked: usize = curated_families()
+        .iter()
+        .flat_map(|f| &f.setvars)
+        .filter(|s| s.respawn.is_some())
+        .count();
+    assert_eq!(
+        marked, 4,
+        "three documented restarts and one live-tested option"
+    );
 }

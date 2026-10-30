@@ -135,6 +135,7 @@ pub const ALL: &[&str] = &[
     md::STAR_ADD,
     md::STAR_REMOVE,
     wiz::WIZ_OPTION_IDENT_VISIBLE,
+    wiz::WIZ_SETVAR_RESPAWN,
     load::LOAD_TITLE,
     load::LOAD_MINOR_TOAST,
     load::LOAD_MINOR_TITLE,

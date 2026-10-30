@@ -38,6 +38,19 @@ pub enum SetvarKind {
     Fraction,
 }
 
+/// Whether a change of an option reaches a vehicle that already exists (Q-SV02). Only documented
+/// or tested facts are `Required` or `Live`; everything else stays `Unknown`, never a guess.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Respawn {
+    /// The vendor documents that the vehicle must be built again after a change.
+    Required,
+    /// A live test showed that the running vehicle reacts.
+    Live,
+    /// Nothing is known about the option.
+    #[default]
+    Unknown,
+}
+
 /// Which evidence an entry rests on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Evidence {
@@ -75,6 +88,8 @@ pub struct SetvarEntry {
     /// The documented range was narrower than the values repaints set (a picture was probably
     /// misread), so the range is the join of both.
     pub range_unverified: bool,
+    /// Whether a change needs the vehicle to be built again (documented or tested only).
+    pub respawn: Respawn,
     /// The value each repaint gives the option.
     by_repaint: BTreeMap<String, f64>,
 }
@@ -251,6 +266,11 @@ fn entry(
             documented: doc.is_some(),
         },
         range_unverified,
+        respawn: match doc.and_then(|d| d.respawn) {
+            Some(true) => Respawn::Required,
+            Some(false) => Respawn::Live,
+            None => Respawn::Unknown,
+        },
         by_repaint: observed.map(|s| s.by_repaint.clone()).unwrap_or_default(),
     }
 }
@@ -310,6 +330,10 @@ pub struct CuratedSetvar {
     /// Vendor group.
     #[serde(default)]
     pub group: String,
+    /// `true`: the vendor says the vehicle must be built again after a change; `false`: a live
+    /// test showed the running vehicle reacts; absent: not known (Q-SV02).
+    #[serde(default)]
+    pub respawn: Option<bool>,
 }
 
 /// The setvars one vendor documents for a family of vehicles.

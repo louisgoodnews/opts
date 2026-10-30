@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use opts_core::formats::cti::CtiSetvar;
-use opts_core::setvars::{family_of_folder, SetvarCatalogue, SetvarKind};
+use opts_core::setvars::{family_of_folder, Respawn, SetvarCatalogue, SetvarKind};
 use opts_gui::l10n::Localization;
 
 use super::repaints::{vehicle_repaints, VehicleRepaints};
@@ -36,6 +36,8 @@ pub struct SetvarItem {
     pub group: Option<String>,
     /// The documented range was narrower than what repaints set (shown as unverified).
     pub unverified: bool,
+    /// Whether a change needs the vehicle to be built again (Q-SV02: documented or tested only).
+    pub respawn: Respawn,
 }
 
 impl SetvarItem {
@@ -130,6 +132,7 @@ pub fn setvars_from(
                 values,
                 group: e.group.clone(),
                 unverified: e.range_unverified,
+                respawn: e.respawn,
                 name: e.name.clone(),
             }
         })
