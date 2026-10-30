@@ -137,6 +137,63 @@ type EmitterQuery<'w, 's> = Query<
     ),
 >;
 
+
+/// One emitter's level for this frame: entity, gain, distance (when it has a position) and
+/// position.
+type EmitterLevel = (Entity, f32, Option<f32>, Option<Vec3>);
+
+/// The level of every emitter: its gain after mute, distance curve and bus volume.
+fn emitter_levels(
+    settings: &AudioSettings,
+    listener_pos: Option<Vec3>,
+    emitters: &EmitterQuery,
+) -> Vec<EmitterLevel> {
+    emitters
+            .iter()
+            .map(|(entity, e, tf, _, _)| {
+                let (distance, spatial_gain) = match (&e.spatial, listener_pos, tf) {
+                    (Some(curve), Some(l), Some(t)) => {
+                        let d = l.distance(t.translation());
+                        (Some(d), curve.gain(d))
+                    }
+                    // A spatial source with no listener or no position cannot be heard.
+                    (Some(_), _, _) => (None, 0.0),
+                    (None, _, _) => (None, 1.0),
+                };
+                let gain = if e.muted {
+                    0.0
+                } else {
+                    e.gain * spatial_gain * settings.bus_gain(e.bus)
+                };
+                (entity, gain, distance, tf.map(GlobalTransform::translation))
+            })
+            .collect()
+}
+
+/// Gives a new voice to an emitter: the player with the clip, the loop mode, volume, speed and the
+/// spatial setup.
+fn start_voice(commands: &mut Commands, entity: Entity, e: &SoundEmitter, gain: f32) {
+    commands.entity(entity).insert((
+        AudioPlayer::<PcmClip>(e.clip.clone()),
+        PlaybackSettings {
+            mode: if e.looping {
+                PlaybackMode::Loop
+            } else {
+                PlaybackMode::Remove
+            },
+            volume: Volume::Linear(gain),
+            speed: e.speed,
+            spatial: e.spatial.is_some(),
+            // Bevy's own distance fall-off (1/d²) is kept out of the way: positions
+            // are scaled into the unit range, our curve does the fading.
+            spatial_scale: e.spatial.map(|d| SpatialScale::new(1.0 / d.max.max(1.0))),
+            ..PlaybackSettings::ONCE
+        },
+        Voice { gain },
+    ));
+
+}
+
 /// Decides every frame which emitters are heard: computes their level, gives the loudest ones
 /// a voice (an [`AudioPlayer`]) and takes it away from the others, and despawns one-shots that
 /// finished or could not be heard when they were triggered.
@@ -149,26 +206,7 @@ pub fn select_voices(
 ) {
     let listener_pos = listener.iter().next().map(GlobalTransform::translation);
     stats.listener = listener_pos;
-    let all: Vec<(Entity, f32, Option<f32>, Option<Vec3>)> = emitters
-        .iter()
-        .map(|(entity, e, tf, _, _)| {
-            let (distance, spatial_gain) = match (&e.spatial, listener_pos, tf) {
-                (Some(curve), Some(l), Some(t)) => {
-                    let d = l.distance(t.translation());
-                    (Some(d), curve.gain(d))
-                }
-                // A spatial source with no listener or no position cannot be heard.
-                (Some(_), _, _) => (None, 0.0),
-                (None, _, _) => (None, 1.0),
-            };
-            let gain = if e.muted {
-                0.0
-            } else {
-                e.gain * spatial_gain * settings.bus_gain(e.bus)
-            };
-            (entity, gain, distance, tf.map(GlobalTransform::translation))
-        })
-        .collect();
+    let all = emitter_levels(&settings, listener_pos, &emitters);
     let levels: Vec<(usize, f32)> = all
         .iter()
         .enumerate()
@@ -193,24 +231,7 @@ pub fn select_voices(
             // A new voice.
             (true, false, _) => {
                 voices += 1;
-                commands.entity(*entity).insert((
-                    AudioPlayer::<PcmClip>(e.clip.clone()),
-                    PlaybackSettings {
-                        mode: if e.looping {
-                            PlaybackMode::Loop
-                        } else {
-                            PlaybackMode::Remove
-                        },
-                        volume: Volume::Linear(*gain),
-                        speed: e.speed,
-                        spatial: e.spatial.is_some(),
-                        // Bevy's own distance fall-off (1/d²) is kept out of the way: positions
-                        // are scaled into the unit range, our curve does the fading.
-                        spatial_scale: e.spatial.map(|d| SpatialScale::new(1.0 / d.max.max(1.0))),
-                        ..PlaybackSettings::ONCE
-                    },
-                    Voice { gain: *gain },
-                ));
+                start_voice(&mut commands, *entity, e, *gain);
             }
             // A running voice: keep it, remember its level.
             (true, true, true) => {
