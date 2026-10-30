@@ -5,6 +5,41 @@ use super::*;
 /// Period of the indicator flash (s); half of it on, half off.
 const BLINK_PERIOD_S: f32 = 0.7;
 
+/// Wheel rotation and steering of every axle. Steering: the lane's heading at the front axle
+/// against the body (positive = right).
+fn set_wheel_variables(vars: &mut opts_bevy::AiVariables, wheel_angle: f32, steer: f32) {
+    for axle in 0..4 {
+        for side in ["l", "r"] {
+            vars.set(&format!("wheel_rotation_{axle}_{side}"), wheel_angle);
+            let s = if axle == 0 { steer } else { 0.0 };
+            vars.set(&format!("axle_steering_{axle}_{side}"), s);
+        }
+    }
+}
+
+/// The AI flag, the commanded indicators and the flashing lamps.
+fn set_blinker_variables(
+    vars: &mut opts_bevy::AiVariables,
+    blinker: opts_traffic::Blinker,
+    flash: bool,
+) {
+    let (left, right) = (
+        f32::from(flash && blinker == opts_traffic::Blinker::Left),
+        f32::from(flash && blinker == opts_traffic::Blinker::Right),
+    );
+    vars.set("ai", 1.0);
+    vars.set(
+        "ai_blinker_l",
+        f32::from(blinker == opts_traffic::Blinker::Left),
+    );
+    vars.set(
+        "ai_blinker_r",
+        f32::from(blinker == opts_traffic::Blinker::Right),
+    );
+    vars.set("lights_blinker_l", left);
+    vars.set("lights_blinker_r", right);
+}
+
 /// Feeds the variables the AI vehicle models read: wheel rotation and steering from speed and lane
 /// curvature, indicators, headlights, brake lights and passengers.
 ///
@@ -45,31 +80,9 @@ pub fn update_ai_variables(
         };
         v.wheel_angle = (v.wheel_angle + agent.speed as f32 / v.wheel_radius * dt)
             % (std::f32::consts::TAU * 64.0);
-        // Steering: the lane's heading at the front axle against the body (positive = right).
-        let steer = agent.steer as f32;
-        for axle in 0..4 {
-            for side in ["l", "r"] {
-                vars.set(&format!("wheel_rotation_{axle}_{side}"), v.wheel_angle);
-                let s = if axle == 0 { steer } else { 0.0 };
-                vars.set(&format!("axle_steering_{axle}_{side}"), s);
-            }
-        }
+        set_wheel_variables(&mut vars, v.wheel_angle, agent.steer as f32);
         let flash = (now + v.blink_phase) % BLINK_PERIOD_S < BLINK_PERIOD_S / 2.0;
-        let (left, right) = (
-            f32::from(flash && command.blinker == opts_traffic::Blinker::Left),
-            f32::from(flash && command.blinker == opts_traffic::Blinker::Right),
-        );
-        vars.set("ai", 1.0);
-        vars.set(
-            "ai_blinker_l",
-            f32::from(command.blinker == opts_traffic::Blinker::Left),
-        );
-        vars.set(
-            "ai_blinker_r",
-            f32::from(command.blinker == opts_traffic::Blinker::Right),
-        );
-        vars.set("lights_blinker_l", left);
-        vars.set("lights_blinker_r", right);
+        set_blinker_variables(&mut vars, command.blinker, flash);
         // Brake lights also while standing (held on the brake).
         let brake = f32::from(command.brake > 0.05 || agent.speed < 0.3);
         vars.set("ai_brakelight", brake);
