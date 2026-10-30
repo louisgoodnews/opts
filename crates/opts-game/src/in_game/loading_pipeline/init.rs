@@ -2,6 +2,47 @@
 
 use super::*;
 
+/// A trip given by the protocol names its run only: its stop and texts come from the map's
+/// timetables. A trip that does not resolve is dropped. Sets the session's start station.
+fn resolve_trip(
+    setup: &mut crate::new_game_screen::NewGameSetup,
+    mut cfg: opts_bevy::OmsiSessionConfig,
+) -> opts_bevy::OmsiSessionConfig {
+    if setup.trip.as_ref().is_some_and(|t| t.station_id == 0)
+        && !setup
+            .trip
+            .as_mut()
+            .is_some_and(|t| crate::trip_start::complete_trip(t, &cfg.map_dir))
+    {
+        tracing::warn!(trip = ?setup.trip, "the run is not in the map's timetables; no trip");
+        setup.trip = None;
+    }
+    cfg.start_station = setup.trip.as_ref().map(|t| t.station_id);
+    cfg
+    cfg
+}
+
+/// What the loading screen builds: the share of parked bays, and *Load all tiles* or the tile
+/// radius (M-0080).
+fn configure_job(env: &LoadEnv, job: &mut WorldLoadJob, no_vehicle: bool) {
+    job.no_vehicle = no_vehicle;
+    // The share of the parking bays that hold a vehicle (setting *Parked vehicles*).
+    job.parked_permille = env
+        .settings
+        .as_deref()
+        .and_then(|s| s.raw("gameplay.parked")?.parse::<u32>().ok())
+        .map_or(1000, |p| p.min(100) * 10);
+    // *Load all tiles* and the tile radius decide what the loading screen builds (M-0080).
+    let choice = env
+        .settings
+        .as_deref()
+        .map(tile_loading::TileChoice::from_settings)
+        .unwrap_or_default();
+    let profile = env.hardware.as_deref().and_then(|h| h.profile.as_ref());
+    job.queue_for_mode(tile_loading::resolve(choice, profile, job.map_radius()));
+}
+
+
 pub(super) fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
     state.waiting_for_catalogue = catalogue_pending(env);
     if state.waiting_for_catalogue {
@@ -41,40 +82,12 @@ pub(super) fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         env.catalogue.as_deref(),
         env.service.as_deref(),
     )
-    .map(|mut cfg| {
-        // A trip given by the protocol names its run only: its stop and texts come from the map's
-        // timetables. A trip that does not resolve is dropped.
-        if setup.trip.as_ref().is_some_and(|t| t.station_id == 0)
-            && !setup
-                .trip
-                .as_mut()
-                .is_some_and(|t| crate::trip_start::complete_trip(t, &cfg.map_dir))
-        {
-            tracing::warn!(trip = ?setup.trip, "the run is not in the map's timetables; no trip");
-            setup.trip = None;
-        }
-        cfg.start_station = setup.trip.as_ref().map(|t| t.station_id);
-        cfg
-    })
+    .map(|cfg| resolve_trip(&mut setup, cfg))
     .and_then(|cfg| {
         // The map is built for the planned date (Chrono); the session environment starts there.
         let date = chrono_date(crate::new_game_screen::planner::setup_date(&setup));
         begin_world_load_at(cfg, Some(date)).map(|mut job| {
-            job.no_vehicle = no_vehicle;
-            // The share of the parking bays that hold a vehicle (setting *Parked vehicles*).
-            job.parked_permille = env
-                .settings
-                .as_deref()
-                .and_then(|s| s.raw("gameplay.parked")?.parse::<u32>().ok())
-                .map_or(1000, |p| p.min(100) * 10);
-            // *Load all tiles* and the tile radius decide what the loading screen builds (M-0080).
-            let choice = env
-                .settings
-                .as_deref()
-                .map(tile_loading::TileChoice::from_settings)
-                .unwrap_or_default();
-            let profile = env.hardware.as_deref().and_then(|h| h.profile.as_ref());
-            job.queue_for_mode(tile_loading::resolve(choice, profile, job.map_radius()));
+            configure_job(env, &mut job, no_vehicle);
             (job.map_name(), job)
         })
     });

@@ -153,6 +153,28 @@ pub(in crate::in_game::omsi_world) fn engine_for(
     Some((VehicleScripts::new(engine), vehicle_route))
 }
 
+
+/// What the script engine is told about the agent: speed, pedals, the AI flags and the route.
+fn host_inputs(
+    agent: &opts_traffic::Agent,
+    command: opts_traffic::DriverCommand,
+    route: &VehicleRoute,
+) -> HostInputs {
+    let kmh = agent.speed as f32 * 3.6;
+    let mut inputs = HostInputs {
+        velocity_km_h: kmh,
+        velocity_ground_km_h: kmh,
+        throttle: command.throttle,
+        brake: command.brake,
+        ai: true,
+        ai_engine: 1.0,
+        wearlifespan: WEARLIFESPAN_NO_BREAKDOWNS,
+        ..HostInputs::default()
+    };
+    opts_bevy::route::feed_route(&mut inputs, &route.handle);
+    inputs
+}
+
 /// Feeds one traffic vehicle's script engine from its agent and runs it on a script frame.
 fn run_vehicle(
     tv: &TrafficVehicle,
@@ -181,18 +203,7 @@ fn run_vehicle(
         .front()
         .and_then(|s| s.arrived_at.map(|a| (a, s.min_dwell_s)));
     let open = at_stop.is_some_and(|(a, d)| clock - a < d * DOORS_OPEN_SHARE);
-    let kmh = agent.speed as f32 * 3.6;
-    let mut inputs = HostInputs {
-        velocity_km_h: kmh,
-        velocity_ground_km_h: kmh,
-        throttle: command.throttle,
-        brake: command.brake,
-        ai: true,
-        ai_engine: 1.0,
-        wearlifespan: WEARLIFESPAN_NO_BREAKDOWNS,
-        ..HostInputs::default()
-    };
-    opts_bevy::route::feed_route(&mut inputs, &route.handle);
+    let mut inputs = host_inputs(agent, command, route);
     let (doors, atstation) = next_doors(ai.doors, at_stop.is_some(), open);
     ai.doors = doors;
     if let Some(v) = atstation {

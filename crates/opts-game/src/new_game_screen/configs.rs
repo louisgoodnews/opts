@@ -226,6 +226,75 @@ pub fn spawn_configs_section(
     section
 }
 
+/// The *Favourite*, *Duplicate* and *Delete* buttons of a configuration (a second press deletes).
+fn row_buttons(
+    commands: &mut Commands,
+    library: &ConfigLibrary,
+    c: &BusConfiguration,
+    index: usize,
+) -> [Entity; 3] {
+    let favourite = action_button(
+        commands,
+        if c.favourite {
+            "wiz-configs-unfavourite"
+        } else {
+            "wiz-configs-favourite"
+        },
+        Emphasis::Quiet,
+        PlannerAction::FavouriteConfig(c.id.clone()),
+        format!("wizard.what.configs.{index}.favourite"),
+    );
+    let duplicate = action_button(
+        commands,
+        "wiz-configs-duplicate",
+        Emphasis::Quiet,
+        PlannerAction::DuplicateConfig(c.id.clone()),
+        format!("wizard.what.configs.{index}.duplicate"),
+    );
+    let confirming = library.pending_delete.as_deref() == Some(c.id.as_str());
+    let delete = action_button(
+        commands,
+        if confirming {
+            "wiz-configs-delete-confirm"
+        } else {
+            "wiz-configs-delete"
+        },
+        if confirming {
+            Emphasis::Primary
+        } else {
+            Emphasis::Quiet
+        },
+        PlannerAction::DeleteConfig(c.id.clone()),
+        format!("wizard.what.configs.{index}.delete"),
+    );
+    [favourite, duplicate, delete]
+}
+
+/// The first two problems found with a configuration, in the colour of their severity.
+fn problem_lines(commands: &mut Commands, problems: &[Problem]) -> Vec<Entity> {
+    let mut out = Vec::new();
+    for p in problems.iter().take(2) {
+        let (key, arg) = problem_text(p);
+        let role = if p.is_fatal() {
+            ColorRole::Error
+        } else {
+            ColorRole::Warning
+        };
+        out.push(
+            commands
+                .spawn(keyed_args(
+                    key,
+                    L10nArgs::one("name", arg),
+                    TypeScale::Label,
+                    role,
+                ))
+                .id(),
+        );
+    }
+    out
+}
+
+
 fn config_row(
     commands: &mut Commands,
     library: &ConfigLibrary,
@@ -280,62 +349,12 @@ fn config_row(
         ))
         .id();
     let mut content = vec![name, subtitle];
-    for p in checked.problems.iter().take(2) {
-        let (key, arg) = problem_text(p);
-        let role = if p.is_fatal() {
-            ColorRole::Error
-        } else {
-            ColorRole::Warning
-        };
-        content.push(
-            commands
-                .spawn(keyed_args(
-                    key,
-                    L10nArgs::one("name", arg),
-                    TypeScale::Label,
-                    role,
-                ))
-                .id(),
-        );
-    }
+    content.extend(problem_lines(commands, &checked.problems));
     commands
         .entity(load)
         .insert(ChoiceStep(PlannerStep::What))
         .insert_children(1, &content);
-    let favourite = action_button(
-        commands,
-        if c.favourite {
-            "wiz-configs-unfavourite"
-        } else {
-            "wiz-configs-favourite"
-        },
-        Emphasis::Quiet,
-        PlannerAction::FavouriteConfig(c.id.clone()),
-        format!("wizard.what.configs.{index}.favourite"),
-    );
-    let duplicate = action_button(
-        commands,
-        "wiz-configs-duplicate",
-        Emphasis::Quiet,
-        PlannerAction::DuplicateConfig(c.id.clone()),
-        format!("wizard.what.configs.{index}.duplicate"),
-    );
-    let confirming = library.pending_delete.as_deref() == Some(c.id.as_str());
-    let delete = action_button(
-        commands,
-        if confirming {
-            "wiz-configs-delete-confirm"
-        } else {
-            "wiz-configs-delete"
-        },
-        if confirming {
-            Emphasis::Primary
-        } else {
-            Emphasis::Quiet
-        },
-        PlannerAction::DeleteConfig(c.id.clone()),
-        format!("wizard.what.configs.{index}.delete"),
-    );
+    let [favourite, duplicate, delete] = row_buttons(commands, library, c, index);
     commands
         .entity(line)
         .add_children(&[load, favourite, duplicate, delete]);

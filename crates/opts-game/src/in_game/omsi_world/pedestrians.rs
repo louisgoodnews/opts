@@ -147,6 +147,35 @@ pub(super) fn unregister_tile(commands: &mut Commands, key: (i32, i32)) {
     });
 }
 
+
+/// Reads the map's `humans.txt` and makes a slot for each distinct character.
+fn start_pool(job: &WorldLoadJob, pool: &mut PedestrianPool) {
+    pool.started = true;
+    pool.rng = 0x9E37_79B9;
+    let text = job
+        .install
+        .find_in(&job.config.map_dir, "humans.txt")
+        .and_then(|p| std::fs::read(p).ok())
+        .map(|b| opts_core::formats::text::decode_bytes(&b))
+        .unwrap_or_default();
+    pool.entries = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| l.to_ascii_lowercase().ends_with(".hum"))
+        .map(str::to_string)
+        .collect();
+    let mut distinct: Vec<String> = Vec::new();
+    for e in &pool.entries {
+        if !distinct.iter().any(|d| d.eq_ignore_ascii_case(e)) {
+            distinct.push(e.clone());
+        }
+    }
+    pool.slots = distinct.into_iter().map(|d| (d, None, 0)).collect();
+    if pool.slots.is_empty() {
+        tracing::error!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no characters in humans.txt; no pedestrians");
+    }
+}
+
 /// Reads `humans.txt` once and loads one missing character model every few frames.
 pub fn load_variants(
     job: Option<ResMut<WorldLoadJob>>,
@@ -161,30 +190,7 @@ pub fn load_variants(
         return;
     }
     if !pool.started {
-        pool.started = true;
-        pool.rng = 0x9E37_79B9;
-        let text = job
-            .install
-            .find_in(&job.config.map_dir, "humans.txt")
-            .and_then(|p| std::fs::read(p).ok())
-            .map(|b| opts_core::formats::text::decode_bytes(&b))
-            .unwrap_or_default();
-        pool.entries = text
-            .lines()
-            .map(str::trim)
-            .filter(|l| l.to_ascii_lowercase().ends_with(".hum"))
-            .map(str::to_string)
-            .collect();
-        let mut distinct: Vec<String> = Vec::new();
-        for e in &pool.entries {
-            if !distinct.iter().any(|d| d.eq_ignore_ascii_case(e)) {
-                distinct.push(e.clone());
-            }
-        }
-        pool.slots = distinct.into_iter().map(|d| (d, None, 0)).collect();
-        if pool.slots.is_empty() {
-            tracing::error!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no characters in humans.txt; no pedestrians");
-        }
+        start_pool(&job, &mut pool);
     }
     pool.frames += 1;
     if !pool.frames.is_multiple_of(20) {

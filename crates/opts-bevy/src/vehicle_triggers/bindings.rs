@@ -42,9 +42,12 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::Escape,
 ];
 
-fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
-    use KeyCode as K;
-    const LETTERS_Q: [KeyCode; 10] = [
+// The key rows of the DirectInput scan codes (`DIK_*`), by code from the first key of the row.
+mod rows {
+    use bevy::prelude::KeyCode as K;
+    use bevy::prelude::KeyCode;
+
+    pub(super) const LETTERS_Q: [KeyCode; 10] = [
         K::KeyQ,
         K::KeyW,
         K::KeyE,
@@ -56,7 +59,7 @@ fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
         K::KeyO,
         K::KeyP,
     ];
-    const LETTERS_A: [KeyCode; 9] = [
+    pub(super) const LETTERS_A: [KeyCode; 9] = [
         K::KeyA,
         K::KeyS,
         K::KeyD,
@@ -67,7 +70,7 @@ fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
         K::KeyK,
         K::KeyL,
     ];
-    const LETTERS_Z: [KeyCode; 7] = [
+    pub(super) const LETTERS_Z: [KeyCode; 7] = [
         K::KeyZ,
         K::KeyX,
         K::KeyC,
@@ -76,7 +79,7 @@ fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
         K::KeyN,
         K::KeyM,
     ];
-    const DIGITS: [KeyCode; 10] = [
+    pub(super) const DIGITS: [KeyCode; 10] = [
         K::Digit1,
         K::Digit2,
         K::Digit3,
@@ -88,7 +91,7 @@ fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
         K::Digit9,
         K::Digit0,
     ];
-    const FKEYS: [KeyCode; 10] = [
+    pub(super) const FKEYS: [KeyCode; 10] = [
         K::F1,
         K::F2,
         K::F3,
@@ -100,6 +103,12 @@ fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
         K::F9,
         K::F10,
     ];
+}
+use rows::{DIGITS, FKEYS, LETTERS_A, LETTERS_Q, LETTERS_Z};
+
+
+fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
+    use KeyCode as K;
     let c = usize::from(code);
     Some(match code {
         1 => K::Escape,
