@@ -109,50 +109,15 @@ pub fn blob_alpha(u: f32, v: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
-/// Adds, keeps and removes the puddles.
-#[allow(clippy::too_many_arguments)]
-pub fn update_puddles(
-    time: Res<Time<Real>>,
-    env: Res<SessionEnvironment>,
-    effects: Res<WeatherEffects>,
-    wetness: Res<Wetness>,
-    ground: Option<Res<GroundIndex>>,
-    cameras: Query<&GlobalTransform, With<InGameCamera>>,
-    mut state: ResMut<PuddleState>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
-    puddles: Query<(Entity, &Puddle)>,
-    mut commands: Commands,
+/// The shared plane and the dark water material, made on first use.
+fn ensure_assets(
+    state: &mut PuddleState,
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
 ) {
-    state.timer += time.delta_secs();
-    if state.timer < TICK_S {
-        return;
-    }
-    state.timer = 0.0;
-    let surface = wanted_state(&env, &effects);
-    let target = puddle_target(&surface, wetness.0);
-    let camera = cameras.iter().next().map(|c| c.translation());
-    let centre = camera.map(|c| Vec2::new(c.x, -c.z));
-    // Remove the far ones and those above the target (the farthest first).
-    let mut present: Vec<(Entity, f32)> = puddles
-        .iter()
-        .map(|(e, p)| (e, centre.map_or(0.0, |c| c.distance(p.at))))
-        .collect();
-    present.sort_by(|a, b| b.1.total_cmp(&a.1));
-    let mut count = present.len();
-    for (e, d) in &present {
-        if count > target || *d > DROP_DISTANCE_M {
-            commands.entity(*e).despawn();
-            count -= 1;
-        }
-    }
-    let (Some(ground), Some(camera), Some(centre)) = (ground, camera, centre) else {
-        return;
-    };
-    if count >= target {
-        return;
-    }
     if state.mesh.is_none() {
         state.mesh = Some(meshes.add(Plane3d::default().mesh().size(1.0, 1.0)));
         let blob = images.add(super::precip::texture(64, 64, blob_alpha));
@@ -169,20 +134,17 @@ pub fn update_puddles(
             ..default()
         }));
     }
-    let (Some(mesh), Some(material)) = (state.mesh.clone(), state.material.clone()) else {
-        return;
-    };
-    // The water mirrors the sky: pale grey under cloud, bluer when it is clear, as bright as the
-    // light (the cloud brightness follows the sun and the cover), not black blobs.
-    let look = opts_bevy::weather::weather_look(env.conditions(), [0.5; 3], env.sun_alt_deg());
-    let clear = (1.0 - look.cloud).clamp(0.0, 1.0);
-    let sky = LinearRgba::rgb(0.8 - 0.25 * clear, 0.85 - 0.12 * clear, 0.95)
-        * (SKY_NITS * look.cloud.max(0.15));
-    if let Some(mut m) = materials.get_mut(&material) {
-        if m.emissive != sky {
-            m.emissive = sky;
-        }
-    }
+}
+
+/// Tries to place new puddles around the camera on level road, up to the per-tick limit and the
+/// target.
+fn spawn_new(
+    commands: &mut Commands,
+    state: &mut PuddleState,
+    ground: &GroundIndex,
+    (camera, centre): (Vec3, Vec2),
+    (mesh, material, count, target): (Handle<Mesh>, Handle<StandardMaterial>, usize, usize),
+) {
     let mut added = 0;
     for _ in 0..TRIES_PER_TICK {
         if added >= SPAWN_PER_TICK || count + added >= target {
@@ -228,65 +190,73 @@ pub fn update_puddles(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn state(puddles: f32) -> SurfaceState {
-        SurfaceState {
-            puddles,
-            ..Default::default()
+/// Adds, keeps and removes the puddles.
+#[allow(clippy::too_many_arguments)]
+pub fn update_puddles(
+    time: Res<Time<Real>>,
+    env: Res<SessionEnvironment>,
+    effects: Res<WeatherEffects>,
+    wetness: Res<Wetness>,
+    ground: Option<Res<GroundIndex>>,
+    cameras: Query<&GlobalTransform, With<InGameCamera>>,
+    mut state: ResMut<PuddleState>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+    puddles: Query<(Entity, &Puddle)>,
+    mut commands: Commands,
+) {
+    state.timer += time.delta_secs();
+    if state.timer < TICK_S {
+        return;
+    }
+    state.timer = 0.0;
+    let surface = wanted_state(&env, &effects);
+    let target = puddle_target(&surface, wetness.0);
+    let camera = cameras.iter().next().map(|c| c.translation());
+    let centre = camera.map(|c| Vec2::new(c.x, -c.z));
+    // Remove the far ones and those above the target (the farthest first).
+    let mut present: Vec<(Entity, f32)> = puddles
+        .iter()
+        .map(|(e, p)| (e, centre.map_or(0.0, |c| c.distance(p.at))))
+        .collect();
+    present.sort_by(|a, b| b.1.total_cmp(&a.1));
+    let mut count = present.len();
+    for (e, d) in &present {
+        if count > target || *d > DROP_DISTANCE_M {
+            commands.entity(*e).despawn();
+            count -= 1;
         }
     }
-
-    #[test]
-    fn the_target_follows_coverage_and_wetness() {
-        assert_eq!(puddle_target(&state(0.0), 1.0), 0);
-        assert_eq!(puddle_target(&state(0.45), 0.0), 0);
-        assert_eq!(puddle_target(&state(0.45), 1.0), MAX_PUDDLES);
-        assert_eq!(puddle_target(&state(0.225), 1.0), MAX_PUDDLES / 2);
-        assert_eq!(puddle_target(&state(0.45), 0.5), MAX_PUDDLES / 2);
-        // More than full coverage does not add more.
-        assert_eq!(puddle_target(&state(0.9), 1.0), MAX_PUDDLES);
+    let (Some(ground), Some(camera), Some(centre)) = (ground, camera, centre) else {
+        return;
+    };
+    if count >= target {
+        return;
     }
-
-    #[test]
-    fn a_puddle_is_opaque_in_the_middle_and_gone_at_the_corners() {
-        assert!(blob_alpha(0.5, 0.5) > 0.99);
-        for (u, v) in [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)] {
-            assert!(blob_alpha(u, v) < 0.01, "({u}, {v})");
+    ensure_assets(&mut state, (&mut meshes, &mut materials, &mut images));
+    let (Some(mesh), Some(material)) = (state.mesh.clone(), state.material.clone()) else {
+        return;
+    };
+    // The water mirrors the sky: pale grey under cloud, bluer when it is clear, as bright as the
+    // light (the cloud brightness follows the sun and the cover), not black blobs.
+    let look = opts_bevy::weather::weather_look(env.conditions(), [0.5; 3], env.sun_alt_deg());
+    let clear = (1.0 - look.cloud).clamp(0.0, 1.0);
+    let sky = LinearRgba::rgb(0.8 - 0.25 * clear, 0.85 - 0.12 * clear, 0.95)
+        * (SKY_NITS * look.cloud.max(0.15));
+    if let Some(mut m) = materials.get_mut(&material) {
+        if m.emissive != sky {
+            m.emissive = sky;
         }
-        // Irregular: the edge is not a circle.
-        let radii: Vec<f32> = (0..16)
-            .map(|k| {
-                let a = k as f32 / 16.0 * TAU;
-                (0..200)
-                    .map(|i| i as f32 / 200.0)
-                    .take_while(|r| {
-                        blob_alpha(0.5 + 0.5 * r * a.cos(), 0.5 + 0.5 * r * a.sin()) > 0.5
-                    })
-                    .last()
-                    .unwrap_or(0.0)
-            })
-            .collect();
-        let (lo, hi) = radii
-            .iter()
-            .fold((f32::MAX, f32::MIN), |(l, h), r| (l.min(*r), h.max(*r)));
-        assert!(hi - lo > 0.1, "{radii:?}");
     }
-
-    #[test]
-    fn rain_intensity_raises_the_wetness_and_with_it_the_puddles() {
-        use opts_bevy::weather::surface_state_for;
-        let c = opts_bevy::WeatherConditions {
-            ground_wet: [0.0, 120.0, 60.0],
-            ..Default::default()
-        };
-        let half = surface_state_for(&c, 0.5, 1.0);
-        let full = surface_state_for(&c, 1.0, 1.0);
-        let heavy = surface_state_for(&c, 2.0, 1.0);
-        assert!(half.puddles < full.puddles && full.puddles < heavy.puddles);
-        assert!(half.wet < full.wet && full.wet < heavy.wet);
-        assert_eq!(surface_state_for(&c, 0.0, 1.0).puddles, 0.0);
-    }
+    spawn_new(
+        &mut commands,
+        &mut state,
+        &ground,
+        (camera, centre),
+        (mesh, material, count, target),
+    );
 }
+
+#[cfg(test)]
+mod tests;

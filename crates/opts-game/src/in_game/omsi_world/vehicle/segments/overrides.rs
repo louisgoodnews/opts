@@ -47,6 +47,104 @@ pub(crate) fn in_file_order(
     parts
 }
 
+/// The image of a text texture of the model, made once per index and registered as a component
+/// the text system draws into.
+fn text_image_for(
+    (job, commands, images): (&WorldLoadJob, &mut Commands, &mut Assets<Image>),
+    (mesh_def, owner, root): (&ModelMesh, Entity, Entity),
+    (text_images, i): (&mut std::collections::HashMap<usize, Handle<Image>>, usize),
+) -> Option<Handle<Image>> {
+    let text_defs = &job.vehicle_text_defs;
+    if let Some(h) = text_images.get(&i) {
+        return Some(h.clone());
+    }
+    let Some(def) = text_defs.get(i) else {
+        tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, index = i, "[useTextTexture] names a text texture the model does not declare");
+        return None;
+    };
+    let (w, h) = (def.width.max(1), def.height.max(1));
+    let handle = images.add(opts_bevy::text_texture::text_image(
+        w,
+        h,
+        vec![0; (w * h * 4) as usize],
+    ));
+    commands.spawn((
+        VehicleTextTexture::new(owner, def, handle.clone()),
+        Name::new(format!("text_texture_{i}_{}", def.variable)),
+        ChildOf(root),
+    ));
+    text_images.insert(i, handle.clone());
+    Some(handle)
+}
+
+/// The image of a script texture (a canvas the vehicle's scripts draw), made once per index.
+fn script_image_for(
+    (job, commands, images): (&WorldLoadJob, &mut Commands, &mut Assets<Image>),
+    (mesh_def, m, owner, root): (
+        &ModelMesh,
+        &opts_core::formats::vehicles::model::ModelMaterial,
+        Entity,
+        Entity,
+    ),
+    (tex_dirs, script_images, i): (
+        &[PathBuf],
+        &mut std::collections::HashMap<usize, Handle<Image>>,
+        usize,
+    ),
+) -> Option<Handle<Image>> {
+    let script_defs = &job.vehicle_script_defs;
+    if let Some(h) = script_images.get(&i) {
+        return Some(h.clone());
+    }
+    let Some(def) = script_defs.get(i) else {
+        tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, index = i, "[useScriptTexture] names a script texture the model does not declare");
+        return None;
+    };
+    let (w, h) = (def.width.max(1), def.height.max(1));
+    // A canvas used as `[matl_transmap] \S:n` is only the alpha: the colour
+    // is the material's own texture (an LED matrix's `.dds`).
+    let transmap = m
+        .trans_map
+        .as_deref()
+        .is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("\\s:"));
+    let tint: Option<[u8; 3]> = transmap
+        .then(|| {
+            tex_dirs
+                .iter()
+                .find_map(|d| job.install.find_in(d, &m.texture))
+                .and_then(|p| std::fs::read(p).ok())
+                .and_then(|b| opts_bevy::texture::load_bevy_image(&b).ok())
+                .and_then(|img| bright_colour(&img))
+        })
+        .flatten();
+    let mut blank = vec![0; (w * h * 4) as usize];
+    if let Some(rgb) = tint {
+        for p in blank.chunks_exact_mut(4) {
+            p[..3].copy_from_slice(&rgb);
+        }
+    }
+    let handle = images.add(opts_bevy::text_texture::text_image(w, h, blank));
+    let mut component =
+        VehicleScriptTexture::new(i, job.vehicle_script_textures.clone(), handle.clone());
+    if let Some(rgb) = tint {
+        component = component.with_tint(rgb);
+    }
+    // The colour texture may be named by a string variable
+    // (`[matl_freetex]`: the LED matrix's `Matrix_Farbe`, the ATRON AFR4's
+    // `AFR4_ST_texture` over a black placeholder, which has no colour of its
+    // own to start from).
+    if let (true, Some(free)) = (transmap, &m.free_tex) {
+        component = component.following(owner, free.variable.trim(), tex_dirs.to_vec());
+    }
+    commands.spawn((
+        component,
+        Name::new(format!("script_texture_{i}")),
+        ChildOf(root),
+    ));
+    script_images.insert(i, handle.clone());
+    Some(handle)
+}
+
 /// Builds the texture overrides of `mesh_def`.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn build_overrides(
@@ -60,8 +158,6 @@ pub(crate) fn build_overrides(
     text_images: &mut std::collections::HashMap<usize, Handle<Image>>,
     script_images: &mut std::collections::HashMap<usize, Handle<Image>>,
 ) -> Vec<TextureOverride> {
-    let text_defs = &job.vehicle_text_defs;
-    let script_defs = &job.vehicle_script_defs;
     mesh_def
         .materials
         .iter()
@@ -71,90 +167,24 @@ pub(crate) fn build_overrides(
             alpha: m.alpha_mode,
             alpha_variable: m.alpha_scale_var.clone(),
             trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
-            image: m.text_texture_index.and_then(|i| {
-                if let Some(h) = text_images.get(&i) {
-                    return Some(h.clone());
-                }
-                let Some(def) = text_defs.get(i) else {
-                    tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, index = i, "[useTextTexture] names a text texture the model does not declare");
-                    return None;
-                };
-                let (w, h) = (def.width.max(1), def.height.max(1));
-                let handle = images.add(opts_bevy::text_texture::text_image(
-                    w,
-                    h,
-                    vec![0; (w * h * 4) as usize],
-                ));
-                commands.spawn((
-                    VehicleTextTexture::new(owner, def, handle.clone()),
-                    Name::new(format!("text_texture_{i}_{}", def.variable)),
-                    ChildOf(root),
-                ));
-                text_images.insert(i, handle.clone());
-                Some(handle)
-            }).or_else(|| {
-                m.script_texture_index.and_then(|i| {
-                    if let Some(h) = script_images.get(&i) {
-                        return Some(h.clone());
-                    }
-                    let Some(def) = script_defs.get(i) else {
-                        tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, index = i, "[useScriptTexture] names a script texture the model does not declare");
-                        return None;
-                    };
-                    let (w, h) = (def.width.max(1), def.height.max(1));
-                    // A canvas used as `[matl_transmap] \S:n` is only the alpha: the colour
-                    // is the material's own texture (an LED matrix's `.dds`).
-                    let transmap = m
-                        .trans_map
-                        .as_deref()
-                        .is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("\\s:"));
-                    let tint: Option<[u8; 3]> = transmap
-                        .then(|| {
-                            tex_dirs
-                                .iter()
-                                .find_map(|d| job.install.find_in(d, &m.texture))
-                                .and_then(|p| std::fs::read(p).ok())
-                                .and_then(|b| opts_bevy::texture::load_bevy_image(&b).ok())
-                                .and_then(|img| bright_colour(&img))
-                        })
-                        .flatten();
-                    let mut blank = vec![0; (w * h * 4) as usize];
-                    if let Some(rgb) = tint {
-                        for p in blank.chunks_exact_mut(4) {
-                            p[..3].copy_from_slice(&rgb);
-                        }
-                    }
-                    let handle =
-                        images.add(opts_bevy::text_texture::text_image(w, h, blank));
-                    let mut component =
-                        VehicleScriptTexture::new(
-                            i,
-                            job.vehicle_script_textures.clone(),
-                            handle.clone(),
-                        );
-                    if let Some(rgb) = tint {
-                        component = component.with_tint(rgb);
-                    }
-                    // The colour texture may be named by a string variable
-                    // (`[matl_freetex]`: the LED matrix's `Matrix_Farbe`, the ATRON AFR4's
-                    // `AFR4_ST_texture` over a black placeholder, which has no colour of its
-                    // own to start from).
-                    if let (true, Some(free)) = (transmap, &m.free_tex) {
-                        component = component.following(
-                            owner,
-                            free.variable.trim(),
-                            tex_dirs.to_vec(),
-                        );
-                    }
-                    commands.spawn((
-                        component,
-                        Name::new(format!("script_texture_{i}")),
-                        ChildOf(root),
-                    ));
-                    script_images.insert(i, handle.clone());
-                    Some(handle)
+            image: m
+                .text_texture_index
+                .and_then(|i| {
+                    text_image_for(
+                        (job, commands, images),
+                        (mesh_def, owner, root),
+                        (&mut *text_images, i),
+                    )
                 })
-            }),
+                .or_else(|| {
+                    m.script_texture_index.and_then(|i| {
+                        script_image_for(
+                            (job, commands, images),
+                            (mesh_def, m, owner, root),
+                            (tex_dirs, &mut *script_images, i),
+                        )
+                    })
+                }),
             light_map: m.light_map.clone(),
             night_map: m.night_map.clone().filter(|t| !t.trim().is_empty()),
             // A texture named by a string variable (`[matl_freetex]`): the C2 display's
