@@ -56,17 +56,12 @@ fn clock_text(s: f32) -> String {
     format!("{:02}:{:02}", t / 3600, t / 60 % 60)
 }
 
-pub(super) fn route_view(menu: &VehicleMenu, handle: &opts_bevy::route::RouteHandle) -> RouteView {
-    let needle = menu.route_search.to_lowercase();
-    let all = route_labels(handle);
-    let total_routes = all.len();
-    let routes: Vec<(i32, String)> = all
-        .into_iter()
-        .filter(|(_, l)| needle.is_empty() || l.to_lowercase().contains(&needle))
-        .collect();
-    let selected = handle.selection().map(|s| s.route_code);
-    let schedule = handle.schedule();
-    let summary = match (&schedule, handle.selection()) {
+/// One line saying what is selected: the timetable run, the route's terminus, or free driving.
+fn route_summary(
+    handle: &opts_bevy::route::RouteHandle,
+    schedule: &Option<opts_core::formats::timetable::ActiveSchedule>,
+) -> String {
+    match (schedule, handle.selection()) {
         (Some(sc), _) => format!(
             "Timetable: {} · {} {} → {}, start {}",
             sc.line_file,
@@ -84,67 +79,86 @@ pub(super) fn route_view(menu: &VehicleMenu, handle: &opts_bevy::route::RouteHan
             format!("Route: {terminus}")
         }
         (None, None) => "No route selected (free driving).".to_string(),
-    };
-    let timetable = handle.timetables().map(|tt| {
-        let line = menu
-            .tt_line
-            .and_then(|i| tt.lines.iter().filter(|(_, l)| l.user_allowed).nth(i));
-        match (line, menu.tt_tour) {
-            (None, _) => TimetableView::Lines(
-                tt.lines
-                    .iter()
-                    .filter(|(_, l)| l.user_allowed)
-                    .enumerate()
-                    .map(|(i, (n, l))| (i, format!("{n}  ({} tours)", l.tours.len())))
-                    .collect(),
+    }
+}
+
+/// The lines, tours or runs the timetable browser lists, by how far the user has drilled down.
+fn timetable_view(
+    menu: &VehicleMenu,
+    tt: &opts_core::formats::timetable::Timetables,
+) -> TimetableView {
+    let line = menu
+        .tt_line
+        .and_then(|i| tt.lines.iter().filter(|(_, l)| l.user_allowed).nth(i));
+    match (line, menu.tt_tour) {
+        (None, _) => TimetableView::Lines(
+            tt.lines
+                .iter()
+                .filter(|(_, l)| l.user_allowed)
+                .enumerate()
+                .map(|(i, (n, l))| (i, format!("{n}  ({} tours)", l.tours.len())))
+                .collect(),
+        ),
+        (Some((name, l)), None) => TimetableView::Tours(
+            name.clone(),
+            l.tours
+                .iter()
+                .enumerate()
+                .map(|(i, t)| {
+                    (
+                        i,
+                        format!(
+                            "{}  ·  {}  ({} runs)",
+                            t.name,
+                            t.vehicle_group,
+                            t.trips.len()
+                        ),
+                    )
+                })
+                .collect(),
+        ),
+        (Some((name, l)), Some(ti)) => TimetableView::Runs(
+            format!(
+                "{name} / {}",
+                l.tours.get(ti).map_or("", |t| t.name.as_str())
             ),
-            (Some((name, l)), None) => TimetableView::Tours(
-                name.clone(),
-                l.tours
-                    .iter()
-                    .enumerate()
-                    .map(|(i, t)| {
-                        (
-                            i,
-                            format!(
-                                "{}  ·  {}  ({} runs)",
-                                t.name,
-                                t.vehicle_group,
-                                t.trips.len()
-                            ),
-                        )
-                    })
-                    .collect(),
-            ),
-            (Some((name, l)), Some(ti)) => TimetableView::Runs(
-                format!(
-                    "{name} / {}",
-                    l.tours.get(ti).map_or("", |t| t.name.as_str())
-                ),
-                l.tours
-                    .get(ti)
-                    .map(|t| {
-                        t.trips
-                            .iter()
-                            .enumerate()
-                            .map(|(i, r)| {
-                                let trip = tt.trip(&r.trip);
-                                (
-                                    i,
-                                    format!(
-                                        "{}  {}  {}",
-                                        clock_text(r.start_min * 60.0),
-                                        trip.map_or("", |x| x.line.as_str()),
-                                        trip.map_or(r.trip.as_str(), |x| x.title.as_str())
-                                    ),
-                                )
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default(),
-            ),
-        }
-    });
+            l.tours
+                .get(ti)
+                .map(|t| {
+                    t.trips
+                        .iter()
+                        .enumerate()
+                        .map(|(i, r)| {
+                            let trip = tt.trip(&r.trip);
+                            (
+                                i,
+                                format!(
+                                    "{}  {}  {}",
+                                    clock_text(r.start_min * 60.0),
+                                    trip.map_or("", |x| x.line.as_str()),
+                                    trip.map_or(r.trip.as_str(), |x| x.title.as_str())
+                                ),
+                            )
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        ),
+    }
+}
+
+pub(super) fn route_view(menu: &VehicleMenu, handle: &opts_bevy::route::RouteHandle) -> RouteView {
+    let needle = menu.route_search.to_lowercase();
+    let all = route_labels(handle);
+    let total_routes = all.len();
+    let routes: Vec<(i32, String)> = all
+        .into_iter()
+        .filter(|(_, l)| needle.is_empty() || l.to_lowercase().contains(&needle))
+        .collect();
+    let selected = handle.selection().map(|s| s.route_code);
+    let schedule = handle.schedule();
+    let summary = route_summary(handle, &schedule);
+    let timetable = handle.timetables().map(|tt| timetable_view(menu, &tt));
     RouteView {
         depot: handle.with(|s| s.hof.as_ref().map(|h| h.name.clone())),
         routes,

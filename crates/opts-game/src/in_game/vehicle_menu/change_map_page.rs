@@ -89,6 +89,61 @@ pub(super) fn build_change_map(
     });
 }
 
+/// What the change keeps and what not: the vehicle, the time and the dropped options.
+fn plan_labels(p: &mut ChildSpawnerCommands, plan: &ChangeMapPlan) {
+    let vehicle = if plan.no_vehicle {
+        "No vehicle (free camera).".to_owned()
+    } else if plan.repaint.is_empty() {
+        format!("Vehicle: {} is built again.", plan.vehicle_name)
+    } else {
+        format!(
+            "Vehicle: {} ({}) is built again.",
+            plan.vehicle_name, plan.repaint
+        )
+    };
+    label(p, vehicle, 13.0, ColorRole::OnSurfaceVariant);
+    label(
+        p,
+        format!(
+            "Time: {:04}-{:02}-{:02} {:02}:{:02}, weather kept.",
+            plan.date.year,
+            plan.date.month,
+            plan.date.day,
+            (plan.seconds_of_day / 3600.0) as u32 % 24,
+            (plan.seconds_of_day / 60.0) as u32 % 60
+        ),
+        13.0,
+        ColorRole::OnSurfaceVariant,
+    );
+    if !plan.dropped.is_empty() {
+        label(
+            p,
+            format!("Not carried over: {}.", plan.dropped.join(", ")),
+            13.0,
+            ColorRole::OnSurfaceVariant,
+        );
+    }
+}
+
+/// The chosen vehicle is gone: say so and offer to go on without one.
+fn unavailable_notice(p: &mut ChildSpawnerCommands, v: &str) {
+    label(
+        p,
+        format!("{v} is not installed any more and cannot be built on the other map."),
+        13.0,
+        ColorRole::Error,
+    );
+    let b = button(
+        p,
+        "Go on without a vehicle",
+        false,
+        Action::DriveWithoutVehicle,
+    );
+    p.commands()
+        .entity(b)
+        .insert(UiId::new("vehicle.map.without_vehicle"));
+}
+
 /// What the change does, and the question that asks once.
 pub(super) fn build_change_map_confirm(
     commands: &mut Commands,
@@ -105,57 +160,8 @@ pub(super) fn build_change_map_confirm(
     commands.entity(content).with_children(|p| {
         label(p, format!("Change to {map_name}"), 22.0, ColorRole::Primary);
         match outcome {
-            Ok(plan) => {
-                let vehicle = if plan.no_vehicle {
-                    "No vehicle (free camera).".to_owned()
-                } else if plan.repaint.is_empty() {
-                    format!("Vehicle: {} is built again.", plan.vehicle_name)
-                } else {
-                    format!(
-                        "Vehicle: {} ({}) is built again.",
-                        plan.vehicle_name, plan.repaint
-                    )
-                };
-                label(p, vehicle, 13.0, ColorRole::OnSurfaceVariant);
-                label(
-                    p,
-                    format!(
-                        "Time: {:04}-{:02}-{:02} {:02}:{:02}, weather kept.",
-                        plan.date.year,
-                        plan.date.month,
-                        plan.date.day,
-                        (plan.seconds_of_day / 3600.0) as u32 % 24,
-                        (plan.seconds_of_day / 60.0) as u32 % 60
-                    ),
-                    13.0,
-                    ColorRole::OnSurfaceVariant,
-                );
-                if !plan.dropped.is_empty() {
-                    label(
-                        p,
-                        format!("Not carried over: {}.", plan.dropped.join(", ")),
-                        13.0,
-                        ColorRole::OnSurfaceVariant,
-                    );
-                }
-            }
-            Err(ChangeMapError::VehicleUnavailable(v)) => {
-                label(
-                    p,
-                    format!("{v} is not installed any more and cannot be built on the other map."),
-                    13.0,
-                    ColorRole::Error,
-                );
-                let b = button(
-                    p,
-                    "Go on without a vehicle",
-                    false,
-                    Action::DriveWithoutVehicle,
-                );
-                p.commands()
-                    .entity(b)
-                    .insert(UiId::new("vehicle.map.without_vehicle"));
-            }
+            Ok(plan) => plan_labels(p, plan),
+            Err(ChangeMapError::VehicleUnavailable(v)) => unavailable_notice(p, v),
             Err(e) => label(p, e.to_string(), 13.0, ColorRole::Error),
         }
         if !menu.status.is_empty() {

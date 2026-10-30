@@ -28,6 +28,85 @@ fn texts_bundle(key: &'static str, palette: &InstrumentPalette, ink: InstrumentI
     (texts(key, TypeScale::Label, ink, palette), L10nKey(key))
 }
 
+/// The map name and the zoom, top left.
+fn caption_panel(root: &mut ChildSpawnerCommands, palette: &InstrumentPalette) {
+    root.spawn(panel(
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(16.0),
+            top: Val::Px(12.0),
+            padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+            border: UiRect::all(Val::Px(1.0)),
+            ..default()
+        },
+        RadiusLevel::Medium,
+        palette,
+    ))
+    .with_children(|p| {
+        p.spawn((
+            texts("", TypeScale::BodyLarge, InstrumentInk::Text, palette),
+            FullMapCaption,
+            UiId::new("hud.fullmap.caption"),
+        ));
+    });
+}
+
+/// The scale bar, bottom left.
+fn scale_panel(root: &mut ChildSpawnerCommands, palette: &InstrumentPalette) {
+    root.spawn(panel(
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(16.0),
+            bottom: Val::Px(12.0),
+            padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(4.0),
+            border: UiRect::all(Val::Px(1.0)),
+            ..default()
+        },
+        RadiusLevel::Medium,
+        palette,
+    ))
+    .with_children(|p| {
+        p.spawn((
+            Node {
+                width: Val::Px(100.0),
+                height: Val::Px(3.0),
+                ..default()
+            },
+            BackgroundColor(palette.text),
+            FullMapScaleBar,
+        ));
+        p.spawn((
+            texts("", TypeScale::Label, InstrumentInk::TextDim, palette),
+            FullMapScaleText,
+            UiId::new("hud.fullmap.scale"),
+        ));
+    });
+}
+
+/// The keys, bottom right.
+fn hint_panel(root: &mut ChildSpawnerCommands, palette: &InstrumentPalette) {
+    root.spawn(panel(
+        Node {
+            position_type: PositionType::Absolute,
+            right: Val::Px(16.0),
+            bottom: Val::Px(12.0),
+            padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+            border: UiRect::all(Val::Px(1.0)),
+            ..default()
+        },
+        RadiusLevel::Medium,
+        palette,
+    ))
+    .with_children(|p| {
+        p.spawn((
+            texts_bundle(keys::FULLMAP_HINT, palette, InstrumentInk::TextDim),
+            UiId::new("hud.fullmap.hint"),
+        ));
+    });
+}
+
 /// Spawns the overlay.
 fn spawn_overlay(commands: &mut Commands, palette: &InstrumentPalette, ground: Color) {
     commands
@@ -57,77 +136,49 @@ fn spawn_overlay(commands: &mut Commands, palette: &InstrumentPalette, ground: C
                 FullMapSurface,
                 UiId::new("hud.fullmap.surface"),
             ));
-            // The map name and the zoom, top left.
-            root.spawn(panel(
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(16.0),
-                    top: Val::Px(12.0),
-                    padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                RadiusLevel::Medium,
-                palette,
-            ))
-            .with_children(|p| {
-                p.spawn((
-                    texts("", TypeScale::BodyLarge, InstrumentInk::Text, palette),
-                    FullMapCaption,
-                    UiId::new("hud.fullmap.caption"),
-                ));
-            });
-            // The scale bar, bottom left.
-            root.spawn(panel(
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(16.0),
-                    bottom: Val::Px(12.0),
-                    padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(4.0),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                RadiusLevel::Medium,
-                palette,
-            ))
-            .with_children(|p| {
-                p.spawn((
-                    Node {
-                        width: Val::Px(100.0),
-                        height: Val::Px(3.0),
-                        ..default()
-                    },
-                    BackgroundColor(palette.text),
-                    FullMapScaleBar,
-                ));
-                p.spawn((
-                    texts("", TypeScale::Label, InstrumentInk::TextDim, palette),
-                    FullMapScaleText,
-                    UiId::new("hud.fullmap.scale"),
-                ));
-            });
-            // The keys, bottom right.
-            root.spawn(panel(
-                Node {
-                    position_type: PositionType::Absolute,
-                    right: Val::Px(16.0),
-                    bottom: Val::Px(12.0),
-                    padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                RadiusLevel::Medium,
-                palette,
-            ))
-            .with_children(|p| {
-                p.spawn((
-                    texts_bundle(keys::FULLMAP_HINT, palette, InstrumentInk::TextDim),
-                    UiId::new("hud.fullmap.hint"),
-                ));
-            });
+            caption_panel(root, palette);
+            scale_panel(root, palette);
+            hint_panel(root, palette);
         });
+}
+
+/// The caption (the map name, with the reading progress while the overview is still being read)
+/// and the text of the scale bar.
+fn caption_texts(
+    loc: &Localization,
+    overview: &super::overview::OverviewRoads,
+    map: &str,
+    bar_m: f64,
+) -> (String, String) {
+    let bar_text = if bar_m >= 1000.0 {
+        loc.t_args(
+            keys::FULLMAP_SCALE_KM,
+            &[("km".to_owned(), Arg::from((bar_m / 1000.0).round() as i32))],
+        )
+    } else {
+        loc.t_args(
+            keys::FULLMAP_SCALE_M,
+            &[("metres".to_owned(), Arg::from(bar_m.round() as i32))],
+        )
+    };
+    let name = if map.is_empty() {
+        loc.t(keys::FULLMAP_TITLE)
+    } else {
+        map.to_owned()
+    };
+    // While the reader works on the other tiles, the title says how far it is.
+    let title = if overview.started() && !overview.complete() {
+        loc.t_args(
+            keys::FULLMAP_READING,
+            &[
+                ("map".to_owned(), Arg::from(name.as_str())),
+                ("percent".to_owned(), Arg::from(overview.percent() as i32)),
+            ],
+        )
+    } else {
+        name
+    };
+    (title, bar_text)
 }
 
 /// Builds the overlay when the map opens and removes it when it closes; keeps the texture node,
@@ -186,37 +237,10 @@ pub fn overlay(
             }
         }
     }
-    let map = session.as_ref().map_or("", |s| s.map_name.as_str());
     let ppm = state.viewport.px_per_m(screen);
     let bar_m = scale_bar_m(SCALE_BAR_MAX_PX / ppm);
-    let bar_text = if bar_m >= 1000.0 {
-        loc.t_args(
-            keys::FULLMAP_SCALE_KM,
-            &[("km".to_owned(), Arg::from((bar_m / 1000.0).round() as i32))],
-        )
-    } else {
-        loc.t_args(
-            keys::FULLMAP_SCALE_M,
-            &[("metres".to_owned(), Arg::from(bar_m.round() as i32))],
-        )
-    };
-    let name = if map.is_empty() {
-        loc.t(keys::FULLMAP_TITLE)
-    } else {
-        map.to_owned()
-    };
-    // While the reader works on the other tiles, the title says how far it is.
-    let title = if overview.started() && !overview.complete() {
-        loc.t_args(
-            keys::FULLMAP_READING,
-            &[
-                ("map".to_owned(), Arg::from(name.as_str())),
-                ("percent".to_owned(), Arg::from(overview.percent() as i32)),
-            ],
-        )
-    } else {
-        name
-    };
+    let map = session.as_ref().map_or("", |s| s.map_name.as_str());
+    let (title, bar_text) = caption_texts(&loc, &overview, map, bar_m);
     for mut t in &mut caption {
         if t.0 != title {
             t.0.clone_from(&title);
