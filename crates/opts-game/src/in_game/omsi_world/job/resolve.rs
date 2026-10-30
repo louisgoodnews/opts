@@ -2,6 +2,64 @@
 
 use super::*;
 
+/// The map folder: the given path, else the catalogue's or the typed name looked up under `maps`.
+fn resolve_map_dir(
+    req: &SessionRequest<'_>,
+    catalogue: Option<&GameCatalogue>,
+    install: &OmsiInstall,
+    root: &Path,
+) -> Result<PathBuf, String> {
+    Ok(match req.map_path {
+        Some(p) => p.to_path_buf(),
+        None => {
+            let id = catalogue
+                .and_then(|c| {
+                    c.maps.iter().find(|m| {
+                        m.id == req.selected_map
+                            || m.name == req.selected_map
+                            || m.friendly_name == req.selected_map
+                    })
+                })
+                .map_or(req.selected_map, |m| m.id.as_str());
+            install.find_in(&root.join("maps"), id).ok_or_else(|| {
+                format!(
+                    "map folder '{id}' not found under {}",
+                    root.join("maps").display()
+                )
+            })?
+        }
+    })
+}
+
+/// The `.bus` file of the chosen vehicle: the given path, none without a vehicle, else the
+/// catalogue's marker or a search of the installation.
+fn resolve_vehicle_path(
+    req: &SessionRequest<'_>,
+    catalogue: Option<&GameCatalogue>,
+    service: Option<&CatalogueService>,
+    (install, root): (&OmsiInstall, &Path),
+) -> Option<PathBuf> {
+    match req.vehicle_path {
+        Some(p) => Some(p.to_path_buf()),
+        None if req.no_vehicle => None,
+        None => {
+            let id = catalogue
+                .and_then(|c| {
+                    c.vehicles.iter().find(|v| {
+                        v.id == req.selected_vehicle || v.full_name == req.selected_vehicle
+                    })
+                })
+                .map(|v| v.id.as_str());
+            id.and_then(|id| {
+                service
+                    .and_then(|s| s.catalogue.vehicle_marker(id).ok().flatten())
+                    .map(|rel| root.join(rel))
+                    .or_else(|| find_bus_file(install, id))
+            })
+        }
+    }
+}
+
 /// Resolves map folder, installation root and vehicle for the session.
 ///
 /// CLI paths win; otherwise the menu selection is mapped through the catalogue: a map's
@@ -27,49 +85,12 @@ pub fn resolve_session_config(
             .with_relocate_lookup(s.relocate_lookup());
     }
 
-    let map_dir = match req.map_path {
-        Some(p) => p.to_path_buf(),
-        None => {
-            let id = catalogue
-                .and_then(|c| {
-                    c.maps.iter().find(|m| {
-                        m.id == req.selected_map
-                            || m.name == req.selected_map
-                            || m.friendly_name == req.selected_map
-                    })
-                })
-                .map_or(req.selected_map, |m| m.id.as_str());
-            install.find_in(&root.join("maps"), id).ok_or_else(|| {
-                format!(
-                    "map folder '{id}' not found under {}",
-                    root.join("maps").display()
-                )
-            })?
-        }
-    };
+    let map_dir = resolve_map_dir(&req, catalogue, &install, &root)?;
     if !map_dir.is_dir() {
         return Err(format!("map folder does not exist: {}", map_dir.display()));
     }
 
-    let vehicle_path = match req.vehicle_path {
-        Some(p) => Some(p.to_path_buf()),
-        None if req.no_vehicle => None,
-        None => {
-            let id = catalogue
-                .and_then(|c| {
-                    c.vehicles.iter().find(|v| {
-                        v.id == req.selected_vehicle || v.full_name == req.selected_vehicle
-                    })
-                })
-                .map(|v| v.id.as_str());
-            id.and_then(|id| {
-                service
-                    .and_then(|s| s.catalogue.vehicle_marker(id).ok().flatten())
-                    .map(|rel| root.join(rel))
-                    .or_else(|| find_bus_file(&install, id))
-            })
-        }
-    };
+    let vehicle_path = resolve_vehicle_path(&req, catalogue, service, (&install, &root));
     if vehicle_path.is_none() && !req.no_vehicle {
         tracing::warn!(
             selected = req.selected_vehicle,

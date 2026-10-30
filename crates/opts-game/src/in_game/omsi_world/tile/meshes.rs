@@ -144,6 +144,35 @@ pub(super) fn lod_preference(lods: &[ModelLod]) -> Vec<&ModelLod> {
     out
 }
 
+/// Finds and parses the model config of a vehicle model object (registering it as a hot-reload
+/// dependency); counts a failure and returns `None` when it is missing or unreadable.
+fn read_model_config(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    (sco_path, sco_dir, cfg_rel): (&Path, &Path, &str),
+) -> Option<(PathBuf, ModelConfig)> {
+    let Some(cfg_path) = job.install.find_in(sco_dir, cfg_rel) else {
+        tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), cfg = cfg_rel, "vehicle model config not found");
+        super::super::trace::warn(|| format!("vehicle model config not found: {cfg_rel}"));
+        stats.objects_failed += 1;
+        return None;
+    };
+    job.loading_deps
+        .insert(opts_bevy::hot_reload::cache::normalize(&cfg_path));
+    let model = match std::fs::read(&cfg_path)
+        .map_err(|e| e.to_string())
+        .and_then(|b| ModelConfig::parse_bytes(&b).map_err(|e| e.to_string()))
+    {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!(at = %opts_bevy::position_tag(), cfg = %cfg_path.display(), "vehicle model config failed: {e}");
+            stats.objects_failed += 1;
+            return None;
+        }
+    };
+    Some((cfg_path, model))
+}
+
 /// Places a parked/static vehicle object: its `[model]` is a vehicle-style model config; the first
 /// level of detail of [`lod_preference`] that loads anything is drawn.
 #[allow(clippy::too_many_arguments)]
@@ -161,24 +190,9 @@ pub(super) fn spawn_vehicle_model(
     repaint_seed: u64,
     children: &mut Vec<Entity>,
 ) {
-    let Some(cfg_path) = job.install.find_in(sco_dir, cfg_rel) else {
-        tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), cfg = cfg_rel, "vehicle model config not found");
-        super::super::trace::warn(|| format!("vehicle model config not found: {cfg_rel}"));
-        stats.objects_failed += 1;
+    let Some((cfg_path, model)) = read_model_config(job, stats, (sco_path, sco_dir, cfg_rel))
+    else {
         return;
-    };
-    job.loading_deps
-        .insert(opts_bevy::hot_reload::cache::normalize(&cfg_path));
-    let model = match std::fs::read(&cfg_path)
-        .map_err(|e| e.to_string())
-        .and_then(|b| ModelConfig::parse_bytes(&b).map_err(|e| e.to_string()))
-    {
-        Ok(m) => m,
-        Err(e) => {
-            tracing::error!(at = %opts_bevy::position_tag(), cfg = %cfg_path.display(), "vehicle model config failed: {e}");
-            stats.objects_failed += 1;
-            return;
-        }
     };
     let lods = lod_preference(&model.lods);
     if lods.is_empty() {
