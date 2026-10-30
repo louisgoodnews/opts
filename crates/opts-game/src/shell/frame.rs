@@ -151,7 +151,6 @@ fn spawn_entry(
     entry.id()
 }
 
-
 /// The navigation rail: the brand, the registered screens (main ones above, utility ones below),
 /// the theme toggle, *Quit* and the version.
 fn spawn_rail(commands: &mut Commands, registry: &ScreenRegistry) -> Entity {

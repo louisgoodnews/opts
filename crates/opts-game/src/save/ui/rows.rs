@@ -70,6 +70,126 @@ fn row_button(
     button
 }
 
+/// The name and details of a readable save, or the file name and the reason it cannot be read.
+fn row_details(
+    row: &mut ChildSpawnerCommands,
+    entry: &SaveEntry,
+    issues: &[Issue],
+    loc: &Localization,
+) {
+    let id = &entry.id;
+    match &entry.state {
+        Ok(loaded) => {
+            let meta = &loaded.file.meta;
+            row.spawn((
+                Text::new(meta.name.clone()),
+                TextColor::default(),
+                TypeStyleToken(TypeScale::TitleMedium),
+                ForegroundRole(ColorRole::OnSurface),
+            ));
+            let vehicles = if meta.vehicles.is_empty() {
+                loc.t(keys::SAVES_NO_VEHICLE)
+            } else {
+                meta.vehicles.join(", ")
+            };
+            line(
+                row,
+                keys::SAVES_ROW_DETAIL,
+                vec![
+                    ("map".to_owned(), meta.map.clone().into()),
+                    ("vehicles".to_owned(), vehicles.into()),
+                    (
+                        "played".to_owned(),
+                        format_duration(meta.play_time_s as f32).into(),
+                    ),
+                    ("date".to_owned(), date_text(meta.saved_unix).into()),
+                ],
+                TypeScale::BodyMedium,
+                ColorRole::OnSurfaceVariant,
+            );
+            if loaded.from_backup {
+                line(
+                    row,
+                    keys::SAVES_FROM_BACKUP,
+                    Vec::new(),
+                    TypeScale::BodyMedium,
+                    ColorRole::Tertiary,
+                );
+            }
+            for issue in issues {
+                let (key, role) = issue_line(issue);
+                line(
+                    row,
+                    key,
+                    vec![("name".to_owned(), issue.subject.clone().into())],
+                    TypeScale::BodyMedium,
+                    role,
+                );
+            }
+        }
+        Err(e) => {
+            row.spawn((
+                Text::new(id.clone()),
+                TextColor::default(),
+                TypeStyleToken(TypeScale::TitleMedium),
+                ForegroundRole(ColorRole::OnSurface),
+            ));
+            line(
+                row,
+                keys::SAVES_UNREADABLE,
+                vec![("reason".to_owned(), e.to_string().into())],
+                TypeScale::BodyMedium,
+                ColorRole::Error,
+            );
+        }
+    }
+}
+
+/// The buttons of a row: *Load*, *Overwrite* (when saving into a session), *Rename* and *Delete*.
+fn row_buttons(
+    buttons: &mut ChildSpawnerCommands,
+    entry: &SaveEntry,
+    (mode, in_session): (SavesMode, bool),
+) {
+    let id = &entry.id;
+    if entry.state.is_ok() {
+        row_button(
+            buttons,
+            keys::SAVES_LOAD,
+            id,
+            RowAction::Load,
+            "load",
+            false,
+        );
+        if mode == SavesMode::Save && in_session {
+            row_button(
+                buttons,
+                keys::SAVES_OVERWRITE,
+                id,
+                RowAction::Overwrite,
+                "overwrite",
+                false,
+            );
+        }
+        row_button(
+            buttons,
+            keys::SAVES_RENAME,
+            id,
+            RowAction::Rename,
+            "rename",
+            true,
+        );
+    }
+    row_button(
+        buttons,
+        keys::SAVES_DELETE,
+        id,
+        RowAction::Delete,
+        "delete",
+        true,
+    );
+}
+
 fn spawn_row(
     list: &mut ChildSpawnerCommands,
     entry: &SaveEntry,
@@ -92,71 +212,7 @@ fn spawn_row(
         UiId::new(format!("saves.row.{id}")),
     ))
     .with_children(|row| {
-        match &entry.state {
-            Ok(loaded) => {
-                let meta = &loaded.file.meta;
-                row.spawn((
-                    Text::new(meta.name.clone()),
-                    TextColor::default(),
-                    TypeStyleToken(TypeScale::TitleMedium),
-                    ForegroundRole(ColorRole::OnSurface),
-                ));
-                let vehicles = if meta.vehicles.is_empty() {
-                    loc.t(keys::SAVES_NO_VEHICLE)
-                } else {
-                    meta.vehicles.join(", ")
-                };
-                line(
-                    row,
-                    keys::SAVES_ROW_DETAIL,
-                    vec![
-                        ("map".to_owned(), meta.map.clone().into()),
-                        ("vehicles".to_owned(), vehicles.into()),
-                        (
-                            "played".to_owned(),
-                            format_duration(meta.play_time_s as f32).into(),
-                        ),
-                        ("date".to_owned(), date_text(meta.saved_unix).into()),
-                    ],
-                    TypeScale::BodyMedium,
-                    ColorRole::OnSurfaceVariant,
-                );
-                if loaded.from_backup {
-                    line(
-                        row,
-                        keys::SAVES_FROM_BACKUP,
-                        Vec::new(),
-                        TypeScale::BodyMedium,
-                        ColorRole::Tertiary,
-                    );
-                }
-                for issue in issues {
-                    let (key, role) = issue_line(issue);
-                    line(
-                        row,
-                        key,
-                        vec![("name".to_owned(), issue.subject.clone().into())],
-                        TypeScale::BodyMedium,
-                        role,
-                    );
-                }
-            }
-            Err(e) => {
-                row.spawn((
-                    Text::new(id.clone()),
-                    TextColor::default(),
-                    TypeStyleToken(TypeScale::TitleMedium),
-                    ForegroundRole(ColorRole::OnSurface),
-                ));
-                line(
-                    row,
-                    keys::SAVES_UNREADABLE,
-                    vec![("reason".to_owned(), e.to_string().into())],
-                    TypeScale::BodyMedium,
-                    ColorRole::Error,
-                );
-            }
-        }
+        row_details(row, entry, issues, loc);
         row.spawn(Node {
             flex_direction: FlexDirection::Row,
             column_gap: Val::Px(8.0),
@@ -164,42 +220,7 @@ fn spawn_row(
             ..default()
         })
         .with_children(|buttons| {
-            if entry.state.is_ok() {
-                row_button(
-                    buttons,
-                    keys::SAVES_LOAD,
-                    id,
-                    RowAction::Load,
-                    "load",
-                    false,
-                );
-                if mode == SavesMode::Save && in_session {
-                    row_button(
-                        buttons,
-                        keys::SAVES_OVERWRITE,
-                        id,
-                        RowAction::Overwrite,
-                        "overwrite",
-                        false,
-                    );
-                }
-                row_button(
-                    buttons,
-                    keys::SAVES_RENAME,
-                    id,
-                    RowAction::Rename,
-                    "rename",
-                    true,
-                );
-            }
-            row_button(
-                buttons,
-                keys::SAVES_DELETE,
-                id,
-                RowAction::Delete,
-                "delete",
-                true,
-            );
+            row_buttons(buttons, entry, (mode, in_session));
         });
     });
 }

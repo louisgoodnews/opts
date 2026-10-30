@@ -21,6 +21,9 @@ use crate::new_game_screen::weather::name_of;
 use crate::settings::GameSettings;
 use opts_bevy::{SessionEnvironment, WeatherCatalogue};
 
+mod texts;
+use texts::{camera_label_text, clock_line, controls_hint, session_info_text};
+
 /// The last camera state that the label announced, and what it says.
 #[derive(Resource, Debug, Default, Clone, PartialEq)]
 pub struct CameraLabel {
@@ -139,79 +142,12 @@ pub fn update_texts(
                 }
                 loc.t(if on { keys::BRAKE_ON } else { keys::BRAKE_OFF })
             }
-            // The map, and the entry point the active vehicle was spawned at while it still stands
-            // there (the place label; none without a vehicle).
-            (Binding::SessionInfo, Part::Value) => match place.0.as_deref() {
-                Some(entry) => loc.t_args(
-                    keys::SESSION,
-                    &[
-                        ("map".to_owned(), Arg::from(session.map_name.as_str())),
-                        ("entry".to_owned(), Arg::from(entry)),
-                    ],
-                ),
-                None => loc.t_args(
-                    keys::SESSION_MAP,
-                    &[("map".to_owned(), Arg::from(session.map_name.as_str()))],
-                ),
-            },
-            (Binding::SessionClock, Part::Value) => {
-                let mut args = vec![
-                    ("time".to_owned(), Arg::from(clock_text(env))),
-                    (
-                        "weather".to_owned(),
-                        Arg::from(name_of(weather, &loc, env.weather())),
-                    ),
-                ];
-                match &values.timetable {
-                    Some(t) => {
-                        args.push(("line".to_owned(), Arg::from(t.line.as_str())));
-                        args.push(("stop".to_owned(), Arg::from(t.next_stop.as_str())));
-                        args.push(("due".to_owned(), Arg::from(hhmm(t.due_s))));
-                        args.push(("delay".to_owned(), Arg::from(delay_text(t.delay_s))));
-                        loc.t_args(keys::CLOCK_TIMETABLE, &args)
-                    }
-                    None => loc.t_args(keys::CLOCK, &args),
-                }
-            }
-            // The keys of the rebindable actions are the player's current ones.
+            (Binding::SessionInfo, Part::Value) => session_info_text(&loc, &session, &place),
+            (Binding::SessionClock, Part::Value) => clock_line(&loc, env, weather, &values),
             (Binding::ControlsHint, Part::Value) => {
-                let bound = opts_bevy::action_keys_of(&action_keys);
-                if values.rail.is_some() {
-                    let new = rail_hint(&loc, bound, layout.compact);
-                    set_text(&mut text, new);
-                    continue;
-                }
-                loc.t_args(
-                    if layout.compact {
-                        keys::HINT_CONTROLS_COMPACT
-                    } else {
-                        keys::HINT_CONTROLS
-                    },
-                    &[
-                        (
-                            "parking".to_owned(),
-                            Arg::from(bound.label("parking_brake")),
-                        ),
-                        ("help".to_owned(), Arg::from(bound.label("help"))),
-                    ],
-                )
+                controls_hint(&loc, &action_keys, &values, &layout)
             }
-            (Binding::CameraLabel, Part::Value) => label.shown.map_or_else(String::new, |s| {
-                let (mode, index, total) = s;
-                let name = loc.t(camera_key(mode));
-                if total > 1 {
-                    loc.t_args(
-                        keys::CAMERA_SUB,
-                        &[
-                            ("name".to_owned(), Arg::from(name)),
-                            ("index".to_owned(), Arg::from(index + 1)),
-                            ("total".to_owned(), Arg::from(total)),
-                        ],
-                    )
-                } else {
-                    name
-                }
-            }),
+            (Binding::CameraLabel, Part::Value) => camera_label_text(&loc, label.shown),
             // The captions with a message key are written by `L10nKey`; the alert line has its
             // own system.
             _ => continue,

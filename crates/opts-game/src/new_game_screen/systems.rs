@@ -64,6 +64,56 @@ fn go(env: &mut Env, step: PlannerStep) {
     }
 }
 
+/// A quick time button: the clock of the preset (relative to the wall clock).
+fn quick_time(env: &mut Env, i: usize) {
+    let (h, m) = quick_time_of(&QUICK_TIMES[i.min(4)], wall_clock());
+    env.setup.hour = h;
+    env.setup.minute = m;
+    env.state.time_chosen = true;
+    env.state.time_source = None;
+}
+
+/// A date or time stepper: changes the field and marks the date or the time as chosen.
+fn step_time(env: &mut Env, field: Field, delta: i32) {
+    step_field(&mut env.setup, field, delta, false);
+    if Field::DATE.contains(&field) {
+        env.state.date_chosen = true;
+    } else {
+        env.state.time_chosen = true;
+        env.state.time_source = None;
+    }
+}
+
+/// *Duplicate*: a copy of the configuration under the first free name.
+fn duplicate_config(env: &mut Env, id: &str, commands: &mut Commands) {
+    let copy = env
+        .library
+        .store
+        .find(id)
+        .map(|c| format!("{} {}", c.name, env.loc.t("wiz-configs-copy-suffix")));
+    if let Some(base) = copy {
+        let mut name = base.clone();
+        let mut n = 2;
+        while env.library.store.duplicate(id, &name, now_unix()).is_none() && n < 100 {
+            name = format!("{base} {n}");
+            n += 1;
+        }
+        configs_changed(env, commands);
+    }
+}
+
+/// *Delete*: the first press asks, the second deletes.
+fn delete_config(env: &mut Env, id: String, commands: &mut Commands) {
+    if env.library.pending_delete.as_deref() == Some(id.as_str()) {
+        env.library.pending_delete = None;
+        env.library.store.delete(&id);
+        configs_changed(env, commands);
+    } else {
+        env.library.pending_delete = Some(id);
+        env.state.built = None;
+    }
+}
+
 /// Applies the action of an activated wizard button.
 pub fn handle_actions(
     mut activated: MessageReader<Activated>,
@@ -85,23 +135,9 @@ pub fn handle_actions(
             }
             PlannerAction::Drive => drive(&mut env, &mut commands),
             PlannerAction::GoStep(s) => go(&mut env, s),
-            PlannerAction::Quick(i) => {
-                let (h, m) = quick_time_of(&QUICK_TIMES[i.min(4)], wall_clock());
-                env.setup.hour = h;
-                env.setup.minute = m;
-                env.state.time_chosen = true;
-                env.state.time_source = None;
-            }
+            PlannerAction::Quick(i) => quick_time(&mut env, i),
             PlannerAction::Weather(id) => id.clone_into(&mut env.setup.weather_preset),
-            PlannerAction::Step(field, delta) => {
-                step_field(&mut env.setup, field, delta, false);
-                if Field::DATE.contains(&field) {
-                    env.state.date_chosen = true;
-                } else {
-                    env.state.time_chosen = true;
-                    env.state.time_source = None;
-                }
-            }
+            PlannerAction::Step(field, delta) => step_time(&mut env, field, delta),
             PlannerAction::Livery(name) => env.setup.selected_livery = name,
             PlannerAction::OpenOptions => open_options(
                 &mut commands,
@@ -153,38 +189,8 @@ pub fn handle_actions(
                 env.library.store.set_favourite(&id, on);
                 configs_changed(&mut env, &mut commands);
             }
-            PlannerAction::DuplicateConfig(id) => {
-                let copy = env
-                    .library
-                    .store
-                    .find(&id)
-                    .map(|c| format!("{} {}", c.name, env.loc.t("wiz-configs-copy-suffix")));
-                if let Some(base) = copy {
-                    let mut name = base.clone();
-                    let mut n = 2;
-                    while env
-                        .library
-                        .store
-                        .duplicate(&id, &name, now_unix())
-                        .is_none()
-                        && n < 100
-                    {
-                        name = format!("{base} {n}");
-                        n += 1;
-                    }
-                    configs_changed(&mut env, &mut commands);
-                }
-            }
-            PlannerAction::DeleteConfig(id) => {
-                if env.library.pending_delete.as_deref() == Some(id.as_str()) {
-                    env.library.pending_delete = None;
-                    env.library.store.delete(&id);
-                    configs_changed(&mut env, &mut commands);
-                } else {
-                    env.library.pending_delete = Some(id);
-                    env.state.built = None;
-                }
-            }
+            PlannerAction::DuplicateConfig(id) => duplicate_config(&mut env, &id, &mut commands),
+            PlannerAction::DeleteConfig(id) => delete_config(&mut env, id, &mut commands),
             PlannerAction::OpenSettings => {
                 // A step into a sub-page: Back returns here.
                 env.navigate.write(Navigate::push("settings"));

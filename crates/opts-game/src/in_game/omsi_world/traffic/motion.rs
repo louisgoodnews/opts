@@ -126,7 +126,6 @@ const RETIRE_AFTER_S: f64 = 8.0;
 /// other vehicle.
 const RETIRE_FAR_M: f64 = 80.0;
 
-
 /// `OPTS_DBG_OBSTACLES`: logs the obstacles and every agent that is near one.
 fn log_obstacles(world: &opts_traffic::TrafficWorld) {
     if std::env::var_os("OPTS_DBG_OBSTACLES").is_none() {

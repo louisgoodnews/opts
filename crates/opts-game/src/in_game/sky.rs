@@ -88,6 +88,67 @@ pub fn place_sky_dome(
     }
 }
 
+/// The colour of the sky at the horizon (the last row of the textures, blended by `weights`); it
+/// fills anything the dome does not cover and the fog takes it too.
+fn horizon_colour(sky: &Sky, weights: [f32; 3]) -> [f32; 3] {
+    let h = sky.textures[0].height - 1;
+    let mut horizon = [0.0; 3];
+    for (ch, out) in horizon.iter_mut().enumerate() {
+        for (t, wt) in sky.textures.iter().zip(weights) {
+            *out += f32::from(t.rgba[(h * t.width) * 4 + ch]) * wt / 255.0;
+        }
+    }
+    horizon
+}
+
+/// The sun's colour and strength from the sky's light curve at the sun elevation, scaled by the
+/// weather (`opts_bevy::weather::light_scales`).
+fn sun_light(sky: &Sky, env: &SessionEnvironment, elevation: f32) -> (Color, f32) {
+    let a = sky.config.light_at(&sky.config.light_a, elevation);
+    let mean = (a[0] + a[1] + a[2]) / 3.0;
+    let att = env.light_attenuation().direct;
+    (
+        Color::srgb(a[0].max(0.001), a[1].max(0.001), a[2].max(0.001)),
+        SUN_ILLUMINANCE * mean * att,
+    )
+}
+
+/// The ambient light from the sky's light curves at the sun elevation, scaled by the weather.
+fn set_ambient(
+    sky: &Sky,
+    ambient: &mut GlobalAmbientLight,
+    env: &SessionEnvironment,
+    (elevation, ambient_scale): (f32, f32),
+) {
+    let b = sky.config.light_at(&sky.config.light_b, elevation);
+    let c = sky.config.light_at(&sky.config.light_c, elevation);
+    let amb = [c[0] + b[0] * 0.5, c[1] + b[1] * 0.5, c[2] + b[2] * 0.5];
+    let peak = amb.iter().copied().fold(0.001_f32, f32::max);
+    ambient.color = Color::srgb(amb[0] / peak, amb[1] / peak, amb[2] / peak);
+    ambient.brightness =
+        AMBIENT_BRIGHTNESS * ambient_scale * peak.min(1.0) * env.light_attenuation().ambient;
+}
+
+/// Writes the clear colour; with HDR what shows the colour after the camera's tonemapping.
+fn set_clear_colour(
+    clear: &mut ClearColor,
+    look: Option<&crate::look::ActiveLook>,
+    hdr: bool,
+    clear_color: [f32; 3],
+) {
+    let display = Color::srgb(clear_color[0], clear_color[1], clear_color[2]).to_linear();
+    clear.0 = if hdr {
+        // The HDR camera tonemaps its clear colour too; write what shows `display` after it.
+        let tm = look
+            .as_ref()
+            .map_or_else(Default::default, |l| l.0.params().tonemapping);
+        let x = crate::look::hdr_clear_color(tm, [display.red, display.green, display.blue]);
+        Color::linear_rgb(x[0], x[1], x[2])
+    } else {
+        display.into()
+    };
+}
+
 /// Updates sky colours, sun/moon placement and lighting.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update_sky(
@@ -155,13 +216,7 @@ pub fn update_sky(
         let weights = sky.config.sky_weights(elevation);
         // Colour of the sky at the horizon fills anything the dome does not cover; the fog
         // takes it too, greyed in thick fog.
-        let h = sky.textures[0].height - 1;
-        let mut horizon = [0.0; 3];
-        for (ch, out) in horizon.iter_mut().enumerate() {
-            for (t, wt) in sky.textures.iter().zip(weights) {
-                *out += f32::from(t.rgba[(h * t.width) * 4 + ch]) * wt / 255.0;
-            }
-        }
+        let horizon = horizon_colour(&sky, weights);
         let conditions = env.conditions();
         let fog_on = effects.as_ref().is_none_or(|e| e.fog);
         let veil_color = opts_bevy::weather::fog_color(horizon, conditions);
@@ -180,22 +235,13 @@ pub fn update_sky(
         if let Some(mut img) = images.get_mut(&sky.image) {
             img.data = Some(data);
         }
-        let l = |c: [f32; 3]| (c[0] + c[1] + c[2]) / 3.0;
-        let a = sky.config.light_at(&sky.config.light_a, elevation);
-        let b = sky.config.light_at(&sky.config.light_b, elevation);
-        let c = sky.config.light_at(&sky.config.light_c, elevation);
-        // The weather scales the light through `opts_bevy::weather::light_scales`.
-        let la = env.light_attenuation();
-        let (att, ambient_att) = (la.direct, la.ambient);
+        let (sun_colour, sun_lux) = sun_light(&sky, &env, elevation);
         for (_, mut light) in &mut sun {
-            light.color = Color::srgb(a[0].max(0.001), a[1].max(0.001), a[2].max(0.001));
-            light.illuminance = SUN_ILLUMINANCE * l(a) * att;
+            light.color = sun_colour;
+            light.illuminance = sun_lux;
         }
-        let amb = [c[0] + b[0] * 0.5, c[1] + b[1] * 0.5, c[2] + b[2] * 0.5];
-        let peak = amb.iter().copied().fold(0.001_f32, f32::max);
         if let Some(ambient) = ambient.as_mut() {
-            ambient.color = Color::srgb(amb[0] / peak, amb[1] / peak, amb[2] / peak);
-            ambient.brightness = AMBIENT_BRIGHTNESS * ambient_scale * peak.min(1.0) * ambient_att;
+            set_ambient(&sky, ambient, &env, (elevation, ambient_scale));
         }
         // The clear colour fills what the dome does not cover: the fog colour, towards the
         // horizon colour as the camera leaves the ground-fog layer.
@@ -206,18 +252,7 @@ pub fn update_sky(
             horizon
         };
         if let Some(clear) = clear.as_mut() {
-            let display = Color::srgb(clear_color[0], clear_color[1], clear_color[2]).to_linear();
-            clear.0 = if hdr {
-                // The HDR camera tonemaps its clear colour too; write what shows `display` after it.
-                let tm = look
-                    .as_ref()
-                    .map_or_else(Default::default, |l| l.0.params().tonemapping);
-                let x =
-                    crate::look::hdr_clear_color(tm, [display.red, display.green, display.blue]);
-                Color::linear_rgb(x[0], x[1], x[2])
-            } else {
-                display.into()
-            };
+            set_clear_colour(clear, look.as_deref(), hdr, clear_color);
         }
         commands.insert_resource(SkyHorizon(horizon));
     }

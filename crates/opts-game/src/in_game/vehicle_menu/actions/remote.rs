@@ -9,6 +9,70 @@ use crate::session_vehicles::SessionVehicles;
 use super::super::route_page::run_timetable;
 use super::super::{Action, MenuCommands, Page, VehicleMenu};
 
+/// `map <text>` picks the first map that matches, `map <text> / <entry>` also the entry.
+fn map_action(
+    menu: &mut VehicleMenu,
+    catalogue: Option<&GameCatalogue>,
+    rest: &str,
+) -> Option<Action> {
+    let (m, entry) = rest
+        .split_once('/')
+        .map_or((rest, None), |(m, e)| (m, Some(e.trim())));
+    if let Some(entry) = entry {
+        menu.change_map.entry = Some(entry.to_owned());
+    }
+    catalogue
+        .and_then(|c| {
+            super::super::super::change_map::find_maps(c, m.trim())
+                .first()
+                .map(|x| x.id.clone())
+        })
+        .map(Action::PickMap)
+}
+
+/// `run <line file> <tour> <run>`: the line file may contain spaces, tour and run are the last two
+/// words. Starts that timetable run.
+fn queue_run(commands: &mut Commands, rest: &str) {
+    let mut w: Vec<&str> = rest.split_whitespace().collect();
+    let run = w.pop().and_then(|x| x.parse().ok());
+    let tour = w.pop().and_then(|x| x.parse().ok());
+    if let (Some(tour), Some(run), false) = (tour, run, w.is_empty()) {
+        let line = w.join(" ");
+        commands.queue(move |world: &mut World| {
+            run_timetable(world, &line, tour, run);
+        });
+    }
+}
+
+/// `step <option> [-1|1]`: the option is the first word, the direction the last.
+fn step_action(rest: &str) -> Option<Action> {
+    let mut words = rest.split_whitespace();
+    let delta = words
+        .clone()
+        .nth(1)
+        .and_then(|d| d.parse().ok())
+        .unwrap_or(1);
+    words
+        .next()
+        .map(|name| Action::Step(name.to_string(), delta))
+}
+
+/// `repaint <text>` picks the first repaint of the shown vehicle whose name matches; the first one
+/// is the default and has no name.
+fn repaint_action(menu: &VehicleMenu, has: impl Fn(&str) -> bool) -> Option<Action> {
+    menu.repaints
+        .as_ref()
+        .and_then(|(_, r)| r.names.iter().position(|n| has(n)))
+        .map(|i| {
+            let n = menu
+                .repaints
+                .as_ref()
+                .map(|(_, r)| r.names[i].clone())
+                .unwrap_or_default();
+            Action::PickRepaint(if i == 0 { String::new() } else { n })
+        })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn parse_remote_commands(
     remote: &mut MenuCommands,
@@ -58,22 +122,7 @@ pub(super) fn parse_remote_commands(
                 .iter()
                 .find(|r| has(&r.name))
                 .map(|r| Action::SpawnConfig(r.id.clone())),
-            // `map <text>` picks the first map that matches, `map <text> / <entry>` also the entry.
-            "map" => {
-                let (m, entry) = rest
-                    .split_once('/')
-                    .map_or((rest.as_str(), None), |(m, e)| (m, Some(e.trim())));
-                if let Some(entry) = entry {
-                    menu.change_map.entry = Some(entry.to_owned());
-                }
-                catalogue
-                    .and_then(|c| {
-                        super::super::super::change_map::find_maps(c, m.trim())
-                            .first()
-                            .map(|x| x.id.clone())
-                    })
-                    .map(Action::PickMap)
-            }
+            "map" => map_action(menu, catalogue, &rest),
             "route" if rest.is_empty() => Some(Action::OpenRoute),
             "route" => Some(Action::PickRouteText(rest.clone())),
             "route-clear" => Some(Action::ClearRoute),
@@ -81,22 +130,9 @@ pub(super) fn parse_remote_commands(
             "jump" => job
                 .and_then(|j| j.entry_records().into_iter().find(|(_, n)| has(n)))
                 .map(|(id, _)| Action::JumpEntry(id)),
-            // `run <line file> <tour> <run>`: the line file may contain spaces, tour and run are
-            // the last two words.
             "run" => {
-                let mut w: Vec<&str> = rest.split_whitespace().collect();
-                let run = w.pop().and_then(|x| x.parse().ok());
-                let tour = w.pop().and_then(|x| x.parse().ok());
-                match (tour, run, w.is_empty()) {
-                    (Some(tour), Some(run), false) => {
-                        let line = w.join(" ");
-                        commands.queue(move |world: &mut World| {
-                            run_timetable(world, &line, tour, run);
-                        });
-                        None
-                    }
-                    _ => None,
-                }
+                queue_run(commands, &rest);
+                None
             }
             "config" => Some(Action::OpenConfig),
             "done" => Some(Action::CloseConfig),
@@ -111,18 +147,7 @@ pub(super) fn parse_remote_commands(
             "respawn" => registry.active_id().map(Action::Respawn),
             "reset" => registry.active_id().map(Action::ResetOnRoad),
             "toggle" => Some(Action::Toggle(rest.clone())),
-            // `step <option> [-1|1]`: the option is the first word, the direction the last.
-            "step" => {
-                let mut words = rest.split_whitespace();
-                let delta = words
-                    .clone()
-                    .nth(1)
-                    .and_then(|d| d.parse().ok())
-                    .unwrap_or(1);
-                words
-                    .next()
-                    .map(|name| Action::Step(name.to_string(), delta))
-            }
+            "step" => step_action(&rest),
             "vehicle" => catalogue
                 .and_then(|c| {
                     c.vehicles
@@ -130,18 +155,7 @@ pub(super) fn parse_remote_commands(
                         .position(|v| has(&v.full_name) || has(&v.id))
                 })
                 .map(Action::PickVehicle),
-            "repaint" => menu
-                .repaints
-                .as_ref()
-                .and_then(|(_, r)| r.names.iter().position(|n| has(n)))
-                .map(|i| {
-                    let n = menu
-                        .repaints
-                        .as_ref()
-                        .map(|(_, r)| r.names[i].clone())
-                        .unwrap_or_default();
-                    Action::PickRepaint(if i == 0 { String::new() } else { n })
-                }),
+            "repaint" => repaint_action(menu, has),
             "entry" => menu
                 .shown_entries
                 .iter()

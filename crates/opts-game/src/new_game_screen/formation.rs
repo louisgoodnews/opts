@@ -99,35 +99,13 @@ fn small_button(
     action_button(commands, key, Emphasis::Quiet, action, id)
 }
 
-/// Opens the composer.
-pub fn open(
+/// The train so far: one line per car with its *Up*, *Turn* and *Remove* buttons.
+fn spawn_train(
     commands: &mut Commands,
     loc: &Localization,
     catalogue: &GameCatalogue,
     setup: &NewGameSetup,
-) {
-    let (root, content) = ModalBuilder::new()
-        .with_size_percent(60.0, 80.0)
-        .with_width_range(520.0, 820.0)
-        .spawn(commands);
-    commands
-        .entity(root)
-        .insert((FormationModal, UiId::new("wizard.what.formation.modal")));
-    let title = commands
-        .spawn(keyed(
-            "wiz-formation-title",
-            TypeScale::TitleLarge,
-            ColorRole::OnSurface,
-        ))
-        .id();
-    let hint = commands
-        .spawn(keyed(
-            "wiz-formation-hint",
-            TypeScale::BodyMedium,
-            ColorRole::OnSurfaceVariant,
-        ))
-        .id();
-    // The train so far.
+) -> Entity {
     let train = commands
         .spawn((
             Node {
@@ -192,7 +170,11 @@ pub fn open(
         commands.entity(line).add_children(&kids);
         commands.entity(train).add_child(line);
     }
-    // The cars that can be added.
+    train
+}
+
+/// The title and the list of the cars that can be added.
+fn spawn_car_list(commands: &mut Commands, catalogue: &GameCatalogue) -> (Entity, Entity) {
     let add_title = commands
         .spawn(keyed(
             "wiz-formation-add",
@@ -233,6 +215,11 @@ pub fn open(
         ));
         commands.entity(list).add_child(button);
     }
+    (add_title, list)
+}
+
+/// The footer with *Clear* and *Done*.
+fn spawn_footer(commands: &mut Commands) -> Entity {
     let footer = commands
         .spawn(Node {
             justify_content: JustifyContent::FlexEnd,
@@ -255,6 +242,40 @@ pub fn open(
     );
     commands.entity(done).insert(DefaultFocus);
     commands.entity(footer).add_children(&[clear, done]);
+    footer
+}
+
+/// Opens the composer.
+pub fn open(
+    commands: &mut Commands,
+    loc: &Localization,
+    catalogue: &GameCatalogue,
+    setup: &NewGameSetup,
+) {
+    let (root, content) = ModalBuilder::new()
+        .with_size_percent(60.0, 80.0)
+        .with_width_range(520.0, 820.0)
+        .spawn(commands);
+    commands
+        .entity(root)
+        .insert((FormationModal, UiId::new("wizard.what.formation.modal")));
+    let title = commands
+        .spawn(keyed(
+            "wiz-formation-title",
+            TypeScale::TitleLarge,
+            ColorRole::OnSurface,
+        ))
+        .id();
+    let hint = commands
+        .spawn(keyed(
+            "wiz-formation-hint",
+            TypeScale::BodyMedium,
+            ColorRole::OnSurfaceVariant,
+        ))
+        .id();
+    let train = spawn_train(commands, loc, catalogue, setup);
+    let (add_title, list) = spawn_car_list(commands, catalogue);
+    let footer = spawn_footer(commands);
     commands
         .entity(content)
         .add_children(&[title, hint, train, add_title, list, footer]);

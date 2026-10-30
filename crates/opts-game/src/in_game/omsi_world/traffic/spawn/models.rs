@@ -24,23 +24,22 @@ pub(crate) struct SpawnedModels {
     pub trace_frame: trace::Frame,
 }
 
-
 /// One hidden root entity per unit of the vehicle, all at the spawn position.
 fn spawn_unit_roots(commands: &mut Commands, variant: &Variant, origin: Transform) -> Vec<Entity> {
     variant
-            .units
-            .iter()
-            .map(|u| {
-                commands
-                    .spawn((
-                        origin,
-                        Visibility::Hidden,
-                        Name::new(u.name.clone()),
-                        InGameEntity,
-                    ))
-                    .id()
-            })
-            .collect()
+        .units
+        .iter()
+        .map(|u| {
+            commands
+                .spawn((
+                    origin,
+                    Visibility::Hidden,
+                    Name::new(u.name.clone()),
+                    InGameEntity,
+                ))
+                .id()
+        })
+        .collect()
 }
 
 /// The repaint the fleet entry of this spawn names: among the entries in service on the map date
@@ -51,29 +50,29 @@ fn fleet_repaint_name(
     repaint_seed: u64,
 ) -> Option<String> {
     {
-            let today = chrono
-                .and_then(|c| c.date)
-                .map(opts_core::formats::chrono::ChronoDate::yyyymmdd);
-            let in_service: Vec<_> = fleet
-                .iter()
-                .filter(|e| today.is_none_or(|d| e.in_service(d)))
-                .collect();
-            let fleet = if in_service.is_empty() {
-                fleet.iter().collect()
-            } else {
-                in_service
-            };
-            (!fleet.is_empty())
-                .then(|| fleet[usize::try_from(repaint_seed % fleet.len() as u64).unwrap_or(0)])
-                .map(|e| e.repaint.clone())
-        }
+        let today = chrono
+            .and_then(|c| c.date)
+            .map(opts_core::formats::chrono::ChronoDate::yyyymmdd);
+        let in_service: Vec<_> = fleet
+            .iter()
+            .filter(|e| today.is_none_or(|d| e.in_service(d)))
+            .collect();
+        let fleet = if in_service.is_empty() {
+            fleet.iter().collect()
+        } else {
+            in_service
+        };
+        (!fleet.is_empty())
+            .then(|| fleet[usize::try_from(repaint_seed % fleet.len() as u64).unwrap_or(0)])
+            .map(|e| e.repaint.clone())
+    }
 }
 
 /// Makes the unit's text and script texture definitions the ones the mesh loader sees; for a
 /// scheduled vehicle also a fresh set of canvases, which are returned.
 fn set_unit_defs(
     job: &mut WorldLoadJob,
-    unit: &Unit,
+    unit: &crate::in_game::omsi_world::traffic_variant::Unit,
     is_scheduled: bool,
 ) -> Option<Arc<RwLock<Vec<CpuScriptTexture>>>> {
     job.vehicle_text_defs = unit.model.text_textures.clone();

@@ -122,6 +122,119 @@ fn trip_row(commands: &mut Commands, ctx: &BuildCtx) -> Option<Entity> {
     ))
 }
 
+/// The *Where* row: the map and the start point (the first stop with a trip).
+fn where_row(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
+    let s = ctx.setup;
+    let map = ctx.catalogue.map_by_name(&s.selected_map);
+    // With a trip the drive starts at its first stop, not at the start point.
+    let start = s
+        .trip
+        .as_ref()
+        .map_or_else(|| s.selected_entry_point.clone(), |t| t.stop_name.clone());
+    let where_lines = vec![
+        commands
+            .spawn(plain(
+                s.selected_map.clone(),
+                TypeScale::TitleMedium,
+                ColorRole::OnSurface,
+            ))
+            .id(),
+        commands
+            .spawn(plain(
+                start,
+                TypeScale::BodyMedium,
+                ColorRole::OnSurfaceVariant,
+            ))
+            .id(),
+    ];
+    review_row(
+        commands,
+        PlannerStep::Where,
+        glyphs::MAP,
+        map.map(|m| format!("map:{}", m.id)),
+        where_lines,
+    )
+}
+
+/// The *What* row: the vehicle, its repaint and how many options were changed.
+fn what_row(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
+    let s = ctx.setup;
+    let vehicle = ctx
+        .catalogue
+        .find_vehicle(&s.selected_vehicle)
+        .filter(|_| !s.no_vehicle);
+    let mut what_lines = vec![commands
+        .spawn(plain(
+            vehicle_line(ctx.loc, ctx.catalogue, s),
+            TypeScale::TitleMedium,
+            ColorRole::OnSurface,
+        ))
+        .id()];
+    let livery = livery_name(ctx.catalogue, s);
+    if !livery.is_empty() {
+        what_lines.push(
+            commands
+                .spawn(plain(
+                    livery,
+                    TypeScale::BodyMedium,
+                    ColorRole::OnSurfaceVariant,
+                ))
+                .id(),
+        );
+    }
+    if !s.custom_setvars.is_empty() {
+        what_lines.push(
+            commands
+                .spawn(keyed_args(
+                    "wiz-what-options-changed",
+                    L10nArgs::one("count", s.custom_setvars.len()),
+                    TypeScale::Label,
+                    ColorRole::OnSurfaceVariant,
+                ))
+                .id(),
+        );
+    }
+    review_row(
+        commands,
+        PlannerStep::What,
+        glyphs::BUS,
+        vehicle.map(|v| format!("veh:{}", v.id)),
+        what_lines,
+    )
+}
+
+/// The *When* row: date, time and weather.
+fn when_row(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
+    let s = ctx.setup;
+    let when_lines = vec![
+        commands
+            .spawn(plain(
+                format!(
+                    "{} {}",
+                    date_text(ctx.loc, s),
+                    super::planner::clock_text(s)
+                ),
+                TypeScale::TitleMedium,
+                ColorRole::OnSurface,
+            ))
+            .id(),
+        commands
+            .spawn(plain(
+                weather_name(ctx.loc, ctx.weather, s),
+                TypeScale::BodyMedium,
+                ColorRole::OnSurfaceVariant,
+            ))
+            .id(),
+    ];
+    review_row(
+        commands,
+        PlannerStep::When,
+        glyphs::SCHEDULE,
+        None,
+        when_lines,
+    )
+}
+
 /// Builds the step body.
 pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     let s = ctx.setup;
@@ -159,104 +272,9 @@ pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
             Name::new("ReviewCard"),
         ))
         .id();
-    let map = ctx.catalogue.map_by_name(&s.selected_map);
-    // With a trip the drive starts at its first stop, not at the start point.
-    let start = s
-        .trip
-        .as_ref()
-        .map_or_else(|| s.selected_entry_point.clone(), |t| t.stop_name.clone());
-    let where_lines = vec![
-        commands
-            .spawn(plain(
-                s.selected_map.clone(),
-                TypeScale::TitleMedium,
-                ColorRole::OnSurface,
-            ))
-            .id(),
-        commands
-            .spawn(plain(
-                start,
-                TypeScale::BodyMedium,
-                ColorRole::OnSurfaceVariant,
-            ))
-            .id(),
-    ];
-    let where_row = review_row(
-        commands,
-        PlannerStep::Where,
-        glyphs::MAP,
-        map.map(|m| format!("map:{}", m.id)),
-        where_lines,
-    );
-    let vehicle = ctx
-        .catalogue
-        .find_vehicle(&s.selected_vehicle)
-        .filter(|_| !s.no_vehicle);
-    let mut what_lines = vec![commands
-        .spawn(plain(
-            vehicle_line(ctx.loc, ctx.catalogue, s),
-            TypeScale::TitleMedium,
-            ColorRole::OnSurface,
-        ))
-        .id()];
-    let livery = livery_name(ctx.catalogue, s);
-    if !livery.is_empty() {
-        what_lines.push(
-            commands
-                .spawn(plain(
-                    livery,
-                    TypeScale::BodyMedium,
-                    ColorRole::OnSurfaceVariant,
-                ))
-                .id(),
-        );
-    }
-    if !s.custom_setvars.is_empty() {
-        what_lines.push(
-            commands
-                .spawn(keyed_args(
-                    "wiz-what-options-changed",
-                    L10nArgs::one("count", s.custom_setvars.len()),
-                    TypeScale::Label,
-                    ColorRole::OnSurfaceVariant,
-                ))
-                .id(),
-        );
-    }
-    let what_row = review_row(
-        commands,
-        PlannerStep::What,
-        glyphs::BUS,
-        vehicle.map(|v| format!("veh:{}", v.id)),
-        what_lines,
-    );
-    let when_lines = vec![
-        commands
-            .spawn(plain(
-                format!(
-                    "{} {}",
-                    date_text(ctx.loc, s),
-                    super::planner::clock_text(s)
-                ),
-                TypeScale::TitleMedium,
-                ColorRole::OnSurface,
-            ))
-            .id(),
-        commands
-            .spawn(plain(
-                weather_name(ctx.loc, ctx.weather, s),
-                TypeScale::BodyMedium,
-                ColorRole::OnSurfaceVariant,
-            ))
-            .id(),
-    ];
-    let when_row = review_row(
-        commands,
-        PlannerStep::When,
-        glyphs::SCHEDULE,
-        None,
-        when_lines,
-    );
+    let where_row = where_row(commands, ctx);
+    let what_row = what_row(commands, ctx);
+    let when_row = when_row(commands, ctx);
     let mut rows = vec![where_row, what_row, when_row];
     if let Some(trip) = trip_row(commands, ctx) {
         rows.push(trip);

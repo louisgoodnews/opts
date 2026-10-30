@@ -13,6 +13,128 @@ pub struct Scene {
     pub markers: Vec<(DVec2, f32, bool)>,
 }
 
+/// The player's and the session's vehicles as markers; the player's pose centres the map (the
+/// free camera's when there is no vehicle). Also whether there is a player vehicle.
+fn gather_scene(
+    vehicles: &Query<(
+        &GlobalTransform,
+        Option<&SessionVehicle>,
+        Has<PlayerVehicle>,
+    )>,
+    cameras: &Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
+) -> (Scene, bool) {
+    let mut scene = Scene::default();
+    let mut has_player = false;
+    for (t, session, is_player) in vehicles {
+        if session.is_none() && !is_player {
+            continue;
+        }
+        let (pos, heading) = pose_of(t);
+        if is_player {
+            scene.centre = Some(pos);
+            scene.heading = heading;
+            has_player = true;
+        }
+        scene.markers.push((pos, heading, is_player));
+    }
+    if scene.centre.is_none() {
+        if let Some(t) = cameras.iter().next() {
+            let (pos, heading) = pose_of(t);
+            scene.centre = Some(pos);
+            scene.heading = heading;
+            scene.markers.push((pos, heading, true));
+        }
+    }
+    (scene, has_player)
+}
+
+/// The view for this tick: the radius (the zoom step, or what the speed asks for: the head unit's
+/// road speed, the free camera's own speed without a vehicle) and what points up. Records the
+/// radius and speed in the state.
+fn choose_view(
+    state: &mut MiniMapState,
+    (centre, heading): (DVec2, f32),
+    has_player: bool,
+    hud: Option<&super::super::HudValues>,
+    tick_dt: f32,
+) -> MapView {
+    let config = state.config;
+    // The radius: the zoom step, or what the speed asks for (the head unit's road speed; the
+    // free camera's own speed when there is no vehicle).
+    let moved = state.centre.map(|prev| (centre - prev).length());
+    let speed_in = if has_player {
+        hud.map(|h| h.speed_kmh)
+    } else {
+        moved.and_then(|m| zoom::camera_speed_kmh(m, tick_dt))
+    };
+    if moved.is_some_and(|m| m > zoom::JUMP_M) {
+        state.filter.reset();
+    }
+    let (radius_m, target_m) = match config.zoom_mode {
+        ZoomMode::Fixed => {
+            state.filter.reset();
+            (config.zoom_m, config.zoom_m)
+        }
+        ZoomMode::Speed => {
+            let held = state.filter.speed_kmh;
+            let r = state
+                .filter
+                .step(tick_dt, speed_in.unwrap_or(held), config.zoom_m);
+            (
+                r,
+                zoom::target_radius(state.filter.speed_kmh, config.zoom_m),
+            )
+        }
+    };
+    state.radius_m = radius_m;
+    state.target_m = target_m;
+    state.speed_kmh = state.filter.speed_kmh;
+    MapView {
+        radius_m,
+        up_heading: match config.orientation {
+            Orientation::North => 0.0,
+            Orientation::Heading => heading,
+        },
+    }
+}
+
+/// The route's lines, its stops and the scheduled vehicles in map pixels.
+type RouteOverlay = (Vec<MapLine>, Vec<(Vec2, bool)>, Vec<(Vec2, f32)>);
+
+/// The route's lines and stops and the scheduled vehicles, in map pixels around the centre.
+fn route_overlay(
+    route: Option<&super::super::route_path::PlayerRoutePath>,
+    scheduled: Option<&super::super::route_path::ScheduledVehicles>,
+    centre: DVec2,
+    min_chord: f64,
+) -> RouteOverlay {
+    let mut route_lines: Vec<MapLine> = Vec::new();
+    let mut route_stops: Vec<(Vec2, bool)> = Vec::new();
+    if let Some(r) = route {
+        for road in &r.roads {
+            push_chords(road, centre, min_chord, &mut route_lines);
+        }
+        route_stops.extend(r.stops.iter().map(|(p, n)| {
+            (
+                Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
+                *n,
+            )
+        }));
+    }
+    let scheduled_px: Vec<(Vec2, f32)> = scheduled.map_or_else(Vec::new, |s| {
+        s.poses
+            .iter()
+            .map(|(p, h)| {
+                (
+                    Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
+                    *h,
+                )
+            })
+            .collect()
+    });
+    (route_lines, route_stops, scheduled_px)
+}
+
 /// Redraws the map at most 10 times per second.
 #[allow(clippy::too_many_arguments)]
 pub fn redraw(
@@ -46,33 +168,11 @@ pub fn redraw(
     let tick_dt = state.since;
     state.since = 0.0;
 
-    let mut scene = Scene::default();
-    let mut has_player = false;
-    for (t, session, is_player) in &vehicles {
-        if session.is_none() && !is_player {
-            continue;
-        }
-        let (pos, heading) = pose_of(t);
-        if is_player {
-            scene.centre = Some(pos);
-            scene.heading = heading;
-            has_player = true;
-        }
-        scene.markers.push((pos, heading, is_player));
-    }
-    if scene.centre.is_none() {
-        if let Some(t) = cameras.iter().next() {
-            let (pos, heading) = pose_of(t);
-            scene.centre = Some(pos);
-            scene.heading = heading;
-            scene.markers.push((pos, heading, true));
-        }
-    }
+    let (scene, has_player) = gather_scene(&vehicles, &cameras);
     let Some(centre) = scene.centre else {
         return;
     };
 
-    let config = state.config;
     let colors = colors_of(
         theme
             .as_ref()
@@ -80,43 +180,13 @@ pub fn redraw(
                 t.instrument(*variant)
             }),
     );
-    // The radius: the zoom step, or what the speed asks for (the head unit's road speed; the
-    // free camera's own speed when there is no vehicle).
-    let moved = state.centre.map(|prev| (centre - prev).length());
-    let speed_in = if has_player {
-        hud.as_ref().map(|h| h.speed_kmh)
-    } else {
-        moved.and_then(|m| zoom::camera_speed_kmh(m, tick_dt))
-    };
-    if moved.is_some_and(|m| m > zoom::JUMP_M) {
-        state.filter.reset();
-    }
-    let (radius_m, target_m) = match config.zoom_mode {
-        ZoomMode::Fixed => {
-            state.filter.reset();
-            (config.zoom_m, config.zoom_m)
-        }
-        ZoomMode::Speed => {
-            let held = state.filter.speed_kmh;
-            let r = state
-                .filter
-                .step(tick_dt, speed_in.unwrap_or(held), config.zoom_m);
-            (
-                r,
-                zoom::target_radius(state.filter.speed_kmh, config.zoom_m),
-            )
-        }
-    };
-    state.radius_m = radius_m;
-    state.target_m = target_m;
-    state.speed_kmh = state.filter.speed_kmh;
-    let view = MapView {
-        radius_m,
-        up_heading: match config.orientation {
-            Orientation::North => 0.0,
-            Orientation::Heading => scene.heading,
-        },
-    };
+    let view = choose_view(
+        &mut state,
+        (centre, scene.heading),
+        has_player,
+        hud.as_deref(),
+        tick_dt,
+    );
     // Roads: the lane graph's paths, then the fixture (tests).
     let mut roads = Vec::new();
     let radius = f64::from(view.radius_m) * std::f64::consts::SQRT_2;
@@ -141,30 +211,8 @@ pub fn redraw(
             active: *active,
         })
         .collect();
-    let mut route_lines: Vec<MapLine> = Vec::new();
-    let mut route_stops: Vec<(Vec2, bool)> = Vec::new();
-    if let Some(r) = &route {
-        for road in &r.roads {
-            push_chords(road, centre, min_chord, &mut route_lines);
-        }
-        route_stops.extend(r.stops.iter().map(|(p, n)| {
-            (
-                Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
-                *n,
-            )
-        }));
-    }
-    let scheduled_px: Vec<(Vec2, f32)> = scheduled.as_ref().map_or_else(Vec::new, |s| {
-        s.poses
-            .iter()
-            .map(|(p, h)| {
-                (
-                    Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
-                    *h,
-                )
-            })
-            .collect()
-    });
+    let (route_lines, route_stops, scheduled_px) =
+        route_overlay(route.as_deref(), scheduled.as_deref(), centre, min_chord);
     raster::render_routed(
         canvas,
         view,

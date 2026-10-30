@@ -46,11 +46,9 @@ pub struct BodyMotion {
     rise: f32,
 }
 
-
 /// The longitudinal positions of the front and rear axle (a short default pitch base without
 /// axles) and the widest track (2 m when none is known).
 fn axle_extent(axles: &[opts_sim::vehicle::axle::AxleState]) -> (f32, f32, f32) {
-    let axles = &controller.sim.axles;
     let track = axles
         .iter()
         .map(|a| a.config.track_width_m)
@@ -61,8 +59,16 @@ fn axle_extent(axles: &[opts_sim::vehicle::axle::AxleState]) -> (f32, f32, f32) 
         .fold((f32::MIN, f32::MAX), |(hi, lo), l| (hi.max(l), lo.min(l)));
     let (hi, lo) = ends;
     (
-        (hi > f32::MIN).then_some(hi).unwrap_or(PITCH_BASE_M * 0.5),
-        (lo < f32::MAX).then_some(lo).unwrap_or(-PITCH_BASE_M * 0.5),
+        if hi > f32::MIN {
+            hi
+        } else {
+            PITCH_BASE_M * 0.5
+        },
+        if lo < f32::MAX {
+            lo
+        } else {
+            -PITCH_BASE_M * 0.5
+        },
         if track > 0.5 { track } else { 2.0 },
     )
 }

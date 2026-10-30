@@ -134,19 +134,8 @@ pub fn fill_none_detail(commands: &mut Commands, detail: Entity) {
     commands.entity(detail).add_children(&[title, body]);
 }
 
-/// The detail of a chosen vehicle.
-#[allow(clippy::too_many_arguments)]
-pub fn fill_what_detail(
-    commands: &mut Commands,
-    detail: Entity,
-    loc: &Localization,
-    notes: &[Note],
-    setup: &NewGameSetup,
-    liveries: &mut LiveryState,
-    vehicle: &VehicleItem,
-    library: &ConfigLibrary,
-    catalogue: &super::types::GameCatalogue,
-) {
+/// The vehicle's picture slot, name, class and mass.
+fn vehicle_header(commands: &mut Commands, vehicle: &VehicleItem) -> Entity {
     let header = commands
         .spawn(Node {
             align_items: AlignItems::Center,
@@ -214,6 +203,47 @@ pub fn fill_what_detail(
     }
     commands.entity(titles).add_children(&title_kids);
     commands.entity(header).add_children(&[thumb, titles]);
+    header
+}
+
+/// For a rail vehicle: the note and the button that opens the formation editor.
+fn formation_entry(commands: &mut Commands, vehicle: &VehicleItem) -> Vec<Entity> {
+    let mut out = Vec::new();
+    if vehicle.class == "rail" {
+        out.push(
+            commands
+                .spawn(keyed(
+                    "wiz-what-formation-note",
+                    TypeScale::BodyMedium,
+                    ColorRole::OnSurfaceVariant,
+                ))
+                .id(),
+        );
+        out.push(super::ui::action_button(
+            commands,
+            "wiz-what-formation",
+            super::ui::Emphasis::Tonal,
+            super::ui::PlannerAction::ComposeFormation,
+            "wizard.what.formation".to_owned(),
+        ));
+    }
+    out
+}
+
+/// The detail of a chosen vehicle.
+#[allow(clippy::too_many_arguments)]
+pub fn fill_what_detail(
+    commands: &mut Commands,
+    detail: Entity,
+    loc: &Localization,
+    notes: &[Note],
+    setup: &NewGameSetup,
+    liveries: &mut LiveryState,
+    vehicle: &VehicleItem,
+    library: &ConfigLibrary,
+    catalogue: &super::types::GameCatalogue,
+) {
+    let header = vehicle_header(commands, vehicle);
     let mut kids = vec![header];
     if notes.contains(&Note::VehicleMissing) {
         kids.push(
@@ -246,24 +276,7 @@ pub fn fill_what_detail(
         vehicle,
         repaints.as_ref(),
     ));
-    if vehicle.class == "rail" {
-        kids.push(
-            commands
-                .spawn(keyed(
-                    "wiz-what-formation-note",
-                    TypeScale::BodyMedium,
-                    ColorRole::OnSurfaceVariant,
-                ))
-                .id(),
-        );
-        kids.push(super::ui::action_button(
-            commands,
-            "wiz-what-formation",
-            super::ui::Emphasis::Tonal,
-            super::ui::PlannerAction::ComposeFormation,
-            "wizard.what.formation".to_owned(),
-        ));
-    }
+    kids.extend(formation_entry(commands, vehicle));
     kids.push(super::ui::action_button(
         commands,
         "wiz-what-none",

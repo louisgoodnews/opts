@@ -30,32 +30,14 @@ pub use super::parts::{
     Part, ReadoutBox,
 };
 
-/// Spawns the whole HUD for `profile`.
-pub fn spawn_hud(commands: &mut Commands, profile: &HudProfile, palette: &InstrumentPalette) {
+/// The top row: the status bar (fades) and the pause button.
+fn spawn_top_bar(
+    commands: &mut Commands,
+    profile: &HudProfile,
+    palette: &InstrumentPalette,
+) -> Entity {
     let in_slot = |slot| profile.in_slot(slot);
-    let root = commands
-        .spawn((
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.0),
-                top: Val::Px(0.0),
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::SpaceBetween,
-                padding: UiRect::all(Val::Px(20.0)),
-                ..default()
-            },
-            GlobalZIndex(50),
-            InGameEntity,
-            InGameHudRoot,
-            HudRoot,
-            UiId::new("hud"),
-        ))
-        .id();
-
-    // Top: the status bar (fades) and the pause button.
-    let top = commands
+    commands
         .spawn(Node {
             width: Val::Percent(100.0),
             flex_direction: FlexDirection::Row,
@@ -120,11 +102,18 @@ pub fn spawn_hud(commands: &mut Commands, profile: &HudProfile, palette: &Instru
                 ));
             });
         })
-        .id();
+        .id()
+}
 
-    // The camera label: below the top bar, centred, hidden until the camera changes.
+/// The camera label: below the top bar, centred, hidden until the camera changes.
+fn spawn_camera_label(
+    commands: &mut Commands,
+    profile: &HudProfile,
+    palette: &InstrumentPalette,
+) -> Option<Entity> {
+    let in_slot = |slot| profile.in_slot(slot);
     let camera = in_slot(Slot::CameraLabel);
-    let camera_label = (!camera.is_empty()).then(|| {
+    (!camera.is_empty()).then(|| {
         commands
             .spawn((
                 Node {
@@ -161,7 +150,35 @@ pub fn spawn_hud(commands: &mut Commands, profile: &HudProfile, palette: &Instru
                 });
             })
             .id()
-    });
+    })
+}
+
+/// Spawns the whole HUD for `profile`.
+pub fn spawn_hud(commands: &mut Commands, profile: &HudProfile, palette: &InstrumentPalette) {
+    let root = commands
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::SpaceBetween,
+                padding: UiRect::all(Val::Px(20.0)),
+                ..default()
+            },
+            GlobalZIndex(50),
+            InGameEntity,
+            InGameHudRoot,
+            HudRoot,
+            UiId::new("hud"),
+        ))
+        .id();
+
+    let top = spawn_top_bar(commands, profile, palette);
+
+    let camera_label = spawn_camera_label(commands, profile, palette);
 
     // Bottom: the cluster at the left (hints, alerts, instruments in a fixed order, top to
     // bottom) and the mini map at the right.

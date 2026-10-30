@@ -37,6 +37,165 @@ type VehicleFilter = Or<(
     With<opts_bevy::VehicleController>,
 )>;
 
+/// Finishes the spawn that was started in an earlier frame: builds the vehicle and makes it the
+/// active one, or marks the request failed and says so in a toast.
+fn complete_flight(
+    (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
+    assets: &mut LoadAssets,
+    (registry, camera): (&mut SessionVehicles, &mut CameraState),
+    (loc, flight): (Option<&Localization>, &SpawnVehicleRequest),
+) {
+    let id = flight.id;
+    match load_player_vehicle(
+        job,
+        stats,
+        commands,
+        &mut assets.meshes,
+        &mut assets.materials,
+        &mut assets.images,
+        &mut assets.bindposes,
+        id,
+        false,
+    ) {
+        Ok(spawned) => {
+            registry.mark_alive(
+                id,
+                spawned.root,
+                Some(flight.entry.clone()),
+                Some(flight.point),
+                Some(spawned.camera),
+            );
+            camera.mode = CameraMode::External;
+            tracing::info!(id, entry = %flight.entry.1, "session vehicle spawned");
+            commands.queue(move |world: &mut World| {
+                if let Err(e) = ops::switch_to(world, id) {
+                    tracing::error!(at = %opts_bevy::position_tag(), "cannot activate the new vehicle: {e}");
+                }
+            });
+        }
+        Err(e) => {
+            tracing::error!(at = %opts_bevy::position_tag(), "cannot spawn the vehicle: {e}");
+            let name = registry.get(id).map(|r| r.name.clone()).unwrap_or_default();
+            registry.mark_failed(id, e.clone());
+            if let Some(loc) = loc {
+                ToastBuilder::new(loc.t_args(
+                    crate::shell::keys::SPAWN_FAILED,
+                    &[
+                        ("name".to_owned(), name.as_str().into()),
+                        ("error".to_owned(), e.as_str().into()),
+                    ],
+                ))
+                .with_duration(8.0)
+                .spawn(commands);
+            }
+        }
+    }
+}
+
+/// A vehicle that starts at a bus stop: placed like a trip's start, and only when the stop is free.
+fn place_at_stop(
+    (job, commands, registry): (&mut WorldLoadJob, &mut Commands, &mut SessionVehicles),
+    vehicles: &Query<&GlobalTransform, VehicleFilter>,
+    (id, rec, bus_path, formation_cars): (
+        crate::session_vehicles::VehicleId,
+        &crate::session_vehicles::SessionVehicleRecord,
+        PathBuf,
+        Vec<super::FormationCar>,
+    ),
+    station: u32,
+) {
+    job.config.vehicle_path = Some(bus_path.clone());
+    let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
+    let Some((tile, (local, heading))) = job.find_stop_spawn(station, &keys) else {
+        registry.mark_failed(
+            id,
+            format!("no bus stop with the station id {station} on this map"),
+        );
+        return;
+    };
+    let session = job.session_pos(tile, local);
+    let at = Vec2::new(session.x, -session.y);
+    if let Some(d) = vehicles
+        .iter()
+        .map(|g| g.translation().xz().distance(at))
+        .find(|d| *d < STOP_CLEAR_M)
+    {
+        registry.mark_failed(
+            id,
+            format!("the stop is occupied (a vehicle {d:.1} m from it)"),
+        );
+        return;
+    }
+    let name = job
+        .timetables()
+        .and_then(|t| t.stop(station).map(|s| s.name.clone()))
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| format!("stop {station}"));
+    place(
+        job,
+        commands,
+        id,
+        rec,
+        bus_path,
+        formation_cars,
+        tile,
+        local,
+        heading,
+        (0, name),
+    );
+}
+
+/// A vehicle that starts at an entry point: the resolved entry, or (entries on spline attachments)
+/// a search of the map.
+fn place_at_entry(
+    (job, commands, registry): (&mut WorldLoadJob, &mut Commands, &mut SessionVehicles),
+    entries: &EntryIndex,
+    (id, rec, bus_path, formation_cars): (
+        crate::session_vehicles::VehicleId,
+        &crate::session_vehicles::SessionVehicleRecord,
+        PathBuf,
+        Vec<super::FormationCar>,
+    ),
+) {
+    let entry = match &rec.entry {
+        crate::session_vehicles::EntrySel::Id(i) => job.entry_name(*i).map(|n| (*i, n)),
+        crate::session_vehicles::EntrySel::Name(n) => job.entry_by_name(n),
+        crate::session_vehicles::EntrySel::Default | crate::session_vehicles::EntrySel::Stop(_) => {
+            job.configured_entry()
+        }
+    };
+    let Some((entry_id, entry_name)) = entry else {
+        registry.mark_failed(id, "no such entry point on this map".to_owned());
+        tracing::error!(at = %opts_bevy::position_tag(), entry = ?rec.entry, "entry point not found; no vehicle spawned");
+        return;
+    };
+    let placed = entries
+        .find(entry_id)
+        .map(|e| (e.tile, e.local, e.heading_deg))
+        .or_else(|| {
+            let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
+            job.find_entry_spawn_by_id(entry_id, &keys)
+                .map(|(k, (p, h))| (k, p, h))
+        });
+    let Some((tile, local, heading)) = placed else {
+        registry.mark_failed(id, format!("entry point `{entry_name}` cannot be placed"));
+        tracing::error!(at = %opts_bevy::position_tag(), entry = %entry_id, "entry point cannot be placed; no vehicle spawned");
+        return;
+    };
+    place(
+        job,
+        commands,
+        id,
+        rec,
+        bus_path,
+        formation_cars,
+        tile,
+        local,
+        heading,
+        (entry_id, entry_name),
+    );
+}
+
 /// Works down the spawn requests of the registry: places the vehicle at its entry point, builds it
 /// and makes it the active vehicle.
 #[allow(clippy::too_many_arguments)]
@@ -65,51 +224,12 @@ pub fn handle_vehicle_requests(
             commands.remove_resource::<SpawnVehicleRequest>();
             return;
         }
-        let id = flight.id;
-        match load_player_vehicle(
-            &mut job,
-            &mut stats,
-            &mut commands,
-            &mut assets.meshes,
-            &mut assets.materials,
-            &mut assets.images,
-            &mut assets.bindposes,
-            id,
-            false,
-        ) {
-            Ok(spawned) => {
-                registry.mark_alive(
-                    id,
-                    spawned.root,
-                    Some(flight.entry.clone()),
-                    Some(flight.point),
-                    Some(spawned.camera),
-                );
-                camera.mode = CameraMode::External;
-                tracing::info!(id, entry = %flight.entry.1, "session vehicle spawned");
-                commands.queue(move |world: &mut World| {
-                    if let Err(e) = ops::switch_to(world, id) {
-                        tracing::error!(at = %opts_bevy::position_tag(), "cannot activate the new vehicle: {e}");
-                    }
-                });
-            }
-            Err(e) => {
-                tracing::error!(at = %opts_bevy::position_tag(), "cannot spawn the vehicle: {e}");
-                let name = registry.get(id).map(|r| r.name.clone()).unwrap_or_default();
-                registry.mark_failed(id, e.clone());
-                if let Some(loc) = loc {
-                    ToastBuilder::new(loc.t_args(
-                        crate::shell::keys::SPAWN_FAILED,
-                        &[
-                            ("name".to_owned(), name.as_str().into()),
-                            ("error".to_owned(), e.as_str().into()),
-                        ],
-                    ))
-                    .with_duration(8.0)
-                    .spawn(&mut commands);
-                }
-            }
-        }
+        complete_flight(
+            (&mut job, &mut stats, &mut commands),
+            &mut assets,
+            (&mut registry, &mut camera),
+            (loc.as_deref(), &flight),
+        );
         commands.remove_resource::<SpawnVehicleRequest>();
         return;
     }
@@ -145,86 +265,19 @@ pub fn handle_vehicle_requests(
         tracing::error!(at = %opts_bevy::position_tag(), file = %rec.bus_file, "vehicle file not found; nothing spawned");
         return;
     }
-    // A bus stop: placed like a trip's start, and only when it is free.
     if let crate::session_vehicles::EntrySel::Stop(station) = rec.entry {
-        job.config.vehicle_path = Some(bus_path.clone());
-        let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
-        let Some((tile, (local, heading))) = job.find_stop_spawn(station, &keys) else {
-            registry.mark_failed(
-                id,
-                format!("no bus stop with the station id {station} on this map"),
-            );
-            return;
-        };
-        let session = job.session_pos(tile, local);
-        let at = Vec2::new(session.x, -session.y);
-        if let Some(d) = vehicles
-            .iter()
-            .map(|g| g.translation().xz().distance(at))
-            .find(|d| *d < STOP_CLEAR_M)
-        {
-            registry.mark_failed(
-                id,
-                format!("the stop is occupied (a vehicle {d:.1} m from it)"),
-            );
-            return;
-        }
-        let name = job
-            .timetables()
-            .and_then(|t| t.stop(station).map(|s| s.name.clone()))
-            .filter(|n| !n.is_empty())
-            .unwrap_or_else(|| format!("stop {station}"));
-        place(
-            &mut job,
-            &mut commands,
-            id,
-            &rec,
-            bus_path,
-            formation_cars,
-            tile,
-            local,
-            heading,
-            (0, name),
+        place_at_stop(
+            (&mut job, &mut commands, &mut registry),
+            &vehicles,
+            (id, &rec, bus_path, formation_cars),
+            station,
         );
         return;
     }
-    // Where: the resolved entry, or (entries on spline attachments) a search of the map.
-    let entry = match &rec.entry {
-        crate::session_vehicles::EntrySel::Id(i) => job.entry_name(*i).map(|n| (*i, n)),
-        crate::session_vehicles::EntrySel::Name(n) => job.entry_by_name(n),
-        crate::session_vehicles::EntrySel::Default | crate::session_vehicles::EntrySel::Stop(_) => {
-            job.configured_entry()
-        }
-    };
-    let Some((entry_id, entry_name)) = entry else {
-        registry.mark_failed(id, "no such entry point on this map".to_owned());
-        tracing::error!(at = %opts_bevy::position_tag(), entry = ?rec.entry, "entry point not found; no vehicle spawned");
-        return;
-    };
-    let placed = entries
-        .find(entry_id)
-        .map(|e| (e.tile, e.local, e.heading_deg))
-        .or_else(|| {
-            let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
-            job.find_entry_spawn_by_id(entry_id, &keys)
-                .map(|(k, (p, h))| (k, p, h))
-        });
-    let Some((tile, local, heading)) = placed else {
-        registry.mark_failed(id, format!("entry point `{entry_name}` cannot be placed"));
-        tracing::error!(at = %opts_bevy::position_tag(), entry = %entry_id, "entry point cannot be placed; no vehicle spawned");
-        return;
-    };
-    place(
-        &mut job,
-        &mut commands,
-        id,
-        &rec,
-        bus_path,
-        formation_cars,
-        tile,
-        local,
-        heading,
-        (entry_id, entry_name),
+    place_at_entry(
+        (&mut job, &mut commands, &mut registry),
+        &entries,
+        (id, &rec, bus_path, formation_cars),
     );
 }
 

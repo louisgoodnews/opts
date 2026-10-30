@@ -15,6 +15,182 @@ use super::models::SpawnedModels;
 use super::variants::unit_size;
 use super::*;
 
+/// The canvases of the head's script textures, once.
+type HeadCanvases =
+    Option<Arc<std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>>>;
+
+/// The sound set of a vehicle.
+type SoundSet = Arc<crate::vehicle_sound::AiSoundSet>;
+
+/// Routes a scheduled vehicle: its route and stops (the first stop moved to where the front door
+/// stands), the scheduled bookkeeping and, with canvases, its scripts. Returns whether the head
+/// has scripts.
+fn route_scheduled(
+    (job, commands, state, sched): (
+        &mut WorldLoadJob,
+        &mut Commands,
+        &mut TrafficState,
+        &mut ScheduledTraffic,
+    ),
+    (id, r): (AgentId, &ScheduledRequest),
+    (root, door_ahead): (Entity, f32),
+    (head_canvases, head_bus_path, head_setvars, sound): (
+        &mut HeadCanvases,
+        &std::path::PathBuf,
+        &[(String, String)],
+        Option<&SoundSet>,
+    ),
+) -> bool {
+    let mut scripted_head = false;
+    state.world.set_route(id, r.route.iter().copied());
+    for stop in &r.stops {
+        let mut stop = *stop;
+        let room = state
+            .world
+            .graph()
+            .lane(stop.lane)
+            .map_or(stop.s, |l| (l.length() - 0.5).max(0.0));
+        stop.s = (stop.s + f64::from(door_ahead)).min(room);
+        state.world.push_stop(id, stop);
+    }
+    sched.built(id, r);
+    if let Some(canvases) = head_canvases.take() {
+        let seed = id.0.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ r.run.run as u64;
+        let scripted = super::super::ai_script::attach(
+            job,
+            commands,
+            root,
+            head_bus_path,
+            canvases,
+            &r.run,
+            seed,
+            head_setvars,
+        );
+        if let (true, Some(set)) = (scripted, sound) {
+            crate::player_sound::attach_defs(commands, root, None, &set.scripted);
+        }
+        scripted_head = scripted;
+    }
+    scripted_head
+}
+
+/// The debug line of a spawned AI vehicle.
+fn log_spawned(
+    id: AgentId,
+    (name, group_name): (&str, &str),
+    speed: f64,
+    (params, traits): (&IdmParams, &opts_traffic::VehicleTraits),
+    (units, measured, fallbacks): (usize, bool, &dyn std::fmt::Debug),
+) {
+    tracing::debug!(
+        agent = id.0,
+        vehicle = %name,
+        group = %group_name,
+        speed,
+        mass_kg = traits.mass_kg,
+        desired_kmh = params.desired_speed * 3.6,
+        accel = params.max_accel,
+        comfort = params.comfort_decel,
+        max_decel = params.max_decel,
+        class = ?params.class,
+        units,
+        measured,
+        fallbacks = ?fallbacks,
+        "AI vehicle spawned"
+    );
+}
+
+/// The scene trace record of a spawned AI vehicle, when tracing.
+fn trace_spawned(
+    root: Entity,
+    name: &str,
+    origin: &Transform,
+    trace_frame: &trace::Frame,
+    (lane_id, speed, params, units): (LaneId, f64, &IdmParams, usize),
+) {
+    if opts_bevy::scene_trace::enabled() {
+        trace::spawned(
+            opts_bevy::scene_trace::kind::TRAFFIC,
+            name,
+            name,
+            root,
+            origin,
+            trace_frame,
+            "ok",
+            serde_json::json!({
+                "lane": format!("{lane_id:?}"),
+                "speed": speed,
+                "class": format!("{:?}", params.class),
+                "units": units,
+            }),
+        );
+    }
+}
+
+/// What the vehicle's body and wheels need to follow its agent.
+struct AgentLook {
+    delta_height: f32,
+    wheel_radius: f32,
+    rear_axle_y: f32,
+    at: DVec2,
+}
+
+/// The traffic components of the vehicle's root, its sounds and its trailing units.
+fn attach_agent(
+    commands: &mut Commands,
+    (root, entities): (Entity, &[Entity]),
+    (id, rng_pax): (AgentId, &mut Rng),
+    look: AgentLook,
+    (sound, unit_sounds, scripted_head, chain): (
+        Option<&SoundSet>,
+        &[Option<SoundSet>],
+        bool,
+        Vec<ChainUnit>,
+    ),
+) {
+    let AgentLook {
+        delta_height,
+        wheel_radius,
+        rear_axle_y,
+        at,
+    } = look;
+    let mut pax = 0u8;
+    for (i, p) in [0.9, 0.35, 0.2, 0.1].into_iter().enumerate() {
+        if rng_pax.next_f64() < p {
+            pax |= 1 << i;
+        }
+    }
+    commands.entity(root).insert((
+        TrafficVehicle {
+            id,
+            delta_height,
+            wheel_radius,
+            rear_axle_y,
+            wheel_angle: 0.0,
+            pax,
+            blink_phase: rng_pax.next_f64() as f32 * 0.7,
+            origin: at,
+            heading: 0.0,
+            height: delta_height,
+            honk_after: HONK_AFTER_S,
+        },
+        opts_bevy::AiVariables::default(),
+    ));
+    crate::vehicle_sound::attach_ai(commands, root, sound);
+    for (set, &e) in unit_sounds.iter().zip(entities.iter().skip(1)) {
+        let Some(set) = set else {
+            continue;
+        };
+        crate::vehicle_sound::attach_ai_unit(commands, e, Some(root), set);
+        if scripted_head {
+            crate::player_sound::attach_defs(commands, e, Some(root), &set.scripted);
+        }
+    }
+    if !chain.is_empty() {
+        commands.entity(root).insert(TrafficChain { units: chain });
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn place_and_insert_agent(
     commands: &mut Commands,
@@ -123,104 +299,44 @@ pub(crate) fn place_and_insert_agent(
         Ok(id) => {
             pool.agent_groups.insert(id, pool_group);
             if let Some(r) = request {
-                state.world.set_route(id, r.route.iter().copied());
-                for stop in &r.stops {
-                    let mut stop = *stop;
-                    let room = state
-                        .world
-                        .graph()
-                        .lane(stop.lane)
-                        .map_or(stop.s, |l| (l.length() - 0.5).max(0.0));
-                    stop.s = (stop.s + f64::from(door_ahead)).min(room);
-                    state.world.push_stop(id, stop);
-                }
-                sched.built(id, r);
-                if let Some(canvases) = head_canvases.take() {
-                    let seed = id.0.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ r.run.run as u64;
-                    let scripted = super::super::ai_script::attach(
-                        job,
-                        commands,
-                        root,
+                scripted_head = route_scheduled(
+                    (job, commands, state, sched),
+                    (id, r),
+                    (root, door_ahead),
+                    (
+                        &mut head_canvases,
                         &head_bus_path,
-                        canvases,
-                        &r.run,
-                        seed,
                         &head_setvars,
-                    );
-                    if let (true, Some(set)) = (scripted, sound.as_ref()) {
-                        crate::player_sound::attach_defs(commands, root, None, &set.scripted);
-                    }
-                    scripted_head = scripted;
-                }
-            }
-            tracing::debug!(
-                agent = id.0,
-                vehicle = %name,
-                group = %group_name,
-                speed,
-                mass_kg = traits.mass_kg,
-                desired_kmh = params.desired_speed * 3.6,
-                accel = params.max_accel,
-                comfort = params.comfort_decel,
-                max_decel = params.max_decel,
-                class = ?params.class,
-                units = entities.len(),
-                measured,
-                fallbacks = ?fallbacks,
-                "AI vehicle spawned"
-            );
-            if opts_bevy::scene_trace::enabled() {
-                trace::spawned(
-                    opts_bevy::scene_trace::kind::TRAFFIC,
-                    &name,
-                    &name,
-                    root,
-                    &origin,
-                    &trace_frame,
-                    "ok",
-                    serde_json::json!({
-                        "lane": format!("{lane_id:?}"),
-                        "speed": speed,
-                        "class": format!("{:?}", params.class),
-                        "units": entities.len(),
-                    }),
+                        sound.as_ref(),
+                    ),
                 );
             }
-            let mut pax = 0u8;
-            for (i, p) in [0.9, 0.35, 0.2, 0.1].into_iter().enumerate() {
-                if rng_pax.next_f64() < p {
-                    pax |= 1 << i;
-                }
-            }
-            commands.entity(root).insert((
-                TrafficVehicle {
-                    id,
+            log_spawned(
+                id,
+                (&name, &group_name),
+                speed,
+                (&params, &traits),
+                (entities.len(), measured, &fallbacks),
+            );
+            trace_spawned(
+                root,
+                &name,
+                &origin,
+                &trace_frame,
+                (lane_id, speed, &params, entities.len()),
+            );
+            attach_agent(
+                commands,
+                (root, &entities),
+                (id, &mut rng_pax),
+                AgentLook {
                     delta_height,
                     wheel_radius,
                     rear_axle_y,
-                    wheel_angle: 0.0,
-                    pax,
-                    blink_phase: rng_pax.next_f64() as f32 * 0.7,
-                    origin: at,
-                    heading: 0.0,
-                    height: delta_height,
-                    honk_after: HONK_AFTER_S,
+                    at,
                 },
-                opts_bevy::AiVariables::default(),
-            ));
-            crate::vehicle_sound::attach_ai(commands, root, sound.as_ref());
-            for (set, &e) in unit_sounds.iter().zip(entities.iter().skip(1)) {
-                let Some(set) = set else {
-                    continue;
-                };
-                crate::vehicle_sound::attach_ai_unit(commands, e, Some(root), set);
-                if scripted_head {
-                    crate::player_sound::attach_defs(commands, e, Some(root), &set.scripted);
-                }
-            }
-            if !chain.is_empty() {
-                commands.entity(root).insert(TrafficChain { units: chain });
-            }
+                (sound.as_ref(), &unit_sounds, scripted_head, chain),
+            );
         }
         Err(_) => {
             for e in entities {
