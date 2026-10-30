@@ -5,7 +5,6 @@
 
 use bevy::prelude::*;
 use opts_bevy::{PlayerVehicle, VehicleController};
-use opts_sim::vehicle::dynamic_mass_kg;
 
 use super::PassengerRig;
 use crate::settings::GameSettings;
@@ -42,16 +41,27 @@ pub(super) fn mass_settings(settings: Option<&GameSettings>) -> (bool, f32) {
     })
 }
 
-/// The mass (kg) the dynamics carry for `count` people: none while the setting is off.
-fn carried_mass_kg(on: bool, average_kg: f32, count: usize) -> f32 {
-    if on {
-        dynamic_mass_kg(0.0, count, average_kg)
-    } else {
-        0.0
+/// People each unit of a chain carries for its dynamics, head first. The real passengers count
+/// by the unit they are in; a test count (`override_count`) is shared over the units in
+/// proportion to their curb mass, so one unit takes all of it. Fractions are fine: only the mass
+/// (count x average) is used.
+pub(super) fn unit_counts(
+    override_count: Option<usize>,
+    real: &[usize],
+    curb_kg: &[f32],
+) -> Vec<f32> {
+    let Some(total) = override_count else {
+        return real.iter().map(|&c| c as f32).collect();
+    };
+    let sum: f32 = curb_kg.iter().sum();
+    if curb_kg.len() <= 1 || sum <= 0.0 {
+        return vec![total as f32];
     }
+    curb_kg.iter().map(|m| total as f32 * m / sum).collect()
 }
 
-/// Writes the passengers' mass into the player's vehicle simulation.
+/// Writes the passengers' mass into the player's vehicle simulation, unit by unit (the head and
+/// each following unit carry their own people).
 pub fn apply_passenger_mass(
     settings: Option<Res<GameSettings>>,
     forced: Option<Res<PassengerCountOverride>>,
@@ -59,14 +69,38 @@ pub fn apply_passenger_mass(
 ) {
     let (on, average) = mass_settings(settings.as_deref());
     for (rig, mut controller) in &mut vehicles {
-        let count = forced
-            .as_ref()
-            .and_then(|f| f.0)
-            .unwrap_or_else(|| rig.sim.humans_inside());
-        let kg = carried_mass_kg(on, average, count);
-        if controller.sim.passenger_mass_kg != kg {
-            controller.sim.passenger_mass_kg = kg;
+        let sim = &controller.sim;
+        let units = 1 + sim.trailer_loads.len();
+        let curb: Vec<f32> = std::iter::once(sim.head_mass_kg())
+            .chain(sim.trailer_loads.iter().map(|u| u.mass_kg))
+            .collect();
+        let real = rig.sim.humans_inside_by_unit(units);
+        let counts = unit_counts(forced.as_ref().and_then(|f| f.0), &real, &curb);
+        let masses: Vec<f32> = counts
+            .iter()
+            .map(|&c| carried_mass_kg(on, average, c))
+            .collect();
+        let current: Vec<f32> = std::iter::once(sim.passenger_mass_kg)
+            .chain((1..units).map(|k| {
+                sim.unit_passenger_mass_kg
+                    .get(k - 1)
+                    .copied()
+                    .unwrap_or(0.0)
+            }))
+            .collect();
+        if masses.iter().zip(&current).any(|(a, b)| a != b) || masses.len() != current.len() {
+            controller.sim.set_unit_passenger_masses(&masses);
         }
+    }
+}
+
+/// The mass (kg) the dynamics carry for `count` people (a share may be fractional): none while
+/// the setting is off.
+fn carried_mass_kg(on: bool, average_kg: f32, count: f32) -> f32 {
+    if on {
+        count * average_kg.max(0.0)
+    } else {
+        0.0
     }
 }
 

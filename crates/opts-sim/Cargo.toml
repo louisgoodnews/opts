@@ -27,4 +27,4 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
-# Add test-specific dependencies here
+serde_json = { workspace = true }

@@ -153,6 +153,21 @@ impl PassengerSim {
             .count()
     }
 
+    /// Passengers inside each of `units` units of the chain, head first (M-0124): the people
+    /// aboard counted by the unit they are in; a unit beyond the list holds nobody.
+    #[must_use]
+    pub fn humans_inside_by_unit(&self, units: usize) -> Vec<usize> {
+        let mut counts = vec![0; units];
+        for p in &self.passengers {
+            if !matches!(p.phase, Phase::WaitingOutside { .. }) {
+                if let Some(c) = counts.get_mut(p.unit) {
+                    *c += 1;
+                }
+            }
+        }
+        counts
+    }
+
     /// Passengers on place `place` (`GetHumanCountOnSeat`).
     #[must_use]
     pub fn on_place(&self, place: usize) -> usize {

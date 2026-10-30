@@ -66,6 +66,7 @@ fn state_json(
         "mass": {
             "source": if forced.is_some() { "override" } else { "passengers" },
             "count": forced.unwrap_or_else(|| sim.humans_inside()),
+            "by_unit": sim.humans_inside_by_unit(rig.units.len().max(1)),
             "on": super::weight::mass_settings(world.get_resource::<crate::settings::GameSettings>()).0,
         },
         "approaching": rig.approaching.len(),

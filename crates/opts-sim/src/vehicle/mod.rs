@@ -126,6 +126,11 @@ pub struct VehicleSimulation {
     /// still use the curb mass.
     #[serde(default)]
     pub passenger_mass_kg: f32,
+    /// Mass of the people on board each following unit (kg; same order as
+    /// [`VehicleSimulation::trailer_loads`], missing entries are 0): the per-unit load of a
+    /// consist (M-0124). Saves from before it have none and load as empty units.
+    #[serde(default)]
+    pub unit_passenger_mass_kg: Vec<f32>,
 }
 
 impl Default for VehicleSimulation {
@@ -189,6 +194,7 @@ impl VehicleSimulation {
             consist_bodies: Vec::new(),
             teleports: 0,
             passenger_mass_kg: 0.0,
+            unit_passenger_mass_kg: Vec::new(),
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
@@ -236,6 +242,7 @@ impl VehicleSimulation {
             consist_bodies: Vec::new(),
             teleports: 0,
             passenger_mass_kg: 0.0,
+            unit_passenger_mass_kg: Vec::new(),
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
