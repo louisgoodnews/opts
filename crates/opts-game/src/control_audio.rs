@@ -52,6 +52,49 @@ fn bus_name(b: SoundBus) -> &'static str {
     }
 }
 
+/// What the player's vehicle is sounding: the loudest loops with the speed they play at, so the
+/// engine layers (idle, throttle, load, interior and exterior) can be told apart.
+fn loudest_loops(world: &mut World) -> Vec<Value> {
+    let mut loud: Vec<(f32, f32, String)> = world
+        .query::<(
+            &crate::player_sound::PlayerVoice,
+            &opts_bevy::audio::SoundEmitter,
+        )>()
+        .iter(world)
+        .filter(|(_, e)| e.gain > 0.001 && !e.muted)
+        .map(|(v, e)| {
+            let file = v
+                .file
+                .file_name()
+                .map_or_else(String::new, |f| f.to_string_lossy().into_owned());
+            (e.gain, e.speed, file)
+        })
+        .collect();
+    loud.sort_by(|a, b| b.0.total_cmp(&a.0));
+    loud.iter()
+        .take(10)
+        .map(|(gain, speed, file)| json!({ "file": file, "gain": gain, "speed": speed }))
+        .collect()
+}
+
+/// The loudest emitters the engine keeps statistics of.
+fn top_voices(stats: &AudioStats) -> Vec<Value> {
+    stats
+        .top
+        .iter()
+        .map(|e| {
+            json!({
+                "entity": e.entity.to_bits(),
+                "bus": bus_name(e.bus),
+                "gain": e.gain,
+                "distance": e.distance,
+                "voice": e.voice,
+                "position": e.position.map(|p| json!([p.x, p.y, p.z])),
+            })
+        })
+        .collect()
+}
+
 fn state(world: &mut World, _: &Value) -> Outcome {
     let settings = world.get_resource::<AudioSettings>().cloned();
     let Some(settings) = settings else {
@@ -81,43 +124,8 @@ fn state(world: &mut World, _: &Value) -> Outcome {
         .get_resource::<ClipLoader>()
         .map_or((0, 0, 0), ClipLoader::counts);
     let loaded_bytes = world.get_resource::<ClipLoader>().map_or(0, |l| l.bytes);
-    // What the player's vehicle is sounding: the loudest loops with the speed they play at, so the
-    // engine layers (idle, throttle, load, interior and exterior) can be told apart.
-    let mut loud: Vec<(f32, f32, String)> = world
-        .query::<(
-            &crate::player_sound::PlayerVoice,
-            &opts_bevy::audio::SoundEmitter,
-        )>()
-        .iter(world)
-        .filter(|(_, e)| e.gain > 0.001 && !e.muted)
-        .map(|(v, e)| {
-            let file = v
-                .file
-                .file_name()
-                .map_or_else(String::new, |f| f.to_string_lossy().into_owned());
-            (e.gain, e.speed, file)
-        })
-        .collect();
-    loud.sort_by(|a, b| b.0.total_cmp(&a.0));
-    let loudest: Vec<Value> = loud
-        .iter()
-        .take(10)
-        .map(|(gain, speed, file)| json!({ "file": file, "gain": gain, "speed": speed }))
-        .collect();
-    let top: Vec<Value> = stats
-        .top
-        .iter()
-        .map(|e| {
-            json!({
-                "entity": e.entity.to_bits(),
-                "bus": bus_name(e.bus),
-                "gain": e.gain,
-                "distance": e.distance,
-                "voice": e.voice,
-                "position": e.position.map(|p| json!([p.x, p.y, p.z])),
-            })
-        })
-        .collect();
+    let loudest = loudest_loops(world);
+    let top = top_voices(&stats);
     Outcome::ok(json!({
         "enabled": settings.enabled,
         "volumes": {

@@ -181,6 +181,30 @@ fn button(commands: &mut Commands, key: &'static str, filled: bool, action: EnvA
     b
 }
 
+/// A section heading of the page.
+fn section_title(commands: &mut Commands, key: &'static str) -> Entity {
+    commands
+        .spawn(text(key, TypeScale::TitleMedium, ColorRole::OnSurface))
+        .id()
+}
+
+/// The *Cancel* and *Apply* buttons.
+fn action_row(commands: &mut Commands) -> Entity {
+    let buttons = commands
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::FlexEnd,
+            column_gap: Val::Px(8.0),
+            ..default()
+        })
+        .id();
+    let cancel = button(commands, keys::CANCEL, false, EnvAction::Cancel);
+    let apply = button(commands, keys::ENV_APPLY, true, EnvAction::Apply);
+    commands.entity(apply).insert(DefaultFocus);
+    commands.entity(buttons).add_children(&[cancel, apply]);
+    buttons
+}
+
 fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Localization) {
     let (root, card) = ModalBuilder::new()
         .with_size_percent(60.0, 80.0)
@@ -203,39 +227,15 @@ fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Lo
             ColorRole::OnSurfaceVariant,
         ))
         .id();
-    let date_title = commands
-        .spawn(text(
-            keys::ENV_DATE,
-            TypeScale::TitleMedium,
-            ColorRole::OnSurface,
-        ))
-        .id();
+    let date_title = section_title(commands, keys::ENV_DATE);
     let date_steppers: Vec<Entity> = Field::DATE.iter().map(|f| stepper(commands, *f)).collect();
     let date = calendar::spawn_stepper_row(commands, &date_steppers);
-    let time_title = commands
-        .spawn(text(
-            keys::ENV_TIME,
-            TypeScale::TitleMedium,
-            ColorRole::OnSurface,
-        ))
-        .id();
+    let time_title = section_title(commands, keys::ENV_TIME);
     let time_steppers: Vec<Entity> = Field::TIME.iter().map(|f| stepper(commands, *f)).collect();
     let time = calendar::spawn_stepper_row(commands, &time_steppers);
-    let weather_title = commands
-        .spawn(text(
-            keys::ENV_WEATHER,
-            TypeScale::TitleMedium,
-            ColorRole::OnSurface,
-        ))
-        .id();
+    let weather_title = section_title(commands, keys::ENV_WEATHER);
     let weather = weather_chips(commands, weather_list, loc);
-    let light_title = commands
-        .spawn(text(
-            "env-light-quality",
-            TypeScale::TitleMedium,
-            ColorRole::OnSurface,
-        ))
-        .id();
+    let light_title = section_title(commands, "env-light-quality");
     let light = super::light_row::spawn(commands);
     let rebuild = commands
         .spawn((
@@ -251,18 +251,7 @@ fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Lo
             },
         ))
         .id();
-    let buttons = commands
-        .spawn(Node {
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::FlexEnd,
-            column_gap: Val::Px(8.0),
-            ..default()
-        })
-        .id();
-    let cancel = button(commands, keys::CANCEL, false, EnvAction::Cancel);
-    let apply = button(commands, keys::ENV_APPLY, true, EnvAction::Apply);
-    commands.entity(apply).insert(DefaultFocus);
-    commands.entity(buttons).add_children(&[cancel, apply]);
+    let buttons = action_row(commands);
     let body = commands
         .spawn(Node {
             flex_direction: FlexDirection::Column,

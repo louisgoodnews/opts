@@ -53,43 +53,8 @@ pub struct PagePane;
 #[derive(Component)]
 pub struct SettingsSearch;
 
-/// Spawns the settings page as a child of `parent` and returns it. `category` is the id of the
-/// category to show (`graphics`, ...; the deep link `screen:settings/graphics`), the first one
-/// when `None` or unknown.
-pub fn spawn_settings_page(
-    commands: &mut Commands,
-    parent: Entity,
-    category: Option<&str>,
-) -> Entity {
-    let category = category
-        .and_then(Category::parse)
-        .unwrap_or(Category::Graphics);
-    commands.insert_resource(SettingsPageState {
-        category,
-        query: String::new(),
-        clear_search_field: false,
-        dirty: true,
-        restore_focus: None,
-        rebinding: None,
-        notice: None,
-    });
-    let page = commands
-        .spawn((
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(16.0)),
-                row_gap: Val::Px(12.0),
-                min_height: Val::Px(0.0),
-                ..default()
-            },
-            SettingsPage,
-            UiId::new("settings"),
-            Name::new("SettingsPage"),
-            ChildOf(parent),
-        ))
-        .id();
+/// The title and the search field.
+fn spawn_header(commands: &mut Commands, page: Entity) {
     let header = commands
         .spawn((
             Node {
@@ -117,6 +82,10 @@ pub fn spawn_settings_page(
         UiId::new("settings/search"),
         ChildOf(header),
     ));
+}
+
+/// The category list on the left and the pane the selected category fills.
+fn spawn_body(commands: &mut Commands, page: Entity) {
     let body = commands
         .spawn((
             Node {
@@ -160,6 +129,47 @@ pub fn spawn_settings_page(
         FocusRegion(Landmark::Content),
         ChildOf(body),
     ));
+}
+
+/// Spawns the settings page as a child of `parent` and returns it. `category` is the id of the
+/// category to show (`graphics`, ...; the deep link `screen:settings/graphics`), the first one
+/// when `None` or unknown.
+pub fn spawn_settings_page(
+    commands: &mut Commands,
+    parent: Entity,
+    category: Option<&str>,
+) -> Entity {
+    let category = category
+        .and_then(Category::parse)
+        .unwrap_or(Category::Graphics);
+    commands.insert_resource(SettingsPageState {
+        category,
+        query: String::new(),
+        clear_search_field: false,
+        dirty: true,
+        restore_focus: None,
+        rebinding: None,
+        notice: None,
+    });
+    let page = commands
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(16.0)),
+                row_gap: Val::Px(12.0),
+                min_height: Val::Px(0.0),
+                ..default()
+            },
+            SettingsPage,
+            UiId::new("settings"),
+            Name::new("SettingsPage"),
+            ChildOf(parent),
+        ))
+        .id();
+    spawn_header(commands, page);
+    spawn_body(commands, page);
     page
 }
 
