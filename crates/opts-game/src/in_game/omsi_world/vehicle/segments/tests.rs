@@ -1,6 +1,6 @@
 //! Unit tests for `super` (`segments.rs`).
 
-use super::mesh_stem;
+use super::overrides::mesh_stem;
 
 #[test]
 fn copies_in_other_folders_share_a_stem() {
