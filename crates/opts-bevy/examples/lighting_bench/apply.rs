@@ -10,8 +10,12 @@ use super::procedural::sky_cube;
 use super::*;
 
 type StaleQ<'w, 's> = Query<'w, 's, Entity, Or<(With<Cone>, With<Fog>, With<Mirror>)>>;
-type SunQ<'w, 's> =
-    Query<'w, 's, (Entity, &'static mut Transform, &'static mut Visibility), (With<Sun>, Without<Cam>)>;
+type SunQ<'w, 's> = Query<
+    'w,
+    's,
+    (Entity, &'static mut Transform, &'static mut Visibility),
+    (With<Sun>, Without<Cam>),
+>;
 type LampQ<'w, 's> =
     Query<'w, 's, (&'static NightLamp, &'static mut Visibility), (Without<Sun>, Without<HeadSpot>)>;
 type SpotQ<'w, 's> = Query<

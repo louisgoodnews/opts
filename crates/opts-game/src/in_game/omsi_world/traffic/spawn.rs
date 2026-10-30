@@ -190,7 +190,10 @@ fn finish_spawn(
         &mut Assets<StandardMaterial>,
         &mut Assets<Image>,
     ),
-    (chrono, request): (Option<&ChronoState>, Option<ScheduledRequest>),
+    (chrono, request): (
+        Option<&crate::in_game::omsi_world::chrono::ChronoState>,
+        Option<super::scheduled::ScheduledRequest>,
+    ),
     ((lane_id, s, slot, at), mut rng): ((opts_traffic::LaneId, f64, usize, DVec2), Rng),
 ) {
     pool.built += 1;
@@ -207,7 +210,7 @@ fn finish_spawn(
         (commands, job),
         (meshes, materials, images),
         (variant, at, fleet),
-        (repaint_seed, chrono.as_deref(), request.is_some()),
+        (repaint_seed, chrono, request.is_some()),
     ) {
         Ok(m) => m,
         Err(unusable) => {

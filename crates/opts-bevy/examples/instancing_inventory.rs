@@ -245,7 +245,8 @@ fn main() {
                     t.no_mesh += 1;
                     continue;
                 }
-                let obj_parts = scan::add_mesh_parts(&mut t, &mut tile_pairs, &mut mesh_cache, info);
+                let obj_parts =
+                    scan::add_mesh_parts(&mut t, &mut tile_pairs, &mut mesh_cache, info);
                 tile_parts += obj_parts;
                 let e = t.per_sco.entry(obj.sco_file.clone()).or_default();
                 e.0 += 1;

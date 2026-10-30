@@ -32,7 +32,6 @@ pub(super) struct Layout {
     pub(super) upstream: bool,
     pub(super) from_stop: usize,
     pub(super) offset: Option<f64>,
-    pub(super) first: usize,
 }
 
 /// Where a run's train appears: the run's layout, its route, whether the first place is skipped
@@ -138,7 +137,6 @@ pub(super) fn place_run(
         upstream,
         from_stop,
         offset,
-        first,
     })
 }
 

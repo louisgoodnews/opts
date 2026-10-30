@@ -138,7 +138,9 @@ pub fn player_collisions(
                     contact = Some((n, 0.05));
                 }
             }
-            let Some((normal, depth)) = contact else { break };
+            let Some((normal, depth)) = contact else {
+                break;
+            };
             log_push(
                 &mut logged,
                 &controller,

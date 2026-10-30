@@ -146,14 +146,14 @@ fn script_image_for(
 }
 
 /// Builds the texture overrides of `mesh_def`.
+/// Images by material index.
+pub(crate) type ImageMap = std::collections::HashMap<usize, Handle<Image>>;
+
 pub(crate) fn build_overrides(
     (job, commands, images): (&WorldLoadJob, &mut Commands, &mut Assets<Image>),
     (mesh_def, owner, root): (&ModelMesh, Entity, Entity),
     tex_dirs: &[PathBuf],
-    (text_images, script_images): (
-        &mut std::collections::HashMap<usize, Handle<Image>>,
-        &mut std::collections::HashMap<usize, Handle<Image>>,
-    ),
+    (text_images, script_images): (&mut ImageMap, &mut ImageMap),
 ) -> Vec<TextureOverride> {
     mesh_def
         .materials

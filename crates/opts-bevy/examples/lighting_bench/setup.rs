@@ -17,7 +17,13 @@ pub(super) fn setup(
     let facade = facade_materials(&mut materials, &mut images);
     spawn_boxes(&mut commands, &mut meshes, &facade, &mut rng);
     spawn_road(&mut commands, &mut meshes, &mut materials, &mut images);
-    spawn_trees(&mut commands, &mut meshes, &mut materials, &mut images, &mut rng);
+    spawn_trees(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut images,
+        &mut rng,
+    );
     spawn_lights(&mut commands);
     let target = spawn_camera(&mut commands, &mut images, win.0);
     commands.insert_resource(Assets3 {

@@ -245,7 +245,6 @@ fn choose_branch(
     }
 }
 
-
 /// The throttle (in drive), the service brake and whether the vehicle is held: a rail vehicle has
 /// no parking brake of its own, so its controls ignore it.
 fn pedals(controller: &opts_bevy::VehicleController, has_controls: bool) -> (f32, f32, bool) {

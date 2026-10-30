@@ -135,12 +135,7 @@ pub(super) struct RebuildData<'w, 's> {
     registry: Res<'w, SessionVehicles>,
     index: Res<'w, EntryIndex>,
     job: Option<Res<'w, WorldLoadJob>>,
-    routes: Query<
-        'w,
-        's,
-        &'static opts_bevy::route::VehicleRoute,
-        With<opts_bevy::PlayerVehicle>,
-    >,
+    routes: Query<'w, 's, &'static opts_bevy::route::VehicleRoute, With<opts_bevy::PlayerVehicle>>,
     env: Option<Res<'w, opts_bevy::environment::SessionEnvironment>>,
     session: Option<Res<'w, super::super::types::InGameSessionInfo>>,
 }

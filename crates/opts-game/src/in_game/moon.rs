@@ -74,19 +74,11 @@ pub fn choose_carrier(current: Option<LightRole>, sun: f32, moon: f32) -> Option
 /// Any sun light (data-driven or fallback).
 type SunsQuery<'w, 's> = Query<'w, 's, (), Or<(With<SunLight>, With<FallbackLight>)>>;
 /// Moon discs still without a mesh.
-type NewDiscsQuery<'w, 's> = Query<
-    'w,
-    's,
-    (Entity, &'static MoonDiscTexture),
-    (With<MoonDisc>, Without<Mesh3d>),
->;
+type NewDiscsQuery<'w, 's> =
+    Query<'w, 's, (Entity, &'static MoonDiscTexture), (With<MoonDisc>, Without<Mesh3d>)>;
 /// The main camera's transform.
-type CameraQuery<'w, 's> = Query<
-    'w,
-    's,
-    &'static GlobalTransform,
-    (With<opts_bevy::MainCamera>, Without<MoonDisc>),
->;
+type CameraQuery<'w, 's> =
+    Query<'w, 's, &'static GlobalTransform, (With<opts_bevy::MainCamera>, Without<MoonDisc>)>;
 /// The moon light's light and transform.
 type MoonLightQuery<'w, 's> = Query<
     'w,
@@ -98,7 +90,10 @@ type MoonLightQuery<'w, 's> = Query<
 type MoonDiscQuery<'w, 's> = Query<
     'w,
     's,
-    (&'static mut Transform, &'static MeshMaterial3d<MoonMaterial>),
+    (
+        &'static mut Transform,
+        &'static MeshMaterial3d<MoonMaterial>,
+    ),
     With<MoonDisc>,
 >;
 

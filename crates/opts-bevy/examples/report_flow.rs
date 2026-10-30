@@ -118,11 +118,13 @@ fn script(
         let f = s.frame - of;
         if f == 10 {
             for ch in ["G", "r", "ö", "ß", "e", " ", "✓"] {
-                out.keys.write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
+                out.keys
+                    .write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
             }
             out.keys.write(key(w, KeyCode::Enter, Key::Enter));
             for ch in ["Z", "w", "e", "i", "t", "e"] {
-                out.keys.write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
+                out.keys
+                    .write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
             }
         }
         if f == 40 {

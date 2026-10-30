@@ -181,20 +181,19 @@ impl Census {
             self.total_matl += 1;
             self.total_matl_files.insert(rel.to_string());
         }
-        let interesting =
-            matches!(
-                name,
-                "matl_envmap"
-                    | "matl_envmap_mask"
-                    | "matl_alpha"
-                    | "matl_transmap"
-                    | "matl_bumpmap"
-                    | "matl_nightmap"
-                    | "matl_lightmap"
-                    | "matl_noZwrite"
-                    | "matl_nozwrite"
-                    | "matl_nozcheck"
-            ) || has_any(name, &["mirror", "spiegel", "reflect", "cube", "env"]);
+        let interesting = matches!(
+            name,
+            "matl_envmap"
+                | "matl_envmap_mask"
+                | "matl_alpha"
+                | "matl_transmap"
+                | "matl_bumpmap"
+                | "matl_nightmap"
+                | "matl_lightmap"
+                | "matl_noZwrite"
+                | "matl_nozwrite"
+                | "matl_nozcheck"
+        ) || has_any(name, &["mirror", "spiegel", "reflect", "cube", "env"]);
         if interesting {
             self.kw.entry(name.to_string()).or_default().add(rel, unit);
         }
@@ -225,7 +224,11 @@ impl Census {
                     self.name_hits
                         .entry("text line mentions mirror")
                         .or_default()
-                        .push(format!("{}: {}", at.0, l.chars().take(80).collect::<String>()));
+                        .push(format!(
+                            "{}: {}",
+                            at.0,
+                            l.chars().take(80).collect::<String>()
+                        ));
                 }
             }
         }

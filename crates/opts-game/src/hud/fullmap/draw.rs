@@ -122,12 +122,12 @@ fn redraw_due(
                 .zip(markers)
                 .any(|(a, b)| a.0.distance(b.0) > 0.05 || (a.1 - b.1).abs() > 0.01 || a.2 != b.2)
     });
-    let due = resized
+
+    resized
         || state.immediate
         || (view_changed && state.since >= MOVING_INTERVAL_S)
         || (markers_moved && state.since >= MOVING_INTERVAL_S)
-        || state.since >= IDLE_INTERVAL_S;
-    due
+        || state.since >= IDLE_INTERVAL_S
 }
 
 /// A fresh canvas and the image that shows it.
@@ -166,10 +166,7 @@ fn marker_pixels(markers: &[(DVec2, f32, bool)], centre: DVec2) -> Vec<MapMarker
     markers
         .iter()
         .map(|(p, h, active)| MapMarker {
-            pos: Vec2::new(
-                (p.x - centre.x) as f32,
-                (p.y - centre.y) as f32,
-            ),
+            pos: Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
             heading: *h,
             active: *active,
         })
@@ -223,7 +220,12 @@ pub fn redraw(
     let screen = state.screen;
     let side = canvas_px(screen);
     let resized = canvas.0.as_ref().is_none_or(|c| c.size != side) || handle.0.is_none();
-    let due = redraw_due(&state, overview.generation + route.generation, resized, &markers);
+    let due = redraw_due(
+        &state,
+        overview.generation + route.generation,
+        resized,
+        &markers,
+    );
     if !due {
         return;
     }

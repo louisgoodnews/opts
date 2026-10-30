@@ -183,14 +183,19 @@ fn refresh_texture(
 
 /// The clear colour fills what the dome does not cover: the fog colour, towards the horizon
 /// colour as the camera leaves the ground-fog layer.
-fn clear_colour_of(horizon: [f32; 3], veil_color: [f32; 3], fog_on: bool, fog_clear: u8) -> [f32; 3] {
+fn clear_colour_of(
+    horizon: [f32; 3],
+    veil_color: [f32; 3],
+    fog_on: bool,
+    fog_clear: u8,
+) -> [f32; 3] {
     let lift = f32::from(fog_clear) / 32.0;
-    let clear_color = if fog_on {
+
+    if fog_on {
         [0, 1, 2].map(|c| veil_color[c] + (horizon[c] - veil_color[c]) * lift)
     } else {
         horizon
-    };
-    clear_color
+    }
 }
 
 /// The sun disc: on the dome in the sun's direction, hidden below the horizon.
@@ -223,30 +228,18 @@ pub struct SkyTargets<'w> {
 /// The queries of [`update_sky`].
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct SkyQueries<'w, 's> {
-    cameras: Query<
-        'w,
-        's,
-        &'static GlobalTransform,
-        (With<opts_bevy::MainCamera>, Without<SkyDome>),
-    >,
-    sun: Query<
-        'w,
-        's,
-        (&'static mut Transform, &'static mut DirectionalLight),
-        (With<SunLight>, Without<SkyDome>),
-    >,
-    sun_disc: Query<
-        'w,
-        's,
-        &'static mut Transform,
-        (
-            With<SunDisc>,
-            Without<SkyDome>,
-            Without<SunLight>,
-            Without<MoonDisc>,
-        ),
-    >,
+    cameras: Query<'w, 's, &'static GlobalTransform, CameraFilter>,
+    sun: Query<'w, 's, (&'static mut Transform, &'static mut DirectionalLight), SunFilter>,
+    sun_disc: Query<'w, 's, &'static mut Transform, DiscFilter>,
 }
+type CameraFilter = (With<opts_bevy::MainCamera>, Without<SkyDome>);
+type SunFilter = (With<SunLight>, Without<SkyDome>);
+type DiscFilter = (
+    With<SunDisc>,
+    Without<SkyDome>,
+    Without<SunLight>,
+    Without<MoonDisc>,
+);
 
 /// Updates sky colours, sun/moon placement and lighting.
 pub fn update_sky(
@@ -267,7 +260,7 @@ pub fn update_sky(
         images,
         clear,
         ambient,
-    } = &mut *targets;
+    } = &mut targets;
     let (cameras, sun, sun_disc) = (&queries.cameras, &mut queries.sun, &mut queries.sun_disc);
     let Some(mut sky) = sky else { return };
     let Some(cam) = cameras.iter().next().map(GlobalTransform::translation) else {

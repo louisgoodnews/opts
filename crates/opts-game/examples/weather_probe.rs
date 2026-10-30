@@ -285,6 +285,13 @@ fn main() {
         .flat_map(|(n, id)| heights.iter().map(move |h| (n, id, *h)))
         .collect();
     for (n, id, height) in jobs {
-        render_job(&mut apps, &shared, &target, (n, id.as_str(), height), pitch, &out);
+        render_job(
+            &mut apps,
+            &shared,
+            &target,
+            (n, id.as_str(), height),
+            pitch,
+            &out,
+        );
     }
 }

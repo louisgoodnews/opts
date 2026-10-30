@@ -43,10 +43,7 @@ fn open_equipment_dialog(app: &mut App) {
 }
 
 /// Writes through the dialog's controls: a choice, a number and a switch.
-fn exercise_option_controls(
-    app: &mut App,
-    (switch, combo, field): (Entity, Entity, Entity),
-) {
+fn exercise_option_controls(app: &mut App, (switch, combo, field): (Entity, Entity, Entity)) {
     use opts_gui::interaction::events::{ComboboxSelected, SwitchToggled, TextChanged};
     // Choosing the second value (5) writes it; choosing the default again removes the override.
     app.world_mut().write_message(ComboboxSelected {

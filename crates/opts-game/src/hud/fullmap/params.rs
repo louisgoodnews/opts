@@ -50,19 +50,11 @@ pub struct OverlayNodes<'w, 's> {
     /// The texture node.
     pub surface: Query<'w, 's, (&'static mut Node, &'static mut ImageNode), With<FullMapSurface>>,
     /// The caption.
-    pub caption: Query<
-        'w,
-        's,
-        &'static mut Text,
-        (With<FullMapCaption>, Without<FullMapScaleText>),
-    >,
+    pub caption:
+        Query<'w, 's, &'static mut Text, (With<FullMapCaption>, Without<FullMapScaleText>)>,
     /// The scale bar's text.
-    pub scale_text: Query<
-        'w,
-        's,
-        &'static mut Text,
-        (With<FullMapScaleText>, Without<FullMapCaption>),
-    >,
+    pub scale_text:
+        Query<'w, 's, &'static mut Text, (With<FullMapScaleText>, Without<FullMapCaption>)>,
     /// The scale bar.
     pub scale_bar:
         Query<'w, 's, &'static mut Node, (With<FullMapScaleBar>, Without<FullMapSurface>)>,

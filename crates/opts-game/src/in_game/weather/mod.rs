@@ -17,7 +17,7 @@ pub mod surfaces;
 
 /// The clock, the session environment and the weather effects: what every weather system reads.
 #[derive(bevy::ecs::system::SystemParam)]
-pub(crate) struct WeatherScene<'w> {
+pub struct WeatherScene<'w> {
     pub(crate) time: Res<'w, Time<Real>>,
     pub(crate) env: Res<'w, opts_bevy::SessionEnvironment>,
     pub(crate) effects: Res<'w, WeatherEffects>,
@@ -25,7 +25,7 @@ pub(crate) struct WeatherScene<'w> {
 
 /// The asset stores the weather layers build their meshes, textures and materials in.
 #[derive(bevy::ecs::system::SystemParam)]
-pub(crate) struct WeatherAssets<'w> {
+pub struct WeatherAssets<'w> {
     pub(crate) images: ResMut<'w, Assets<Image>>,
     pub(crate) meshes: ResMut<'w, Assets<Mesh>>,
     pub(crate) materials: ResMut<'w, Assets<StandardMaterial>>,

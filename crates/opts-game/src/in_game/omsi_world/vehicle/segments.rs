@@ -60,14 +60,24 @@ pub(super) fn repaint_map(
 pub(in super::super::super) fn load_segment_meshes(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
-    stores: (&mut Assets<Mesh>, &mut Assets<StandardMaterial>, &mut Assets<Image>),
+    stores: (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
     root: Entity,
     lod0: &opts_core::formats::vehicles::model::ModelLod,
     model_dir: &Path,
     tex_dirs: &[PathBuf],
 ) -> (usize, usize, Vec3, Vec3) {
     load_segment_meshes_for(
-        job, commands, stores, (root, root), lod0, model_dir, tex_dirs,
+        job,
+        commands,
+        stores,
+        (root, root),
+        lod0,
+        model_dir,
+        tex_dirs,
     )
 }
 

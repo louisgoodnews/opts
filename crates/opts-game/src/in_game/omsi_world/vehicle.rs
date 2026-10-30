@@ -237,7 +237,6 @@ fn trace_vehicle(
     );
 }
 
-
 /// The scripts, sounds, door points, passengers and key bindings of the vehicle.
 fn attach_vehicle_parts(
     job: &mut WorldLoadJob,
@@ -246,11 +245,11 @@ fn attach_vehicle_parts(
     (manifest, bus_dir): (&BusManifest, &Path),
     (script_seed, activate): (u64, bool),
 ) {
-    attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed, None);
-    crate::player_sound::attach(job, commands, root, &manifest, &bus_dir);
-    doors::attach_door_points(job, commands, root, &manifest, &bus_dir);
+    attach_scripts(job, commands, root, manifest, bus_dir, script_seed, None);
+    crate::player_sound::attach(job, commands, root, manifest, bus_dir);
+    doors::attach_door_points(job, commands, root, manifest, bus_dir);
     if activate {
-        passengers::attach_passengers(job, commands, root, &manifest, &bus_dir, script_seed);
+        passengers::attach_passengers(job, commands, root, manifest, bus_dir, script_seed);
     }
     load_key_bindings(job, commands);
 }
@@ -401,8 +400,23 @@ pub fn load_player_vehicle(
         (spawn_world, heading_deg),
         job.formation_cars.is_empty(),
     );
-    attach_vehicle_parts(job, commands, root, (&manifest, &bus_dir), (script_seed(job.install.root(), &bus_path, session_id), activate));
-    attach_trailers(job, commands, (meshes, materials, images), root, (&bus_dir, &manifest));
+    attach_vehicle_parts(
+        job,
+        commands,
+        root,
+        (&manifest, &bus_dir),
+        (
+            script_seed(job.install.root(), &bus_path, session_id),
+            activate,
+        ),
+    );
+    attach_trailers(
+        job,
+        commands,
+        (meshes, materials, images),
+        root,
+        (&bus_dir, &manifest),
+    );
     let cockpit_offset = cockpit_offset_of(&manifest);
     seat_driver(
         (job, commands),

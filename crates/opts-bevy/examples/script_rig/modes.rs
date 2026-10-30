@@ -35,9 +35,8 @@ pub(super) fn route_mode(args: &Args, bus: &BusManifest, dir: &Path, rel: &str) 
 pub(super) fn physics_mode(args: &Args, f: &Path, bus: &BusManifest, dir: &Path, rel: &str) {
     let seed0 = seed_of(rel);
     let loader = || {
-        let (mut e, _) = load_vehicle_scripts(bus, |r| {
-            find_ci(dir, r).or_else(|| find_ci(&args.root, r))
-        });
+        let (mut e, _) =
+            load_vehicle_scripts(bus, |r| find_ci(dir, r).or_else(|| find_ci(&args.root, r)));
         e.seed_random(seed0 as u32);
         e.set_external_handler(vehicle_callbacks(seed0));
         e

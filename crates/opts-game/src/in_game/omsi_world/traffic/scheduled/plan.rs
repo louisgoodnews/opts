@@ -66,7 +66,10 @@ impl PlanCtx<'_> {
 
 /// Where a run is now: the stop it starts at and, between stops, how far it has come; `None` for
 /// a run that is not about to start or already over.
-fn run_start(ctx: &PlanCtx, schedule: &opts_core::formats::timetable::ActiveSchedule) -> Option<(usize, Option<f64>)> {
+fn run_start(
+    ctx: &PlanCtx,
+    schedule: &opts_core::formats::timetable::ActiveSchedule,
+) -> Option<(usize, Option<f64>)> {
     let phase = run_phase(schedule, ctx.now);
     Some(match phase {
         RunPhase::NotStarted { wait_s } if wait_s <= LEAD_S => (0, None),
@@ -90,36 +93,26 @@ fn spawn_spot(
         .and_then(|s| ctx.place(s.station_id));
     Some(match (offset, a) {
         (None, Some(a)) => (a.0, a.1, vec![]),
-        (None, None) => continue,
+        (None, None) => return None,
         (Some(fraction), a) => {
-            let Some(b) = schedule
+            let b = schedule
                 .stops
                 .get(first_stop + 1)
-                .and_then(|s| ctx.place(s.station_id))
-            else {
-                return None;
-            };
+                .and_then(|s| ctx.place(s.station_id))?;
             match a {
                 Some(a) => {
-                    let Some((lanes, lengths)) = leg(graph, a, b) else {
-                        return None;
-                    };
+                    let (lanes, lengths) = leg(graph, a, b)?;
                     let total: f64 = lengths.iter().sum::<f64>()
                         - a.1
                         - (lengths.last().copied().unwrap_or(0.0) - b.1);
-                    let Some((i, s)) = place_along(&lengths, a.1, fraction * total.max(0.0))
-                    else {
-                        return None;
-                    };
+                    let (i, s) = place_along(&lengths, a.1, fraction * total.max(0.0))?;
                     (lanes[i], s, Vec::new())
                 }
                 None => {
                     let due = schedule.stops[first_stop + 1].arrival_s;
                     let back = ((f64::from(due) - now).max(0.0) * UPSTREAM_MS)
                         .clamp(UPSTREAM_MIN_M, APPEAR_MAX_M);
-                    let Some((lane, s)) = walk_back(graph, b.0, b.1, back) else {
-                        return None;
-                    };
+                    let (lane, s) = walk_back(graph, b.0, b.1, back)?;
                     (lane, s, Vec::new())
                 }
             }
@@ -139,7 +132,7 @@ fn appears_there(ctx: &PlanCtx, (spawn_lane, spawn_s): (LaneId, f64)) -> bool {
     if !(APPEAR_MIN_M..=APPEAR_MAX_M).contains(&distance)
         || (view.dot(to) > 0.5 && distance < VIEW_CLEAR_M)
     {
-        continue;
+        return false;
     }
     true
 }
@@ -163,7 +156,9 @@ fn plan_route(
         .enumerate()
         .skip(first_stop + usize::from(offset.is_some()))
     {
-        let Some(p) = ctx.place(st.station_id) else { break };
+        let Some(p) = ctx.place(st.station_id) else {
+            break;
+        };
         if let Some(from) = prev {
             let Some((lanes, _)) = leg(graph, from, p) else {
                 break;
@@ -195,9 +190,7 @@ fn pick_slot_for(
     tt: &opts_core::formats::timetable::Timetables,
     (run, schedule): (&RunRef, &opts_core::formats::timetable::ActiveSchedule),
 ) -> Option<usize> {
-    let Some(tour) = tt.tour(&schedule.line_file, run.tour) else {
-        return None;
-    };
+    let tour = tt.tour(&schedule.line_file, run.tour)?;
     let Some(choices) = pool
         .depots
         .get(&tour.vehicle_group.to_ascii_lowercase())
@@ -368,7 +361,8 @@ pub fn plan_scheduled(
             continue;
         };
         seen[1] += 1;
-        let Some((spawn_lane, spawn_s, route_from)) = spawn_spot(&ctx, &schedule, (first_stop, offset))
+        let Some((spawn_lane, spawn_s, route_from)) =
+            spawn_spot(&ctx, &schedule, (first_stop, offset))
         else {
             continue;
         };

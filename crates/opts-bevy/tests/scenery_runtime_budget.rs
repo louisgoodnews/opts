@@ -52,7 +52,11 @@ const SCRIPT: &str = "\
 fn spawn_heads(
     commands: &mut Commands,
     (meshes, materials): (&mut Assets<Mesh>, &mut Assets<StandardMaterial>),
-    (sco, template, program): (&SceneryObject, &std::sync::Mutex<ScriptEngine>, &SignalProgram),
+    (sco, template, program): (
+        &SceneryObject,
+        &std::sync::Mutex<ScriptEngine>,
+        &SignalProgram,
+    ),
 ) {
     let material = materials.add(StandardMaterial::default());
     let mut lights = SceneryLightAssets::default();

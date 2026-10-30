@@ -8,7 +8,8 @@ use super::*;
 #[derive(SystemParam)]
 pub struct PanelNodes<'w, 's> {
     /// The numbers.
-    pub values: Query<'w, 's, (&'static ViewpointValue, &'static mut Text), Without<ViewpointSubtitle>>,
+    pub values:
+        Query<'w, 's, (&'static ViewpointValue, &'static mut Text), Without<ViewpointSubtitle>>,
     /// The subtitle.
     pub subtitle:
         Query<'w, 's, &'static mut Text, (With<ViewpointSubtitle>, Without<ViewpointValue>)>,
@@ -24,12 +25,8 @@ pub struct PanelNodes<'w, 's> {
     /// The row names.
     pub names: Query<'w, 's, (&'static ViewpointName, &'static mut InstrumentInk)>,
     /// The *unsaved* mark.
-    pub unsaved: Query<
-        'w,
-        's,
-        &'static mut Visibility,
-        (With<ViewpointUnsaved>, Without<ViewpointMarker>),
-    >,
+    pub unsaved:
+        Query<'w, 's, &'static mut Visibility, (With<ViewpointUnsaved>, Without<ViewpointMarker>)>,
     /// The painted tracks.
     pub paints: Query<'w, 's, (&'static ViewpointPaint, &'static mut BackgroundColor)>,
     /// The scope text.

@@ -126,10 +126,26 @@ fn spawn_wheels(
     let rl = Vec3::new(-1.25, 0.49, 2.925);
     let rr = Vec3::new(1.25, 0.49, 2.925);
     [
-        wheel(WheelVisual::new(0, WheelSide::Left, fl), fl, "Wheel_Axle0_Left"),
-        wheel(WheelVisual::new(0, WheelSide::Right, fr), fr, "Wheel_Axle0_Right"),
-        wheel(WheelVisual::new(1, WheelSide::Left, rl), rl, "Wheel_Axle1_Left"),
-        wheel(WheelVisual::new(1, WheelSide::Right, rr), rr, "Wheel_Axle1_Right"),
+        wheel(
+            WheelVisual::new(0, WheelSide::Left, fl),
+            fl,
+            "Wheel_Axle0_Left",
+        ),
+        wheel(
+            WheelVisual::new(0, WheelSide::Right, fr),
+            fr,
+            "Wheel_Axle0_Right",
+        ),
+        wheel(
+            WheelVisual::new(1, WheelSide::Left, rl),
+            rl,
+            "Wheel_Axle1_Left",
+        ),
+        wheel(
+            WheelVisual::new(1, WheelSide::Right, rr),
+            rr,
+            "Wheel_Axle1_Right",
+        ),
     ]
 }
 

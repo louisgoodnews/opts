@@ -79,7 +79,11 @@ fn lookup_action(
     word: &str,
     rest: &str,
     menu: &VehicleMenu,
-    (registry, catalogue, job): (&SessionVehicles, Option<&GameCatalogue>, Option<&WorldLoadJob>),
+    (registry, catalogue, job): (
+        &SessionVehicles,
+        Option<&GameCatalogue>,
+        Option<&WorldLoadJob>,
+    ),
 ) -> Option<Action> {
     let has = |name: &str| name.to_lowercase().contains(rest);
     match word {
@@ -154,7 +158,6 @@ pub(super) fn parse_remote_commands(
     for line in std::mem::take(&mut remote.0) {
         let (word, rest) = line.split_once(' ').unwrap_or((line.as_str(), ""));
         let rest = rest.trim().to_lowercase();
-        let has = |name: &str| name.to_lowercase().contains(&rest);
         let action = match word {
             "open" if menu.page == Page::Closed => {
                 menu.page = Page::Main;
@@ -193,12 +196,7 @@ pub(super) fn parse_remote_commands(
             "reset" => registry.active_id().map(Action::ResetOnRoad),
             "toggle" => Some(Action::Toggle(rest.clone())),
             "step" => step_action(&rest),
-            _ => lookup_action(
-                word,
-                &rest,
-                menu,
-                (registry, catalogue, job),
-            ),
+            _ => lookup_action(word, &rest, menu, (registry, catalogue, job)),
         };
         todo.extend(action);
     }

@@ -18,6 +18,22 @@ use super::trees::spawn_tree;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{LoadAssets, WorldLoadJob, WorldStats};
 
+/// An object instance with where it stands: instance, placement, terrain, tile key and origin.
+type ObjSpot<'a> = (
+    &'a MapObjectInstance,
+    Placement,
+    Option<&'a TileTerrain>,
+    (i32, i32),
+    (f32, f32),
+);
+/// A placed object's model parts and script template, and the children list they go into.
+type ObjParts<'a> = (
+    Transform,
+    Vec<Vec<opts_bevy::ModelPart>>,
+    Option<std::sync::Arc<super::scenery_objects::ScriptTemplate>>,
+    &'a mut Vec<Entity>,
+);
+
 /// Flat width from which a spline without lanes (paved area, apron) carries vehicles (m).
 pub(super) const SURFACE_MIN_WIDTH_M: f32 = 3.5;
 
@@ -52,13 +68,7 @@ pub(super) fn spawn_object(
         &mut Assets<StandardMaterial>,
         &mut Assets<Image>,
     ),
-    (obj, placement, terrain, key, origin): (
-        &MapObjectInstance,
-        Placement,
-        Option<&TileTerrain>,
-        (i32, i32),
-        (f32, f32),
-    ),
+    (obj, placement, terrain, key, origin): ObjSpot<'_>,
     (children, tile, site): (
         &mut Vec<Entity>,
         &opts_core::formats::map::MapTile,
@@ -107,13 +117,7 @@ fn special_object(
         &mut Assets<StandardMaterial>,
         &mut Assets<Image>,
     ),
-    (obj, placement, terrain, key, origin): (
-        &MapObjectInstance,
-        Placement,
-        Option<&TileTerrain>,
-        (i32, i32),
-        (f32, f32),
-    ),
+    (obj, placement, terrain, key, origin): ObjSpot<'_>,
     (children, tile, site): (
         &mut Vec<Entity>,
         &opts_core::formats::map::MapTile,
@@ -267,7 +271,7 @@ fn spawn_map_lights_only(
             Name::new("BusStop"),
         ));
     }
-    opts_bevy::scenery_runtime::spawn_map_lights(commands, root, &sco);
+    opts_bevy::scenery_runtime::spawn_map_lights(commands, root, sco);
     children.push(root);
     tracing::debug!(sco = %sco_path.display(), "editor-only object: map lights only");
 }
@@ -289,12 +293,7 @@ fn no_mesh_parts(
         &Path,
         (i32, i32),
     ),
-    (transform, mesh_parts, template, children): (
-        Transform,
-        Vec<Vec<opts_bevy::ModelPart>>,
-        Option<ScriptTemplate>,
-        &mut Vec<Entity>,
-    ),
+    (transform, mesh_parts, template, children): ObjParts<'_>,
     (hidden_before, protected_before): (usize, usize),
 ) {
     if sco.sound.is_some() && (sco.meshes.is_empty() || sco.is_editor_only()) {
@@ -309,14 +308,13 @@ fn no_mesh_parts(
         children.push(parent);
         job.finish_object(
             commands,
-            meshes,
-            materials,
+            (&mut *meshes, &mut *materials),
             parent,
-            (&sco, obj),
+            (sco, obj),
             mesh_parts,
             template,
         );
-        crate::scenery_sound::attach(job, commands, parent, &sco, sco_dir);
+        crate::scenery_sound::attach(job, commands, parent, sco, sco_dir);
         stats.objects_loaded += 1;
         return;
     }
@@ -344,13 +342,7 @@ fn spawn_object_inner(
         &mut Assets<StandardMaterial>,
         &mut Assets<Image>,
     ),
-    (obj, placement, terrain, key, origin): (
-        &MapObjectInstance,
-        Placement,
-        Option<&TileTerrain>,
-        (i32, i32),
-        (f32, f32),
-    ),
+    (obj, placement, terrain, key, origin): ObjSpot<'_>,
     (children, tile, site): (
         &mut Vec<Entity>,
         &opts_core::formats::map::MapTile,
@@ -386,7 +378,12 @@ fn spawn_object_inner(
         .unwrap_or_else(|| sco_dir.join("model"));
     let tex_dirs = vec![sco_dir.join("texture"), job.config.map_dir.join("texture")];
 
-    let (transform, terrain_h) = object_transform(job, &sco, (obj, placement, terrain, origin), site.marker.is_some());
+    let (transform, terrain_h) = object_transform(
+        job,
+        &sco,
+        (obj, placement, terrain, origin),
+        site.marker.is_some(),
+    );
     if sco.only_editor && sco.sound.is_none() {
         spawn_map_lights_only(commands, children, (obj, &sco, &sco_path), transform);
         return;
@@ -498,8 +495,7 @@ fn spawn_object_inner(
         .sum::<usize>();
     job.finish_object(
         commands,
-        meshes,
-        materials,
+        (&mut *meshes, &mut *materials),
         parent,
         (&sco, obj),
         mesh_parts,

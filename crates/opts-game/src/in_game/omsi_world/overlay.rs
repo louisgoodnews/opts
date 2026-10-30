@@ -111,7 +111,14 @@ pub struct PanelSources<'w, 's> {
     environment: Option<Res<'w, opts_bevy::SessionEnvironment>>,
     traffic: Option<Res<'w, super::traffic::TrafficState>>,
     scheduled: Option<Res<'w, super::traffic::ScheduledTraffic>>,
-    stops: Query<'w, 's, (&'static GlobalTransform, &'static opts_bevy::bus_stops::BusStopMarker)>,
+    stops: Query<
+        'w,
+        's,
+        (
+            &'static GlobalTransform,
+            &'static opts_bevy::bus_stops::BusStopMarker,
+        ),
+    >,
 }
 
 /// Refreshes the developer panel text while it is visible.

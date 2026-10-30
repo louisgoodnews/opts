@@ -94,19 +94,11 @@ pub type DisplayNodes<'w, 's> = Query<
     (Without<HudSlot>, Without<HudRow>),
 >;
 /// The slot containers.
-pub type DisplaySlots<'w, 's> = Query<
-    'w,
-    's,
-    (&'static HudSlot, &'static mut Node),
-    (Without<HudWidgetNode>, Without<HudRow>),
->;
+pub type DisplaySlots<'w, 's> =
+    Query<'w, 's, (&'static HudSlot, &'static mut Node), (Without<HudWidgetNode>, Without<HudRow>)>;
 /// The row containers.
-pub type DisplayRows<'w, 's> = Query<
-    'w,
-    's,
-    (&'static HudRow, &'static mut Node),
-    (Without<HudWidgetNode>, Without<HudSlot>),
->;
+pub type DisplayRows<'w, 's> =
+    Query<'w, 's, (&'static HudRow, &'static mut Node), (Without<HudWidgetNode>, Without<HudSlot>)>;
 
 /// The camera facts that decide whether the virtual mirrors show.
 #[derive(SystemParam)]

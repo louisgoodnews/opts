@@ -27,9 +27,9 @@ pub(super) fn load_sco(install: &OmsiInstall, sco_path: &Path) -> Option<ScoInfo
         || sco.meshes.iter().any(|m| {
             m.visible.is_some()
                 || !m.animations.is_empty()
-                || m.materials.iter().any(|x| {
-                    x.light_map.is_some() && x.light_map_variable.is_some()
-                })
+                || m.materials
+                    .iter()
+                    .any(|x| x.light_map.is_some() && x.light_map_variable.is_some())
         });
     let lod = sco.meshes.iter().any(|m| m.lod_threshold.is_some());
     let text_textures = sco
@@ -96,9 +96,10 @@ pub(super) fn add_mesh_parts(
         *entry = (*entry).max(mesh.slots.len());
         for (si, slot) in mesh.slots.iter().enumerate() {
             // The `[matl]` entry of this slot changes texture, alpha and light map.
-            let over = mesh_def.materials.iter().find(|m| {
-                base_name(&m.texture) == slot.texture || m.material_index == si
-            });
+            let over = mesh_def
+                .materials
+                .iter()
+                .find(|m| base_name(&m.texture) == slot.texture || m.material_index == si);
             let content = format!(
                 "{}|{:?}|alpha={:?}|lm={:?}/{:?}|tm={}|tt={:?}",
                 over.map_or(slot.texture.clone(), |o| {

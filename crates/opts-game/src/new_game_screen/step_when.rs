@@ -2,7 +2,7 @@
 //! here with [`date_block`]) are on the map step, the one place where the date is chosen.
 
 use bevy::prelude::*;
-use opts_gui::l10n::{L10nArgs, Localization};
+use opts_gui::l10n::L10nArgs;
 use opts_gui::not_yet::NotAvailableYet;
 use opts_gui::prelude::*;
 

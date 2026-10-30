@@ -237,7 +237,7 @@ pub fn update_clouds(
             m.base_color = colour;
             state.tint = tint;
         }
-    }
+    };
 }
 
 #[cfg(test)]

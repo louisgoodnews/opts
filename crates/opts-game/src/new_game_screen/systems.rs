@@ -116,7 +116,7 @@ fn delete_config(env: &mut Env, id: String, commands: &mut Commands) {
 
 /// *Compose a train*: makes sure the head car is set and opens the formation editor.
 fn compose_formation(env: &mut Env, commands: &mut Commands) {
-    super::formation::ensure_head(env.setup, &env.catalogue);
+    super::formation::ensure_head(&mut env.setup, &env.catalogue);
     super::formation::reopen(
         commands,
         &env.formation_modals,

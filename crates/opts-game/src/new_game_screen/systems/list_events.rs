@@ -48,8 +48,7 @@ fn where_selected(
         let era = eras
             .entry(map.id.clone())
             .or_insert_with(|| {
-                crate::omsi_root::known_omsi_root()
-                    .and_then(|root| MapEra::read(&root, &map.id))
+                crate::omsi_root::known_omsi_root().and_then(|root| MapEra::read(&root, &map.id))
             })
             .unwrap_or_default();
         if !s.state.date_chosen {

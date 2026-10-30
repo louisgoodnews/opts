@@ -222,8 +222,7 @@ impl WorldLoadJob {
     pub(super) fn finish_object(
         &mut self,
         commands: &mut Commands,
-        meshes: &mut Assets<Mesh>,
-        materials: &mut Assets<StandardMaterial>,
+        (meshes, materials): (&mut Assets<Mesh>, &mut Assets<StandardMaterial>),
         root: Entity,
         (sco, obj): (&SceneryObject, &MapObjectInstance),
         mesh_parts: Vec<Vec<ModelPart>>,

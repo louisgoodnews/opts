@@ -46,8 +46,8 @@ fn trace_accel(a: &Loop, t0: f32) {
     }
 }
 
-/// 1. Standstill to 50 km/h at full throttle: the loop, the time to 50 km/h and the speed after
-/// 40 s (km/h).
+/// 1. Standstill to 50 km/h at full throttle: the loop, the time to 50 km/h and the speed
+///    after 40 s (km/h).
 fn accel_scenario(fresh: Fresh<'_>, dt: f32, hz: f32) -> (Loop, Option<f32>, f32) {
     let mut a = fresh();
     a.ready();

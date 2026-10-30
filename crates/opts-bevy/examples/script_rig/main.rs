@@ -67,7 +67,10 @@ fn main() {
     let mut files = Vec::new();
     buses(&args.root.join("Vehicles"), &mut files);
     files.sort();
-    let mut out = args.json.as_ref().and_then(|p| std::fs::File::create(p).ok());
+    let mut out = args
+        .json
+        .as_ref()
+        .and_then(|p| std::fs::File::create(p).ok());
     if let Some(dir) = &args.csv {
         let _ = std::fs::create_dir_all(dir);
     }

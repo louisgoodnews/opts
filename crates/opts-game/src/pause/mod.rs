@@ -21,7 +21,6 @@ use opts_gui::prelude::*;
 pub use stats::SessionStats;
 
 use crate::app_state::AppState;
-use crate::in_game::types::SimulationLoadState;
 use crate::in_game::VehicleMenu;
 use crate::new_game_screen::types::NewGameSetup;
 use crate::session_summary::LastSession;
@@ -245,7 +244,7 @@ pub fn pause_items(
     } = clicks;
     let params::PauseClock { mut time, rebuild } = clock;
     let params::ReportAccess {
-        report: mut report,
+        mut report,
         state: report_state,
         next: mut report_next,
     } = dialog;

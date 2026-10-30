@@ -203,7 +203,11 @@ struct VariantLook {
     chain: Vec<ChainUnit>,
 }
 
-fn variant_look(variant: &Variant, params: &IdmParams, entities: &[Entity]) -> VariantLook {
+fn variant_look(
+    variant: &crate::in_game::omsi_world::traffic_variant::Variant,
+    params: &IdmParams,
+    entities: &[Entity],
+) -> VariantLook {
     let head = &variant.units[0];
     let sound = head.sound.clone();
     let door_ahead = head

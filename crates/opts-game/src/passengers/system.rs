@@ -86,7 +86,10 @@ fn spawn_forced_group(
     for slot in 0..n {
         // Beyond the drawn crowd a group boards unseen, like the crowd of a real stop.
         let actor = (slot < MAX_VISIBLE_WAITING)
-            .then(|| e.pool.spawn_actor(&mut e.commands, &mut e.bindposes, rig.rng.next_f32()))
+            .then(|| {
+                e.pool
+                    .spawn_actor(&mut e.commands, &mut e.bindposes, rig.rng.next_f32())
+            })
             .flatten();
         let Some(actor) = actor else {
             let entry = rig.force_entry;
@@ -146,20 +149,20 @@ fn arrive_at_stop(
         // (the setting's rate times the map's passenger factor for the hour).
         let key = stop_key(&tf);
         rig.stop_key = Some(key);
-        let (last, left_behind) = e.crowds
+        let (last, left_behind) = e
+            .crowds
             .0
             .get(&key)
             .copied()
             .unwrap_or((now - FIRST_VISIT_WAIT_MIN * 60.0, 0));
         let minutes = ((now - last) / 60.0).clamp(0.0, MAX_ACCUMULATE_MIN) as f32;
         let rate = settings
-                                    .and_then(|s| s.raw(RATE_SETTING)?.trim().parse::<f32>().ok())
+            .and_then(|s| s.raw(RATE_SETTING)?.trim().parse::<f32>().ok())
             .unwrap_or(DEFAULT_RATE);
         let factor = match (&job, &env) {
-            (Some(job), Some(env)) => crate::in_game::omsi_world::passenger_factor(
-                job.passenger_curve(),
-                env.hour(),
-            ),
+            (Some(job), Some(env)) => {
+                crate::in_game::omsi_world::passenger_factor(job.passenger_curve(), env.hour())
+            }
             _ => 1.0,
         };
         let arrivals = rig.rng.poisson(rate * factor * minutes / 60.0);
@@ -174,7 +177,8 @@ fn arrive_at_stop(
             // The first ones are drawn; the rest of the crowd boards without a figure.
             let actor = (slot < MAX_VISIBLE_WAITING)
                 .then(|| {
-                    e.pool.spawn_actor(&mut e.commands, &mut e.bindposes, rig.rng.next_f32())
+                    e.pool
+                        .spawn_actor(&mut e.commands, &mut e.bindposes, rig.rng.next_f32())
                 })
                 .flatten();
             let Some(actor) = actor else {
@@ -310,19 +314,19 @@ fn board_unseen(rig: &mut PassengerRig, doors: &Doors, dt: f32) {
     }
 }
 
+/// What a vehicle's passengers are driven from.
+type RigRow = (
+    Entity,
+    &'static mut PassengerRig,
+    &'static GlobalTransform,
+    &'static VehicleController,
+    Option<&'static opts_bevy::host_callbacks::PassengerCountsHandle>,
+);
+
 /// Runs the passengers of the player's vehicle.
 pub fn update_passengers(
     time: Res<Time>,
-    mut rigs: Query<
-        (
-            Entity,
-            &mut PassengerRig,
-            &GlobalTransform,
-            &VehicleController,
-            Option<&opts_bevy::host_callbacks::PassengerCountsHandle>,
-        ),
-        With<PlayerVehicle>,
-    >,
+    mut rigs: Query<RigRow, With<PlayerVehicle>>,
     mut e: PassengerEnv,
     settings: Option<Res<crate::settings::GameSettings>>,
     job: Option<Res<crate::in_game::omsi_world::WorldLoadJob>>,

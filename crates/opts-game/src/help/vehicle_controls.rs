@@ -150,7 +150,11 @@ pub fn fill_vehicle_controls(
     probe: super::VehicleProbe,
     mut shown: Local<Vec<String>>,
 ) {
-    let super::VehicleProbe { spots, players, rail } = probe;
+    let super::VehicleProbe {
+        spots,
+        players,
+        rail,
+    } = probe;
     if lists.is_empty() {
         return;
     }

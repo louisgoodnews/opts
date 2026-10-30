@@ -90,7 +90,6 @@ fn set_unit_defs(
     Some(job.vehicle_script_textures.clone())
 }
 
-
 /// The equipment options of the repaint the head unit gets.
 fn head_setvars_of(
     variant: &Variant,

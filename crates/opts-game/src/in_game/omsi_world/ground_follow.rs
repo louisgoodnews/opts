@@ -93,7 +93,6 @@ fn add_unevenness(
     }
 }
 
-
 /// The height the vehicle rests at: the mean of the wheels that have ground within reach under
 /// them; with fewer than two it falls towards the highest ground below it.
 fn support_height(heights: &[f32; 4], z: f32) -> f32 {

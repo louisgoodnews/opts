@@ -52,4 +52,3 @@ pub struct VehicleProbe<'w, 's> {
         ),
     >,
 }
-

@@ -107,7 +107,7 @@ fn decode_layers(
         &mut Assets<StandardMaterial>,
         &mut Assets<Image>,
     ),
-    (wanted, dirs): (&[usize], &[PathBuf]),
+    (wanted, dirs): (&[usize], &[std::path::PathBuf]),
 ) -> Option<DecodedLayers> {
     use opts_bevy::ground::CpuImage;
     let mut decoded: DecodedLayers = Vec::new();

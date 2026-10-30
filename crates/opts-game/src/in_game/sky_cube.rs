@@ -42,8 +42,7 @@ pub fn row_colour(data: &[u8], width: usize, y: usize) -> Option<[f32; 3]> {
 }
 
 /// The sky dome's material handle query.
-type DomeQuery<'w, 's> =
-    Query<'w, 's, &'static MeshMaterial3d<StandardMaterial>, With<SkyDome>>;
+type DomeQuery<'w, 's> = Query<'w, 's, &'static MeshMaterial3d<StandardMaterial>, With<SkyDome>>;
 /// The sun's directional light query.
 type SunQuery<'w, 's> = Query<'w, 's, &'static DirectionalLight, With<SunLight>>;
 

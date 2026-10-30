@@ -128,8 +128,11 @@ pub struct ThumbSlots<'w, 's> {
     /// The children of a slot.
     pub children: Query<'w, 's, &'static Children>,
     /// The placeholder glyphs.
-    pub glyphs: Query<'w, 's, (), Or<(With<HeroGlyph>, With<ThumbGlyph>)>>,
+    pub glyphs: Query<'w, 's, (), GlyphFilter>,
 }
+
+/// Either placeholder glyph.
+type GlyphFilter = Or<(With<HeroGlyph>, With<ThumbGlyph>)>;
 
 /// What the slots are filled from.
 #[derive(SystemParam)]

@@ -53,7 +53,9 @@ fn golden_sample(engine: &ScriptEngine, t: f32) -> Option<serde_json::Value> {
         .iter()
         .map(|n| ((*n).to_owned(), serde_json::json!(engine.get(n))))
         .collect();
-    Some(serde_json::json!({ "time": GOLDEN_TIMES.iter().copied().find(|g| (t - g).abs() < DT * 0.5), "values": values }))
+    Some(
+        serde_json::json!({ "time": GOLDEN_TIMES.iter().copied().find(|g| (t - g).abs() < DT * 0.5), "values": values }),
+    )
 }
 
 /// One CSV row of every variable; the first frame writes the header and fixes the column order.
@@ -224,7 +226,12 @@ pub(super) fn report_vehicle(
     if let Some(o) = out.as_mut() {
         let _ = writeln!(o, "{line}");
     }
-    write_or_check_golden(info.rel, &samples, args.golden.as_deref(), args.check.as_deref());
+    write_or_check_golden(
+        info.rel,
+        &samples,
+        args.golden.as_deref(),
+        args.check.as_deref(),
+    );
     if args.filter.is_some() {
         println!(
             "{}",

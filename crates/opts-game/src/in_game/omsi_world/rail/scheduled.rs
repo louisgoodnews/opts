@@ -165,7 +165,7 @@ pub fn spawn_scheduled_trains(
         };
         // The vehicle: one of the group's rail vehicles.
         let file = rail[(run.run + run.tour * 7) % rail.len()];
-        let args = (&run, &schedule, file);
+        let args = (&run, &schedule, file.as_str());
         match spawn_run(
             &pass,
             (&mut job, &mut commands, &mut assets),

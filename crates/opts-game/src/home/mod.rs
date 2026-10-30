@@ -21,8 +21,8 @@ use opts_gui::prelude::*;
 use opts_gui::theme::LayoutClass;
 
 pub use hero::{cover_rect, HeroImage, HeroPending};
-pub use params::{HomeFacts, HomeWidgets};
 pub use model::{stage_key, CatalogueStatus, DriveBlock, HomeBanner, HomeInputs};
+pub use params::{HomeFacts, HomeWidgets};
 
 use crate::app_state::AppState;
 use crate::catalogue_service::{CatalogueService, DiscoveryStatus};

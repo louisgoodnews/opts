@@ -293,7 +293,12 @@ fn drive(
         }
         shot.observe(
             move |cap: On<ScreenshotCaptured>, mut probe: ResMut<Probe>| {
-                let img = cap.image.clone().try_into_dynamic().expect("image").to_rgba8();
+                let img = cap
+                    .image
+                    .clone()
+                    .try_into_dynamic()
+                    .expect("image")
+                    .to_rgba8();
                 probe.lines.push(frame_line(label, &img));
                 probe.idx += 1;
                 probe.started_s = -1.0;
