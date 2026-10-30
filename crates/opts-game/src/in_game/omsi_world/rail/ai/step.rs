@@ -33,26 +33,15 @@ fn ahead_gap(
     nearest_gap(obstacles, owner, origin, dir, 60.0)
 }
 
-/// Runs the AI trains along their track and poses every unit by its distance behind the head.
-#[allow(clippy::too_many_arguments)]
-pub fn move_ai_trains(
-    time: Res<Time>,
-    mut commands: Commands,
-    rail_net: Res<RailNetwork>,
-    bike_net: Res<BikeNetwork>,
-    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    players: Query<PlayerFootprint, With<opts_bevy::PlayerVehicle>>,
-    globals: Query<&GlobalTransform>,
-    mut trains: Query<(Entity, &mut AiTrain)>,
-    mut units: Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
-    env: Option<Res<opts_bevy::SessionEnvironment>>,
-    mut sched: ResMut<crate::in_game::omsi_world::ScheduledTraffic>,
-) {
-    let clock = env.as_ref().map_or(0.0, |e| e.seconds_of_day());
-    let dt = time.delta_secs().min(0.1);
-    let cam = camera.single().ok().map(|c| c.translation());
-    // What a train must not run into: every unit of the player's traction (its last unit's rear
-    // counts, not just the head) and of the other trains.
+
+/// What a train must not run into: every unit of the player's traction (its last unit's rear
+/// counts, not just the head) and of the other trains.
+fn collect_obstacles(
+    players: &Query<PlayerFootprint, With<opts_bevy::PlayerVehicle>>,
+    globals: &Query<&GlobalTransform>,
+    trains: &Query<(Entity, &mut AiTrain)>,
+    units: &Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
+) -> Vec<Obstacle> {
     let mut obstacles: Vec<Obstacle> = Vec::new();
     for (g, body, composition) in &players {
         let at = g.compute_transform();
@@ -74,6 +63,61 @@ pub fn move_ai_trains(
             }
         }
     }
+    obstacles
+}
+
+/// Puts every unit of a train on the track at its offset, shows it and turns its wheels.
+fn place_units(
+    t: &AiTrain,
+    net: &RailNet,
+    units: &mut Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
+) {
+    let angle = t.wheel_angle;
+    let head_span = t.composition.head.half_span;
+    let list: Vec<Part> = t.composition.parts().cloned().collect();
+    for part in list {
+        let (e, reversed) = (part.entity, part.reversed);
+        let Some(pose) = unit_pose(
+            &t.train,
+            net,
+            part.behind + head_span,
+            part.half_span,
+            reversed,
+            0.0,
+        ) else {
+            continue;
+        };
+        if let Ok((mut tf, mut vis, mut vars)) = units.get_mut(e) {
+            *tf = pose;
+            *vis = Visibility::Visible;
+            for axle in 0..6 {
+                for side in ["l", "r"] {
+                    vars.set(&format!("wheel_rotation_{axle}_{side}"), angle);
+                }
+            }
+        }
+    }
+}
+
+/// Runs the AI trains along their track and poses every unit by its distance behind the head.
+#[allow(clippy::too_many_arguments)]
+pub fn move_ai_trains(
+    time: Res<Time>,
+    mut commands: Commands,
+    rail_net: Res<RailNetwork>,
+    bike_net: Res<BikeNetwork>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
+    players: Query<PlayerFootprint, With<opts_bevy::PlayerVehicle>>,
+    globals: Query<&GlobalTransform>,
+    mut trains: Query<(Entity, &mut AiTrain)>,
+    mut units: Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
+    mut sched: ResMut<crate::in_game::omsi_world::ScheduledTraffic>,
+) {
+    let clock = env.as_ref().map_or(0.0, |e| e.seconds_of_day());
+    let dt = time.delta_secs().min(0.1);
+    let cam = camera.single().ok().map(|c| c.translation());
+    let obstacles = collect_obstacles(&players, &globals, &trains, &units);
     for (head, mut t) in &mut trains {
         let net = if t.bike { &bike_net.0 } else { &rail_net.0 };
         let (accel, cruise) = if t.bike {
@@ -111,30 +155,6 @@ pub fn move_ai_trains(
             continue;
         }
         t.wheel_angle += step / 0.29;
-        let angle = t.wheel_angle;
-        let head_span = t.composition.head.half_span;
-        let list: Vec<Part> = t.composition.parts().cloned().collect();
-        for part in list {
-            let (e, reversed) = (part.entity, part.reversed);
-            let Some(pose) = unit_pose(
-                &t.train,
-                net,
-                part.behind + head_span,
-                part.half_span,
-                reversed,
-                0.0,
-            ) else {
-                continue;
-            };
-            if let Ok((mut tf, mut vis, mut vars)) = units.get_mut(e) {
-                *tf = pose;
-                *vis = Visibility::Visible;
-                for axle in 0..6 {
-                    for side in ["l", "r"] {
-                        vars.set(&format!("wheel_rotation_{axle}_{side}"), angle);
-                    }
-                }
-            }
-        }
+        place_units(&t, net, &mut units);
     }
 }
