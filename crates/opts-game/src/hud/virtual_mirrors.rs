@@ -13,7 +13,7 @@ use opts_bevy::mirrors::{MirrorSlot, VirtualMirrors};
 use opts_gui::interaction::events::ButtonClicked;
 use opts_gui::interaction::focus::PointerOnly;
 use opts_gui::prelude::*;
-use opts_gui::theme::InstrumentVariant;
+use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
 
 use super::keys;
 use super::parts::texts;
@@ -74,6 +74,80 @@ pub fn shown(vm: &VirtualMirrors, visible: bool, external: bool) -> Shown {
     Shown { slots }
 }
 
+/// One slot of the mirrors: a clickable area, or a streaming panel with the mirror's picture
+/// (`streaming`), anchored at its edge of the screen.
+fn spawn_slot(
+    commands: &mut Commands,
+    vm: &VirtualMirrors,
+    (slot, streaming): (MirrorSlot, bool),
+    palette: &InstrumentPalette,
+) {
+    let i = slot.index();
+    let feed = vm.feeds[i].as_ref();
+    let (left, top) = anchor(slot);
+    let aspect = feed.map_or(1.0, |f| f.aspect).clamp(0.4, 3.0);
+    let mut node = Node {
+        position_type: PositionType::Absolute,
+        top: Val::Percent(top),
+        width: Val::Vw(WIDTH_VW),
+        aspect_ratio: Some(aspect),
+        border: UiRect::all(Val::Px(2.0)),
+        align_items: AlignItems::Center,
+        justify_content: JustifyContent::Center,
+        ..default()
+    };
+    if left {
+        node.left = Val::Vw(EDGE_VW);
+    } else {
+        node.right = Val::Vw(EDGE_VW);
+    }
+    let mut entity = commands.spawn((
+        Button,
+        node,
+        BorderColor::all(palette.panel_border),
+        BackgroundColor(if streaming {
+            palette.panel
+        } else {
+            palette.panel.with_alpha(0.55)
+        }),
+        PointerOnly,
+        InstrumentPanel,
+        MirrorSlotNode(slot),
+        GlobalZIndex(54),
+        InGameEntity,
+        UiId::new(format!("hud.virtual_mirror.{i}")),
+    ));
+    match (streaming, feed) {
+        (true, Some(feed)) => {
+            let mut image = ImageNode::new(feed.picture.clone());
+            image.flip_x = true;
+            entity.with_children(|p| {
+                p.spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        ..default()
+                    },
+                    image,
+                ));
+            });
+        }
+        _ => {
+            entity.with_children(|p| {
+                p.spawn((
+                    texts(
+                        caption_key(slot),
+                        TypeScale::BodyMedium,
+                        InstrumentInk::Text,
+                        palette,
+                    ),
+                    opts_gui::l10n::L10nKey(caption_key(slot)),
+                ));
+            });
+        }
+    }
+}
+
 /// Keeps the areas and panels in step with the state of the virtual mirrors.
 #[allow(clippy::too_many_arguments)]
 pub fn sync_virtual_mirrors(
@@ -101,71 +175,10 @@ pub fn sync_virtual_mirrors(
     }
     let palette = theme.instrument(*variant);
     for slot in MirrorSlot::ALL {
-        let i = slot.index();
-        let Some(state) = now.slots[i] else { continue };
-        let feed = vm.feeds[i].as_ref();
-        let (left, top) = anchor(slot);
-        let aspect = feed.map_or(1.0, |f| f.aspect).clamp(0.4, 3.0);
-        let mut node = Node {
-            position_type: PositionType::Absolute,
-            top: Val::Percent(top),
-            width: Val::Vw(WIDTH_VW),
-            aspect_ratio: Some(aspect),
-            border: UiRect::all(Val::Px(2.0)),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            ..default()
+        let Some(state) = now.slots[slot.index()] else {
+            continue;
         };
-        if left {
-            node.left = Val::Vw(EDGE_VW);
-        } else {
-            node.right = Val::Vw(EDGE_VW);
-        }
-        let mut entity = commands.spawn((
-            Button,
-            node,
-            BorderColor::all(palette.panel_border),
-            BackgroundColor(if state.is_some() {
-                palette.panel
-            } else {
-                palette.panel.with_alpha(0.55)
-            }),
-            PointerOnly,
-            InstrumentPanel,
-            MirrorSlotNode(slot),
-            GlobalZIndex(54),
-            InGameEntity,
-            UiId::new(format!("hud.virtual_mirror.{i}")),
-        ));
-        match (state, feed) {
-            (Some(_), Some(feed)) => {
-                let mut image = ImageNode::new(feed.picture.clone());
-                image.flip_x = true;
-                entity.with_children(|p| {
-                    p.spawn((
-                        Node {
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
-                            ..default()
-                        },
-                        image,
-                    ));
-                });
-            }
-            _ => {
-                entity.with_children(|p| {
-                    p.spawn((
-                        texts(
-                            caption_key(slot),
-                            TypeScale::BodyMedium,
-                            InstrumentInk::Text,
-                            palette,
-                        ),
-                        opts_gui::l10n::L10nKey(caption_key(slot)),
-                    ));
-                });
-            }
-        }
+        spawn_slot(&mut commands, &vm, (slot, state.is_some()), palette);
     }
     *last = Some(now);
 }

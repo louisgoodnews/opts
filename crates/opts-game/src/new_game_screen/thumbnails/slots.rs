@@ -71,6 +71,49 @@ fn slot_id(key: &str, hero: bool) -> String {
     format!("{key}@{}x{}", s.0, s.1)
 }
 
+/// Livery swatches take the average colour of the repaint's first readable texture.
+fn fill_swatches(
+    service: &mut ThumbnailService,
+    liveries: &LiveryState,
+    swatches: &Query<(Entity, &LiverySwatch), Without<ThumbDone>>,
+    commands: &mut Commands,
+) {
+    for (entity, sw) in swatches {
+        let id = format!("sw:{}:{}", sw.vehicle, sw.livery);
+        if service.lookup(&id).is_none() {
+            let src = (liveries.vehicle == sw.vehicle)
+                .then_some(liveries.repaints.as_ref())
+                .flatten()
+                .and_then(|r| r.textures.get(&sw.livery))
+                .and_then(|t| t.first().map(|(_, p)| p.clone()));
+            if src.is_none() && liveries.repaints.is_none() {
+                continue;
+            }
+            service.request(&id, src, (8, 8), true);
+        }
+        match service.lookup(&id) {
+            Some(Lookup::Colour([r, g, b])) => {
+                commands
+                    .entity(entity)
+                    .remove::<opts_gui::tokens::components::BackgroundRole>()
+                    .insert((
+                        BackgroundColor(Color::Srgba(Srgba {
+                            red: f32::from(r) / 255.0,
+                            green: f32::from(g) / 255.0,
+                            blue: f32::from(b) / 255.0,
+                            alpha: 1.0,
+                        })),
+                        ThumbDone,
+                    ));
+            }
+            Some(Lookup::Nothing) => {
+                commands.entity(entity).insert(ThumbDone);
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Finishes decodes and fills the slots of lists, details and livery swatches.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn fill_thumbnails(
@@ -131,38 +174,5 @@ pub fn fill_thumbnails(
             _ => {}
         }
     }
-    for (entity, sw) in &swatches {
-        let id = format!("sw:{}:{}", sw.vehicle, sw.livery);
-        if service.lookup(&id).is_none() {
-            let src = (liveries.vehicle == sw.vehicle)
-                .then(|| liveries.repaints.as_ref())
-                .flatten()
-                .and_then(|r| r.textures.get(&sw.livery))
-                .and_then(|t| t.first().map(|(_, p)| p.clone()));
-            if src.is_none() && liveries.repaints.is_none() {
-                continue;
-            }
-            service.request(&id, src, (8, 8), true);
-        }
-        match service.lookup(&id) {
-            Some(Lookup::Colour([r, g, b])) => {
-                commands
-                    .entity(entity)
-                    .remove::<opts_gui::tokens::components::BackgroundRole>()
-                    .insert((
-                        BackgroundColor(Color::Srgba(Srgba {
-                            red: f32::from(r) / 255.0,
-                            green: f32::from(g) / 255.0,
-                            blue: f32::from(b) / 255.0,
-                            alpha: 1.0,
-                        })),
-                        ThumbDone,
-                    ));
-            }
-            Some(Lookup::Nothing) => {
-                commands.entity(entity).insert(ThumbDone);
-            }
-            _ => {}
-        }
-    }
+    fill_swatches(&mut service, &liveries, &swatches, &mut commands);
 }

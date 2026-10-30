@@ -111,6 +111,75 @@ fn rows_of(
     ordered.into_iter().map(|(_, _, r)| r).collect()
 }
 
+/// One saved configuration: name (or the rename field), detail, notices and its buttons.
+fn config_row(list: &mut ChildSpawnerCommands, view: &ConfigsView, row: &ConfigRow) {
+    list.spawn(Node {
+        flex_direction: FlexDirection::Column,
+        row_gap: Val::Px(2.0),
+        width: Val::Percent(100.0),
+        ..default()
+    })
+    .with_children(|r| {
+        let renaming = view.renaming.as_ref().filter(|(id, _)| *id == row.id);
+        match renaming {
+            Some((_, text)) => {
+                label(r, format!("Name: {text}|"), 15.0, ColorRole::Primary);
+            }
+            None => label(r, row.name.clone(), 15.0, ColorRole::Primary),
+        }
+        label(r, row.detail.clone(), 12.0, ColorRole::OnSurfaceVariant);
+        if !row.blocked.is_empty() {
+            label(r, row.blocked.clone(), 12.0, ColorRole::Error);
+        } else if !row.notice.is_empty() {
+            label(r, row.notice.clone(), 12.0, ColorRole::OnSurfaceVariant);
+        }
+        r.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(6.0),
+            ..default()
+        })
+        .with_children(|buttons| {
+            if renaming.is_some() {
+                let ok = button(buttons, "Save name", true, Action::CommitRename);
+                buttons
+                    .commands()
+                    .entity(ok)
+                    .insert(UiId::new("vehicle.config.rename.save"));
+                button(buttons, "Cancel", false, Action::CancelRename);
+                return;
+            }
+            if row.blocked.is_empty() {
+                let b = button(buttons, "Spawn", true, Action::SpawnConfig(row.id.clone()));
+                buttons
+                    .commands()
+                    .entity(b)
+                    .insert(UiId::new(format!("vehicle.config.{}.spawn", row.id)));
+            }
+            let rename = button(
+                buttons,
+                "Rename",
+                false,
+                Action::RenameConfig(row.id.clone()),
+            );
+            buttons
+                .commands()
+                .entity(rename)
+                .insert(UiId::new(format!("vehicle.config.{}.rename", row.id)));
+            let asked = view.confirm_delete.as_deref() == Some(row.id.as_str());
+            let text = if asked {
+                "Delete? Press again"
+            } else {
+                "Delete"
+            };
+            let b = button(buttons, text, asked, Action::DeleteConfig(row.id.clone()));
+            buttons
+                .commands()
+                .entity(b)
+                .insert(UiId::new(format!("vehicle.config.{}.delete", row.id)));
+        });
+    });
+}
+
 /// The page.
 pub(super) fn build_configs(commands: &mut Commands, menu: &VehicleMenu, can_save: bool) {
     let (root, content) = ModalBuilder::new()
@@ -138,62 +207,7 @@ pub(super) fn build_configs(commands: &mut Commands, menu: &VehicleMenu, can_sav
         }
         scroll_list(p, 2, menu.scroll[2], Val::Percent(100.0), |list| {
             for row in &view.rows {
-                list.spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(2.0),
-                    width: Val::Percent(100.0),
-                    ..default()
-                })
-                .with_children(|r| {
-                    let renaming = view.renaming.as_ref().filter(|(id, _)| *id == row.id);
-                    match renaming {
-                        Some((_, text)) => {
-                            label(r, format!("Name: {text}|"), 15.0, ColorRole::Primary);
-                        }
-                        None => label(r, row.name.clone(), 15.0, ColorRole::Primary),
-                    }
-                    label(r, row.detail.clone(), 12.0, ColorRole::OnSurfaceVariant);
-                    if !row.blocked.is_empty() {
-                        label(r, row.blocked.clone(), 12.0, ColorRole::Error);
-                    } else if !row.notice.is_empty() {
-                        label(r, row.notice.clone(), 12.0, ColorRole::OnSurfaceVariant);
-                    }
-                    r.spawn(Node {
-                        flex_direction: FlexDirection::Row,
-                        column_gap: Val::Px(6.0),
-                        ..default()
-                    })
-                    .with_children(|buttons| {
-                        if renaming.is_some() {
-                            let ok = button(buttons, "Save name", true, Action::CommitRename);
-                            buttons
-                                .commands()
-                                .entity(ok)
-                                .insert(UiId::new("vehicle.config.rename.save"));
-                            button(buttons, "Cancel", false, Action::CancelRename);
-                            return;
-                        }
-                        if row.blocked.is_empty() {
-                            let b = button(buttons, "Spawn", true, Action::SpawnConfig(row.id.clone()));
-                            buttons
-                                .commands()
-                                .entity(b)
-                                .insert(UiId::new(format!("vehicle.config.{}.spawn", row.id)));
-                        }
-                        let rename = button(buttons, "Rename", false, Action::RenameConfig(row.id.clone()));
-                        buttons
-                            .commands()
-                            .entity(rename)
-                            .insert(UiId::new(format!("vehicle.config.{}.rename", row.id)));
-                        let asked = view.confirm_delete.as_deref() == Some(row.id.as_str());
-                        let text = if asked { "Delete? Press again" } else { "Delete" };
-                        let b = button(buttons, text, asked, Action::DeleteConfig(row.id.clone()));
-                        buttons
-                            .commands()
-                            .entity(b)
-                            .insert(UiId::new(format!("vehicle.config.{}.delete", row.id)));
-                    });
-                });
+                config_row(list, view, row);
             }
         });
         if can_save {
