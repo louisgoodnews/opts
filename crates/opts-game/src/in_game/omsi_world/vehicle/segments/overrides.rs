@@ -47,7 +47,6 @@ pub(crate) fn in_file_order(
     parts
 }
 
-
 /// The image of a text texture of the model, made once per index and registered as a component
 /// the text system draws into.
 fn text_image_for(
@@ -124,14 +123,9 @@ fn script_image_for(
             p[..3].copy_from_slice(&rgb);
         }
     }
-    let handle =
-        images.add(opts_bevy::text_texture::text_image(w, h, blank));
+    let handle = images.add(opts_bevy::text_texture::text_image(w, h, blank));
     let mut component =
-        VehicleScriptTexture::new(
-            i,
-            job.vehicle_script_textures.clone(),
-            handle.clone(),
-        );
+        VehicleScriptTexture::new(i, job.vehicle_script_textures.clone(), handle.clone());
     if let Some(rgb) = tint {
         component = component.with_tint(rgb);
     }
@@ -140,11 +134,7 @@ fn script_image_for(
     // `AFR4_ST_texture` over a black placeholder, which has no colour of its
     // own to start from).
     if let (true, Some(free)) = (transmap, &m.free_tex) {
-        component = component.following(
-            owner,
-            free.variable.trim(),
-            tex_dirs.to_vec(),
-        );
+        component = component.following(owner, free.variable.trim(), tex_dirs.to_vec());
     }
     commands.spawn((
         component,

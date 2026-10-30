@@ -106,7 +106,6 @@ mod rows {
 }
 use rows::{DIGITS, FKEYS, LETTERS_A, LETTERS_Q, LETTERS_Z};
 
-
 fn dik_to_keycode_base(code: u16) -> Option<KeyCode> {
     use KeyCode as K;
     let c = usize::from(code);

@@ -6,8 +6,8 @@ use super::*;
 /// timetables. A trip that does not resolve is dropped. Sets the session's start station.
 fn resolve_trip(
     setup: &mut crate::new_game_screen::NewGameSetup,
-    mut cfg: opts_bevy::OmsiSessionConfig,
-) -> opts_bevy::OmsiSessionConfig {
+    mut cfg: crate::in_game::omsi_world::OmsiSessionConfig,
+) -> crate::in_game::omsi_world::OmsiSessionConfig {
     if setup.trip.as_ref().is_some_and(|t| t.station_id == 0)
         && !setup
             .trip
@@ -18,7 +18,6 @@ fn resolve_trip(
         setup.trip = None;
     }
     cfg.start_station = setup.trip.as_ref().map(|t| t.station_id);
-    cfg
     cfg
 }
 
@@ -42,6 +41,48 @@ fn configure_job(env: &LoadEnv, job: &mut WorldLoadJob, no_vehicle: bool) {
     job.queue_for_mode(tile_loading::resolve(choice, profile, job.map_radius()));
 }
 
+/// The world job is ready (or not): records what the loading screen shows and starts building the
+/// terrain, or fails the load with the reason.
+fn enter_build(
+    env: &mut LoadEnv,
+    state: &mut SimulationLoadState,
+    resolved: Result<(String, WorldLoadJob), String>,
+    (setup, no_vehicle): (&crate::new_game_screen::NewGameSetup, bool),
+) {
+    match resolved {
+        Ok((name, job)) => {
+            env.stats.map_name = name.clone();
+            env.stats.tiles_missing = job.tiles_listed_missing();
+            env.stats.start_tile = job.start_tile();
+            env.stats.grid = job.grid();
+            // The card shows the map that is really loading, not the one the menu chose (F17).
+            env.session.map_name = name;
+            if !no_vehicle && !job.has_vehicle_file() && !setup.selected_vehicle.is_empty() {
+                env.report.add(
+                    LoadProblem::new(
+                        false,
+                        "load-problem-no-model",
+                        &setup.selected_vehicle,
+                        "the catalogue knows no .bus file for this vehicle",
+                    )
+                    .because("load-cause-no-vehicle-file"),
+                );
+            }
+            env.commands.insert_resource(job.chrono_state());
+            env.commands.insert_resource(job);
+            state.progress = P_TERRAIN;
+            state.stage = LoadStage::BuildTerrain;
+        }
+        Err(e) => {
+            tracing::error!("cannot load OMSI world: {e}");
+            env.report.add(
+                LoadProblem::new(true, "load-problem-map", &setup.selected_map, e)
+                    .because("load-cause-map-unreadable"),
+            );
+            fail(env, state);
+        }
+    }
+}
 
 pub(super) fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
     state.waiting_for_catalogue = catalogue_pending(env);
@@ -102,37 +143,5 @@ pub(super) fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         overlay_visible: overlay,
         ..default()
     };
-    match resolved {
-        Ok((name, job)) => {
-            env.stats.map_name = name.clone();
-            env.stats.tiles_missing = job.tiles_listed_missing();
-            env.stats.start_tile = job.start_tile();
-            env.stats.grid = job.grid();
-            // The card shows the map that is really loading, not the one the menu chose (F17).
-            env.session.map_name = name;
-            if !no_vehicle && !job.has_vehicle_file() && !setup.selected_vehicle.is_empty() {
-                env.report.add(
-                    LoadProblem::new(
-                        false,
-                        "load-problem-no-model",
-                        &setup.selected_vehicle,
-                        "the catalogue knows no .bus file for this vehicle",
-                    )
-                    .because("load-cause-no-vehicle-file"),
-                );
-            }
-            env.commands.insert_resource(job.chrono_state());
-            env.commands.insert_resource(job);
-            state.progress = P_TERRAIN;
-            state.stage = LoadStage::BuildTerrain;
-        }
-        Err(e) => {
-            tracing::error!("cannot load OMSI world: {e}");
-            env.report.add(
-                LoadProblem::new(true, "load-problem-map", &setup.selected_map, e)
-                    .because("load-cause-map-unreadable"),
-            );
-            fail(env, state);
-        }
-    }
+    enter_build(env, state, resolved, (&setup, no_vehicle));
 }

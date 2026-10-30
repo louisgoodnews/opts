@@ -211,7 +211,6 @@ fn player_speed(world: &mut World) -> Option<f64> {
         .map(|c| f64::from(c.forward_speed_km_h().abs()))
 }
 
-
 /// A condition on one UI node (`exists`, `visible`, `gone`, `enabled`, `disabled`, `focused`,
 /// `checked`, `text`): whether it holds and what was observed.
 fn node_condition(world: &mut World, c: &Cond) -> (bool, Value) {
