@@ -1,10 +1,6 @@
 # 🗂️ OPTS Development Board
 
-<<<<<<< HEAD
-_Last updated: 2026-10-30 by Agent (M-0124 per-unit passenger load done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
-=======
-_Last updated: 2026-10-30 by Agent (M-0077 thumbnails, bus configurations done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
->>>>>>> agent/m0077-thumbs
+_Last updated: 2026-10-30 by Agent (M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -642,8 +638,5 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0150 nineteenth slice (`agent/fn-ratchet-19`): player voices, settings info and page rebuild, HUD plugin registration, vehicle script attach, notebook and precipitation split; 80 functions over 80 lines.
 - `2026-10-30` — M-0150 twentieth slice (`agent/fn-ratchet-20`): first pass over 42 large functions, compiled together; 59 functions over 80 lines (14 second-pass remainders, 7 untouched).
 - `2026-10-30` — M-0150 closing slice (`agent/fn-ratchet-21`): the last 59 functions split and all 110 signature allows replaced by `SystemParam` bundles/aliases; `function-known.txt` empty.
-<<<<<<< HEAD
 - `2026-10-30` — M-0124 per-unit passenger load for consists done (`agent/m0124-unit-load`): each unit carries its own people; milestone complete.
-=======
 - `2026-10-30` — M-0077 closed (`agent/m0077-thumbs`): preset thumbnails in the wizard's Configurations list and the Alt-menu page (vehicle preview image, class glyph otherwise).
->>>>>>> agent/m0077-thumbs
