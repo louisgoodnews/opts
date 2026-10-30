@@ -160,6 +160,34 @@ pub(super) fn begin(
     }
 }
 
+/// Reads the tile's terrain grid and builds its ground inputs.
+fn terrain_read_step(
+    b: &mut TileBuild,
+    job: &mut WorldLoadJob,
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    ground_materials: Option<&mut Assets<GroundMaterial>>,
+) {
+    let _t = opts_logging::stream_trace::span("tile.terrain");
+    b.terrain_input = load_terrain(job, meshes, materials, images, ground_materials, b.key);
+    b.phase = Phase::TerrainSurfaces;
+}
+
+/// Makes the surface data of one neighbouring tile available (one per call).
+fn terrain_surfaces_step(b: &mut TileBuild, job: &mut WorldLoadJob) {
+    let _t = opts_logging::stream_trace::span("tile.terrain");
+    // A tile without a grid needs no surfaces.
+    if b.terrain_input.is_none() || b.next_neighbour >= NEIGHBOURHOOD_LEN {
+        b.phase = Phase::Terrain;
+    } else {
+        ensure_surfaces(job, b.key, b.next_neighbour);
+        b.next_neighbour += 1;
+    }
+}
+
 /// Runs the steps of the build in `job.building` until `budget` says stop or the tile is done.
 /// Returns `true` when the tile is finished (or there was nothing to build).
 #[allow(clippy::too_many_arguments)]
@@ -184,28 +212,13 @@ pub(super) fn advance(
             break false;
         }
         match b.phase {
-            Phase::TerrainRead => {
-                let _t = opts_logging::stream_trace::span("tile.terrain");
-                b.terrain_input = load_terrain(
-                    job,
-                    meshes,
-                    materials,
-                    images,
-                    ground_materials.as_deref_mut(),
-                    b.key,
-                );
-                b.phase = Phase::TerrainSurfaces;
-            }
-            Phase::TerrainSurfaces => {
-                let _t = opts_logging::stream_trace::span("tile.terrain");
-                // A tile without a grid needs no surfaces.
-                if b.terrain_input.is_none() || b.next_neighbour >= NEIGHBOURHOOD_LEN {
-                    b.phase = Phase::Terrain;
-                } else {
-                    ensure_surfaces(job, b.key, b.next_neighbour);
-                    b.next_neighbour += 1;
-                }
-            }
+            Phase::TerrainRead => terrain_read_step(
+                &mut b,
+                job,
+                (meshes, materials, images),
+                ground_materials.as_deref_mut(),
+            ),
+            Phase::TerrainSurfaces => terrain_surfaces_step(&mut b, job),
             Phase::Terrain => terrain_step(&mut b, job, stats, commands, meshes, materials),
             Phase::Splines => splines_step(&mut b, job, stats, commands, meshes, materials, images),
             Phase::Surfaces => surfaces_step(&mut b, job, commands),
