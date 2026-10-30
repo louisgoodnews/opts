@@ -350,7 +350,9 @@ pub use composition::{Part, VehicleComposition};
 mod body;
 use body::RailBody;
 mod points;
+mod points_click;
 pub use points::{points_visual_system, set_points_system};
+pub use points_click::click_points_system;
 mod switch;
 pub use switch::{points_ahead, switch_hint_system, way_by_id, way_id};
 

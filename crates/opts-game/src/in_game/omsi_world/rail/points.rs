@@ -17,7 +17,31 @@ use super::*;
 /// Trains ask for their way from this far ahead (m).
 const ASK_REACH_M: f32 = 150.0;
 /// The `Switch` variable of a points object is matched to the object within this distance (m).
-const OBJECT_MATCH_M: f32 = 1.0;
+pub(super) const OBJECT_MATCH_M: f32 = 1.0;
+
+/// Every rail vehicle's train: the player's and the AI's.
+pub(super) fn all_trains<'a>(
+    players: &'a Query<&RailPlayer>,
+    ai: &'a Query<&AiTrain>,
+) -> Vec<&'a Train> {
+    players
+        .iter()
+        .filter_map(|p| p.train())
+        .chain(ai.iter().map(|t| &t.train))
+        .collect()
+}
+
+/// The points that have a vehicle on them.
+pub(super) fn occupied_points(
+    net: &opts_sim::pedestrian::PedestrianNet,
+    trains: &[&Train],
+) -> HashSet<u64> {
+    trains
+        .iter()
+        .flat_map(|t| t.lanes_occupied())
+        .filter_map(|l| net.switch_of(l))
+        .collect()
+}
 
 /// Sets the points that trains approach to the position they need, unless a vehicle is on them.
 pub fn set_points_system(
@@ -31,16 +55,8 @@ pub fn set_points_system(
     if net.0.switches().next().is_none() {
         return;
     }
-    let trains: Vec<&Train> = players
-        .iter()
-        .filter_map(|p| p.train())
-        .chain(ai.iter().map(|t| &t.train))
-        .collect();
-    let occupied: HashSet<u64> = trains
-        .iter()
-        .flat_map(|t| t.lanes_occupied())
-        .filter_map(|l| net.0.switch_of(l))
-        .collect();
+    let trains = all_trains(&players, &ai);
+    let occupied = occupied_points(&net.0, &trains);
     let mut asks: Vec<(f32, u64, u8)> = trains
         .iter()
         .filter_map(|t| {

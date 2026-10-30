@@ -176,7 +176,21 @@ fn build_mesh(mut args: MeshBuildArgs<'_, '_, '_>) {
     };
     let spawned = attach_model_parts(args.commands, holder, args.parts, &def.file);
     super::bind_alpha_scale(args.commands, &spawned, args.parts);
+    // `[mouseevent]`: a click on the mesh raises the trigger (the tongue of rail points).
+    let click = def
+        .mouse_event
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty());
     for (e, part) in spawned.into_iter().zip(args.parts) {
+        if let Some(trigger) = click {
+            args.commands
+                .entity(e)
+                .insert(crate::vehicle_triggers::SceneryMouseTrigger {
+                    owner: args.root,
+                    trigger: trigger.to_owned(),
+                });
+        }
         if let Some(var) = &part.light_variable {
             let in_place = var.eq_ignore_ascii_case(NIGHT_VARIABLE);
             args.commands.entity(e).insert(SceneryLightMap {

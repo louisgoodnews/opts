@@ -24,10 +24,14 @@ mod click;
 pub mod door_lock;
 mod hover;
 mod pseudo;
+mod scenery_click;
 pub use bindings::*;
 pub use click::{scripted_click_system, ScriptedClick, ScriptedClicks};
 pub use hover::{hover_system, HotSpotPicker, HoveredControl};
 use pseudo::{toggle_cabin_light, toggle_door_side};
+pub use scenery_click::{
+    scenery_click_system, SceneryClicked, SceneryMouseTrigger, SceneryPicker, REACH_M,
+};
 
 /// The pseudo trigger of the tram's door side selection: one key switches between the right and
 /// the left side, where the scripts only have a toggle for each (`kw_s_1`, `kw_s_2`).
@@ -285,6 +289,7 @@ impl Plugin for VehicleTriggerPlugin {
             .init_resource::<ScriptKeyBase>()
             .init_resource::<ScriptedClicks>()
             .init_resource::<HoveredControl>()
+            .add_message::<SceneryClicked>()
             .add_systems(
                 Update,
                 (
@@ -296,6 +301,9 @@ impl Plugin for VehicleTriggerPlugin {
                         .run_if(crate::reporting::not_modal_active)
                         .run_if(crate::camera::not_editing_viewpoint),
                     script_mouse_trigger_system
+                        .run_if(crate::reporting::not_modal_active)
+                        .run_if(crate::camera::not_editing_viewpoint),
+                    scenery_click_system
                         .run_if(crate::reporting::not_modal_active)
                         .run_if(crate::camera::not_editing_viewpoint),
                 ),
