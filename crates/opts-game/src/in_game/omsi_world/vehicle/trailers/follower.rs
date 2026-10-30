@@ -209,7 +209,13 @@ fn attach_meshes(
     ];
     job.cache.texture_replacements = repaint_map(job, model);
     let (count, verts, _, _) = load_segment_meshes_for(
-        job, commands, meshes, materials, images, seg, owner, lod0, &model_dir, &tex_dirs,
+        job,
+        commands,
+        (&mut *meshes, &mut *materials, &mut *images),
+        (seg, owner),
+        lod0,
+        &model_dir,
+        &tex_dirs,
     );
     job.cache.texture_replacements.clear();
     (count, verts)

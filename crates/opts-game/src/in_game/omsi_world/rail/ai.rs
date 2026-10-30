@@ -299,9 +299,7 @@ pub(super) fn build_train(
         let (count, ..) = load_segment_meshes(
             job,
             commands,
-            meshes,
-            materials,
-            images,
+            (&mut *meshes, &mut *materials, &mut *images),
             root,
             &u.lod,
             &u.model_dir,

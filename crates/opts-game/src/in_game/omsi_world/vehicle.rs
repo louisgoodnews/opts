@@ -268,7 +268,13 @@ fn attach_trailers(
     (bus_dir, manifest): (&Path, &BusManifest),
 ) {
     let (trailer_cams, trailer_driver_cams) = spawn_trailer_chain(
-        job, commands, meshes, materials, images, root, bus_dir, manifest,
+        job,
+        commands,
+        meshes,
+        materials,
+        images,
+        root,
+        (bus_dir, manifest),
     );
     if !trailer_cams.is_empty() || !trailer_driver_cams.is_empty() {
         commands.queue(move |world: &mut World| {
@@ -373,7 +379,13 @@ pub fn load_player_vehicle(
     job.cache.texture_replacements = repaint_map(job, &model);
     super::trace::begin_frame();
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(
-        job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
+        job,
+        commands,
+        (&mut *meshes, &mut *materials, &mut *images),
+        root,
+        lod0,
+        &model_dir,
+        &tex_dirs,
     );
     let trace_frame = super::trace::end_frame();
     job.cache.texture_replacements.clear();

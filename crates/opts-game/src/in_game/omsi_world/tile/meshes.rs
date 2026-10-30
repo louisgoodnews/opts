@@ -223,7 +223,13 @@ pub(super) fn spawn_vehicle_model(
     let (mut count, mut verts) = (0, 0);
     for lod in lods {
         let (c, v, _, _) = super::super::vehicle::load_segment_meshes(
-            job, commands, meshes, materials, images, root, lod, &model_dir, &tex_dirs,
+            job,
+            commands,
+            (&mut *meshes, &mut *materials, &mut *images),
+            root,
+            lod,
+            &model_dir,
+            &tex_dirs,
         );
         (count, verts) = (c, v);
         if count > 0 {

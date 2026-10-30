@@ -71,30 +71,60 @@ pub(super) use route::*;
 mod spawn;
 use spawn::*;
 
+/// The resources and the world the scheduler reads and changes.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct TrainWorld<'w> {
+    time: Res<'w, Time<Real>>,
+    job: Option<ResMut<'w, WorldLoadJob>>,
+    env: Option<Res<'w, opts_bevy::SessionEnvironment>>,
+    net: Res<'w, RailNetwork>,
+    pool: Res<'w, RailAiPool>,
+    sched: ResMut<'w, ScheduledTraffic>,
+}
+
+/// The asset stores a new train's meshes go into.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct TrainAssets<'w> {
+    meshes: ResMut<'w, Assets<Mesh>>,
+    materials: ResMut<'w, Assets<StandardMaterial>>,
+    images: ResMut<'w, Assets<Image>>,
+}
+
+/// The scheduler's own memory between runs of the system.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct TrainLocals<'s> {
+    timer: Local<'s, f32>,
+    tries: Local<'s, HashMap<RunRef, u32>>,
+    not_rail: Local<'s, HashSet<String>>,
+}
+
 /// Spawns the train of the next run that is on the rails at the session clock and has none.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn spawn_scheduled_trains(
-    time: Res<Time<Real>>,
+    world: TrainWorld,
     mut commands: Commands,
-    job: Option<ResMut<WorldLoadJob>>,
-    env: Option<Res<opts_bevy::SessionEnvironment>>,
-    net: Res<RailNetwork>,
-    pool: Res<RailAiPool>,
-    mut sched: ResMut<ScheduledTraffic>,
     markers: Query<(&BusStopMarker, &GlobalTransform)>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
-    mut timer: Local<f32>,
-    mut tries: Local<HashMap<RunRef, u32>>,
-    mut not_rail: Local<HashSet<String>>,
+    mut train_assets: TrainAssets,
+    mut locals: TrainLocals,
 ) {
-    *timer += time.delta_secs();
-    if *timer < 1.0 {
+    let TrainWorld {
+        time,
+        job,
+        env,
+        net,
+        pool,
+        mut sched,
+    } = world;
+    let TrainLocals {
+        timer,
+        tries,
+        not_rail,
+    } = &mut locals;
+    **timer += time.delta_secs();
+    if **timer < 1.0 {
         return;
     }
-    *timer = 0.0;
+    **timer = 0.0;
     let (Some(mut job), Some(env), Ok(cam)) = (job, env, camera.single()) else {
         return;
     };
@@ -108,7 +138,11 @@ pub fn spawn_scheduled_trains(
         (m.id_code as u32, Vec2::new(t.x, -t.z))
     });
     let pass = Pass::new((net, &tt, env.seconds_of_day()), cam, stops.collect());
-    let mut assets: SpawnAssets = (&mut meshes, &mut materials, &mut images);
+    let mut assets: SpawnAssets = (
+        &mut train_assets.meshes,
+        &mut train_assets.materials,
+        &mut train_assets.images,
+    );
     let mut seen = [0_u32; 6];
     for (run, schedule) in sched.active_list().to_vec() {
         seen[0] += 1;
@@ -116,7 +150,7 @@ pub fn spawn_scheduled_trains(
         {
             continue;
         }
-        let Some(rail) = rail_vehicles(&pass, &pool, (&run, &schedule), &mut not_rail) else {
+        let Some(rail) = rail_vehicles(&pass, &pool, (&run, &schedule), not_rail) else {
             continue;
         };
         seen[1] += 1;

@@ -57,34 +57,31 @@ pub(super) fn repaint_map(
 
 /// Loads the visible lod0 meshes of one vehicle segment as children of `root`.
 /// Returns `(mesh_count, vertex_count, bounds_min, bounds_max)` (Bevy space, body meshes only).
-#[allow(clippy::too_many_arguments)]
 pub(in super::super::super) fn load_segment_meshes(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
+    stores: (&mut Assets<Mesh>, &mut Assets<StandardMaterial>, &mut Assets<Image>),
     root: Entity,
     lod0: &opts_core::formats::vehicles::model::ModelLod,
     model_dir: &Path,
     tex_dirs: &[PathBuf],
 ) -> (usize, usize, Vec3, Vec3) {
     load_segment_meshes_for(
-        job, commands, meshes, materials, images, root, root, lod0, model_dir, tex_dirs,
+        job, commands, stores, (root, root), lod0, model_dir, tex_dirs,
     )
 }
 
 /// [`load_segment_meshes`] for a segment whose animations, light maps and hot spots read the
 /// variables of `owner` (the leading unit: trailers share its scripts, `[scriptshare]`).
-#[allow(clippy::too_many_arguments)]
 pub(in super::super::super) fn load_segment_meshes_for(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    root: Entity,
-    owner: Entity,
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (root, owner): (Entity, Entity),
     lod0: &opts_core::formats::vehicles::model::ModelLod,
     model_dir: &Path,
     tex_dirs: &[PathBuf],

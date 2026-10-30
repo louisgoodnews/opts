@@ -309,15 +309,10 @@ impl<'a> SegmentState<'a> {
             return None;
         };
         let overrides = build_overrides(
-            job,
-            commands,
-            assets.images,
-            mesh_def,
-            self.owner,
-            self.root,
+            (job, commands, assets.images),
+            (mesh_def, self.owner, self.root),
             self.tex_dirs,
-            &mut self.text_images,
-            &mut self.script_images,
+            (&mut self.text_images, &mut self.script_images),
         );
         let mut loader = ContentLoader {
             install: &job.install,

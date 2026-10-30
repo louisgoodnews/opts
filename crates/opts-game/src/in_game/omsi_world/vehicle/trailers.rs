@@ -72,7 +72,6 @@ pub(in super::super::super) type CabCameras =
 
 /// Returns the passenger and the driver camera presets of all trailers with the segment entity
 /// they are defined in.
-#[allow(clippy::too_many_arguments)]
 pub(in super::super::super) fn spawn_trailer_chain(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
@@ -80,8 +79,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     root: Entity,
-    bus_dir: &Path,
-    tractor: &BusManifest,
+    (bus_dir, tractor): (&Path, &BusManifest),
 ) -> (CabCameras, CabCameras) {
     let formation: Vec<FormationCar> = std::mem::take(&mut job.formation_cars);
     let rail = super::super::is_rail(tractor);

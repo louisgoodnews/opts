@@ -151,11 +151,8 @@ pub(crate) fn build_unit_models(
         let (count, _, min, max) = load_segment_meshes_for(
             job,
             commands,
-            meshes,
-            materials,
-            images,
-            entity,
-            root,
+            (&mut *meshes, &mut *materials, &mut *images),
+            (entity, root),
             &lod,
             &unit.model_dir.clone(),
             &unit.tex_dirs.clone(),
