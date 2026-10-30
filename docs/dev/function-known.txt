@@ -101,7 +101,6 @@ crates/opts-game/src/in_game/omsi_world/vehicle.rs::@allow 1  # planned: M-0150 
 crates/opts-game/src/in_game/omsi_world/vehicle.rs::load_player_vehicle 128  # planned: M-0150 batch 3 (decompose function > 80 LOC into <= 40-line helpers)
 crates/opts-game/src/in_game/omsi_world/vehicle/humans.rs::@allow 1  # planned: M-0150 batch 3 (bundle system parameters into #[derive(SystemParam)])
 crates/opts-game/src/in_game/omsi_world/vehicle/segments.rs::@allow 2  # planned: M-0150 batch 3 (bundle system parameters into #[derive(SystemParam)])
-crates/opts-game/src/in_game/omsi_world/vehicle/segments.rs::load_segment_meshes_for 220  # planned: M-0150 batch 3 (decompose function > 80 LOC into <= 40-line helpers)
 crates/opts-game/src/in_game/omsi_world/vehicle/segments/overrides.rs::@allow 1  # planned: M-0150 batch 3 (bundle system parameters into #[derive(SystemParam)])
 crates/opts-game/src/in_game/omsi_world/vehicle/trailers.rs::@allow 1  # planned: M-0150 batch 3 (bundle system parameters into #[derive(SystemParam)])
 crates/opts-game/src/in_game/omsi_world/vehicle/trailers.rs::spawn_trailer_chain 251  # planned: M-0150 batch 3 (decompose function > 80 LOC into <= 40-line helpers)
