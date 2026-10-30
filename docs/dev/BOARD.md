@@ -630,3 +630,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0150 thirteenth slice (`agent/fn-ratchet-13`): drive snapshot, cloud layer and debug overlay split; 131 functions over 80 lines.
 - `2026-10-30` — M-0150 fourteenth slice (`agent/fn-ratchet-14`): ten `opts-game` functions split (session config, vehicle model, tile trace, splines, rail scripts, scenery voices, full map overlay, change-map and route pages); 121 functions over 80 lines.
 - `2026-10-30` — M-0150 fifteenth slice (`agent/fn-ratchet-15`): ten more `opts-game` functions split (passenger protocol, scenery mesh load, sky, AI trains, save restore, app build, settings row, viewpoint panel, formation catalogue, AI scripts); 111 functions over 80 lines.
+- `2026-10-30` — M-0150 sixteenth slice (`agent/fn-ratchet-16`): depot search, audio state, home status, settings page, wizard options, player voices, save overlay, traffic groups and environment page split.
