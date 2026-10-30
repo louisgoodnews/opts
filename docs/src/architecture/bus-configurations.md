@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Milestone** | [M-0077](../roadmap/phase-10/M-0077.md) |
-| **Status** | 🟡 Data model, store, control protocol and the wizard's *What* step implemented 2026-10-18; *Pause → Vehicle*, rename in the UI and session integration open |
+| **Status** | 🟢 Complete 2026-10-30 (thumbnails added) |
 
 A **bus configuration** is a vehicle, a repaint and the user's equipment options ([setvars](../formats/text/vehicles/setvars.md)) saved under a name and loaded again in one step. Code: `opts-game/src/bus_config.rs` (model, file, check), `control_configs.rs` (protocol).
 
@@ -60,6 +60,6 @@ The *What* step has a *Configurations* section under the livery (`new_game_scree
 
 The session save (M-0069) already stores each session vehicle with its catalogue id, repaint and equipment options, so a spawned configuration is restored with the session; the saved configurations themselves are a user file next to the settings and are not part of a save.
 
-## Open
+## Thumbnails
 
-A thumbnail is not done.
+Each row of the wizard list and of the Alt-menu page starts with a 48 px picture slot (`new_game_screen/thumbnails/config_slot.rs`). It is a row thumbnail with the key `veh:<vehicle id>`: `fill_thumbnails` puts the preview image of the vehicle into it when the content ships one (`picture`/`preview`/`thumbnail` next to the `.bus` file, scaled and cached like the vehicle list's), otherwise the slot keeps the glyph of the vehicle's class. None of the shipped vehicles has such an image, so there the glyph shows; nothing is rendered or invented. A configuration whose vehicle is gone keeps the generic glyph. In a drive the same system runs while the Alt menu is open.

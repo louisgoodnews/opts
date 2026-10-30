@@ -246,9 +246,14 @@ fn config_row(
         .insert(ChoiceStep(PlannerStep::What))
         .insert_children(1, &content);
     let [favourite, duplicate, delete] = row_buttons(commands, library, c, index);
+    let thumb = super::thumbnails::spawn_config_thumb(
+        commands,
+        &c.vehicle,
+        vehicle.map_or("", |v| v.class.as_str()),
+    );
     commands
         .entity(line)
-        .add_children(&[load, favourite, duplicate, delete]);
+        .add_children(&[thumb, load, favourite, duplicate, delete]);
     line
 }
 
