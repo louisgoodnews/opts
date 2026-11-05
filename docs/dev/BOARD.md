@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-30 by Agent (M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-11-05 by Agent (status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -116,13 +116,10 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🟡 **Broken-link CI proof** (M-0042, chore) — push a deliberately broken link on a scratch branch and see the docs-links job fail; the last open item of M-0042 (`cargo-deny-action` added 2026-10-28).
 - [ ] 🟠 **Ahlheim V5, Eichenhöhe Bf: curbs below the ground; one spline/object slab over the road** (M-0090, content) — project lead 2026-10-19, screenshots: a dark slab covers the road below the viaduct; the stop's curbs sink under the terrain.
 - [ ] 🟠 **Scripted scenery (dynamic passenger information) is not functional** (M-0099/M-0100, code) — should show a default display and take its data from the stop's timetable/AI schedule (`GetTT*`, hof, `Busstops.cfg`).
 - [ ] 🟠 **Vehicle overrides and visual editor (Phase 14)** (M-0135 design, M-0136 profile schema, loader and validation, M-0137 in-game visual mesh editor; design + code) — project lead 2026-10-19. `VehicleProfile` TOML patch layer in `~/.local/share/opts/vehicles/` (sound, script, constant and mesh swaps) with compatibility validation against varlists and constants, and an in-game editor (picking, gizmos, `.o3d` browser). **Design first (M-0135), approval before implementation;** [Phase 14](../src/roadmap/phase-14/README.md).
 - [ ] 🟡 **Audio spec: script variables in `[volcurve]` and OMSI's `[3d]` fall-off** (M-0027, spec) — the rest of the spatial audio and curve mapping is in [audio-system](../src/architecture/audio-system.md) since 2026-10-20 (traces to F-009, F-020); these two are undocumented (§8 'Not yet', Q-AU01).
-- [x] 🟡 **Rewrite articulation.md for the shared consist state (design plan step 8)** (M-0053, spec) — done 2026-10-29 on `agent/articulation-doc`: every claim checked against the code (consist plan, train formations, AI consists, bellows frame rule; stale statements corrected). F-002, F-003; the β/γ pitch rule is already in [articulation.md](../src/architecture/articulation.md) and the model in [articulation-physics.md](../src/architecture/articulation-physics.md).
-- [x] 🟡 **Smooth driver view: measure the driver's view in a recorded 60 s drive** (M-0109, test) — **done 2026-10-29** on `agent/driver-view-measure`: a headless 60 s drive with the real physics at 4 to 25 ms frames gives 1.9 mm at the worst frame (criterion 2 mm), so `camera.smoothing` is not needed (test `a_60_second_drive_keeps_the_driver_view_with_the_cab_within_2_mm`). Unblocked 2026-10-25: the root cause was fixed in `44c889a5` and is guarded by `the_driver_camera_does_not_lag_a_frame_behind_a_moving_vehicle`; record the per-frame camera delta against the vehicle motion (criterion 3, within 2 mm) and add `camera.smoothing` only if residual jitter shows.
 
 ---
 
@@ -215,7 +212,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Q-ART-01 sign check (screenshot in a right-hand curve)** (M-0053, test) — OPTS side pinned by a test 2026-10-31 (right curve: α < 0, left: α > 0); the comparison with OMSI needs a person with OMSI.
 - [x] 🟡 **Replace `ArticulationJoint` with `TrailerKinematics` in `VehicleSimulation`; trailer loads in physics** (M-0053, code) — F-002. D1 (state in `VehicleSimulation`, `ArticulationJoint` removed, `teleport`) done; D2 (consist mass, axle-load friction caps, hitch force) done; D3 (fixed-step pitch/roll, frame-rate test passes) done — merged 2026-10-14 (`ecafeb49`, `agent/articulation-physics-impl`).
 - [x] 🟡 **Segment pitch from the ground-height query; `articulation_<n>_beta`** (M-0053, code) — needs M-0025 query; F-003. Merged 2026-10-14 (`ecafeb49`) with a TEMPORARY `GroundIndex` sampler in `FixedUpdate` (Q-ART-09 option b) until the M-0025 height service.
-- [~] 🟢 **`[couple_front]`, chains > 4, trailers for AI and parked vehicles** (M-0053, code) — AI trailers done (`42fa120f`); β limits verified in place and tested 2026-10-31 (`agent/m0053-artic`); open: `[couple_front]` (no installed vehicle uses it) and parked-vehicle trailers (parked entries are `.sco` objects), see M-0053 Notes.
+- [~] 🟢 **`[couple_front]`, chains > 4, trailers for AI and parked vehicles** (M-0053, code) — AI trailers done (`42fa120f`); β limits verified in place and tested 2026-10-31 (`agent/m0053-artic`, merged 2026-11-05); open: `[couple_front]` (no installed vehicle uses it) and parked-vehicle trailers (parked entries are `.sco` objects), see M-0053 Notes.
 
 #### M-0024 — OMSI Map Tile Grid & Chunk Streaming (`opts-game`, `opts-bevy`)
 - [~] 🔴 **Implement TileGridManager and coordinate tracking** (M-0024, code) — paging by radius exists in `opts-game` (`stream_world_tiles`); the `opts-bevy` module does not.
@@ -364,6 +361,12 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files (pruned under Rule 3 on 2026-10-25: the groups of 2026-10-04 to 2026-10-14)._
+
+**2026-10-29 – 2026-11-05 — items moved out of Ready by the status sync 2026-11-05**
+
+- `[x]` 🟡 **Broken-link CI proof** (M-0042/M-0052, chore) — done 2026-10-30 (`9a32759b`): scratch branch `agent/ci-broken-link2` with one dead link; hosted run 41105973084 failed in exactly one job, `Documentation links`.
+- `[x]` 🟡 **Rewrite articulation.md for the shared consist state (design plan step 8)** (M-0053, spec) — done 2026-10-29 on `agent/articulation-doc`: every claim checked against the code (consist plan, train formations, AI consists, bellows frame rule; stale statements corrected). F-002, F-003; the β/γ pitch rule is already in [articulation.md](../src/architecture/articulation.md) and the model in [articulation-physics.md](../src/architecture/articulation-physics.md).
+- `[x]` 🟡 **Smooth driver view: measure the driver's view in a recorded 60 s drive** (M-0109, test) — **done 2026-10-29** on `agent/driver-view-measure`: a headless 60 s drive with the real physics at 4 to 25 ms frames gives 1.9 mm at the worst frame (criterion 2 mm), so `camera.smoothing` is not needed (test `a_60_second_drive_keeps_the_driver_view_with_the_cab_within_2_mm`). Unblocked 2026-10-25: the root cause was fixed in `44c889a5` and is guarded by `the_driver_camera_does_not_lag_a_frame_behind_a_moving_vehicle`; record the per-frame camera delta against the vehicle motion (criterion 3, within 2 mm) and add `camera.smoothing` only if residual jitter shows.
 
 **2026-10-28**
 
@@ -642,3 +645,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0077 closed (`agent/m0077-thumbs`): preset thumbnails in the wizard's Configurations list and the Alt-menu page (vehicle preview image, class glyph otherwise).
 - `2026-10-30` — M-0045 `delay` damping (`agent/m0045-delay`): `[newanim]` `delay` applied as a frame-rate independent first-order lag before `maxspeed`; the SD200 screenshot check stays open (interactive run).
 - `2026-10-31` — M-0053: β joint limits verified (already implemented; fixture tests added), Q-ART-01 sign of α pinned by a test on the OPTS side, `[couple_front]` and parked trailers analysed (no data path); OMSI comparison still open (`agent/m0053-artic`).
+- `2026-11-05` — Status sync (`agent/board-sync`): `agent/m0053-artic` merged (a test in `follower/tests.rs` used a moved value and did not compile; fixed before the merge); M-0042 broken-link proof (done 2026-10-30) and the finished M-0053 doc / M-0109 measurement items moved from Ready to Recently Done; worktrees of `agent/m0053-artic` and `agent/fn-ratchet-20` removed.
