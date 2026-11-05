@@ -29,7 +29,7 @@ fn part(manifest: BusManifest) -> PlannedPart {
 
 fn segment(manifest: BusManifest) -> opts_bevy::ArticulatedSegment {
     let load = opts_sim::UnitLoad::from_manifest_or(&manifest, false, 8_000.0);
-    articulated_segment(&part(manifest), &manifest, &load, 2)
+    articulated_segment(&part(manifest.clone()), &manifest, &load, 2)
 }
 
 #[test]
