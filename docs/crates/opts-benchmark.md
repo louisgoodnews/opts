@@ -5,7 +5,7 @@
 | **Layer** | Development (dev-only, `publish = false`) |
 | **Role** | Benchmarks and corpus verification |
 | **Kind** | Library (`opts_benchmark`) + binary (`opts-benchmark`) |
-| **Status** | 🟡 Scenery harness implemented (M-0054 Phase B); Criterion suite (M-0028): parsers, configs, plain `.o3d`, physics step, regression check |
+| **Status** | 🟡 Scenery harness implemented (M-0054 Phase B); Criterion suite (M-0028, done): text parsers, configs, `.sli`, `.o3d` (v1, v7, keyed), text `.x`, physics step, regression check |
 | **Last Updated** | 2026-11-05 |
 
 ## 🎯 Purpose
@@ -20,7 +20,7 @@ The Criterion benches of [M-0028](../src/roadmap/phase-5/M-0028.md) live in `ben
 with `--no-default-features` (no renderer); their baseline is in the milestone file.
 
 ```sh
-# The text parsers, configs and meshes; the physics step needs the `physics` feature
+# Benches: parsers, configs, splines, meshes, xfiles; the physics step needs the `physics` feature
 cargo bench -p opts-benchmark --no-default-features --bench parsers
 cargo bench -p opts-benchmark --no-default-features --features physics --bench physics
 

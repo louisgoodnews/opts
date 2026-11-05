@@ -2,13 +2,13 @@
 
 *Goal: Profile, benchmark, and optimize engine throughput, and provide developer CLI inspection utilities.*
 
-**Status:** 🟡 In progress (status sync 2026-10-25) — control protocol, hot reload, Bevy 0.19 and 0.20 upgrades, scene trace, settings protocol, instancing and reflections research done; scenery benchmark Phases A, B, D done; CI runs on GitHub, every job green since 2026-10-25, Pages live; benchmarks (M-0028), tile LOD (M-0029) and DLSS open
+**Status:** 🟡 In progress (status sync 2026-10-25) — control protocol, hot reload, Bevy 0.19 and 0.20 upgrades, scene trace, settings protocol, instancing and reflections research done; scenery benchmark Phases A, B, D done; CI runs on GitHub, every job green since 2026-10-25, Pages live; benchmarks (M-0028) done 2026-11-05; tile LOD (M-0029) and DLSS open
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
 ## Milestones
 
-- [M-0028 — Performance Benchmark Suite (Criterion)](M-0028.md) — 🟡 In progress (text parser, `global.cfg`, `model.cfg` and physics step benches with a baseline since 2026-10-29; regression check `scripts/bench_compare.py` since 2026-11-05; splines, newer and keyed mesh versions and `.x` open)
+- [M-0028 — Performance Benchmark Suite (Criterion)](M-0028.md) — ✅ Done 2026-11-05 (text parsers, configs, `.sli`, `.o3d` v1/v7/keyed, text `.x` and physics step benches with a baseline; regression check `scripts/bench_compare.py`)
 - M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems (`opts-bevy`) — ⏳ Planned (LOD switching, shadow distance culling, mesh instancing)
 - M-0030 — Asset Validation & Inspection CLI Tooling (`opts-cli`, `opts-tools`) — 🟡 `opts-tools inspect` delivered 2026-10-10 (`28249ea8`); header dumper and glTF export open
 - [M-0043 — CLI Control Protocol & Hot Reload (`opts-cli`, `opts-bevy`)](M-0043.md) — 🟢 Complete (JSON-RPC control server, `opts-cli` client, hot reload; P2 commands deferred)
@@ -35,7 +35,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 *Goal: Profile, benchmark, and optimize engine throughput, and provide developer CLI inspection utilities.*
 
 - [ ] **⚡ Performance & Optimization** — [M-0028](M-0028.md) & [M-0029](M-0029.md)
-  - [~] Implement Criterion microbenchmark suite in `opts-benchmark` for format parsers and vehicle physics step ([M-0028](M-0028.md); text parsers (tile, scenery object, bus manifest, `global.cfg`, `model.cfg`), the plain `.o3d` path and the physics step done 2026-10-29; the regression check `scripts/bench_compare.py` done 2026-11-05; splines, newer and keyed mesh versions and `.x` open).
+  - [x] Implement Criterion microbenchmark suite in `opts-benchmark` for format parsers and vehicle physics step ([M-0028](M-0028.md); text parsers (tile, scenery object, bus manifest, `global.cfg`, `model.cfg`), the plain `.o3d` path and the physics step done 2026-10-29; `.sli`, `.o3d` v7/32-bit/keyed, text `.x` and the regression check `scripts/bench_compare.py` done 2026-11-05).
   - [ ] Document LOD (Level of Detail), frustum culling, and occlusion strategies in `docs/src/architecture/lod-culling.md`.
   - [~] Implement distance-based dynamic LOD mesh switching and shadow culling in `opts-bevy` (M-0029). *Scenery `[LOD]` bands, view, shadow, light and detail distance settings live (2026-10-20/24); tile mesh LOD open.*
   - [~] Implement async background asset streaming to prevent frame drops during tile boundary crossings. (time-budgeted, resumable tile build, [M-0089](../phase-4/M-0089.md) steps 1–2, 2026-10-18).

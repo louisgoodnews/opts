@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-11-05 by Agent (M-0040, M-0042 and M-0052 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-11-05 by Agent (M-0028 done; M-0040, M-0042 and M-0052 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -246,7 +246,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟡 **State-chain research on the twin corpus; record negatives in o3d.md** (M-0038, research) — F-001. Done 2026-10-16 (`c3d10946`, [report](../src/meta/scramble-chain-2026-10-16.md), o3d.md Addendum 14).
 
 #### M-0028 — Performance Benchmark Suite (Criterion)
-- [~] 🟡 **Criterion benches of the text parsers and the vehicle physics step, with a recorded baseline** (M-0028, test) — [M-0028](../src/roadmap/phase-5/M-0028.md); done 2026-10-29 on `agent/criterion-bench` (`opts-benchmark/benches/parsers.rs` and `physics.rs`, synthetic input, no OMSI asset); `.o3d` plain v1 mesh bench done 2026-10-29 on `agent/bench-mesh`; `global.cfg` and `model.cfg` benches done 2026-10-29 on `agent/bench-configs`; regression-compare script `scripts/bench_compare.py` done 2026-11-05 on `agent/m0028-bench` (no CI gate: shared runners are too noisy; a run under another program's load differed by up to 53 %); open: splines, newer and keyed mesh versions and `.x`.
+- [x] 🟡 **Criterion benches of the text parsers and the vehicle physics step, with a recorded baseline** (M-0028, test) — [M-0028](../src/roadmap/phase-5/M-0028.md); done 2026-10-29 on `agent/criterion-bench` (`opts-benchmark/benches/parsers.rs` and `physics.rs`, synthetic input, no OMSI asset); `.o3d` plain v1 mesh bench done 2026-10-29 on `agent/bench-mesh`; `global.cfg` and `model.cfg` benches done 2026-10-29 on `agent/bench-configs`; regression-compare script `scripts/bench_compare.py` done 2026-11-05 on `agent/m0028-bench` (no CI gate: shared runners are too noisy; a run under another program's load differed by up to 53 %); `.sli`, `.o3d` v7/32-bit/keyed (parse + exact decode) and text `.x` benches done 2026-11-05 on `agent/m0028-bench`; **M-0028 complete**.
 
 #### M-0040 — Code-Quality Debt
 - [x] 🟠 **Fail CI on new size violations (baseline file)** (M-0040, chore) — critical review F-005. The M-0125/M-0147 ratchets (`structure_audit.py check` and `omsi_uses.py --check`) run in `local-ci.sh`, `scripts/pre-commit`, and `.github/workflows/ci.yml` (`docs-links` job, 2026-10-28).
@@ -649,3 +649,4 @@ The agent should check these during P-001 audits:
 - `2026-11-05` — M-0040 and M-0042 closed by the project lead 2026-11-05 (`agent/m0040-m0042-close`): M-0040's function splits and `SystemParam` grouping were done by M-0150; M-0042's F1 checklist item ticked.
 - `2026-11-05` — M-0052 closed by the project lead 2026-11-05 (`agent/m0052-close`): first-green-run item ticked, shared `CARGO_TARGET_DIR` item closed, Windows CI cleanup item ticked.
 - `2026-11-05` — M-0028 regression check (`agent/m0028-bench`): `scripts/bench_compare.py` compares two Criterion runs on one machine (slope estimate, 5 % threshold, non-overlapping confidence intervals), tested by `scripts/test_bench_compare.py` in `local-ci.sh`; builds limited to 4 jobs under the rustrim session's `heavy.lock` while it runs.
+- `2026-11-05` — M-0028 complete (`agent/m0028-bench`): `.sli` bench, `.o3d` bench over v1/v7/32-bit/keyed layouts (keyed via `o3d::exact::scramble`, timed with the exact decode), text `.x` bench; baseline addendum in the milestone file. Findings: a keyed mesh costs about 4× a plain one; a text `.x` about 170× an `.o3d` of the same size; the 40k-face drop of the old baseline was not the cache.
