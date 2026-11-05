@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Shadow-culling A/B benchmark (M-0029, docs/src/architecture/lod-culling.md §4 step 2): one game
-# run on a real map; at each fixed camera pose `graphics.shadow_detail` alternates between 0 (every
-# part casts) and $K, ROUNDS times, so both sides see the same machine load. Per sample: frame
-# times, process CPU time per frame, shadow casters and the shadow-pass GPU time (OPTS_RENDER_DIAG).
+# Setting A/B benchmark (M-0029, docs/src/architecture/lod-culling.md §4): one game run on a real
+# map; at each fixed camera pose the setting $SETTING cycles through $VALUES, ROUNDS times, so every
+# value sees the same machine load. By default it compares `graphics.shadow_detail` 0 (every part
+# casts) with $K (the shadow culling). Per sample: frame times, process CPU time per frame, shadow
+# casters, the shadow phase and the GPU time of every pass (OPTS_RENDER_DIAG).
 #
 #   scripts/shadow-cull-bench.sh <label> <map-dir-name> <entry-substring|-> <vehicle-rel>
 #
 # Environment: OMSI, OPTS_BIN, OPTS_CLI, OUT (default ~/.local/share/opts/benchmark/shadow-cull/<label>),
-#   K (100), ROUNDS (3), HOUR (12), WARM (20), SETTLE (3), SAMPLE (8), PORT (44253), POSES (as in
+#   SETTING (graphics.shadow_detail), VALUES ("0 $K"), K (100), ROUNDS (3), HOUR (12), WARM (20), SETTLE (3), SAMPLE (8), PORT (44253), POSES (as in
 #   instancing-bench.sh: "name forward_m right_m up_m yaw_offset_deg pitch_deg" per line).
 # Results: $OUT/samples.jsonl (one line per pose, round and setting), $OUT/game.log.
 set -euo pipefail
@@ -17,6 +18,7 @@ BIN=${OPTS_BIN:-target/release/opts-game}
 CLI=${OPTS_CLI:-target/release/opts-cli}
 OUT=${OUT:-$HOME/.local/share/opts/benchmark/shadow-cull/$label}
 K=${K:-100}; ROUNDS=${ROUNDS:-3}; PORT=${PORT:-44253}
+SETTING=${SETTING:-graphics.shadow_detail}; VALUES=${VALUES:-"0 $K"}
 POSES=${POSES:-"p1_driver 4.4 0.6 2.1 0 0
 p2_street 20 0 3.0 0 -6
 p3_left 10 -6 3.0 -70 -3
@@ -63,8 +65,8 @@ PY
 )
   cli camera.teleport "$px" "$py" "$pz" --yaw "$yaw" --pitch "$p" >/dev/null
   for round in $(seq 1 "$ROUNDS"); do
-    for k in 0 "$K"; do
-      cli settings.set --key graphics.shadow_detail --value "$k" >/dev/null
+    for k in $VALUES; do
+      cli settings.set --key "$SETTING" --value "$k" >/dev/null
       sleep "${SETTLE:-3}"
       cli render.stats --reset true >/dev/null
       cpu0=$(awk '{print $14+$15}' "/proc/$pid/stat")
@@ -76,6 +78,7 @@ PY
         '{pose: $pose, round: $round, k: $k, loadavg: $load, frames: .frame_times,
           cpu_ms_per_frame: (if .frame_times.frames > 0 then ($c * 10 / .frame_times.frames) else null end),
           shadow_casters: .parts.shadow_casters, mesh_entities: .parts.mesh_entities,
+          active_cameras: ([.parts.cameras[]? | select(.active)] | length),
           shadow_phase: .phases.shadow,
           gpu_shadow_ms: ([.gpu_diagnostics_ms | to_entries[] | select(.key | test("shadow.*gpu")) | .value] | add),
           gpu: .gpu_diagnostics_ms}' <<<"$stats" >> "$OUT/samples.jsonl"

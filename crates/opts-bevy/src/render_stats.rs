@@ -19,6 +19,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
+use bevy::camera::RenderTarget;
 use bevy::core_pipeline::core_3d::{AlphaMask3d, Opaque3d, Transparent3d};
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::light::NotShadowCaster;
@@ -172,6 +173,26 @@ fn memory_kb() -> Value {
 }
 
 /// Counts of the mesh parts in the main world.
+/// Every camera with its state: each active one is another view the whole scene is culled and
+/// shadowed for (M-0029: the driver's seat costs eight shadow views, not four).
+fn cameras(world: &mut World) -> Vec<Value> {
+    let mut q = world.query::<(Option<&Name>, &Camera, Option<&RenderTarget>)>();
+    q.iter(world)
+        .map(|(name, camera, target)| {
+            json!({
+                "name": name.map(|n| n.as_str().to_owned()),
+                "active": camera.is_active,
+                "order": camera.order,
+                "target": match target {
+                    Some(RenderTarget::Image(_)) => "image",
+                    Some(_) => "other",
+                    None => "default",
+                },
+            })
+        })
+        .collect()
+}
+
 fn parts(world: &mut World) -> Value {
     let materials = world.resource::<Assets<StandardMaterial>>();
     let alpha: HashMap<AssetId<StandardMaterial>, u8> = materials
@@ -211,6 +232,7 @@ fn parts(world: &mut World) -> Value {
         *mat_users.entry(mat.0.id()).or_default() += 1;
     }
     let single_use = mat_users.values().filter(|n| **n == 1).count();
+    let cameras = cameras(world);
     let mut casters = world.query_filtered::<(), (With<Mesh3d>, Without<NotShadowCaster>)>();
     let shadow_casters = casters.iter(world).count();
     json!({
@@ -223,6 +245,7 @@ fn parts(world: &mut World) -> Value {
         "visible_opaque_mask_blend": per_kind,
         "no_automatic_batching": no_batch,
         "shadow_casters": shadow_casters,
+        "cameras": cameras,
     })
 }
 
