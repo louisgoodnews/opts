@@ -19,7 +19,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0047 — Bevy 0.20 Upgrade](M-0047.md) — 🟢 Complete (`Interaction` follow-up done 2026-10-12, `1d3ad031`)
 - [M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems](M-0029.md) — 🟡 View, shadow, light and detail distance settings live (2026-10-24); tile mesh LOD and instancing open
 - [M-0048 — DLSS Upscaling (optional)](M-0048.md) — 📝 Planned
-- [M-0052 — Repository Hosting, CI Activation & Commit Gate](M-0052.md) — 🟡 Hosted on GitHub 2026-10-24, CI on every branch, commit gate done, Pages live; a fully green CI run open (critical review 2026-10-11 F-001, F-018–F-020)
+- [M-0052 — Repository Hosting, CI Activation & Commit Gate](M-0052.md) — ✅ Done 2026-11-05; hosted on GitHub 2026-10-24, CI on every branch, commit gate done, Pages live, CI green and the broken-push proof recorded (critical review 2026-10-11 F-001, F-018–F-020)
 - [M-0072 — Settings and Configuration through the Control Protocol](M-0072.md) — 🟢 Complete 2026-10-18 (R-10)
 - [M-0081 — `opts-hardware`: Privacy-Respecting Hardware Capability Probe](M-0081.md) — 🟡 Implemented and merged into master (R-22); untested on macOS and Windows hardware
 - [M-0082 — Mesh Instancing Research](M-0082.md) — 🔬 Research done 2026-10-13, merged into master (R-23)
@@ -55,7 +55,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] Documentation repair and developer switch reference — [M-0041](M-0041.md) (F-013, F-018, F-020–F-023).
   - [x] CI and toolchain hardening (done 2026-11-05; running on GitHub since 2026-10-13; every job green since 2026-10-25, the Windows test failures were test assumptions about line ends, letter case, Unix paths and timing; `binrw` removed and `cargo-deny-action` added 2026-10-28; broken-link proof done 2026-10-30): link check, mdBook build, toolchain pin, Windows job — [M-0042](M-0042.md) (F-024–F-026).
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../../meta/critical-review-2026-10-11.md))**
-  - [ ] 🟡 GitHub hosts the repository (2026-10-24), CI runs on every branch, commits can be gated on the staged tree (`scripts/install-hooks.sh`); Pages deploys and the site is live; `ci.yml` fully green since 2026-10-25; the remote broken-push proof is done (2026-10-30, run 41105973084); open: the first-green-run item in the milestone file (run URLs in M-0042 and M-0000) — [M-0052](M-0052.md) (F-001, F-018, F-019, F-020).
+  - [x] 🟡 GitHub hosts the repository (2026-10-24), CI runs on every branch, commits can be gated on the staged tree (`scripts/install-hooks.sh`); Pages deploys and the site is live; `ci.yml` fully green since 2026-10-25; the remote broken-push proof is done (2026-10-30, run 41105973084); done 2026-11-05 — [M-0052](M-0052.md) (F-001, F-018, F-019, F-020).
   - [x] Stop the size and lint-allow growth: fail CI on new size violations (file/function/inline-test/allow ratchets in `local-ci.sh`, `pre-commit` and `ci.yml` since 2026-10-28, M-0125/M-0147), group load-job parameters (done: 0 signature allows since M-0150, 2026-10-30), fix stale Bevy rustdoc links (done, `3c760f73`) (appended to [M-0040](M-0040.md); F-005–F-007).
   - [x] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](M-0047.md); F-019) — fast-forwarded 2026-10-11.
   - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).
