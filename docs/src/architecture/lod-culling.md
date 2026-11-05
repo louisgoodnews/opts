@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Design (2026-11-05): §1 describes the code on `master`; §3 is the plan of [M-0029](../roadmap/phase-5/M-0029.md), with the order of work in §4. Facts name the code or the source that shows them; guesses are ❓ and collected in §5 |
+| **Status** | 🟡 Design (2026-11-05): §1 describes the code on `master`; §3 is the plan of [M-0029](../roadmap/phase-5/M-0029.md), with the order of work in §4. Step 2 (per-part shadow culling) is built and measured: no gain, so it is off and hidden (§3.1). Facts name the code or the source that shows them; guesses are ❓ and collected in §5 |
 | **Last Updated** | 2026-11-05 |
 | **Relevant Crates** | `opts-bevy` (`scenery_runtime/{lod,draw_distance}.rs`, `terrain.rs`, `render_stats.rs`, `instancing.rs`), `opts-game` (`settings_registry/live.rs`, `in_game/omsi_world/`) |
 | **Traces to** | [M-0029](../roadmap/phase-5/M-0029.md); [M-0082](../roadmap/phase-5/M-0082.md) ([instancing research](instancing-research.md) §9) |
@@ -42,7 +42,7 @@ The rule for every step below: **measure, then switch**. Per-mesh culling has a 
 | Sorted (blended) draws | 127 of about 140 main-pass draw items in a Spandau city view | the same, §1 |
 | Frame time, Berlin-Spandau | 3.7–3.9 ms (about 260 fps), **CPU-bound**: the GPU works 1.3–2.0 ms of it | [lighting cones](lighting-cones.md) §C (2026-10-17, park and overview views, not the densest street) |
 | Shadow pass GPU time, Berlin-Spandau | 0.17–0.25 ms | the same |
-| CPU cost of the shadow casters (visibility per cascade, phase queueing) | **not measured** ❓ (Q-LC-01) | — |
+| Effect of culling 44 % of the shadow casters | none measurable: frame time and shadow-pass GPU time unchanged within noise | §3.1 *Measured* (2026-11-05) |
 | Terrain share of GPU time | **not measured** ❓ (Q-LC-02) | — |
 
 The tools to measure exist: `render.stats` counts the `Shadow` phase's batch sets, bins and entities per view, and with `OPTS_RENDER_DIAG=1` it reports the GPU time of every pass (`gpu_diagnostics_ms`); `scripts/instancing-bench.sh` drives the game through fixed camera poses on a real map and records both.
@@ -61,7 +61,21 @@ The tools to measure exist: `render.stats` counts the `Shadow` phase's batch set
 - **Which parts.** Only meshes of placed scenery objects, marked at spawn (`ShadowCullCandidate`). Not terrain (hills shadow valleys), not splines (a bridge deck casts a large shadow; flat road ribbons lie on the ground and cast onto nothing visible, a possible later step), not vehicles (few, and their shadows are close to the camera), not trees in the first step (billboards, M-0144 wind).
 - **When.** Every 0.25 s like the draw distance, with 10 % hysteresis on `k · r` so a part at the border does not toggle; only parts whose state changes get a component change.
 - **Never re-enabled by mistake.** The system inserts and removes its own marker together with `NotShadowCaster`, and never touches a part that already had `NotShadowCaster` for another reason (the pattern of `DistanceCulled`).
-- **Setting.** `graphics.shadow_detail`: *Off* (no culling), and steps of `k`. The default is chosen by the measurement (§4 step 2): **on** only if it lowers the frame time on a real map beyond run-to-run noise, without a visible loss in the near field. If it does not, the code stays behind the setting with *Off* as the default (a weaker GPU may still profit), or is removed.
+**Measured (2026-11-05)** with `scripts/shadow-cull-bench.sh`: one game run on Berlin-Spandau (entry *Rathaus Spandau*, MAN SD77, noon, no traffic, simulation paused), release build without LTO, five camera poses, `k` alternating between 0 and 100 three times per pose (8 s samples) so both sides share the machine's load (load average 6 to 9: the rustrim session was building; the machine was not quiet).
+
+| Pose | Frame time, off (ms) | Frame time, k = 100 (ms) | Shadow pass GPU, off (ms) | Shadow pass GPU, k = 100 (ms) |
+| :--- | :--- | :--- | :--- | :--- |
+| driver | 19.55 · 20.72 · 18.74 | 20.19 · 18.86 · 20.14 | 0.394 · 0.397 · 0.407 | 0.405 · 0.392 · 0.428 |
+| street | 8.16 · 8.28 · 8.31 | 8.27 · 8.29 · 8.31 | 0.371 · 0.383 · 0.397 | 0.369 · 0.354 · 0.388 |
+| left | 8.59 · 9.54 · 8.54 | 8.65 · 8.50 · 8.48 | 0.465 · 0.476 · 0.489 | 0.479 · 0.462 · 0.470 |
+| far | 8.19 · 8.21 · 8.16 | 8.16 · 8.15 · 8.13 | 0.353 · 0.353 · 0.350 | 0.354 · 0.341 · 0.342 |
+| high | 6.07 · 5.73 · 5.40 | 5.99 · 5.36 · 5.37 | 0.310 · 0.305 · 0.309 | 0.286 · 0.307 · 0.299 |
+
+The culling did what it should: `shadow_casters` (every `Mesh3d` without `NotShadowCaster`, `render.stats --parts`) fell from about 34,800–36,500 to 19,400–20,300 (−44 %). It saved nothing: the frame times of the two settings overlap at every pose, and the shadow pass's GPU time (timestamp queries, unaffected by the CPU load) is the same to within 0.03 ms. The `Shadow` phase was already 81 multi-draw calls over 8 views; with GPU preprocessing the small parts cost next to nothing. The process CPU time per frame (10 ms ticks) was too noisy to read. **Answer to Q-LC-01: shadow casters are not a cost worth culling on this map and machine.** Not measured: an open-country map (no reason to expect more casters than a city) and a weaker GPU (the GPU time did not move, so little to gain there either).
+
+A side observation for later work: the driver pose costs 19–21 ms against about 8 ms for the outside poses on the same spot, with eight shadow views instead of four (the cab's mirrors add views, [lighting cones](lighting-cones.md) §E) ❓ not analysed here.
+
+- **Setting.** `graphics.shadow_detail`: *Off* (no culling), and steps of `k`. **Outcome:** default *Off*, and the setting is hidden from the settings page (status *internal*: it stays reachable through `settings.set` for a later measurement on other hardware). The default is chosen by the measurement (§4 step 2): **on** only if it lowers the frame time on a real map beyond run-to-run noise, without a visible loss in the near field. If it does not, the code stays behind the setting with *Off* as the default (a weaker GPU may still profit), or is removed.
 
 ### 3.2 Terrain level of detail
 
@@ -92,7 +106,7 @@ Productising layer (a) of the instancing research (de-duplication across tiles, 
 | Step | What | Gate |
 | ---: | :--- | :--- |
 | 1 | This page | — |
-| 2 | Per-part shadow culling (§3.1) with `graphics.shadow_detail`; measure frame time (average and 1 % low), `Shadow` phase entities and shadow-pass GPU time on Berlin-Spandau (city) and one open map at the harness poses, off and on, on an otherwise quiet machine | Default on only with a frame-time gain beyond noise and no visible near-field loss |
+| 2 ✅ | Per-part shadow culling (§3.1), **done 2026-11-05: no gain, off and hidden** with `graphics.shadow_detail`; measure frame time (average and 1 % low), `Shadow` phase entities and shadow-pass GPU time on Berlin-Spandau (city) and one open map at the harness poses, off and on, on an otherwise quiet machine | Default on only with a frame-time gain beyond noise and no visible near-field loss |
 | 3 | De-duplication of assets (§3.5, research §9 item 1) | Tests that equal parts share handles; asset counts in `render.stats --parts` |
 | 4 | Measure terrain share (Q-LC-02) and occlusion culling (Q-LC-05) | Decides whether 3.2 and 3.4 are built |
 | 5 | Terrain LOD (§3.2), only if step 4 shows a need | Carve tests stay green; no terrain through roads at any distance |
@@ -101,7 +115,7 @@ Productising layer (a) of the instancing research (de-duplication across tiles, 
 
 | ID | Question | Status |
 | :--- | :--- | :--- |
-| Q-LC-01 | How much CPU time do the shadow casters cost (visibility per cascade, queueing), and does culling small parts lower the frame time once the culling pass itself is paid? GPU: 0.17–0.25 ms on Berlin-Spandau (§2) | ❓ Step 2 measures it |
+| Q-LC-01 | How much CPU time do the shadow casters cost (visibility per cascade, queueing), and does culling small parts lower the frame time once the culling pass itself is paid? | ✅ 2026-11-05: culling 44 % of the casters changed neither frame time nor shadow-pass GPU time on Berlin-Spandau (§3.1) |
 | Q-LC-02 | What share of GPU time is terrain at the automatic radius and with the whole map loaded? | ❓ |
 | Q-LC-03 | Does the block-minimum decimation keep coarse terrain at or below every carved road surface, also across tile borders? | ❓ |
 | Q-LC-04 | Which OPTS materials support `VisibilityRange` dithering (ground material extension, alpha-masked, blended)? | ❓ |

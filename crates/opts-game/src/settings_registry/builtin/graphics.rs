@@ -159,7 +159,9 @@ fn shadows() -> Vec<D> {
             "set-shadow-detail-desc",
         )
         .keywords(&["shadows", "small objects", "culling", "performance"])
-        .since("0.5"),
+        .since("0.5")
+        // Measured without a gain (lod-culling.md §3.1): kept for the control protocol only.
+        .hidden(),
     ]
 }
 
