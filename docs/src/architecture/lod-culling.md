@@ -73,7 +73,7 @@ The tools to measure exist: `render.stats` counts the `Shadow` phase's batch set
 
 The culling did what it should: `shadow_casters` (every `Mesh3d` without `NotShadowCaster`, `render.stats --parts`) fell from about 34,800–36,500 to 19,400–20,300 (−44 %). It saved nothing: the frame times of the two settings overlap at every pose, and the shadow pass's GPU time (timestamp queries, unaffected by the CPU load) is the same to within 0.03 ms. The `Shadow` phase was already batched (32 to 48 multi-draw calls over the 4 cascade views outside, 81 over 8 views from the driver's seat); with GPU preprocessing the small parts cost next to nothing. The process CPU time per frame (10 ms ticks) was too noisy to read. **Answer to Q-LC-01: shadow casters are not a cost worth culling on this map and machine.** Not measured: an open-country map (no reason to expect more casters than a city) and a weaker GPU (the GPU time did not move, so little to gain there either).
 
-A side observation for later work: the driver pose costs 19–21 ms against about 8 ms for the outside poses on the same spot, with eight shadow views instead of four (the cab's mirrors add views, [lighting cones](lighting-cones.md) §E) ❓ not analysed here.
+**A side observation, followed up the same day (§3.6).** The driver pose cost 19–21 ms against about 8 ms for the outside poses at the same spot, with eight shadow views instead of four.
 
 - **Setting.** `graphics.shadow_detail`: *Off* (no culling), and steps of `k`. **Outcome:** default *Off*, and the setting is hidden from the settings page (status *internal*: it stays reachable through `settings.set` for a later measurement on other hardware). The default is chosen by the measurement (§4 step 2): **on** only if it lowers the frame time on a real map beyond run-to-run noise, without a visible loss in the near field. If it does not, the code stays behind the setting with *Off* as the default (a weaker GPU may still profit), or is removed.
 
@@ -99,7 +99,21 @@ In a city street most buildings are hidden behind the first row. Bevy's GPU occl
 
 ### 3.5 Instancing and asset sharing
 
-Productising layer (a) of the instancing research (de-duplication across tiles, trees, splines; tests that equal parts share handles and repaints do not) is part of M-0029's instancing item; the research's §9 is its plan and is not repeated here. Static merging (c) stays behind a setting, off, until a tile-spawn profile justifies it. A custom instancing pipeline is rejected (research §6).
+**De-duplication (layer (a)) is not made the default.** The prototype already exists and works behind `OPTS_INSTANCING=dedupe` (`AssetPool`, used for `.o3d` parts, glass, trees, spline water and vehicle overrides). The research measured what it buys on three maps ([research](instancing-research.md) §5): assets −28 to −32 %, but process CPU time per frame "within noise", resident memory "unchanged within noise" and the load time inside the run-to-run spread; draw calls do not change because Bevy already batches. Turning it on would change the material of every part in the game for a saving nobody measured, and it needs a hand-written key: the current key is the material's `Debug` text, which is robust (a field Bevy adds in an upgrade is included automatically) and a field-by-field hash is not (a forgotten field would let two different materials share one handle). So the same rule as §3.1 applies, measure then switch, and the switch stays `off` until a measurement shows a gain in load time or memory on a quiet machine. It is not a code task; it is a measurement task (Q-LC-07).
+
+Static merging (c) stays behind a setting, off, until a tile-spawn profile justifies it. A custom instancing pipeline is rejected (research §6).
+
+### 3.6 The driver's seat renders the scene twice (open)
+
+**Observed (2026-11-05, Berlin-Spandau, MAN SD77 at the *Rathaus Spandau* entry).**
+
+- With default settings a session at the driver's position has seven cameras: three `Mirror_Camera` and two `Ambient_Mirror_Camera` (only one `Mirror_Camera` is active), one unnamed inactive camera without an image target, and the main camera (`Simulation_3D_Tracking_Camera`). `render.stats --parts` lists them (`parts.cameras`, added for this). Each active camera is another view the scene is culled and shadowed for: the `Shadow` phase has **8 views** with one `Mirror_Camera` active, **4** at the outside poses.
+- The driver pose measured **19.5–20.7 ms** per frame in the first run, **about 8 ms** at the outside poses of the same run, and **10.6 ms** and **16.6 ms (capped at 60 fps)** in two later runs on a machine at load 5 to 11. The GPU is not the difference: its pass total is 3.8 ms at the driver pose and 4.0–4.6 ms elsewhere. The extra time is on the CPU.
+- `graphics.mirror_count` 0, 1 and 2 left the driver pose at 18–22 ms and 8 shadow views; `graphics.mirror_rate` 1, 2 and 4 left every number identical (483 frames, 42.4 ms process CPU per frame, 3.78 ms GPU). **Neither setting switched that camera off**, although their descriptions say they limit the mirror pictures ([virtual mirrors](virtual-mirrors.md), the settings page). It is unknown whether the camera belongs to a mirror that is "on" for another reason or whether the settings do not reach it ❓.
+
+**Not established:** the true cost of the extra view (the runs were not clean: other load on the machine, and one run capped at the display rate), and which code keeps the camera active. The earlier synthetic measurement (about 0.7 ms per view, [lighting cones](lighting-cones.md) §E) came from a scene with few entities; this scene has 34,000 mesh entities, and visibility culling per view and cascade scales with them, which would fit a much larger figure ❓.
+
+**Next step (a measurement, not a guess):** at the same position, compare the view with the mirror in sight against the view turned away (the mirror camera then deactivates) on a quiet machine with the frame cap off, then find why the two settings do not act. If the cost is real, a mirror camera that renders only the vehicle's own mirror area and skips the shadow cascades for itself (a smaller view, fewer shadow views) is the lever.
 
 ## 4. Order of work
 
@@ -107,7 +121,7 @@ Productising layer (a) of the instancing research (de-duplication across tiles, 
 | ---: | :--- | :--- |
 | 1 | This page | — |
 | 2 ✅ | Per-part shadow culling (§3.1), **done 2026-11-05: no gain, off and hidden** with `graphics.shadow_detail`; measure frame time (average and 1 % low), `Shadow` phase entities and shadow-pass GPU time on Berlin-Spandau (city) and one open map at the harness poses, off and on, on an otherwise quiet machine | Default on only with a frame-time gain beyond noise and no visible near-field loss |
-| 3 | De-duplication of assets (§3.5, research §9 item 1) | Tests that equal parts share handles; asset counts in `render.stats --parts` |
+| 3 ⏸ | De-duplication of assets (§3.5): **not made default**, waits for a measurement of load time and memory (Q-LC-07) | A gain beyond noise on a quiet machine |
 | 4 | Measure terrain share (Q-LC-02) and occlusion culling (Q-LC-05) | Decides whether 3.2 and 3.4 are built |
 | 5 | Terrain LOD (§3.2), only if step 4 shows a need | Carve tests stay green; no terrain through roads at any distance |
 
@@ -121,6 +135,8 @@ Productising layer (a) of the instancing research (de-duplication across tiles, 
 | Q-LC-04 | Which OPTS materials support `VisibilityRange` dithering (ground material extension, alpha-masked, blended)? | ❓ |
 | Q-LC-05 | Does occlusion culling (with its depth prepass) save time in a city street, and does it cost time in open country? | ❓ |
 | Q-LC-06 | The texel size of the far cascades with OPTS's cascade settings (the 0.15–0.3 m in §3.1 is an estimate) | ❓ |
+| Q-LC-07 | Does `OPTS_INSTANCING=dedupe` shorten tile loads or lower resident memory on a quiet machine? The research saw no CPU, memory or load-time difference beyond noise (§3.5) | ❓ |
+| Q-LC-08 | Why does an active `Mirror_Camera` double the shadow views at the driver's seat, what does it cost, and why do `graphics.mirror_count` (0, 1, 2) and `graphics.mirror_rate` (1, 2, 4) not change it? | ❓ §3.6 |
 
 ## 🔗 Related Documents
 
