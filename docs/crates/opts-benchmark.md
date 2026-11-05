@@ -5,8 +5,8 @@
 | **Layer** | Development (dev-only, `publish = false`) |
 | **Role** | Benchmarks and corpus verification |
 | **Kind** | Library (`opts_benchmark`) + binary (`opts-benchmark`) |
-| **Status** | 🟡 Scenery harness implemented (M-0054 Phase B); Criterion suite (M-0028) not started |
-| **Last Updated** | 2026-10-12 |
+| **Status** | 🟡 Scenery harness implemented (M-0054 Phase B); Criterion suite (M-0028, done): text parsers, configs, `.sli`, `.o3d` (v1, v7, keyed), text `.x`, physics step, regression check |
+| **Last Updated** | 2026-11-05 |
 
 ## 🎯 Purpose
 
@@ -16,7 +16,22 @@
 compared with the silhouette its own files predict. The design is in
 [Scenery Object Load Verification](../src/architecture/scenery-benchmark.md).
 
-The Criterion benches of M-0028 will live in `benches/` and build with `--no-default-features`.
+The Criterion benches of [M-0028](../src/roadmap/phase-5/M-0028.md) live in `benches/` and build
+with `--no-default-features` (no renderer); their baseline is in the milestone file.
+
+```sh
+# Benches: parsers, configs, splines, meshes, xfiles; the physics step needs the `physics` feature
+cargo bench -p opts-benchmark --no-default-features --bench parsers
+cargo bench -p opts-benchmark --no-default-features --features physics --bench physics
+
+# Regression check on one machine: save a baseline, change the code, run again, compare
+cargo bench -p opts-benchmark --no-default-features --bench parsers -- --save-baseline main
+cargo bench -p opts-benchmark --no-default-features --bench parsers
+python3 scripts/bench_compare.py --base main   # exit 1 on a regression over 5 % (--threshold)
+```
+
+Run both sides on a quiet machine: with another program's game running, identical code
+measured up to 53 % apart (2026-11-05).
 
 ## 🚀 Usage
 

@@ -33,7 +33,17 @@ name = "configs"
 harness = false
 
 [[bench]]
-# M-0028: Criterion benchmark of the .o3d mesh parser (plain version-1 layout, synthetic).
+# M-0028: Criterion benchmark of the .sli spline profile parser (synthetic).
+name = "splines"
+harness = false
+
+[[bench]]
+# M-0028: Criterion benchmark of the DirectX .x mesh parser (text form, synthetic).
+name = "xfiles"
+harness = false
+
+[[bench]]
+# M-0028: Criterion benchmark of the .o3d mesh parser (v1, v7, 32-bit indices, keyed; synthetic).
 name = "meshes"
 harness = false
 
