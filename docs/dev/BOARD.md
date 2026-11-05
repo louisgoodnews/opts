@@ -212,10 +212,10 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Shadow quality and realism** (M-0091, research + code) — R-40; the shadow-distance setting exists since 2026-10-24 (`4d2a4955`).
 
 #### M-0053 — Articulated Vehicle Completion
-- [ ] 🟡 **Q-ART-01 sign check (screenshot in a right-hand curve)** (M-0053, test)
+- [ ] 🟡 **Q-ART-01 sign check (screenshot in a right-hand curve)** (M-0053, test) — OPTS side pinned by a test 2026-10-31 (right curve: α < 0, left: α > 0); the comparison with OMSI needs a person with OMSI.
 - [x] 🟡 **Replace `ArticulationJoint` with `TrailerKinematics` in `VehicleSimulation`; trailer loads in physics** (M-0053, code) — F-002. D1 (state in `VehicleSimulation`, `ArticulationJoint` removed, `teleport`) done; D2 (consist mass, axle-load friction caps, hitch force) done; D3 (fixed-step pitch/roll, frame-rate test passes) done — merged 2026-10-14 (`ecafeb49`, `agent/articulation-physics-impl`).
 - [x] 🟡 **Segment pitch from the ground-height query; `articulation_<n>_beta`** (M-0053, code) — needs M-0025 query; F-003. Merged 2026-10-14 (`ecafeb49`) with a TEMPORARY `GroundIndex` sampler in `FixedUpdate` (Q-ART-09 option b) until the M-0025 height service.
-- [~] 🟢 **`[couple_front]`, chains > 4, trailers for AI and parked vehicles** (M-0053, code) — AI trailers done (`42fa120f`); open: β limits, `[couple_front]`, parked-vehicle trailers.
+- [~] 🟢 **`[couple_front]`, chains > 4, trailers for AI and parked vehicles** (M-0053, code) — AI trailers done (`42fa120f`); β limits verified in place and tested 2026-10-31 (`agent/m0053-artic`); open: `[couple_front]` (no installed vehicle uses it) and parked-vehicle trailers (parked entries are `.sco` objects), see M-0053 Notes.
 
 #### M-0024 — OMSI Map Tile Grid & Chunk Streaming (`opts-game`, `opts-bevy`)
 - [~] 🔴 **Implement TileGridManager and coordinate tracking** (M-0024, code) — paging by radius exists in `opts-game` (`stream_world_tiles`); the `opts-bevy` module does not.
@@ -641,3 +641,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0124 per-unit passenger load for consists done (`agent/m0124-unit-load`): each unit carries its own people; milestone complete.
 - `2026-10-30` — M-0077 closed (`agent/m0077-thumbs`): preset thumbnails in the wizard's Configurations list and the Alt-menu page (vehicle preview image, class glyph otherwise).
 - `2026-10-30` — M-0045 `delay` damping (`agent/m0045-delay`): `[newanim]` `delay` applied as a frame-rate independent first-order lag before `maxspeed`; the SD200 screenshot check stays open (interactive run).
+- `2026-10-31` — M-0053: β joint limits verified (already implemented; fixture tests added), Q-ART-01 sign of α pinned by a test on the OPTS side, `[couple_front]` and parked trailers analysed (no data path); OMSI comparison still open (`agent/m0053-artic`).
