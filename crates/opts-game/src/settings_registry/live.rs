@@ -173,6 +173,35 @@ pub const SHADOW_DISTANCE_DEFAULT_M: i64 = 300;
 pub const LIGHT_DISTANCE_DEFAULT_M: i64 = 350;
 /// LOD detail distance when the setting is missing (percent: 100 is the pure screen-size rule).
 pub const DETAIL_DISTANCE_DEFAULT_PERCENT: i64 = 200;
+/// Shadow detail when the setting is missing: 0, every scenery part casts (M-0029: on by default
+/// only once a measurement shows a frame-time gain, `lod-culling.md` §4).
+pub const SHADOW_DETAIL_DEFAULT: i64 = 0;
+
+/// The shadow-culling factor for `graphics.shadow_detail`: metres of cast distance per metre of
+/// part radius, `None` (every part casts) for 0.
+#[must_use]
+pub fn shadow_detail_of(settings: &GameSettings) -> Option<f32> {
+    let k = number(
+        settings,
+        "graphics.shadow_detail",
+        SHADOW_DETAIL_DEFAULT,
+        0,
+        400,
+    );
+    (k > 0.0).then_some(k)
+}
+
+/// `graphics.shadow_detail`: how far small scenery parts cast the sun's shadow (M-0029).
+pub fn sync_shadow_detail(
+    settings: Res<GameSettings>,
+    detail: Option<ResMut<opts_bevy::ShadowDetail>>,
+) {
+    let Some(mut detail) = detail else { return };
+    let factor = shadow_detail_of(&settings);
+    if detail.factor != factor {
+        detail.factor = factor;
+    }
+}
 
 fn number(settings: &GameSettings, key: &str, default: i64, lo: i64, hi: i64) -> f32 {
     settings

@@ -231,7 +231,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 
 - [ ] **⚡ Performance & Optimization** — [M-0028](docs/src/roadmap/phase-5/M-0028.md) & [M-0029](docs/src/roadmap/phase-5/M-0029.md)
   - [x] Implement Criterion microbenchmark suite in `opts-benchmark` for format parsers and vehicle physics step ([M-0028](docs/src/roadmap/phase-5/M-0028.md); text parsers (tile, scenery object, bus manifest, `global.cfg`, `model.cfg`), the plain `.o3d` path and the physics step done 2026-10-29; `.sli`, `.o3d` v7/32-bit/keyed, text `.x` and the regression check `scripts/bench_compare.py` done 2026-11-05).
-  - [ ] Document LOD (Level of Detail), frustum culling, and occlusion strategies in `docs/src/architecture/lod-culling.md`.
+  - [x] Document LOD (Level of Detail), frustum culling, and occlusion strategies in `docs/src/architecture/lod-culling.md`. *(2026-11-05: design page with the measured costs, per-part shadow culling, terrain LOD, `VisibilityRange` and occlusion options and the order of work.)*
   - [~] Implement distance-based dynamic LOD mesh switching and shadow culling in `opts-bevy` (M-0029). *Scenery `[LOD]` bands, view, shadow, light and detail distance settings live (2026-10-20/24); tile mesh LOD open.*
   - [~] Implement async background asset streaming to prevent frame drops during tile boundary crossings. (time-budgeted, resumable tile build, [M-0089](docs/src/roadmap/phase-4/M-0089.md) steps 1–2, 2026-10-18).
 - [ ] **🧰 Developer CLI Tooling** — [M-0030](docs/src/roadmap/phase-5/README.md)

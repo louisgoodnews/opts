@@ -151,7 +151,7 @@ pub use scenery_runtime::{
     advance_scenery, bind_alpha_scale, build_scenery_object, SceneryAlphaScale, SceneryClock,
     SceneryDrawDistance, SceneryDrawRoot, SceneryLodBias, SceneryLodMode, SceneryMeshRule,
     SceneryObjectRuntime, SceneryRuntimePlugin, SceneryRuntimeSettings, SceneryRuntimeStats,
-    SceneryScripts, SceneryVariableOverrides,
+    SceneryScripts, SceneryVariableOverrides, ShadowDetail,
 };
 pub use terrain::{
     build_cut_terrain_mesh, build_terrain_mesh, carve_terrain, spline_cut_triangles,

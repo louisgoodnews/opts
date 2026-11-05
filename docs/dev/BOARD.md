@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-11-05 by Agent (M-0028 done; M-0040, M-0042 and M-0052 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-11-05 by Agent (M-0029 started: design page; M-0028 done; M-0040, M-0042 and M-0052 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -155,7 +155,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Migrate the engine crates to `opts-model`, module by module** (Phase 13 follow-up, refactor; no milestone yet) — not started; the Phase 13 crates exist since 2026-10-19 ([Phase 13](../src/roadmap/phase-13/README.md)).
 
 #### Open milestones without work items yet (added by the roadmap audit 2026-10-18, M-0074)
-- [ ] 🟠 **Dynamic LOD, Frustum Culling & Occlusion Systems** (M-0029) — 🟡 **View distance live 2026-10-20** on `agent/view-distance`: `graphics.view_distance` hides scenery objects beyond 150 m × step (top step: all); shadow, light and object detail distance settings since 2026-10-24 (`4d2a4955`); shadow culling and instancing open; see [M-0029](../src/roadmap/phase-5/M-0029.md).
+- [~] 🟠 **Dynamic LOD, Frustum Culling & Occlusion Systems** (M-0029) — 🟡 **View distance live 2026-10-20** on `agent/view-distance`: `graphics.view_distance` hides scenery objects beyond 150 m × step (top step: all); shadow, light and object detail distance settings since 2026-10-24 (`4d2a4955`); shadow culling and instancing open; **2026-11-05 on `agent/m0029-lod`:** design page [lod-culling.md](../src/architecture/lod-culling.md) done; per-part shadow culling (`graphics.shadow_detail`) built and measured on Berlin-Spandau: 44 % fewer casters, no frame-time or GPU gain, so off and hidden; next: asset de-duplication (lod-culling §4 step 3); see [M-0029](../src/roadmap/phase-5/M-0029.md).
 - [ ] 🟡 **DLSS Upscaling (optional)** (M-0048) — 📝 Planned; see [M-0048](../src/roadmap/phase-5/M-0048.md).
 - [ ] 🟠 **Editor Mode** (M-0051) — 📝 Specified; implementation not started; see [M-0051](../src/roadmap/phase-6/M-0051.md).
 - [ ] 🟠 **`opts-script_editor` — specification model and script generator** (M-0055) — 📝 Specified; implementation not started; see [M-0055](../src/roadmap/phase-6/M-0055.md).
@@ -650,3 +650,5 @@ The agent should check these during P-001 audits:
 - `2026-11-05` — M-0052 closed by the project lead 2026-11-05 (`agent/m0052-close`): first-green-run item ticked, shared `CARGO_TARGET_DIR` item closed, Windows CI cleanup item ticked.
 - `2026-11-05` — M-0028 regression check (`agent/m0028-bench`): `scripts/bench_compare.py` compares two Criterion runs on one machine (slope estimate, 5 % threshold, non-overlapping confidence intervals), tested by `scripts/test_bench_compare.py` in `local-ci.sh`; builds limited to 4 jobs under the rustrim session's `heavy.lock` while it runs.
 - `2026-11-05` — M-0028 complete (`agent/m0028-bench`): `.sli` bench, `.o3d` bench over v1/v7/32-bit/keyed layouts (keyed via `o3d::exact::scramble`, timed with the exact decode), text `.x` bench; baseline addendum in the milestone file. Findings: a keyed mesh costs about 4× a plain one; a text `.x` about 170× an `.o3d` of the same size; the 40k-face drop of the old baseline was not the cache.
+- `2026-11-05` — M-0029 started (`agent/m0029-lod`): design page `lod-culling.md`; per-part shadow culling next. The real-map baseline (lighting cones §C) shows the game CPU-bound with 0.2 ms of shadow GPU time, so the culling is judged by frame time.
+- `2026-11-05` — M-0029 step 2 (`agent/m0029-lod`): per-part shadow culling behind `graphics.shadow_detail`, `shadow_casters` in `render.stats --parts`, `scripts/shadow-cull-bench.sh`; A/B on Berlin-Spandau: casters −44 %, frame time and shadow-pass GPU time unchanged, so the setting stays off and hidden.

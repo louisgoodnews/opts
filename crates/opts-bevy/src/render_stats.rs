@@ -21,6 +21,7 @@ use std::sync::{Arc, Mutex};
 
 use bevy::core_pipeline::core_3d::{AlphaMask3d, Opaque3d, Transparent3d};
 use bevy::diagnostic::DiagnosticsStore;
+use bevy::light::NotShadowCaster;
 use bevy::pbr::{MeshMaterial3d, Shadow, StandardMaterial};
 use bevy::prelude::*;
 use bevy::render::batching::NoAutomaticBatching;
@@ -210,6 +211,8 @@ fn parts(world: &mut World) -> Value {
         *mat_users.entry(mat.0.id()).or_default() += 1;
     }
     let single_use = mat_users.values().filter(|n| **n == 1).count();
+    let mut casters = world.query_filtered::<(), (With<Mesh3d>, Without<NotShadowCaster>)>();
+    let shadow_casters = casters.iter(world).count();
     json!({
         "mesh_entities": total,
         "visible": visible,
@@ -219,6 +222,7 @@ fn parts(world: &mut World) -> Value {
         "visible_materials_used_once": single_use,
         "visible_opaque_mask_blend": per_kind,
         "no_automatic_batching": no_batch,
+        "shadow_casters": shadow_casters,
     })
 }
 
