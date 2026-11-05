@@ -9,6 +9,8 @@ pub(super) fn graphics() -> Vec<D> {
     [
         display(),
         distances(),
+        shadows(),
+        detail(),
         world(),
         weather_strength(),
         audio_controls::audio(),
@@ -89,7 +91,7 @@ fn display() -> Vec<D> {
     ]
 }
 
-/// Field of view and the view, shadow, light and detail distances.
+/// Field of view and the view distance.
 fn distances() -> Vec<D> {
     vec![
         D::new(
@@ -122,6 +124,12 @@ fn distances() -> Vec<D> {
         )
         .keywords(&["draw distance", "lod"])
         .since("0.4"),
+    ]
+}
+
+/// The sun's shadows: how far they reach and how far small parts cast (M-0029).
+fn shadows() -> Vec<D> {
+    vec![
         D::new(
             "graphics.shadow_distance",
             K::Int {
@@ -137,6 +145,27 @@ fn distances() -> Vec<D> {
         )
         .keywords(&["shadows", "cascade", "sun", "distance"])
         .since("0.5"),
+        D::new(
+            "graphics.shadow_detail",
+            K::Int {
+                min: 0,
+                max: 400,
+                step: 25,
+            },
+            "0",
+            C::Graphics,
+            64,
+            "set-shadow-detail",
+            "set-shadow-detail-desc",
+        )
+        .keywords(&["shadows", "small objects", "culling", "performance"])
+        .since("0.5"),
+    ]
+}
+
+/// The light and detail distances.
+fn detail() -> Vec<D> {
+    vec![
         D::new(
             "graphics.light_distance",
             K::Int {

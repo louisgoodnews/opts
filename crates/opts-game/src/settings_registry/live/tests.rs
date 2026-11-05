@@ -105,3 +105,40 @@ mod audio_tests {
         assert!(!app.world().resource::<opts_bevy::AudioSettings>().enabled);
     }
 }
+
+mod shadow_detail_tests {
+    use super::super::*;
+
+    fn detail(value: Option<&str>) -> Option<f32> {
+        let mut s = GameSettings::default();
+        if let Some(v) = value {
+            s.set_raw("graphics.shadow_detail", v);
+        }
+        shadow_detail_of(&s)
+    }
+
+    #[test]
+    fn zero_and_missing_let_every_part_cast_and_values_are_clamped() {
+        assert_eq!(detail(None), None);
+        assert_eq!(detail(Some("0")), None);
+        assert_eq!(detail(Some("100")), Some(100.0));
+        assert_eq!(detail(Some("9999")), Some(400.0));
+        assert_eq!(detail(Some("-5")), None);
+        assert_eq!(detail(Some("much")), None);
+    }
+
+    #[test]
+    fn the_setting_reaches_the_scenery_runtime() {
+        let mut settings = GameSettings::default();
+        settings.set_raw("graphics.shadow_detail", "150");
+        let mut app = App::new();
+        app.insert_resource(settings)
+            .init_resource::<opts_bevy::ShadowDetail>()
+            .add_systems(Update, sync_shadow_detail);
+        app.update();
+        assert_eq!(
+            app.world().resource::<opts_bevy::ShadowDetail>().factor,
+            Some(150.0)
+        );
+    }
+}

@@ -372,6 +372,7 @@ impl Plugin for SettingsRegistryPlugin {
                     live::sync_hdr,
                     live::sync_view_distance,
                     live::sync_detail_distances,
+                    live::sync_shadow_detail,
                     live::sync_audio,
                     crate::vehicle_setup_settings::sync_vehicle_setup,
                     live::sync_weather_effects,

@@ -315,6 +315,7 @@ fn minimap() -> Vec<D> {
 const MAP_PROFILE_KEYS: &[&str] = &[
     "graphics.view_distance",
     "graphics.shadow_distance",
+    "graphics.shadow_detail",
     "graphics.light_distance",
     "graphics.detail_distance",
     "graphics.water",

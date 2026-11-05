@@ -16,6 +16,7 @@ mod lights;
 mod lod;
 mod maplights;
 mod scripts;
+mod shadow_cull;
 mod spawn;
 mod tick;
 
@@ -38,6 +39,10 @@ pub use maplights::{
     map_light_range, spawn_map_lights, MapLight, MapLightPool, MapLightSettings, PoolSlot,
 };
 pub use scripts::{HostValues, SceneryScripts, SceneryVariableOverrides};
+pub use shadow_cull::{
+    is_shadow_culled, mark_shadow_candidates, scenery_shadow_cull_system, ShadowCullCandidate,
+    ShadowCulled, ShadowDetail,
+};
 pub use spawn::{
     build_scenery_object, needs_runtime, SceneryBuildAssets, SceneryObjectInput, NIGHT_VARIABLE,
 };
@@ -62,6 +67,7 @@ impl Plugin for SceneryRuntimePlugin {
             .init_resource::<SceneryLodMode>()
             .init_resource::<SceneryLodBias>()
             .init_resource::<SceneryDrawDistance>()
+            .init_resource::<ShadowDetail>()
             .init_resource::<MapLightSettings>()
             .init_resource::<MapLightPool>()
             .add_systems(
@@ -70,6 +76,8 @@ impl Plugin for SceneryRuntimePlugin {
                     scenery_script_system,
                     scenery_lod_system,
                     scenery_draw_distance_system,
+                    mark_shadow_candidates,
+                    scenery_shadow_cull_system,
                     scenery_light_system,
                     scenery_alpha_scale_system,
                     map_light_pool_system,
