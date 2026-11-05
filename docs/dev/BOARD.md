@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-11-05 by Agent (status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-11-05 by Agent (M-0040 and M-0042 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -250,8 +250,8 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### M-0040 — Code-Quality Debt
 - [x] 🟠 **Fail CI on new size violations (baseline file)** (M-0040, chore) — critical review F-005. The M-0125/M-0147 ratchets (`structure_audit.py check` and `omsi_uses.py --check`) run in `local-ci.sh`, `scripts/pre-commit`, and `.github/workflows/ci.yml` (`docs-links` job, 2026-10-28).
-- [~] 🟠 **Split the functions over 80 lines (239 today)** (M-0040, refactor) — F-009 (audit), F-005. The file part is done (refactoring cycle 1: 0 files over 500 lines of code; `from_text` 28 lines, `traffic.rs` split in `d538a8f3`).
-- [ ] 🟡 **Group system/load-job parameters into `SystemParam`s; remove the lint allows (144 today)** (M-0040, refactor) — F-010 (audit), F-006.
+- [x] 🟠 **Split the functions over 80 lines (239 today)** (M-0040, refactor) — F-009 (audit), F-005. Done by M-0150 (2026-10-30): 0 functions over 80 lines. The file part is done (refactoring cycle 1: 0 files over 500 lines of code; `from_text` 28 lines, `traffic.rs` split in `d538a8f3`).
+- [x] 🟡 **Group system/load-job parameters into `SystemParam`s; remove the lint allows (144 today)** (M-0040, refactor) — F-010 (audit), F-006. Done by M-0150 (2026-10-30): 0 signature allows.
 - [x] 🟡 **Fix rustdoc links to removed Bevy bundles** (M-0040, docs) — critical review F-007. Done with the CI gate fix (10 stale rustdoc links, 2026-10-22).
 - [x] 🟡 **Load Game screen (needs a save system) — labelled "not available" until then** (M-0040, code) — F-011. Done by M-0069 (2026-10-13).
 
@@ -260,7 +260,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### M-0042 — CI & Toolchain Hardening
 - [x] 🟡 **Add `rust-toolchain.toml`, `.editorconfig`, `deny.toml`; upgrade `binrw`** (M-0042, chore) — files exist; `binrw` is no longer built (only an unused line in the root `Cargo.toml`, see Deferred Cleanup).
-- [~] 🟡 **Run F1 keyboard checklist; add headless key-event test** (M-0042, test) — F-026; the headless test exists (`opts-bevy/tests/reporting.rs::press_f1`); the manual checklist run is unverified.
+- [x] 🟡 **Run F1 keyboard checklist; add headless key-event test** (M-0042, test) — F-026; the headless test exists (`opts-bevy/tests/reporting.rs::press_f1`); closed by the project lead 2026-11-05.
 
 #### M-0054 — Scenery Object Load Verification (`opts-benchmark`)
 - [x] 🔴 **Preflight, CPU rasteriser, metrics and verdicts; map writers in `opts-core`** (M-0054, code) — Phase B. **Done 2026-10-12.**
@@ -646,3 +646,4 @@ The agent should check these during P-001 audits:
 - `2026-10-30` — M-0045 `delay` damping (`agent/m0045-delay`): `[newanim]` `delay` applied as a frame-rate independent first-order lag before `maxspeed`; the SD200 screenshot check stays open (interactive run).
 - `2026-10-31` — M-0053: β joint limits verified (already implemented; fixture tests added), Q-ART-01 sign of α pinned by a test on the OPTS side, `[couple_front]` and parked trailers analysed (no data path); OMSI comparison still open (`agent/m0053-artic`).
 - `2026-11-05` — Status sync (`agent/board-sync`): `agent/m0053-artic` merged (a test in `follower/tests.rs` used a moved value and did not compile; fixed before the merge); M-0042 broken-link proof (done 2026-10-30) and the finished M-0053 doc / M-0109 measurement items moved from Ready to Recently Done; worktrees of `agent/m0053-artic` and `agent/fn-ratchet-20` removed.
+- `2026-11-05` — M-0040 and M-0042 closed by the project lead 2026-11-05 (`agent/m0040-m0042-close`): M-0040's function splits and `SystemParam` grouping were done by M-0150; M-0042's F1 checklist item ticked.
