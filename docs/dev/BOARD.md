@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-11-05 by Agent (M-0040 and M-0042 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-11-05 by Agent (M-0040, M-0042 and M-0052 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -170,7 +170,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Course Geometry and Path Recognition** (M-0105) — 📝 Proposed (2026-10-14) - research only, needs approval; partly overtaken by the route line on the maps (`ca9535de`); see [M-0105](../src/roadmap/phase-4/M-0105.md).
 
 #### M-0052 — Repository Hosting, CI Activation & Commit Gate
-- [ ] 🟢 **Shared `CARGO_TARGET_DIR` for worktrees** (M-0052, docs) — F-020; the `target/` hygiene note is done (CONTRIBUTING.md).
+- [x] 🟢 **Shared `CARGO_TARGET_DIR` for worktrees** (M-0052, docs) — F-020; the `target/` hygiene note is done (CONTRIBUTING.md); closed by the project lead 2026-11-05.
 
 #### M-0061–M-0065 — Phase 9: User Interface & Experience (design approved 2026-10-12, decisions D-UI-01 … D-UI-11 answered)
 - [ ] 🟡 **Close M-0062: every deliverable was implemented 2026-10-12 (`f7c7b91d`, `e0b889ec`); the milestone still reads Planned** (M-0062, process)
@@ -352,7 +352,7 @@ _Small items discovered during implementation that don't warrant a milestone._
 - `[ ]` 🟡 Reconcile stale Open Questions in promoted specifications (`o3d.md`, `x.md`, `bus.md`) into Resolved Questions (F-012)
 - `[x]` 🟠 Integrate automated markdown link checker and mdBook validation step into CI workflow (F-015) — `docs-links` job and `deploy-docs.yml`; never executed (M-0052) *(reconciled 2026-10-11, critical review)*
 - `[x]` 🟡 Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016) — both exist (1.97.1) *(reconciled 2026-10-11, critical review)*
-- `[~]` 🟡 Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017) — job written; never run (M-0052) *(reconciled 2026-10-11, critical review)*
+- `[x]` 🟡 Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017) — job written; green on GitHub since 2026-10-25 (M-0042) (M-0052) *(reconciled 2026-10-11, critical review)*
 - `[x]` 🟢 Fix the mdbook warnings: unclosed `<var>` tags in `architecture/control-protocol.md` (chore, found 2026-10-25) — done 2026-10-25 (`agent/loose-ends`): pipes inside table code spans escaped, a bare `<map>` escaped; only the search-index size note remains
 - `[ ]` 🟢 Remove the unused `nom` and `binrw` from the root `[workspace.dependencies]` (the parsers are hand-written), or document why they stay (chore, found 2026-10-25)
 
@@ -647,3 +647,4 @@ The agent should check these during P-001 audits:
 - `2026-10-31` — M-0053: β joint limits verified (already implemented; fixture tests added), Q-ART-01 sign of α pinned by a test on the OPTS side, `[couple_front]` and parked trailers analysed (no data path); OMSI comparison still open (`agent/m0053-artic`).
 - `2026-11-05` — Status sync (`agent/board-sync`): `agent/m0053-artic` merged (a test in `follower/tests.rs` used a moved value and did not compile; fixed before the merge); M-0042 broken-link proof (done 2026-10-30) and the finished M-0053 doc / M-0109 measurement items moved from Ready to Recently Done; worktrees of `agent/m0053-artic` and `agent/fn-ratchet-20` removed.
 - `2026-11-05` — M-0040 and M-0042 closed by the project lead 2026-11-05 (`agent/m0040-m0042-close`): M-0040's function splits and `SystemParam` grouping were done by M-0150; M-0042's F1 checklist item ticked.
+- `2026-11-05` — M-0052 closed by the project lead 2026-11-05 (`agent/m0052-close`): first-green-run item ticked, shared `CARGO_TARGET_DIR` item closed, Windows CI cleanup item ticked.
