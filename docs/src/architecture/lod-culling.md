@@ -73,7 +73,7 @@ The tools to measure exist: `render.stats` counts the `Shadow` phase's batch set
 
 The culling did what it should: `shadow_casters` (every `Mesh3d` without `NotShadowCaster`, `render.stats --parts`) fell from about 34,800–36,500 to 19,400–20,300 (−44 %). It saved nothing: the frame times of the two settings overlap at every pose, and the shadow pass's GPU time (timestamp queries, unaffected by the CPU load) is the same to within 0.03 ms. The `Shadow` phase was already batched (32 to 48 multi-draw calls over the 4 cascade views outside, 81 over 8 views from the driver's seat); with GPU preprocessing the small parts cost next to nothing. The process CPU time per frame (10 ms ticks) was too noisy to read. **Answer to Q-LC-01: shadow casters are not a cost worth culling on this map and machine.** Not measured: an open-country map (no reason to expect more casters than a city) and a weaker GPU (the GPU time did not move, so little to gain there either).
 
-**A side observation, followed up the same day (§3.6).** The driver pose cost 19–21 ms against about 8 ms for the outside poses at the same spot, with eight shadow views instead of four.
+**A side observation, followed up in §3.6.** The driver pose cost 19–21 ms against about 8 ms for the outside poses at the same spot, with eight shadow views instead of four: the cost of the mirror cameras.
 
 - **Setting.** `graphics.shadow_detail`: *Off* (no culling), and steps of `k`. **Outcome:** default *Off*, and the setting is hidden from the settings page (status *internal*: it stays reachable through `settings.set` for a later measurement on other hardware). The default is chosen by the measurement (§4 step 2): **on** only if it lowers the frame time on a real map beyond run-to-run noise, without a visible loss in the near field. If it does not, the code stays behind the setting with *Off* as the default (a weaker GPU may still profit), or is removed.
 
@@ -103,17 +103,33 @@ In a city street most buildings are hidden behind the first row. Bevy's GPU occl
 
 Static merging (c) stays behind a setting, off, until a tile-spawn profile justifies it. A custom instancing pipeline is rejected (research §6).
 
-### 3.6 The driver's seat renders the scene twice (open)
+### 3.6 Mirror cameras are the largest single cost on a big map
 
-**Observed (2026-11-05, Berlin-Spandau, MAN SD77 at the *Rathaus Spandau* entry).**
+**Measured (2026-11-05/06, Berlin-Spandau, MAN SD77 at the *Rathaus Spandau* entry, driver pose, release build without LTO, `scripts/shadow-cull-bench.sh`).** Each mirror that renders is another camera: the scene is culled and shadowed once more for it (the `Shadow` phase counts 4 views for the main camera and 4 more per active mirror camera). `render.stats --parts` lists the cameras (`parts.cameras`).
 
-- With default settings a session at the driver's position has seven cameras: three `Mirror_Camera` and two `Ambient_Mirror_Camera` (only one `Mirror_Camera` is active), one unnamed inactive camera without an image target, and the main camera (`Simulation_3D_Tracking_Camera`). `render.stats --parts` lists them (`parts.cameras`, added for this). Each active camera is another view the scene is culled and shadowed for: the `Shadow` phase has **8 views** with one `Mirror_Camera` active, **4** at the outside poses.
-- The driver pose measured **19.5–20.7 ms** per frame in the first run, **about 8 ms** at the outside poses of the same run, and **10.6 ms** and **16.6 ms (capped at 60 fps)** in two later runs on a machine at load 5 to 11. The GPU is not the difference: its pass total is 3.8 ms at the driver pose and 4.0–4.6 ms elsewhere. The extra time is on the CPU.
-- `graphics.mirror_count` 0, 1 and 2 left the driver pose at 18–22 ms and 8 shadow views; `graphics.mirror_rate` 1, 2 and 4 left every number identical (483 frames, 42.4 ms process CPU per frame, 3.78 ms GPU). **Neither setting switched that camera off**, although their descriptions say they limit the mirror pictures ([virtual mirrors](virtual-mirrors.md), the settings page). It is unknown whether the camera belongs to a mirror that is "on" for another reason or whether the settings do not reach it ❓.
+The two mirror settings, `graphics.mirror_count` and `graphics.mirror_rate`, **act only with `graphics.light_quality_mode = custom`**; in the default automatic mode the quality governor owns them ([lighting cones](lighting-cones.md), the settings page shows them disabled). An A/B of the same settings in automatic mode changes nothing, which is what my first attempt found and mis-read. With the mode set to custom (`PRE=graphics.light_quality_mode=custom`):
 
-**Not established:** the true cost of the extra view (the runs were not clean: other load on the machine, and one run capped at the display rate), and which code keeps the camera active. The earlier synthetic measurement (about 0.7 ms per view, [lighting cones](lighting-cones.md) §E) came from a scene with few entities; this scene has 34,000 mesh entities, and visibility culling per view and cascade scales with them, which would fit a much larger figure ❓.
+| `mirror_count` (rate 2) | Active cameras | Shadow views | Frame time (ms, per sample) | Process CPU per frame (ms) | GPU, all passes (ms) |
+| ---: | ---: | ---: | :--- | :--- | :--- |
+| 0 | 1 | 4 | 7.8 · 7.7 · 7.9 · 7.8 | 25.3 · 24.3 · 26.6 · 26.0 | 4.1–4.2 |
+| 1 | 1–2 | 8 | 12.1 · 11.9 · 12.0 · 12.6 | 34.4 · 33.6 · 34.0 · 36.0 | 4.2 |
+| 2 | 2 | 8 | 17.0 · 17.5 · 16.8 · 16.8 | 42.9 · 44.2 · 42.1 · 42.2 | 3.6–3.7 |
 
-**Next step (a measurement, not a guess):** at the same position, compare the view with the mirror in sight against the view turned away (the mirror camera then deactivates) on a quiet machine with the frame cap off, then find why the two settings do not act. If the cost is real, a mirror camera that renders only the vehicle's own mirror area and skips the shadow cascades for itself (a smaller view, fewer shadow views) is the lever.
+At count 2 the update rate changes the cost as the schedule says: `mirror_rate` 4 gave 12.9–13.5 ms (34 ms CPU), 2 gave 16.9–17.6 ms, 1 gave 17.1–17.3 ms with 3 cameras and 12 views (the frame did not get longer than at rate 2, although a second mirror renders every frame instead of every other; the process uses only about 2.5 of the 16 cores, so parallel work in the extra views may hide part of it, or the display rate limits the frame at about 17 ms ❓). Count 1 and rate 4 scale with count 2 in a straight line (+4.2, +5.4 and +9.2 ms over the 7.8 ms base), which is why I take the 9 ms as real; it is not a ceiling-limited figure.
+
+- **Two mirrors at the default rate cost 9 ms of a 17 ms frame**, and 17 ms of process CPU time per frame (medians 42.5 against 25.7). The GPU total does not move (3.6–4.2 ms): the cost is on the CPU.
+- **It is not the far plane.** With the mirror cameras' far plane at 250 m and at 120 m (Bevy's default is 1,000 m) the frame took 17.0–17.2 ms, as before. Bevy's cascades ignore the camera's far plane (`build_directional_light_cascades` uses the light's own bounds), and a short far plane does not shrink the per-entity passes below.
+- **It scales with the scene.** On Grundorf (2,177 mesh entities) two mirrors cost +2.6 ms in the one sample not pinned at the display rate; on Spandau (34,474) +9.2 ms. With static merging (`OPTS_INSTANCING=merge`, 26,410 entities, −23 %) the extra CPU time of two mirrors fell from 17 ms to 9 ms per frame (medians of four samples, −47 %), and the base cost without mirrors from 26 ms to 22 ms.
+- **Likely cause, not proven** ❓: for every active camera Bevy runs a frustum pass over all mesh entities for the camera and one per shadow cascade (`check_visibility_cpu_culling`, `check_dir_light_mesh_visibility`), five passes over 34,000 entities per view. The numbers fit (17 ms of thread time per mirror view) but I did not profile it. Bevy has no per-camera switch for shadow cascades, so a mirror view cannot skip them.
+- **Why the default player does not always see 17 ms:** in automatic mode the governor steps the level down when frames miss the deadline, and the ladder (`ladder_preset`) drops the mirrors to one mirror at a quarter rate **only at level 4**, after the cones and their cap (levels 1 to 3). The ladder was priced with the synthetic 0.7 ms per view of [lighting cones](lighting-cones.md) §E; on a 34,000-entity map a mirror at rate 2 costs about 4.5 ms of every frame (half of the 9 ms for two). Nothing here shows which level the governor settles at on a given map ❓.
+- **Caveat on the frame times.** In the Grundorf and merge runs, the later samples were pinned to 16.6–16.7 ms whatever the setting, even with the mirrors off: something outside the game limits the rate (display or compositor throttling ❓; the automatic-mode runs also sat at 16.6 ms, where the governor's 60 fps deadline can explain it). Such samples carry no frame-time information; the CPU time per frame and the camera counts still do. The Spandau tables above are from runs that were not pinned at count 0 (7.7–7.9 ms).
+
+**Options, not decided (they change what the player sees):**
+
+1. Shed mirror cost earlier on the automatic ladder: `mirror_every = 4` from level 1 or 2 instead of level 4 halves it (a mirror picture refreshed every fourth frame). The lead's call: [virtual mirrors](virtual-mirrors.md) notes a stale mirror "reads as a bug".
+2. Scale the mirror budget with the scene: the extra frame time of two mirrors (one view per frame at rate 2) is about `2 ms + 0.2 µs` per mesh entity (two points, Grundorf and Spandau, Grundorf from one sample; to be checked on a third map).
+3. Productise static merging (research layer (c)): it lowers the base cost and the mirror cost together, at the price of the risks of research §8 (culling granularity, memory).
+4. A view that skips its shadow cascades needs a change in Bevy (or a patch); not a quick fix.
 
 ## 4. Order of work
 
@@ -136,7 +152,8 @@ Static merging (c) stays behind a setting, off, until a tile-spawn profile justi
 | Q-LC-05 | Does occlusion culling (with its depth prepass) save time in a city street, and does it cost time in open country? | ❓ |
 | Q-LC-06 | The texel size of the far cascades with OPTS's cascade settings (the 0.15–0.3 m in §3.1 is an estimate) | ❓ |
 | Q-LC-07 | Does `OPTS_INSTANCING=dedupe` shorten tile loads or lower resident memory on a quiet machine? The research saw no CPU, memory or load-time difference beyond noise (§3.5) | ❓ |
-| Q-LC-08 | Why does an active `Mirror_Camera` double the shadow views at the driver's seat, what does it cost, and why do `graphics.mirror_count` (0, 1, 2) and `graphics.mirror_rate` (1, 2, 4) not change it? | ❓ §3.6 |
+| Q-LC-08 | What do the mirror cameras cost at the driver's seat, and why did `graphics.mirror_count` and `graphics.mirror_rate` seem not to act? | ✅ 2026-11-06: about 9 ms of a 17 ms frame for two at the default rate on Berlin-Spandau; the settings act only in custom lighting mode (§3.6) |
+| Q-LC-09 | Where exactly does the CPU time of a mirror view go (the five visibility passes, extraction, queueing), and how does it scale on a third map? | ❓ §3.6 |
 
 ## 🔗 Related Documents
 
