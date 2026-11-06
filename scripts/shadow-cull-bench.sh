@@ -8,7 +8,8 @@
 #   scripts/shadow-cull-bench.sh <label> <map-dir-name> <entry-substring|-> <vehicle-rel>
 #
 # Environment: OMSI, OPTS_BIN, OPTS_CLI, OUT (default ~/.local/share/opts/benchmark/shadow-cull/<label>),
-#   SETTING (graphics.shadow_detail), VALUES ("0 $K"), K (100), ROUNDS (3), HOUR (12), WARM (20), SETTLE (3), SAMPLE (8), PORT (44253), POSES (as in
+#   SETTING (graphics.shadow_detail), VALUES ("0 $K"), K (100), PRE ("key=value ..." set once before
+#   the poses: the mirror and quality controls only act with PRE="graphics.light_quality_mode=custom"), ROUNDS (3), HOUR (12), WARM (20), SETTLE (3), SAMPLE (8), PORT (44253), POSES (as in
 #   instancing-bench.sh: "name forward_m right_m up_m yaw_offset_deg pitch_deg" per line).
 # Results: $OUT/samples.jsonl (one line per pose, round and setting), $OUT/game.log.
 set -euo pipefail
@@ -50,6 +51,7 @@ for _ in $(seq 1 40); do
   last=$n; [ "$same" -ge 3 ] && break
   sleep 5
 done
+for kv in ${PRE:-}; do cli settings.set --key "${kv%%=*}" --value "${kv#*=}" >/dev/null; done
 v=$(cli vehicle.get)
 x=$(jq -r '.result.x' <<<"$v"); y=$(jq -r '.result.y' <<<"$v"); z=$(jq -r '.result.z' <<<"$v")
 h=$(jq -r '.result.heading_deg' <<<"$v")
