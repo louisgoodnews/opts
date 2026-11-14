@@ -287,6 +287,7 @@
   - [`global.cfg`, `laststn.osn`, `.dsc`](formats/map/global-cfg.md)
   - [Map Lists & Calendars](formats/map/lists.md)
   - [Timetable Files](formats/map/timetables.md)
+  - [GTFS Compatibility Notes](formats/map/gtfs.md)
   - [Chrono Overlays & Map Variants](formats/map/chrono.md)
   - [Map Tiles](formats/map/tiles.md)
 - [Texture Property Files (`*.bmp.cfg`)](formats/text/texture-cfg.md)
