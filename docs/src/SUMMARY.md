@@ -196,6 +196,7 @@
 - [Session Environment (date, time, weather)](architecture/session-environment.md)
 - [Lighting System (sun, moon, light rooms, god rays)](architecture/lighting-system.md)
 - [Weather](architecture/weather.md)
+- [Real Weather: Provider Survey](architecture/real-weather.md)
 - [Vegetation Wind](architecture/vegetation-wind.md)
 - [Screen Capture](architecture/screen-capture.md)
 - [Collisions](simulation/collisions.md)
