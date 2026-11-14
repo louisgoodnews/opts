@@ -136,3 +136,19 @@ The in-file legend stops at 8; the wiki defines the full range 📚: **0** aspha
 
 - [`.sco`](sco.md), [`.sli`](sli.md), [corpus audit](sco-sli-audit.md)
 - [Texture Formats](../textures.md)
+
+## OPTS parse spec for `[moisture]` and `[puddles]` (M-0121 proposal)
+
+Status: spec only, drafted from the format notes above. Nothing in the code parses these keys per texture yet.
+
+**Parse rule.** A texture `.cfg` is a keyword file (see the general structure above). `[moisture]` and `[puddles]` are flags: the keyword line alone sets the flag to true, and the file's absence of the keyword sets it to false. A non-empty line after either keyword is not a parameter: the census found 10, 11 or 19 lines after some of these keywords, which are pasted tutorial text (above), so the parser must ignore them with a warning rather than fail. `[surface]` is read separately (its values are not specified in this spec).
+
+**Output on the texture asset.** `wet_capable: bool` (from `[moisture]`), `puddle_capable: bool` (from `[puddles]`), each independent of the other (open question Q-TC04).
+
+**Default.** No `.cfg` file, or no keyword: both flags false. The material stays dry (matches the milestone's "default to dry when unsure").
+
+**Test fixture.** A small synthetic `.cfg` with each keyword combination (none, moisture only, puddles only, both, both plus junk lines), no OMSI file committed.
+
+**Count method (not run).** The counts in the table above were taken over the whole corpus ([C] tags). No script in `scripts/` counts texture-cfg keyword presence: `scripts/content_issues.py` classifies content problems and does not count flags. A repeatable count would be a scan of every `*.cfg` in the `Texture` folder and the `texture` sub-folders, grouped by keyword set, and it would need an OMSI path. It was not run in this pass, so the existing counts are not re-verified.
+
+**Meaning on non-ground objects** stays open (see M-0121 risk table): the observed meaning of `[moisture]` on vehicles and scenery is not documented.
