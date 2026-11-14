@@ -220,3 +220,36 @@ of it, plus the old built-in ids. `sim.get` in a drive adds `weather_presets` (t
 * **Intensity settings.** `graphics.rain_intensity` and `graphics.snow_intensity` (0–200 %, default 100) scale what the weather says: the rate of the drops or flakes drawn (`WeatherEffects::scaled`), and the surfaces (`surface_state_for`): rain scales the wetness and the puddle coverage, snow the cover of ground and roads. 0 keeps that kind of precipitation away, 200 is a downpour. They apply at once.
 * **Puddles on splines.** The terrain has its puddles in the ground shader; roads, pavements and parking bays are plain materials, which only got darker and smoother. `in_game/weather/puddles.rs` lays flat, irregular water patches on them around the camera: up to 80 at full coverage and wetness, placed where the ground index has a road, level across the patch (±2 cm), 4–55 m from the camera, removed beyond 75 m. The water has roughness 0.03, reflectance 0.9 (the sky cube is reflected at grazing angles) and a pale sky-grey glow that follows the cloud brightness, so it is grey under cloud and bluer in clear weather.
 * **Scenery objects** get the wet look of their materials from `reflections::Wetness` (darker, smoother) as before; puddles lie on the ground they stand on, not on the objects.
+
+## 10. SurfaceGrip: inputs and interface (M-0117 spec, open values)
+
+Status: specification only. No code reads these values for physics yet (`opts-sim` tyre friction is constant). Constants are **not** invented here; every coefficient is open.
+
+**Inputs (what the weather state already provides):**
+
+| Input | Symbol | Range and unit | Source | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| Ground wetness | `w` | 0 to 1 (dimensionless), `groundwet[1]/255` | `Wetness` resource, §6 | ✅ defined |
+| Puddle coverage | `p` | 0 to 1, `0.45 · min(groundwet[2]/120, 1)` clamped | §6 (0.45 is the prototype value) | 🟡 the 0.45 is inherited, not measured |
+| Snow cover | `s` | cover from `[snow]` (ground) and `[snowOnRoad]` (roads) | §3 | ❓ raw field range not stated; the render uses fixed tints (0.85 ground, 0.7 road), which are visual only and must not be reused as grip |
+| Air temperature | `T` | °C, `Weather_Temperature` | §7 | ✅ defined; the freezing threshold for ice is ❓ |
+| Frost flag | `frost` | boolean, §3 | `[temp]` | 🟡 meaning for ice ❓ |
+| Surface class | `class` | per road or texture | `[surface]` in `texture-cfg.md` | ❓ the class list is to be taken from that page's `[surface]` table and was not checked in this pass |
+| Visibility | `V` | distance; unit ❓ (the `[fog]` visibility field is not given a unit in §3) | `[fog]` | ❓ |
+
+**Output.** A grip factor `f` in (0, 1] per contact, with `μ = f · μ_dry(class)`. The contact model of [M-0073](../roadmap/phase-10/M-0073.md) takes `μ`; until it lands, `f` multiplies the current constant friction (interim hook from M-0117).
+
+**Constraints the model must satisfy (testable without numbers):**
+
+1. `f` is non-increasing in `w`, `p` and `s` for a fixed class.
+2. `f` is changed over a documented time (ramp, shared with the ground path), so the vehicle state has no jump.
+3. For the same inputs `f` is the same on every run (determinism).
+
+**Open (not decided here):**
+
+- `μ_dry` per surface class and the value of `f` at each input: none is in the repo. The acceptance numbers in M-0117 (wet at least 20 % longer braking, snow at least 100 %) are targets to test against, not values derived from the sources.
+- The freezing threshold for ice and the meaning of `frost`.
+- The snow cover unit and range.
+- Whether `f` depends on `V` (fog does not change grip; it changes AI following distance).
+
+**Units the scripts use** (for AI and HUD inputs): speed and wind in m/s (wind speed ✅ by plausibility ❓), temperature in °C, humidity in g/m³, `PrecipRate` 0 to 1. The `engine_tank_content` unit is ❓ (see M-0123).
