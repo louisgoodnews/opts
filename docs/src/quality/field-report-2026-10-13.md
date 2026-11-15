@@ -41,7 +41,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | :--- | :--- | :--- | :--- | :--- |
 | R-20 | A setting **Load all tiles on start**: all map tiles are force-loaded at start and stay loaded; it must also be exposed in the *summary screen* of the new-game menu where the user confirms the start | world / settings / wizard | [M-0080](../roadmap/phase-4/M-0080.md) | ✅ done 2026-10-29 (wizard switch with estimate, memory guard, "Automatic (currently N)") |
 | R-21 | A setting for the **number of tiles around the centre tile** (the tile the player camera stands on) to load; the default is derived dynamically from the hardware capabilities | world / settings | [M-0080](../roadmap/phase-4/M-0080.md) | ✅ done 2026-10-29 (wizard switch with estimate, memory guard, "Automatic (currently N)") |
-| R-22 | A new crate **`opts-hardware`** for deep research of the hardware **without spying on the system** | tooling | [M-0081](../roadmap/phase-5/M-0081.md) | 🟡 implemented on `feat/opts-hardware` (Linux verified; macOS/Windows untested; report-dialog preview and GPU benchmark open) |
+| R-22 | A new crate **`opts-hardware`** for deep research of the hardware **without spying on the system** | tooling | [M-0081](../roadmap/phase-5/M-0081.md) | 🟡 merged into `master` (`feat/opts-hardware` is an ancestor of `master`; crate page `docs/crates/opts-hardware.md`; Linux verified; macOS/Windows untested; report-dialog preview and GPU benchmark open) |
 | R-23 | **Research branch** for leveraging Bevy's **instancing** for repeatedly used meshes | performance | [M-0082](../roadmap/phase-5/M-0082.md) (branch `research/mesh-instancing`) | 🔬 started |
 
 ## Follow-up findings (2026-10-13, fourth message)
@@ -67,7 +67,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | :--- | :--- | :--- | :--- | :--- |
 | R-31 | **Freeze when opening the content section of the settings**; any synchronous blocking task must run in another thread | UI / performance | [M-0088](../roadmap/phase-9/M-0088.md) | ✅ fixed (background facts, "Calculating…" placeholders; worst frame 213-350 ms -> 17 ms) |
 | R-32 | **Tile streaming** performs poorly, with noticeable freezes; investigate routes for improvement | performance | [M-0089](../roadmap/phase-4/M-0089.md) | 🟡 in progress 2026-10-18 |
-| R-33 | **Default position per view**, reset with **Shift + Space** | camera | [M-0084](../roadmap/phase-4/M-0084.md) (addendum) | 📝 open |
+| R-33 | **Default position per view**, reset with **Shift + Space** | camera | [M-0084](../roadmap/phase-4/M-0084.md) (addendum) | ✅ implemented: per-view default and Shift+Space reset, `camera.reset` (`f7df4cef`, on `master` since 2026-10-13) |
 | R-34 | A few **pedestrians have scrambled meshes** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 re-checked 2026-10-18, no defect found; awaiting your check |
 | R-35 | **Hamburg maps:** loading objects fails partially, leaving absent or scrambled objects | content | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 fixed 2026-10-18 (M-0066); awaiting your check |
 | R-36 | **Objects take quite a bit of time to load** | performance | [M-0090](../roadmap/phase-10/M-0090.md), [M-0089](../roadmap/phase-4/M-0089.md) | 🟡 loading screen fixed (M-0089); cold model load open |

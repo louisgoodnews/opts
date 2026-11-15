@@ -3,7 +3,7 @@
 Branch `fix/uv-decoder-correctness` (from `fix/man-nlng-materials`, which carries the P-1012 diagnostic).
 Tools: `crates/opts-omsi/examples/uv_truth.rs` (twin enumeration and per-vertex truth), `scripts/uv_truth_analysis.py`.
 Run: `uv_truth "<OMSI 2>" <out>` then `python3 scripts/uv_truth_analysis.py <out>`.
-Status: **Phase A (diagnostic) complete.**
+Status: **Phases A to C merged** (`8cdfd76f`, 2026-10-13). **Superseded 2026-10-16:** the heuristic decoder that Phase C changed was retired in `f17f3c3d` (no `UvQuality` left under `crates/`, checked 2026-11-15); the decoder that replaced it is described in [M-0066](../../roadmap/phase-10/M-0066.md) (MI-0056 to MI-0058). Still open as recorded in A3 and A5: scrambled normals are not recovered.
 
 ## Preconditions
 1. Branch `fix/uv-decoder-correctness`: yes. 2. `man-nlng-materials-2026-10-12.md`: yes (7d13e12).
