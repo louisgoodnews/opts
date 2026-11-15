@@ -5,7 +5,8 @@
 | **Status** | 🟢 Research Complete / Proposed Standard (Phase 15) |
 | **Date** | 2026-10-28 |
 | **Applies to** | All Rust crates in the OPTS workspace, `scripts/structure_audit.py`, `scripts/pre-commit` |
-| **Related** | [Coding Standards §3.7 & §3.14](../contributing/standards.md), [Phase 15](../roadmap/phase-15/README.md), [Phase 999](../roadmap/phase-999/README.md) |
+| **Related** | [Coding Standards §3.7 & §3.14](../contributing/standards.md), [Phase 15](../roadmap/phase-15/README.md), [Phase 999](../roadmap/phase-999/README.md), [M-0151](../roadmap/phase-15/M-0151.md) |
+| **Update 2026-11-15** | The owner lowered the source file limit to **150 lines of code** per file (owner decision). The 250 and 350 ceilings below are the 2026-10-28 proposal and are superseded; the 150 rule is milestone [M-0151](../roadmap/phase-15/M-0151.md) (736 of 1,477 `crates/**/*.rs` files over 150 lines on 2026-11-15). The workload tables in §5 keep their 2026-10-28 baseline. |
 
 ---
 
@@ -16,7 +17,7 @@ OPTS is developed with heavy participation from autonomous AI coding agents. Eve
 1. **Input tokens (`read_file` / context window):** Reading source files to understand types, imports, and call sites. When a production file mixes 250 lines of domain logic with 200 lines of unrelated concerns or inline `#[cfg(test)]` fixtures, every full-file read wastes 2,000–4,000 input tokens per turn (compounded across multi-step conversations).
 2. **Output tokens (`edit_file` / diff generation):** Emitting exact `Target` and `Replacement` blocks. Output tokens are 3–5× more expensive and latency-bound than input tokens, and scale with the size of the **function or impl block being edited**, not the file alone. Monolithic functions (> 80 lines) and 14-parameter Bevy system signatures force large tool payloads and increase whitespace/context-mismatch retries.
 
-This document evaluates whether capping source files at **250 lines max (150 lines optimum)** is optimal for AI token efficiency, models the trade-offs against multi-file fragmentation overhead, and quantifies the exact workload required to audit and migrate the OPTS workspace and enforce the new rules in `scripts/pre-commit`.
+This document evaluates whether capping source files at **250 lines max (150 lines optimum)** (since 2026-11-15 the rule is **150 lines of code** per file, see the update above) is optimal for AI token efficiency, models the trade-offs against multi-file fragmentation overhead, and quantifies the exact workload required to audit and migrate the OPTS workspace and enforce the new rules in `scripts/pre-commit`.
 
 ---
 
@@ -80,8 +81,8 @@ To minimize both **input tokens** (context window pollution) and **output tokens
 
 | Rule | Target / Optimum | Hard Ceiling (Ratcheted) | Token Impact |
 | :--- | :--- | :--- | :--- |
-| **R1 — Production File Size** (`crates/*/src/**/*.rs`, excl. `tests.rs`) | **150–200 code lines** (~1,600–2,100 tokens) | **350 code lines** (down from 500) | Eliminates multi-concern 400–500 line files without forcing artificial splits of cohesive 260–340 line modules. |
-| **R2 — Inline Test Separation** (`#[cfg(test)]` in production files) | **0 inline test lines** once file $> 250$ code lines | **250 total code lines** when `test_code > 0` | Agents reading production files $> 250$ lines never pay input tokens for test fixtures; tests live in sibling `tests.rs`. |
+| **R1 — Production File Size** (`crates/*/src/**/*.rs`, excl. `tests.rs`) | **150 code lines** (owner rule, 2026-11-15; ~1,600 tokens) | **150 code lines** (2026-10-28 proposal of 350 superseded; ratchet `docs/dev/structure-known.txt`, [M-0151](../roadmap/phase-15/M-0151.md)) | Keeps every file within one read; splits multi-concern files by concern boundary. |
+| **R2 — Inline Test Separation** (`#[cfg(test)]` in production files) | **0 inline test lines** once file $> 150$ code lines (2026-10-28 proposal: $> 250$) | **150 total code lines** (under the R1 rule; the 250 trigger is superseded) | Agents reading production files never pay input tokens for test fixtures; tests live in sibling `tests.rs`. |
 | **R3 — Function Size Limit** (`fn` bodies in `src/`) | **≤ 40 code lines** (~430 tokens) | **80 code lines** (~850 tokens, ratcheted via `function-known.txt`) | Directly bounds `edit_file` `Target`/`Replacement` output tokens to $< 900$ tokens per function edit. |
 | **R4 — ECS `SystemParam` Bundling** (`too_many_arguments` / `type_complexity`) | **≤ 7 system parameters** | **0 unbundled `#[allow(clippy::too_many_arguments)]`** (ratcheted) | Saves 15–25 lines (~200 tokens) per Bevy system signature and prevents query-type repetition. |
 
@@ -131,7 +132,8 @@ Running [`scripts/structure_audit.py`](../../../scripts/structure_audit.py) agai
 3. **[M-0149 — Batch 2: Production File Splits to the 350-Line Ceiling](../roadmap/phase-15/M-0149.md) (~6–8 sessions across crate batches):**
    - Split the **102 remaining production files** whose non-test code exceeds 350 lines (52 in `opts-game`, 16 in `opts-bevy`, 10 in `opts-omsi`, 8 in `opts-gui`, 6 in `opts-sim`, 10 in smaller crates) + 18 test/example files $> 350$ lines.
    - Each split targets **150–220 code lines per resulting file**, preserving all public paths via `pub use` re-exports per [Phase 999 rules](../roadmap/phase-999/README.md).
-   - *Note:* If a hard **250-line** ceiling were enforced on non-test production code instead of 350, it would require splitting an additional **119 files** (+6–7 extra sessions) with diminishing token returns. Keeping 150–250 as the target for all *split* and *newly written* files while ratcheting the hard ceiling at 350 captures ~80% of the context-reduction benefit at less than half the refactoring cost.
+   - *Update 2026-11-15:* the ceiling is now 150 lines of code for every file, so this 350 ceiling and its 250-line comparison are superseded; the remaining files are tracked in [M-0151](../roadmap/phase-15/M-0151.md).
+   - *Note (2026-10-28 analysis):* If a hard **250-line** ceiling were enforced on non-test production code instead of 350, it would require splitting an additional **119 files** (+6–7 extra sessions) with diminishing token returns. Keeping 150–250 as the target for all *split* and *newly written* files while ratcheting the hard ceiling at 350 captures ~80% of the context-reduction benefit at less than half the refactoring cost.
 
 4. **[M-0150 — Batch 3: Function Size Ratchet (< 80 Lines) & ECS `SystemParam` Bundling](../roadmap/phase-15/M-0150.md) (~8–10 sessions):**
    - Decompose the **191 production functions $> 80$ code lines** (starting with the 25 functions $> 200$ lines and 55 functions in the 121–200 line band) into focused 25–45 line helpers.
