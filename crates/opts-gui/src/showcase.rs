@@ -4,13 +4,14 @@
 
 use bevy::prelude::*;
 
-use crate::components::{button::ButtonBuilder, label::LabelBuilder};
+use crate::components::button::ButtonBuilder;
 use crate::interaction::{layer::ForcedState, state::DisabledReason, tooltip::Tooltip};
 use crate::not_yet::{NotAvailableYet, NAV_LIBRARY};
-use crate::theme::typography::TypeScale;
 use crate::ui_id::UiId;
 
+mod layout;
 mod sections;
+use layout::{column, heading, row};
 use sections::*;
 
 /// The states of one control that the gallery shows side by side.
@@ -86,35 +87,6 @@ impl Pin {
             }
         }
     }
-}
-
-fn column(commands: &mut Commands, gap: f32) -> Entity {
-    commands
-        .spawn(Node {
-            flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(gap),
-            align_items: AlignItems::FlexStart,
-            ..default()
-        })
-        .id()
-}
-
-fn row(commands: &mut Commands, gap: f32) -> Entity {
-    commands
-        .spawn(Node {
-            flex_direction: FlexDirection::Row,
-            column_gap: Val::Px(gap),
-            align_items: AlignItems::Center,
-            flex_wrap: FlexWrap::Wrap,
-            ..default()
-        })
-        .id()
-}
-
-fn heading(commands: &mut Commands, text: &str) -> Entity {
-    LabelBuilder::new(text)
-        .with_style(TypeScale::TitleMedium)
-        .spawn(commands)
 }
 
 /// Buttons: every variant in every pinned state.
