@@ -360,6 +360,10 @@ _Small items discovered during implementation that don't warrant a milestone._
 
 ### 🗄️ Recently Done
 
+**2026-11-15 — owner decision: 150-line file limit**
+
+- [x] 🟠 **One size limit for all source files: 150 lines of code per file** (chore, tooling + docs) — `agent/size-limit`: `structure_audit.py` `FILE_LIMIT` 350 → 150 (inline-test check folded into it); `size_check.py` now imports the audit (was 500 lines total); `standards.md` §3.7, §3.14 and `CONTRIBUTING.md` say 150; the function limit stays 80 (no doc ties it to the file limit). `structure-known.txt` regenerated with `seed`: 736 files over 150 lines (168,237 lines of code) grandfathered, `check` passes; 0 functions over 80 lines, `function-known.txt` empty. No source file was split.
+
 _Completed items from the last two cycles. Older items live in git history and milestone files (pruned under Rule 3 on 2026-10-25: the groups of 2026-10-04 to 2026-10-14)._
 
 **2026-10-29 – 2026-11-05 — items moved out of Ready by the status sync 2026-11-05**
@@ -656,3 +660,4 @@ The agent should check these during P-001 audits:
 - `2026-11-06` — M-0029 mirrors (`agent/mirror-cost`): measured the mirror cameras on Berlin-Spandau in custom lighting mode: two mirrors at the default rate cost 9 ms of a 17 ms frame (CPU, not GPU), independent of the cameras' far plane, scaling with the scene's mesh entities; static merge halves it. The ladder sheds mirrors only at level 4. Options in lod-culling §3.6 for the project lead; `scripts/shadow-cull-bench.sh` takes `PRE`.
 - `2026-11-15` — Roadmap status reconciliation (`agent/roadmap-status`, docs only): M-0150 done 2026-10-30 (`structure_audit.py check`: 0 functions over 80 LOC, 0 signature allows); M-0059 set to in progress (coverage-preserving mips exist, alpha-to-coverage absent); M-0144 mesh trees ticked (`80990224`); M-0077 thumbnails ticked (`c5de0b71`); M-0066 set to in progress, awaiting the project lead's acceptance; M-0112 scheduled AI marked done in the roadmap. M-0124's steering-effort sub-item left open for owner decision.
 - `2026-11-15` — Stale documentation (`agent/stale-docs`), started and completed in one session: the five pages of removed crates (`opts-utils`, `opts-parsers`, `opts-discovery`, `opts-assets`, `opts-graphics`) deleted from the crate book, with its SUMMARY, README and catalog corrected; `opts-core` page rewritten as the temporary facade; phase-0 workspace text corrected (`opts-utils` removed in `07de1b0`); `priority-list.md` milestone count corrected from 144 to 145 (83 done, 36 in progress, 23 open, 2 deferred, 1 obsolete) with sync notes. ADR-0003 remains only in the crate book (see its report). Git history keeps the deleted pages.
+- `2026-11-15` — Owner decision (`agent/size-limit`): source files max 150 lines of code (was 500 in standards and `size_check.py`, 350 in the ratchet). Ratchet regenerated: 736 files grandfathered; functions stay at 80.

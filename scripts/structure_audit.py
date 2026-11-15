@@ -9,8 +9,8 @@ Sub-commands (Python 3, no dependencies):
 
   report [--date YYYY-MM-DD] [--out FILE]  write the Markdown report (default
                                            docs/src/meta/structure-audit-<date>.md)
-  check                                    the ratchet: exit 1 when a file, inline-test file,
-                                           function (> 80 LOC), or signature allow grew beyond what
+  check                                    the ratchet: exit 1 when a file (> 150 LOC), function
+                                           (> 80 LOC), or signature allow grew beyond what
                                            docs/dev/structure-known.txt or
                                            docs/dev/function-known.txt records
   json                                     the measurements as JSON (for a cycle comparison)
@@ -26,10 +26,10 @@ MEASUREMENT RULES (standards.md §3.7 & §3.14):
     comments `//`, doc comments `///` and `//!`, block comments `/* */`, nested); every other line
     is *code*, including a line with code and a trailing comment, and a line inside a string.
   * the in-file unit tests (`#[cfg(test)] mod tests { .. }`) **count**: the standard says "lines of
-    code" of the file; any production file (`crates/*/src/**/*.rs`, excluding `tests.rs`) over
-    250 code lines that contains inline test code (`test_code > 0`) must move its `#[cfg(test)]`
-    module to a sibling `tests.rs` file (Rule R2).
-  * the hard file limit is 350 lines of code per file (Rule R1; target 150-200) and 80 lines of
+    code" of the file. A file with inline test code (`test_code > 0`) that is over the limit must
+    move its `#[cfg(test)]` module to a sibling `tests.rs` file (Rule R2, same 150-line threshold
+    as R1: the first split step).
+  * the hard file limit is 150 lines of code per file (Rule R1, standards.md §3.7) and 80 lines of
     code per function (Rule R3; target 40), plus signature-complexity allows
     (`too_many_arguments`, `type_complexity`, Rule R4).
   * *total* lines (what `wc -l` counts) are reported next to *code*, so the figures of the phase
@@ -54,11 +54,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 KNOWN = ROOT / "docs/dev/structure-known.txt"
 FN_KNOWN = ROOT / "docs/dev/function-known.txt"
-FILE_LIMIT = 350
-INLINE_TEST_LIMIT = 250
+FILE_LIMIT = 150
+# R2 uses the file limit: with a single 150-line threshold a file with inline tests is simply over
+# the limit; the separate message ("move #[cfg(test)] to tests.rs") is kept for those files.
+INLINE_TEST_LIMIT = FILE_LIMIT
 FN_LIMIT = 80
 FN_TARGET = 40
-REPORT_FILE_FLOOR = 350
+REPORT_FILE_FLOOR = 350  # the report table lists only the largest files; the ratchet lists all
 FN_FLOOR = 60
 SKIP_DIRS = {"golden", "fixtures", "target", ".git"}
 PUB_ITEM = re.compile(r"^\s*pub\s+(?:async\s+|const\s+|unsafe\s+|extern\s+\"C\"\s+)*(fn|struct|enum|trait|type|const|static|mod)\b")
@@ -431,7 +433,7 @@ def module_table(files: list[FileInfo]) -> list[dict]:
 
 
 # --------------------------------------------------------------------------------------------
-# Ratchet (R1: FILE_LIMIT=350, R2: INLINE_TEST_LIMIT=250 w/ test_code>0, R3: FN_LIMIT=80, R4: allows)
+# Ratchet (R1: FILE_LIMIT=150, R2: inline tests in a file over INLINE_TEST_LIMIT, R3: FN_LIMIT=80, R4: allows)
 # --------------------------------------------------------------------------------------------
 def has_inline_test_violation(f: FileInfo) -> bool:
     return f.is_library_path and f.code > INLINE_TEST_LIMIT and f.test_code > 0 and f.marker != "table"
@@ -490,22 +492,20 @@ def cmd_check(files: list[FileInfo]) -> int:
     for path, code in sorted(now.items()):
         f = by_path[path]
         if path not in known:
-            if f.code <= FILE_LIMIT and has_inline_test_violation(f):
-                print(
-                    f"FAIL {path}: {code} lines of code (with {f.test_code} in #[cfg(test)]), over the "
-                    f"{INLINE_TEST_LIMIT}-line inline-test limit and not in docs/dev/structure-known.txt "
-                    f"(move #[cfg(test)] to tests.rs)"
-                )
-            else:
-                print(
-                    f"FAIL {path}: {code} lines of code, over the {FILE_LIMIT}-line limit and not in "
-                    f"docs/dev/structure-known.txt (split it by concern, or record it with a reason)"
-                )
+            hint = (
+                f" (move its {f.test_code} #[cfg(test)] lines to tests.rs first)"
+                if has_inline_test_violation(f)
+                else ""
+            )
+            print(
+                f"FAIL {path}: {code} lines of code, over the {FILE_LIMIT}-line limit{hint} and not in "
+                f"docs/dev/structure-known.txt (split it by concern, or record it with a reason)"
+            )
             bad += 1
         elif code > known[path]:
             print(
                 f"FAIL {path}: grew from {known[path]} to {code} lines of code (it is over the "
-                f"{FILE_LIMIT}-line / {INLINE_TEST_LIMIT}-line inline-test limit; known files may only shrink)"
+                f"{FILE_LIMIT}-line limit; known files may only shrink)"
             )
             bad += 1
         elif code < known[path]:
@@ -540,12 +540,12 @@ def cmd_check(files: list[FileInfo]) -> int:
     for key in sorted(set(fn_known) - set(fn_now)):
         print(f"ok   {key}: no longer over the limit (remove it from docs/dev/function-known.txt with `seed`)")
 
-    over_350 = sum(1 for f in files if f.code > FILE_LIMIT and f.marker != "table")
-    inline_250 = sum(1 for f in files if has_inline_test_violation(f))
+    n_over_limit = sum(1 for f in files if f.code > FILE_LIMIT and f.marker != "table")
+    inline_count = sum(1 for f in files if has_inline_test_violation(f))
     fns_80 = sum(1 for k in fn_now if not k.endswith("::@allow"))
     allows = sum(v for k, v in fn_now.items() if k.endswith("::@allow"))
     print(
-        f"structure: {over_350} files over {FILE_LIMIT} LOC, {inline_250} prod files > {INLINE_TEST_LIMIT} LOC "
+        f"structure: {n_over_limit} files over {FILE_LIMIT} LOC, {inline_count} prod files > {INLINE_TEST_LIMIT} LOC "
         f"with inline tests, {fns_80} functions > {FN_LIMIT} LOC, {allows} signature allows, {bad} regression(s)"
     )
     return 1 if bad else 0
@@ -556,10 +556,9 @@ def cmd_seed(files: list[FileInfo]) -> int:
     now = over_limit(files)
     _, reasons = read_known()
     lines = [
-        f"# Files over the {FILE_LIMIT}-line limit (R1) or production files over {INLINE_TEST_LIMIT} lines with inline",
-        "# #[cfg(test)] modules (R2, standards.md §3.7 & §3.14) that are tolerated for now.",
-        "# Format: <path> <lines of code>  # <reason or planned milestone>. A known file may only shrink;",
-        f"# a new file over {FILE_LIMIT} lines (or > {INLINE_TEST_LIMIT} lines with inline tests) fails `structure_audit.py check`.",
+        f"# Files over the {FILE_LIMIT}-line limit (R1, standards.md §3.7) grandfathered as of 2026-11-15.",
+        "# Format: <path> <lines of code>  # <reason>. A known file may only shrink;",
+        f"# a new file over {FILE_LIMIT} lines of code fails `structure_audit.py check`.",
         "# Regenerate (keeping the reasons) with `python3 scripts/structure_audit.py seed`.",
     ]
     for path, code in sorted(now.items()):
@@ -567,13 +566,13 @@ def cmd_seed(files: list[FileInfo]) -> int:
         if path in reasons and reasons[path]:
             reason = reasons[path]
         elif has_inline_test_violation(f) and f.code - f.test_code <= FILE_LIMIT:
-            reason = f"planned: M-0148 batch 1 (extract {f.test_code} inline test lines to tests.rs)"
+            reason = f"grandfathered: extract {f.test_code} inline test lines to tests.rs (then <= {FILE_LIMIT} LOC)"
         elif has_inline_test_violation(f):
-            reason = f"planned: M-0148 + M-0149 (extract {f.test_code} test lines to tests.rs, then split > {FILE_LIMIT} LOC)"
+            reason = f"grandfathered: extract {f.test_code} test lines to tests.rs, then split by concern to <= {FILE_LIMIT} LOC"
         elif "/examples/" in path or "/tests/" in path or path.endswith("/tests.rs"):
-            reason = "planned: M-0149 batch 2 (oversized test or example file: split by concern)"
+            reason = "grandfathered: oversized test or example file, split by concern"
         else:
-            reason = f"planned: M-0149 batch 2 (split production file > {FILE_LIMIT} LOC along concern boundaries)"
+            reason = f"grandfathered: split production file by concern to <= {FILE_LIMIT} LOC"
         lines.append(f"{path} {code}  # {reason}")
     KNOWN.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -615,7 +614,7 @@ def cmd_report(files: list[FileInfo], date: str, out: Path | None) -> int:
     total_lines = sum(f.total for f in files)
     code = sum(f.code for f in files)
     big = sorted(files, key=lambda f: -f.code)
-    thresholds = [250, 350, 400, 500, 800, 1000]
+    thresholds = sorted({FILE_LIMIT, 250, 350, 400, 500, 800, 1000})
     by_total = {t: sum(1 for f in files if f.total > t) for t in thresholds}
     by_code = {t: sum(1 for f in files if f.code > t) for t in thresholds}
     all_fns = [(f, fn) for f in files for fn in f.fns]
@@ -678,8 +677,8 @@ def cmd_report(files: list[FileInfo], date: str, out: Path | None) -> int:
     unb = [f.path for f in files if f.unbalanced]
     if unb:
         parts.append("\nFiles whose braces did not balance for the function scan (measure by hand): " + ", ".join(f"`{p}`" for p in unb) + "\n")
-    parts.append("\n## 8. Test files over 500 lines\n")
-    tests = sorted((f for f in files if f.is_test_file and f.total > 500), key=lambda f: -f.total)
+    parts.append(f"\n## 8. Test files over {FILE_LIMIT} lines of code\n")
+    tests = sorted((f for f in files if f.is_test_file and f.code > FILE_LIMIT), key=lambda f: -f.total)
     parts.append(md_table(["File", "total", "code", "`#[test]` count"], [[f"`{f.path}`", f.total, f.code, f.tests] for f in tests]) if tests else "None.")
     parts.append("\n## 9. How to read this\n")
     parts.append(f"The numbers come from a textual scan (blind spots in the script header). Pre-commit and CI run `check`, which enforces the four Phase 15 ratchets (`docs/dev/structure-known.txt` and `docs/dev/function-known.txt`): files over {FILE_LIMIT} lines of code, production files over {INLINE_TEST_LIMIT} lines with inline tests, functions over {FN_LIMIT} lines, and signature-complexity `#[allow]` attributes. Known items may shrink freely.\n")
