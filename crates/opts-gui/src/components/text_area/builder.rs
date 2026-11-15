@@ -1,0 +1,160 @@
+//! The builder of a [`TextArea`]: the node, the buffer, the frame and the text span children.
+
+use bevy::prelude::*;
+
+use crate::components::Button;
+use crate::interaction::{focus::Focusable, state::Focused};
+use crate::theme::{color::ColorRole, shape::RadiusLevel};
+use crate::tokens::components::{BackgroundRole, BorderRole, RadiusToken};
+
+use super::{TextArea, TextAreaSpan, TextAreaText, TextBuffer};
+
+/// Builder for a [`TextArea`].
+///
+/// # Example
+/// ```rust
+/// use opts_gui::prelude::*;
+/// use bevy::prelude::*;
+///
+/// fn spawn(mut commands: Commands) {
+///     TextAreaBuilder::new()
+///         .with_placeholder("Describe the issue")
+///         .autofocus(true)
+///         .spawn(&mut commands);
+/// }
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct TextAreaBuilder {
+    text: String,
+    placeholder: String,
+    autofocus: bool,
+    tab_index: usize,
+}
+
+impl TextAreaBuilder {
+    /// Creates an empty text area builder.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the initial text (cursor at the end).
+    #[must_use]
+    pub fn with_text(mut self, text: impl Into<String>) -> Self {
+        self.text = text.into();
+        self
+    }
+
+    /// Sets the placeholder shown while empty.
+    #[must_use]
+    pub fn with_placeholder(mut self, placeholder: impl Into<String>) -> Self {
+        self.placeholder = placeholder.into();
+        self
+    }
+
+    /// Focuses the area on spawn so the user can type immediately.
+    #[must_use]
+    pub fn autofocus(mut self, on: bool) -> Self {
+        self.autofocus = on;
+        self
+    }
+
+    /// Sets the tab-order index.
+    #[must_use]
+    pub fn with_tab_index(mut self, index: usize) -> Self {
+        self.tab_index = index;
+        self
+    }
+
+    fn components(self) -> (impl Bundle, impl Bundle) {
+        let style = Node {
+            flex_grow: 1.0,
+            width: Val::Percent(100.0),
+            min_height: Val::Px(80.0),
+            padding: UiRect::all(Val::Px(12.0)),
+            overflow: Overflow::clip(),
+            ..default()
+        };
+        (
+            (
+                (Button, style),
+                TextArea {
+                    buffer: TextBuffer::new(self.text),
+                    focused: self.autofocus,
+                    placeholder: self.placeholder,
+                    scroll_px: 0.0,
+                    blink_clock: 0.0,
+                },
+            ),
+            (
+                BackgroundRole(ColorRole::SurfaceVariant),
+                BorderRole(ColorRole::Outline),
+                RadiusToken(RadiusLevel::Small),
+                Focusable {
+                    tab_index: self.tab_index,
+                },
+            ),
+        )
+    }
+
+    /// Spawns the text node: the text before the cursor, with two child spans for the
+    /// cursor/selection and the text after it (see `view.rs`).
+    fn spawn_inner_text(p: &mut ChildSpawnerCommands) {
+        p.spawn((
+            Text::new(""),
+            TextFont {
+                font_size: FontSize::Px(16.0),
+                ..default()
+            },
+            TextLayout::new(Justify::Left, LineBreak::WordBoundary),
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(12.0),
+                right: Val::Px(12.0),
+                top: Val::Px(12.0),
+                ..default()
+            },
+            TextAreaText,
+        ))
+        .with_children(|t| {
+            for kind in [TextAreaSpan::Middle, TextAreaSpan::After] {
+                t.spawn((
+                    TextSpan::new(""),
+                    TextFont {
+                        font_size: FontSize::Px(16.0),
+                        ..default()
+                    },
+                    kind,
+                ));
+            }
+        });
+    }
+
+    /// Spawns the text area using top-level [`Commands`].
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
+        let autofocus = self.autofocus;
+        let (a, b) = self.components();
+        let root = commands.spawn((a, b)).id();
+        if autofocus {
+            commands.entity(root).insert(Focused);
+        }
+        commands.entity(root).with_children(|p| {
+            Self::spawn_inner_text(p);
+        });
+        root
+    }
+
+    /// Spawns the text area as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
+        let autofocus = self.autofocus;
+        let (a, b) = self.components();
+        let mut cmd = parent.spawn((a, b));
+        if autofocus {
+            cmd.insert(Focused);
+        }
+        cmd.with_children(|p| {
+            Self::spawn_inner_text(p);
+        });
+        cmd.id()
+    }
+}
