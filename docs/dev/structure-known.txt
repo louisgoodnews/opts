@@ -526,7 +526,6 @@ crates/opts-gui/examples/layout_demo.rs 153  # grandfathered: oversized test or 
 crates/opts-gui/src/actions.rs 203  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/checkbox.rs 283  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/combobox/search.rs 211  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-gui/src/components/combobox/search_tests.rs 294  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/datetime_select.rs 156  # grandfathered: extract 27 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-gui/src/components/modal.rs 156  # grandfathered: extract 35 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-gui/src/components/radio.rs 280  # grandfathered: split production file by concern to <= 150 LOC
@@ -555,7 +554,6 @@ crates/opts-gui/src/not_yet.rs 178  # grandfathered: split production file by co
 crates/opts-gui/src/patterns/list_model.rs 268  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/patterns/master_detail.rs 213  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/patterns/master_detail/spawn.rs 282  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-gui/src/patterns/master_detail_input.rs 291  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/patterns/master_detail_rows/item.rs 278  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/patterns/tests.rs 269  # grandfathered: oversized test or example file, split by concern
 crates/opts-gui/src/plugin.rs 168  # grandfathered: split production file by concern to <= 150 LOC
