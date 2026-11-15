@@ -527,7 +527,6 @@ crates/opts-gui/src/actions.rs 203  # grandfathered: split production file by co
 crates/opts-gui/src/components/combobox/search.rs 211  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/datetime_select.rs 156  # grandfathered: extract 27 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-gui/src/components/modal.rs 156  # grandfathered: extract 35 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-gui/src/components/radio.rs 280  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/switch.rs 263  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/text_area/buffer.rs 221  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/text_area/input.rs 201  # grandfathered: extract 82 inline test lines to tests.rs (then <= 150 LOC)

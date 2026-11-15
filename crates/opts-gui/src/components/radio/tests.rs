@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`radio.rs`).
 
 use super::*;
+use crate::interaction::activation::Activated;
 
 #[test]
 fn test_radio_builder_spawn() {
