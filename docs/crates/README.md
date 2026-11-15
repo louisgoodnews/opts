@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Scope** | Every crate in `crates/` — current and planned |
-| **Status** | 🟡 Proposed architecture — see [ADR-0003](adr/0003-layered-crate-architecture.md) |
+| **Status** | 🟡 Proposed architecture — see [ADR-0003](../src/adr/0003-layered-crate-architecture.md) |
 | **Last Updated** | 2026-10-04 |
 
 ---

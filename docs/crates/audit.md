@@ -73,7 +73,7 @@ flowchart LR
 | F10 | Root `src/main.rs` exists but the root manifest is a virtual workspace (no `[package]`) — the file is dead. | Delete it. |
 | F11 | No crate has a `//!` header, as required by Standards §3.8 / §3.11. | Add a one-paragraph header linking to the crate's page here. |
 | F12 | `rust-version` is set in `[workspace.package]` but not inherited by any crate. | Add `rust-version.workspace = true`; verify the MSRV against the chosen Bevy version. |
-| F13 | Doc drift: Standards §3.11 and PROMPTS.md say `docs/crates/<crate>.md`; the repository uses `docs/crates/<crate>/README.md` folders. Standards §2.11 lists only 5 of 13 crates. | Update both to the folder layout and to [ADR-0003](adr/0003-layered-crate-architecture.md) once accepted. |
+| F13 | Doc drift: Standards §3.11 and PROMPTS.md say `docs/crates/<crate>.md`; the repository uses `docs/crates/<crate>/README.md` folders. Standards §2.11 lists only 5 of 13 crates. | Update both to the folder layout and to [ADR-0003](../src/adr/0003-layered-crate-architecture.md) once accepted. |
 | F14 | No shared `[workspace.lints]`. | Add workspace lints (`clippy::unwrap_used`, `missing_docs`, …) and `[lints] workspace = true` everywhere. |
 
 ---
@@ -100,7 +100,7 @@ The plan is ordered so that **every step leaves the workspace building**, and it
 
 - [ ] Add `xtask` with `check-layers`; add `deny.toml` Bevy wrappers list.
 - [ ] Add `[workspace.lints]` (F14) and `//!` headers (F11).
-- [ ] Accept [ADR-0003](adr/0003-layered-crate-architecture.md); update Standards §2.11 and §3.11, PROMPTS.md (F13), and the `Parser Module` row in each format spec.
+- [ ] Accept [ADR-0003](../src/adr/0003-layered-crate-architecture.md); update Standards §2.11 and §3.11, PROMPTS.md (F13), and the `Parser Module` row in each format spec.
 
 ### Step 3 — Renames & layer folders *(start of Phase 2)*
 

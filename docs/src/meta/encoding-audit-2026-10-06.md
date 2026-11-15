@@ -123,19 +123,19 @@ Five files matched single high-byte or sub-signature search terms (`├`, `Ã¶`
 | `docs/crates/audit.md` | — | N/A | Clean |
 | `docs/crates/catalog.md` | — | N/A | Clean |
 | `docs/crates/conventions.md` | — | N/A | Clean |
-| `docs/crates/opts-assets/README.md` | — | N/A | Clean |
+| opts-assets (removed in 07de1b0; page deleted 2026-11-15) | — | N/A | Clean |
 | `docs/crates/opts-benchmark/README.md` | — | N/A | Clean |
 | `docs/crates/opts-bevy/README.md` | — | N/A | Clean |
 | `docs/crates/opts-cli/README.md` | — | N/A | Clean |
 | `docs/crates/opts-core/README.md` | — | N/A | Clean |
-| `docs/crates/opts-discovery/README.md` | — | N/A | Clean |
+| opts-discovery (removed in 07de1b0; page deleted 2026-11-15) | — | N/A | Clean |
 | `docs/crates/opts-game/README.md` | — | N/A | Clean |
-| `docs/crates/opts-graphics/README.md` | — | N/A | Clean |
+| opts-graphics (removed in 07de1b0; page deleted 2026-11-15) | — | N/A | Clean |
 | `docs/crates/opts-gui/README.md` | — | N/A | Clean |
-| `docs/crates/opts-parsers/README.md` | — | N/A | Clean |
+| opts-parsers (removed in 07de1b0; page deleted 2026-11-15) | — | N/A | Clean |
 | `docs/crates/opts-sim/README.md` | — | N/A | Clean |
 | `docs/crates/opts-tools/README.md` | — | N/A | Clean |
-| `docs/crates/opts-utils/README.md` | — | N/A | Clean |
+| opts-utils (removed in 07de1b0; page deleted 2026-11-15) | — | N/A | Clean |
 | `docs/dev/BOARD.md` | — | N/A | Clean |
 | `docs/dev/Documentation Freeze — Task Prompt.md` | — | N/A | Clean |
 | `docs/dev/PROMPTS.md` | `├` | ⚠️ | Ambiguous (Box drawing) |

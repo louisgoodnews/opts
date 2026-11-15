@@ -358,6 +358,10 @@ _Small items discovered during implementation that don't warrant a milestone._
 
 ---
 
+**2026-11-15 — ADR and crate-page reconciliation (`agent/adr-hardware`, docs only)**
+
+- [x] 🟡 **ADR-0003 moved to `docs/src/adr/` and marked superseded by ADR-0005; `opts-hardware` crate page added; dead links to removed crate pages marked** (docs, chore) — `docs/crates/adr/` removed (its only file moved by `git mv`); `docs/crates/opts-hardware.md` added and listed in the crate book; `docs/src/meta/link-integrity.md` and `encoding-audit-2026-10-06.md` cite the five removed pages as plain text (removed in `07de1b0`, page deleted 2026-11-15); `scripts/check_links.py`: 0 broken links.
+
 ### 🗄️ Recently Done
 
 **2026-11-15 — owner decision: 150-line file limit**
@@ -661,3 +665,4 @@ The agent should check these during P-001 audits:
 - `2026-11-15` — Roadmap status reconciliation (`agent/roadmap-status`, docs only): M-0150 done 2026-10-30 (`structure_audit.py check`: 0 functions over 80 LOC, 0 signature allows); M-0059 set to in progress (coverage-preserving mips exist, alpha-to-coverage absent); M-0144 mesh trees ticked (`80990224`); M-0077 thumbnails ticked (`c5de0b71`); M-0066 set to in progress, awaiting the project lead's acceptance; M-0112 scheduled AI marked done in the roadmap. M-0124's steering-effort sub-item left open for owner decision.
 - `2026-11-15` — Stale documentation (`agent/stale-docs`), started and completed in one session: the five pages of removed crates (`opts-utils`, `opts-parsers`, `opts-discovery`, `opts-assets`, `opts-graphics`) deleted from the crate book, with its SUMMARY, README and catalog corrected; `opts-core` page rewritten as the temporary facade; phase-0 workspace text corrected (`opts-utils` removed in `07de1b0`); `priority-list.md` milestone count corrected from 144 to 145 (83 done, 36 in progress, 23 open, 2 deferred, 1 obsolete) with sync notes. ADR-0003 remains only in the crate book (see its report). Git history keeps the deleted pages.
 - `2026-11-15` — Owner decision (`agent/size-limit`): source files max 150 lines of code (was 500 in standards and `size_check.py`, 350 in the ratchet). Ratchet regenerated: 736 files grandfathered; functions stay at 80.
+- `2026-11-15` — ADR-0003 moved from `docs/crates/adr/` to `docs/src/adr/` and marked superseded by ADR-0005 (`agent/adr-hardware`); `opts-hardware` crate page added (every workspace member now has a crate page); the five removed-crate page references in the meta audit records made plain text.

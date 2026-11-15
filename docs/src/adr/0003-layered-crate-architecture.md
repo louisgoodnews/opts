@@ -3,11 +3,13 @@
 | Metadata | Value |
 | :--- | :--- |
 | **ADR ID** | 0003 |
-| **Status** | 🟡 Proposed |
+| **Status** | 🔄 Superseded by ADR-0005 |
 | **Date** | 2026-10-04 |
 | **Deciders** | OPTS maintainers |
 | **Supersedes** | None (amends the crate-boundary rules in Coding Standards §2.11) |
-| **Superseded by** | None |
+| **Superseded by** | [ADR-0005](0005-crate-architecture.md) |
+
+> **Note:** [ADR-0005](0005-crate-architecture.md) (Workspace Crate Architecture & Boundary Enforcement, accepted) supersedes this layered proposal in practice. The body below is kept unchanged as the historical record.
 
 ---
 
@@ -20,18 +22,18 @@ The workspace has grown from the five crates described in [Coding Standards §2.
 - Two crates claim the CLI (`opts-cli`, `opts-tools`), and two binaries share the name `opts-game`.
 - The workspace currently fails to load because of undeclared workspace dependencies.
 
-Meanwhile the [Vision](../../src/vision.md) asks for a platform where every subsystem is replaceable, and the roadmap adds GTFS/OSM import, a script VM, an editor and multiplayer. All crates are still empty, so restructuring now is free; later it is expensive. Full findings: [Workspace Audit](../audit.md).
+Meanwhile the [Vision](../../src/vision.md) asks for a platform where every subsystem is replaceable, and the roadmap adds GTFS/OSM import, a script VM, an editor and multiplayer. All crates are still empty, so restructuring now is free; later it is expensive. Full findings: [Workspace Audit](../../crates/audit.md).
 
 ## ✅ Decision
 
-Adopt the architecture described in [Proposed Architecture](../architecture.md):
+Adopt the architecture described in [Proposed Architecture](../../crates/architecture.md):
 
 1. **Seven layers** — Foundation, Formats, Model, Pipeline, Simulation, Engine adapters, Applications — plus dev-only crates, with the allowed-dependency matrix defined there.
 2. **Formats and Model are decoupled.** Parsers produce format ASTs; the domain model is format-agnostic; only Pipeline crates translate between them. Consequently, parsers move out of `opts-core`.
 3. **Bevy only in the Engine and Application layers**, in crates whose name contains `bevy` (plus applications). This replaces "only `opts-bevy` depends on Bevy".
 4. **Siblings communicate via `*-api` / `*-core` crates**; facades (`opts-formats`, `opts-sim`, `opts-bevy`) carry no logic.
 5. **Rules are machine-checked** via `[package.metadata.opts] layer` + `cargo xtask check-layers`, and `cargo-deny` for Bevy.
-6. **Crates are created on demand** — the [catalog](../catalog.md) is a map, not a backlog.
+6. **Crates are created on demand** — the [catalog](../../crates/catalog.md) is a map, not a backlog.
 
 ## 🔀 Alternatives Considered
 
@@ -60,5 +62,5 @@ Adopt the architecture described in [Proposed Architecture](../architecture.md):
 
 - Update Coding Standards §2.11 (crate boundaries), §3.4–3.6 (parser location `opts_core::formats` → `opts_fmt_*`), §3.11 (crate doc path).
 - Update the **Parser Crate / Parser Module** rows of every format specification.
-- Execute the [migration plan](../audit.md#-migration-plan).
+- Execute the [migration plan](../../crates/audit.md#-migration-plan).
 - Move this ADR to `docs/src/adr/` alongside ADR-0001/0002 once accepted, if the project prefers a single ADR index.

@@ -28,16 +28,16 @@
 | `docs/crates/opts-sim/README.md` | 58 | `Phase 4 roadmap` | `../../roadmap/phase-4/` | Drift | Fixed to `../../src/roadmap/phase-4/README.md` |
 | `docs/crates/opts-tools/README.md` | 54 | `Vision — A Modding Platform` | `../../vision.html` | Drift / Mismatch | Fixed to `../../src/vision.md` |
 | `docs/crates/adr/0003-layered-crate-architecture.md` | 23 | `Vision` | `../../vision.html` | Drift / Mismatch | Fixed to `../../src/vision.md` |
-| `docs/crates/opts-assets/README.md` | 52 | `Texture formats` | `../../formats/textures.html` | Drift / Mismatch | Fixed to `../../src/formats/textures.md` |
+| opts-assets (removed in 07de1b0; page deleted 2026-11-15) | 52 | `Texture formats` | `../../formats/textures.html` | Drift / Mismatch | Fixed to `../../src/formats/textures.md` |
 | `docs/crates/opts-game/README.md` | 50 | `Vision — Stage 3 "Driver"` | `../../vision.html` | Drift / Mismatch | Fixed to `../../src/vision.md` |
-| `docs/crates/opts-parsers/README.md` | 56 | `Format overview` | `../../formats/overview.html` | Drift / Mismatch | Fixed to `../../src/formats/overview.md` |
-| `docs/crates/opts-parsers/README.md` | 57 | `.sco spec` | `../../formats/text/sco.html` | Drift / Mismatch | Fixed to `../../src/formats/text/sco.md` |
-| `docs/crates/opts-parsers/README.md` | 57 | `.o3d spec` | `../../formats/binary/o3d.html` | Drift / Mismatch | Fixed to `../../src/formats/binary/o3d.md` |
-| `docs/crates/opts-discovery/README.md` | 55 | `Format Inventory` | `../../formats/inventory.html` | Drift / Mismatch | Fixed to `../../src/formats/inventory.md` |
+| opts-parsers (removed in 07de1b0; page deleted 2026-11-15) | 56 | `Format overview` | `../../formats/overview.html` | Drift / Mismatch | Fixed to `../../src/formats/overview.md` |
+| opts-parsers (removed in 07de1b0; page deleted 2026-11-15) | 57 | `.sco spec` | `../../formats/text/sco.html` | Drift / Mismatch | Fixed to `../../src/formats/text/sco.md` |
+| opts-parsers (removed in 07de1b0; page deleted 2026-11-15) | 57 | `.o3d spec` | `../../formats/binary/o3d.html` | Drift / Mismatch | Fixed to `../../src/formats/binary/o3d.md` |
+| opts-discovery (removed in 07de1b0; page deleted 2026-11-15) | 55 | `Format Inventory` | `../../formats/inventory.html` | Drift / Mismatch | Fixed to `../../src/formats/inventory.md` |
 | `docs/crates/opts-benchmark/README.md` | 37 | `ADR-0002` | `../../adr/0002-clean-room-policy.html` | Drift / Mismatch | Fixed to `../../src/adr/0002-clean-room-policy.md` |
 | `docs/crates/opts-benchmark/README.md` | 49 | `ADR-0002: Clean-Room Policy` | `../../adr/0002-clean-room-policy.html` | Drift / Mismatch | Fixed to `../../src/adr/0002-clean-room-policy.md` |
-| `docs/crates/opts-graphics/README.md` | 53 | `.o3d spec` | `../../formats/binary/o3d.html` | Drift / Mismatch | Fixed to `../../src/formats/binary/o3d.md` |
-| `docs/crates/opts-graphics/README.md` | 53 | `Texture property files` | `../../formats/text/texture-cfg.html` | Drift / Mismatch | Fixed to `../../src/formats/text/texture-cfg.md` |
+| opts-graphics (removed in 07de1b0; page deleted 2026-11-15) | 53 | `.o3d spec` | `../../formats/binary/o3d.html` | Drift / Mismatch | Fixed to `../../src/formats/binary/o3d.md` |
+| opts-graphics (removed in 07de1b0; page deleted 2026-11-15) | 53 | `Texture property files` | `../../formats/text/texture-cfg.html` | Drift / Mismatch | Fixed to `../../src/formats/text/texture-cfg.md` |
 | `docs/src/adr/template.md` | 128 | `Related ADR-XXXX` | `./XXXX-title.md` | Placeholder | Preserved as template example |
 | `docs/dev/Documentation Freeze — Task Prompt.md` | 67 | `text` | `path` | Syntax Example | Preserved as prompt markdown example |
 
