@@ -2,6 +2,8 @@
 
 use super::*;
 use opts_core::formats::map::{AiLists, UnschedGroup};
+use opts_core::formats::vehicles::BusManifest;
+use opts_traffic::VehicleClass;
 
 fn lists() -> AiLists {
     AiLists::parse(
