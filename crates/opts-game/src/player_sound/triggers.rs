@@ -1,6 +1,16 @@
 //! One-shot triggers, clip preloading, and gain/speed smoothing for player vehicle sounds.
 
-use super::*;
+use bevy::prelude::*;
+use opts_bevy::audio::{SoundBus, SoundEmitter};
+use opts_bevy::{MainCamera, VehicleScripts};
+
+use crate::audio_content::{ClipLoader, ClipState};
+use crate::sound_logic::{conditions_hold, level, viewpoint_allows, Playback};
+
+use super::listener::listener_in_cabin;
+use super::steps::variable;
+use super::stream::stream_player_voices;
+use super::types::{PlayerAudioStats, PlayerVoice};
 
 /// Starts decoding the files of the one-shots (doors, switches, brakes, the horn's start and end)
 /// as soon as the voices exist: the first ask of a clip that is still undecoded is silent
