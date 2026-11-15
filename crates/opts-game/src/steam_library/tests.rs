@@ -1,4 +1,6 @@
+use super::roots::registry_value;
 use super::*;
+use std::path::{Path, PathBuf};
 
 /// The layout Steam writes since 2021 (shortened from a real `libraryfolders.vdf`).
 const CURRENT: &str = r#""libraryfolders"
