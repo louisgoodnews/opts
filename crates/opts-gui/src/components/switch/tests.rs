@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`switch.rs`).
 
 use super::*;
+use crate::interaction::{activation::Activated, events::SwitchToggled};
 
 #[test]
 fn test_switch_builder_spawn() {
