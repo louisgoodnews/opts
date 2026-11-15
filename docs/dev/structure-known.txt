@@ -66,7 +66,6 @@ crates/opts-bevy/src/host_callbacks/script_texture.rs 244  # grandfathered: spli
 crates/opts-bevy/src/host_callbacks/tests.rs 261  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/hot_reload/events.rs 184  # grandfathered: extract 46 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-bevy/src/hot_reload/mod.rs 187  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/human.rs 279  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/install.rs 230  # grandfathered: extract 53 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-bevy/src/lib.rs 185  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/light_cones/render.rs 180  # grandfathered: split production file by concern to <= 150 LOC
