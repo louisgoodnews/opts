@@ -138,7 +138,6 @@ crates/opts-bevy/tests/coords_sync.rs 182  # grandfathered: oversized test or ex
 crates/opts-bevy/tests/hot_reload.rs 200  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/light_cones_content.rs 156  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/mesh_loader.rs 216  # grandfathered: oversized test or example file, split by concern
-crates/opts-bevy/tests/reporting.rs 266  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/route_service.rs 226  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/scenery_runtime.rs 212  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/spline_winding.rs 195  # grandfathered: oversized test or example file, split by concern
