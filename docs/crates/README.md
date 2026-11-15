@@ -36,16 +36,14 @@ It complements rustdoc rather than duplicating it:
 
 ## 🗂️ Current Crates at a Glance
 
+> [!WARNING]
+> This table is the **2026-10-04 proposal** and is no longer the workspace state. The five crates it listed as `opts-utils`, `opts-parsers`, `opts-discovery`, `opts-assets` and `opts-graphics` were removed and their pages deleted. For the live crate graph see [Crate Graph](../src/architecture/crate-graph.md) and the [Crate Catalog](catalog.md).
+
 | Crate | Kind | Proposed layer | Proposed fate |
 | :--- | :--- | :--- | :--- |
-| [`opts-utils`](opts-utils/) | lib | Foundation | ✅ Keep — strictly minimal |
 | [`opts-core`](opts-core/) | lib | Model | 🔁 Repurpose — domain model only, parsers move out |
-| [`opts-parsers`](opts-parsers/) | lib | Formats | 🔁 Becomes the `opts-formats` facade over `opts-fmt-*` |
-| [`opts-discovery`](opts-discovery/) | lib | Pipeline | ✅ Keep |
-| [`opts-assets`](opts-assets/) | lib | Pipeline | 🔁 Repurpose — Bevy-free asset catalog |
 | [`opts-sim`](opts-sim/) | lib | Simulation | ✅ Keep — becomes facade over `opts-sim-*` |
 | [`opts-bevy`](opts-bevy/) | lib | Engine | ✅ Keep — becomes the `OptsPlugins` group |
-| [`opts-graphics`](opts-graphics/) | bin ⚠️ | Engine | 🔁 Convert to lib → `opts-bevy-render` |
 | [`opts-gui`](opts-gui/) | lib | Engine | 🔁 Rename → `opts-bevy-ui` |
 | [`opts-game`](opts-game/) | bin | Application | ✅ Keep |
 | [`opts-cli`](opts-cli/) | lib | Application | 🔁 Becomes the `opts` binary |
@@ -55,7 +53,7 @@ It complements rustdoc rather than duplicating it:
 Legend: ✅ keep as-is · 🔁 rename / repurpose / restructure · 🆕 planned · 💭 speculative · ⚠️ currently broken or rule-violating
 
 > [!NOTE]
-> All crates are empty skeletons today. That is the best moment to fix the crate graph — it costs nothing to move code that does not exist yet.
+> The statements about empty skeletons are historical (2026-10-04). The crate graph has since been restructured; see the catalog for the current state.
 
 ---
 
