@@ -1,5 +1,6 @@
 //! Unit tests of `accent`.
 
+use crate::theme::contrast::parse_hex;
 use super::*;
 use crate::theme::contrast::contrast_ratio;
 
