@@ -71,7 +71,6 @@ crates/opts-bevy/src/human.rs 279  # grandfathered: split production file by con
 crates/opts-bevy/src/install.rs 230  # grandfathered: extract 53 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-bevy/src/instancing.rs 281  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/lib.rs 185  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/light_cones/pool.rs 284  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/light_cones/render.rs 180  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/light_cones/tests/mapping.rs 156  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/light_quality.rs 196  # grandfathered: split production file by concern to <= 150 LOC
