@@ -86,7 +86,6 @@ crates/opts-bevy/src/moon.rs 184  # grandfathered: split production file by conc
 crates/opts-bevy/src/moon/tests.rs 202  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/mouse_driving/tests.rs 165  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/reflections.rs 252  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/render_stats.rs 263  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/reporting/modal.rs 245  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/route/handle.rs 171  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/scene_trace/types.rs 201  # grandfathered: split production file by concern to <= 150 LOC
