@@ -2,6 +2,9 @@
 
 mod view_distance_tests {
     use super::super::*;
+    use bevy::prelude::*;
+
+    use crate::settings::GameSettings;
 
     fn settings(value: Option<&str>) -> GameSettings {
         let mut s = GameSettings::default();
@@ -79,6 +82,9 @@ mod view_distance_tests {
 
 mod audio_tests {
     use super::super::*;
+    use bevy::prelude::*;
+
+    use crate::settings::GameSettings;
 
     #[test]
     fn the_volume_settings_reach_the_engine() {
@@ -108,6 +114,9 @@ mod audio_tests {
 
 mod shadow_detail_tests {
     use super::super::*;
+    use bevy::prelude::*;
+
+    use crate::settings::GameSettings;
 
     fn detail(value: Option<&str>) -> Option<f32> {
         let mut s = GameSettings::default();
