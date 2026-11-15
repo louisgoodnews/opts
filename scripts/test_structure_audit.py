@@ -179,6 +179,34 @@ class Fixture(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("crates/demo/src/small.rs::@allow: grew from 1 to 2", out)
 
+    def test_test_and_example_files_are_held_to_the_same_150_line_limit(self):
+        # tests/ and examples/ files are not exempt: over 150 LOC fails unless grandfathered.
+        (self.root / "crates/demo/tests").mkdir(parents=True)
+        (self.root / "crates/demo/examples").mkdir(parents=True)
+        over = "".join(f"const T{i}: u32 = {i};\n" for i in range(151))
+        (self.root / "crates/demo/tests/big_it.rs").write_text(over)
+        (self.root / "crates/demo/examples/big_ex.rs").write_text(over)
+        code, out = run(self.root, "check")
+        self.assertEqual(code, 1)
+        self.assertIn("crates/demo/tests/big_it.rs: 151 lines of code", out)
+        self.assertIn("crates/demo/examples/big_ex.rs: 151 lines of code", out)
+        # seeding grandfathers them with the test/example reason; check then passes
+        self.assertEqual(run(self.root, "seed")[0], 0)
+        known = (self.root / "docs/dev/structure-known.txt").read_text()
+        self.assertIn("crates/demo/tests/big_it.rs 151", known)
+        self.assertIn("crates/demo/examples/big_ex.rs 151", known)
+        self.assertEqual(run(self.root, "check")[0], 0)
+        # a grandfathered test file may not grow
+        (self.root / "crates/demo/tests/big_it.rs").write_text(over + "const X: u32 = 1;\n")
+        code, out = run(self.root, "check")
+        self.assertEqual(code, 1)
+        self.assertIn("crates/demo/tests/big_it.rs: grew from 151 to 152", out)
+        # and the report lists it in the test-and-example section
+        out_md = self.root / "report.md"
+        run(self.root, "report", "--date", "2000-01-01", "--out", str(out_md))
+        self.assertIn("## 8. Test and example files over 150 lines of code", out_md.read_text())
+        self.assertIn("`crates/demo/examples/big_ex.rs`", out_md.read_text())
+
     def test_show_prints_the_counts_of_the_named_files(self):
         code, out = run(self.root, "show", "crates/demo/src/small.rs")
         self.assertEqual(code, 0)

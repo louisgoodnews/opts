@@ -636,7 +636,7 @@ Each file is under 150 lines of code and has a single concern.
 **No `.rs` source file exceeds 150 lines of code**, excluding doc
 comments, other comments and blank lines. Test code counts: a
 `#[cfg(test)]` module is part of its file's total. Functions are held
-to the separate 80-line rule of §1.6.
+to the separate 80-line rule of §1.6. The 150-line rule covers test and example files too (`crates/*/tests/`, `crates/*/examples/`, `tests.rs` modules), with no larger limit for them.
 
 **Why 150?** A file this size fits in one read by a reader or an agent,
 and a single concern usually fits in it. The rule is set by the
