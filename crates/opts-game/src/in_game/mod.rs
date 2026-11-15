@@ -29,8 +29,10 @@ use crate::in_game::hud::handle_hud_interactions;
 use crate::in_game::loading_pipeline::{handle_loading_interactions, update_loading_progress};
 use crate::in_game::loading_ui::spawn_loading_screen_ui;
 use crate::new_game_screen::types::NewGameSetup;
+use pause_toggle::toggle_pause;
 
 mod formation_menu;
+mod pause_toggle;
 mod session;
 mod vehicle_menu;
 
@@ -317,25 +319,3 @@ impl Plugin for InGamePlugin {
     }
 }
 
-/// `P` pauses and resumes the simulation (virtual time; the free camera and the HUD keep
-/// running). Ignored while the F1 report modal is open, whose text field takes the key.
-fn toggle_pause(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    menu: Option<Res<opts_bevy::reporting::MenuModalActive>>,
-    report: Option<Res<State<opts_bevy::reporting::ReportModalState>>>,
-    mut time: ResMut<Time<Virtual>>,
-) {
-    if report.is_some_and(|r| *r.get() != opts_bevy::reporting::ReportModalState::Inactive)
-        || menu.is_some_and(|m| m.0)
-        || !keyboard.just_pressed(KeyCode::KeyP)
-    {
-        return;
-    }
-    if time.is_paused() {
-        time.unpause();
-        tracing::info!("simulation resumed [P]");
-    } else {
-        time.pause();
-        tracing::info!("simulation paused [P]");
-    }
-}
