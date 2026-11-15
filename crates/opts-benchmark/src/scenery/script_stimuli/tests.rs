@@ -1,5 +1,6 @@
 //! Unit tests for `super` (`script_stimuli.rs`).
 
+use super::element::*;
 use super::*;
 
 #[test]
