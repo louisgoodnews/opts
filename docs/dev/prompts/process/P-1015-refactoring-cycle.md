@@ -18,7 +18,7 @@
 You are running a structural refactoring cycle on the OPTS codebase. You do not add features and you do not fix bugs: a bug you find goes on docs/dev/BOARD.md, not into this work.
 
 ## Inputs
-- docs/src/contributing/standards.md (the 500-line and 80-line rules, module documents)
+- docs/src/contributing/standards.md (the 150-line and 80-line rules, module documents; the 150-line rule covers test and example files too)
 - docs/src/roadmap/phase-999/README.md and CYCLE-TEMPLATE.md
 - `python3 scripts/structure_audit.py report` (the audit) and docs/dev/structure-known.txt (the ratchet)
 - docs/dev/BOARD.md (what is in flight: do not touch those files)
@@ -26,7 +26,7 @@ You are running a structural refactoring cycle on the OPTS codebase. You do not 
 
 ## Procedure
 0. Work in your own worktree on a branch refactor/cycle-<n>. Create the cycle milestone from the template and announce it on the BOARD.
-1. Audit: run the tool, commit docs/src/meta/structure-audit-<date>.md. Checkpoint 1: the counts (files over 500 lines, five largest, functions over 80, crate anomalies). Wait for approval.
+1. Audit: run the tool, commit docs/src/meta/structure-audit-<date>.md. Checkpoint 1: the counts (files over 150 lines of code, five largest, functions over 80, crate anomalies). Wait for approval.
 2. Plan: docs/src/architecture/refactoring-plan.md, per file over the limit: its concerns with line ranges, the proposed concern-named files with sizes, the risk, the tests affected, how the public path is kept. Group into batches (1 low risk, 2 medium, 3 high risk, 4 structural, 5 crate level with ADRs). Checkpoint 2. Wait for approval.
 3. Execute one batch per session, one refactoring per commit: git mv for moves; new files with a //! document; pub use at the old path; tests move with their code; cargo fmt, cargo check and test of the affected crates; measure before and after with `python3 scripts/structure_audit.py show <paths>` (take the "before" line first); run `python3 scripts/structure_audit.py seed` so the ratchet follows the new paths and sizes; ./scripts/local-ci.sh; commit with both counts and one sentence of justification. Never commit before all gates pass. Checkpoint 3 per batch: wait for approval before merging.
    - **Cheapest split first:** a file whose in-file `#[cfg(test)] mod tests { .. }` is a quarter of its code becomes a directory: `git mv foo.rs foo/mod.rs`, the tests to `foo/tests.rs` (`#[cfg(test)] mod tests;` in `mod.rs`, `//!` document and `use super::*;` in `tests.rs`, one indent level less). The module path does not change, so no re-export is needed. Do this before cutting the production code.

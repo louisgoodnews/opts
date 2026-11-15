@@ -29,6 +29,10 @@ MEASUREMENT RULES (standards.md §3.7 & §3.14):
     code" of the file. A file with inline test code (`test_code > 0`) that is over the limit must
     move its `#[cfg(test)]` module to a sibling `tests.rs` file (Rule R2, same 150-line threshold
     as R1: the first split step).
+  * test and example files (`crates/*/tests/**`, `crates/*/examples/**`, `tests.rs` modules) are
+    measured against the same 150-line file limit as production files (R1) and the same 80-line
+    function limit (R3): no separate, larger limit exists for them. Their entries are in
+    docs/dev/structure-known.txt like any other grandfathered file.
   * the hard file limit is 150 lines of code per file (Rule R1, standards.md §3.7) and 80 lines of
     code per function (Rule R3; target 40), plus signature-complexity allows
     (`too_many_arguments`, `type_complexity`, Rule R4).
@@ -332,7 +336,12 @@ def measure(path: Path) -> FileInfo | None:
     info.test_code = sum(1 for k in in_test if k < len(classes) and classes[k] == "code")
     name = parts[-1]
     in_src = len(parts) > 3 and parts[2] == "src"
-    info.is_test_file = ("tests" in parts and not in_src) or name == "tests.rs" or "tests" in parts[3:-1]
+    info.is_test_file = (
+        ("tests" in parts and not in_src)
+        or ("examples" in parts and not in_src)
+        or name == "tests.rs"
+        or "tests" in parts[3:-1]
+    )
     info.is_library_path = in_src and not info.is_test_file and name != "main.rs" and "bin" not in parts[3:-1]
     info.tests = len(re.findall(r"#\[(?:tokio::)?test\b", text))
     for k, line in enumerate(cleaned):
@@ -677,7 +686,7 @@ def cmd_report(files: list[FileInfo], date: str, out: Path | None) -> int:
     unb = [f.path for f in files if f.unbalanced]
     if unb:
         parts.append("\nFiles whose braces did not balance for the function scan (measure by hand): " + ", ".join(f"`{p}`" for p in unb) + "\n")
-    parts.append(f"\n## 8. Test files over {FILE_LIMIT} lines of code\n")
+    parts.append(f"\n## 8. Test and example files over {FILE_LIMIT} lines of code\n")
     tests = sorted((f for f in files if f.is_test_file and f.code > FILE_LIMIT), key=lambda f: -f.total)
     parts.append(md_table(["File", "total", "code", "`#[test]` count"], [[f"`{f.path}`", f.total, f.code, f.tests] for f in tests]) if tests else "None.")
     parts.append("\n## 9. How to read this\n")

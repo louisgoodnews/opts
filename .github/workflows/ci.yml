@@ -54,7 +54,7 @@ jobs:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --workspace --no-deps
 
-      - name: Size report (standards.md limits; informational until the splits land)
+      - name: Size report (standards.md limits; enforced by structure_audit.py check; size_check.py is a report)
         run: python3 scripts/size_check.py
 
       - name: Check compilation (all targets)
