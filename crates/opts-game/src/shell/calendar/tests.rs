@@ -2,6 +2,8 @@
 
 use super::*;
 
+use opts_bevy::CalendarDate;
+
 #[test]
 fn the_date_stays_valid_when_a_month_changes() {
     let mut d = CalendarDate::new(1989, 1, 31);
