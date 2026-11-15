@@ -3,21 +3,19 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use crate::components::button::ButtonBuilder;
 use crate::components::text_field::M3TextField;
-use crate::icons::icon_text;
-use crate::interaction::state::Disabled;
-use crate::l10n::{wizard_keys::md, L10nArgs, L10nKey, Localization};
-use crate::patterns::glyphs;
+use crate::l10n::{L10nArgs, L10nKey, Localization};
 use crate::patterns::list_model::{first_item, RowLayout};
-use crate::patterns::master_detail::{
-    rows_of, MasterChipButton, MasterClearButton, MasterDetail, MasterDetailSelected,
-    MasterDetailView, Rendered,
-};
+use crate::patterns::master_detail::{rows_of, MasterDetail, MasterDetailSelected, MasterDetailView, Rendered};
 use crate::patterns::master_detail_rows::{spawn_rows, SpawnRowsContext};
-use crate::theme::{color::ColorRole, spacing::LayoutClass};
-use crate::tokens::components::ForegroundRole;
-use crate::ui_id::{slug, UiId};
+
+mod chips;
+mod chrome;
+mod notice;
+
+use chips::{render_chips, sync_clear_button};
+use chrome::{adapt_layout, place_content};
+use notice::{update_notice, update_placeholder};
 
 /// Viewport height assumed while no layout exists yet (headless tests, the first frame).
 const FALLBACK_VIEWPORT: f32 = 400.0;
@@ -133,220 +131,6 @@ pub(super) fn render(mut commands: Commands, mut params: MasterDetailRenderParam
         update_notice(&mut params.nodes, &mut params.texts, model, &view);
         update_placeholder(&params.loc, &view, model, &mut params.text_fields);
         render_chips(&mut commands, root, &mut view, model);
-    }
-}
-
-fn set_if<T: PartialEq>(slot: &mut T, value: T) {
-    if *slot != value {
-        *slot = value;
-    }
-}
-
-fn place_content(
-    nodes: &mut Query<&mut Node>,
-    view: &MasterDetailView,
-    parts: crate::patterns::MasterDetailParts,
-    height: f32,
-) {
-    let total = view.layout.total();
-    if let Ok(mut n) = nodes.get_mut(parts.content) {
-        set_if(&mut n.height, Val::Px(total));
-        set_if(&mut n.top, Val::Px(-view.scroll));
-    }
-    let scrollable = total > height + 0.5;
-    if let Ok(mut n) = nodes.get_mut(parts.track) {
-        set_if(
-            &mut n.display,
-            if scrollable {
-                Display::Flex
-            } else {
-                Display::None
-            },
-        );
-    }
-    if scrollable {
-        let track = (height - 4.0).max(24.0);
-        let thumb = (track * height / total).clamp(24.0, track);
-        let max = view.layout.max_scroll(height).max(1.0);
-        let top = (track - thumb) * (view.scroll / max);
-        if let Ok(mut n) = nodes.get_mut(parts.thumb) {
-            set_if(&mut n.height, Val::Px(thumb));
-            set_if(&mut n.top, Val::Px(top));
-        }
-    }
-}
-
-fn update_notice(
-    nodes: &mut Query<&mut Node>,
-    texts: &mut Query<(&mut L10nKey, &mut L10nArgs)>,
-    model: &MasterDetail,
-    view: &MasterDetailView,
-) {
-    let parts = view.parts;
-    let empty_rows = !view.rows.iter().any(|r| r.is_item());
-    if let Ok(mut n) = nodes.get_mut(parts.notice) {
-        set_if(
-            &mut n.display,
-            if empty_rows {
-                Display::Flex
-            } else {
-                Display::None
-            },
-        );
-    }
-    if let Ok((mut key, mut args)) = texts.get_mut(parts.notice_text) {
-        if model.entries.is_empty() {
-            set_if(&mut key.0, view.config.empty_key);
-        } else {
-            set_if(&mut key.0, md::NO_RESULTS);
-            let a = L10nArgs::one("query", model.query.clone()); // l10n-ok: id or variable name
-            if *args != a {
-                *args = a;
-            }
-        }
-    }
-}
-
-fn update_placeholder(
-    loc: &Localization,
-    view: &MasterDetailView,
-    model: &MasterDetail,
-    text_fields: &mut Query<&mut M3TextField>,
-) {
-    let args = [("count".to_string(), model.entries.len().into())]; // l10n-ok: variable name
-    let want = loc.t_args(view.config.search_key, &args);
-    if let Ok(mut f) = text_fields.get_mut(view.parts.search) {
-        if f.placeholder != want {
-            f.placeholder = want;
-        }
-    }
-}
-
-fn render_chips(
-    commands: &mut Commands,
-    root: Entity,
-    view: &mut MasterDetailView,
-    model: &MasterDetail,
-) {
-    let sig = (model.chips.clone(), model.active_chips.clone());
-    if view.rendered_chips.as_ref() == Some(&sig) {
-        return;
-    }
-    for e in std::mem::take(&mut view.chip_entities) {
-        commands.entity(e).despawn();
-    }
-    let prefix = view.config.prefix;
-    let mut spawned = Vec::new();
-    for chip in &model.chips {
-        let active = model.active_chips.contains(&chip.tag);
-        let builder = if active {
-            ButtonBuilder::tonal(chip.label.clone())
-        } else {
-            ButtonBuilder::outlined(chip.label.clone())
-        };
-        let button = builder.spawn(commands);
-        commands.entity(button).insert((
-            MasterChipButton {
-                root,
-                tag: chip.tag.clone(),
-            },
-            UiId::new(format!("{prefix}.chip.{}", slug(&chip.tag))),
-        ));
-        if active {
-            let mark = commands
-                .spawn((
-                    icon_text(glyphs::CHECK, 16.0, TextColor::default().0),
-                    ForegroundRole(ColorRole::OnSecondaryContainer),
-                    crate::ui_tree::A11yHidden,
-                ))
-                .id();
-            commands.entity(button).add_child(mark);
-        }
-        spawned.push(button);
-    }
-    commands.entity(view.parts.chips).add_children(&spawned);
-    view.chip_entities = spawned;
-    view.rendered_chips = Some(sig);
-}
-
-/// Stacks the pattern in the Compact layout class and puts the list beside the detail otherwise.
-pub(super) fn adapt_layout(
-    class: Option<Res<LayoutClass>>,
-    roots: Query<&MasterDetailView>,
-    mut nodes: Query<&mut Node>,
-) {
-    let Some(class) = class else { return };
-    let compact = *class == LayoutClass::Compact;
-    for view in &roots {
-        let p = view.parts;
-        let root = p.root;
-        if let Ok(mut n) = nodes.get_mut(root) {
-            set_if(
-                &mut n.flex_direction,
-                if compact {
-                    FlexDirection::Column
-                } else {
-                    FlexDirection::Row
-                },
-            );
-            set_if(
-                &mut n.overflow,
-                if compact {
-                    Overflow::scroll_y()
-                } else {
-                    Overflow::visible()
-                },
-            );
-        }
-        if let Ok(mut n) = nodes.get_mut(p.list_col) {
-            set_if(
-                &mut n.width,
-                if compact {
-                    Val::Percent(100.0)
-                } else {
-                    Val::Percent(40.0)
-                },
-            );
-            set_if(
-                &mut n.min_width,
-                if compact {
-                    Val::Px(0.0)
-                } else {
-                    Val::Px(320.0)
-                },
-            );
-            set_if(
-                &mut n.height,
-                if compact { Val::Px(260.0) } else { Val::Auto },
-            );
-            set_if(&mut n.flex_shrink, if compact { 0.0 } else { 1.0 });
-        }
-    }
-}
-
-/// Disables nothing today; the clear button follows the filter state.
-pub(super) fn sync_clear_button(
-    roots: Query<(&MasterDetail, &MasterDetailView)>,
-    clears: Query<(Entity, &MasterClearButton)>,
-    mut nodes: Query<&mut Node>,
-    mut commands: Commands,
-) {
-    for (e, clear) in &clears {
-        let Ok((model, _)) = roots.get(clear.0) else {
-            continue;
-        };
-        let filtering = !model.query.trim().is_empty() || !model.active_chips.is_empty();
-        if let Ok(mut n) = nodes.get_mut(e) {
-            set_if(
-                &mut n.display,
-                if filtering && !model.entries.is_empty() {
-                    Display::Flex
-                } else {
-                    Display::None
-                },
-            );
-        }
-        commands.entity(e).try_remove::<Disabled>();
     }
 }
 
