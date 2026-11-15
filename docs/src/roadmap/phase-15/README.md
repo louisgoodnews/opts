@@ -1,8 +1,8 @@
 # 🤖 Phase 15: AI-Optimized Code Structure & Pre-Commit Enforcement
 
-*Goal: minimise AI-agent input and output token consumption across the workspace by enforcing a two-tier source file budget (150–200 code lines target, 250-line inline-test extraction trigger, 350-line hard ceiling), an 80-line function ratchet, and Bevy `SystemParam` bundling—backed by fast `< 1.5 s` pre-commit and CI gates.*
+*Goal: minimise AI-agent input and output token consumption across the workspace by enforcing a 150-line source file rule (150 lines of code per `.rs` file, owner decision 2026-11-15), an 80-line function ratchet, and Bevy `SystemParam` bundling—backed by fast `< 1.5 s` pre-commit and CI gates.*
 
-**Status:** ✅ Done — [M-0147](M-0147.md), [M-0148](M-0148.md), and [M-0149](M-0149.md) done 2026-10-28; [M-0150](M-0150.md) done 2026-10-30: `function-known.txt` empty (0 functions over 80 lines, 0 signature allows) (research and workload audit in [AI-Agent Token Optimization & Source File Budgets](../../architecture/ai-token-optimization.md); coding rules in [Coding Standards §3.7 & §3.14](../../contributing/standards.md)).
+**Status:** 🟡 In progress — [M-0147](M-0147.md), [M-0148](M-0148.md), [M-0149](M-0149.md) done 2026-10-28 (against the 250- and 350-line limits then in force); [M-0150](M-0150.md) done 2026-10-30: `function-known.txt` empty (0 functions over 80 lines, 0 signature allows); [M-0151](M-0151.md) planned 2026-11-15: the 150-line rule, 736 files still grandfathered (2026-11-15) (research and workload audit in [AI-Agent Token Optimization & Source File Budgets](../../architecture/ai-token-optimization.md); coding rules in [Coding Standards §3.7 & §3.14](../../contributing/standards.md)).
 
 The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 15); this page holds the details.
 
@@ -20,7 +20,8 @@ Phase 999 Cycle 1 ([M-0125](../phase-999/M-0125.md)–[M-0129](../phase-999/M-01
 1. ✅ [M-0147 — Structure Audit v2 & Pre-Commit Ratchet Gates](M-0147.md) *(done 2026-10-28)*: extend `scripts/structure_audit.py` with the 350-line file ceiling, 250-line inline-test extraction rule, 80-line function ratchet (`docs/dev/function-known.txt`), and Clippy allow ratchet; enforce in `scripts/pre-commit` and `.github/workflows/ci.yml`.
 2. ✅ [M-0148 — Batch 1: Inline Test Extraction Above 250 Lines](M-0148.md) *(done 2026-10-28)*: extract inline `#[cfg(test)] mod tests` blocks from all 101 production files over 250 code lines into sibling `tests.rs` files.
 3. ✅ [M-0149 — Batch 2: Production File Splits to the 350-Line Ceiling](M-0149.md) *(done 2026-10-28)*: split the 102 production files over 350 non-test code lines (and 18 oversized test/example files) along concern boundaries into 150–250 line modules.
-4. [M-0150 — Batch 3: Function Size Ratchet (< 80 Lines) & ECS `SystemParam` Bundling](M-0150.md): decompose the 191 production functions over 80 code lines into ≤ 40-line helpers and replace the 155 `too_many_arguments` / `type_complexity` allows with `#[derive(SystemParam)]` bundles.
+4. ✅ [M-0150 — Batch 3: Function Size Ratchet (< 80 Lines) & ECS `SystemParam` Bundling](M-0150.md) *(done 2026-10-30)*: decompose the 191 production functions over 80 code lines into ≤ 40-line helpers and replace the 155 `too_many_arguments` / `type_complexity` allows with `#[derive(SystemParam)]` bundles.
+5. ⏳ [M-0151 — Batch 4: Source Files to the 150-Line Rule](M-0151.md) *(planned 2026-11-15)*: split the 736 grandfathered files over 150 code lines (`docs/dev/structure-known.txt`) by concern, one batch per crate, largest first, until `structure_audit.py check` reports 0 files over 150 LOC; 104 production files with inline tests and about 181 test/example files included.
 
 ## Baseline and workload summary (2026-10-28)
 
@@ -30,3 +31,4 @@ Phase 999 Cycle 1 ([M-0125](../phase-999/M-0125.md)–[M-0129](../phase-999/M-01
 | Prod files > 250 LOC with inline `#[cfg(test)]` (`M-0148`) | ✅ Done 2026-10-28 (101 → 0) | **0** | Done |
 | Prod files > 350 non-test LOC (`M-0149`) | ✅ Done 2026-10-28 (120 → 0) | **0** (new modules 150–220 LOC) | Done |
 | Prod functions > 80 LOC & `SystemParam` allows (`M-0150`) | 191 functions / 155 allows (2026-10-30: **0 / 0**) | **0** unratcheted | done |
+| Source files > 150 LOC, grandfathered (`M-0151`) | 736 of 1,477 `crates/**/*.rs` (2026-11-15) | **0** (every file ≤ 150 code lines) | Planned |
