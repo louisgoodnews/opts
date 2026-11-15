@@ -1,6 +1,7 @@
 //! Unit tests for drivetrain models and forces.
 
 use super::*;
+use crate::vehicle::inputs::{GearPosition, VehicleInputs};
 
 #[test]
 fn test_engine_torque_curve() {

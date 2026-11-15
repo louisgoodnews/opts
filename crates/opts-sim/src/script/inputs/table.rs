@@ -1,6 +1,14 @@
 //! The table of host input rows: the script variable each host input feeds.
 
+//! The rows are split by section (`table/*.rs`); [`INPUT_TABLE`] keeps the table order.
+
 use super::*;
+
+mod cab;
+mod clock_weather;
+mod collision_mouse;
+mod motion;
+mod scene;
 
 const fn row(
     name: &'static str,
@@ -20,309 +28,33 @@ const fn row(
     }
 }
 
-/// Scalar inputs. Wheel and door families are in [`WHEEL_FAMILIES`] and [`DOOR_FAMILIES`].
-pub const INPUT_TABLE: &[InputRow] = &[
-    row(
-        "velocity",
-        "km/h",
-        Source::Physics,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "velocity_ground",
-        "km/h",
-        Source::Physics,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row("n_wheel", "rpm", Source::Physics, Kind::Float, false, true),
-    row(
-        "a_trans_x",
-        "m/s²",
-        Source::Physics,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "a_trans_y",
-        "m/s²",
-        Source::Physics,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "a_trans_z",
-        "m/s²",
-        Source::Physics,
-        Kind::Float,
-        false,
-        false,
-    ),
-    row(
-        "kmcounter_km",
-        "km",
-        Source::Physics,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "kmcounter_m",
-        "m",
-        Source::Physics,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row("throttle", "0..1", Source::Planner, Kind::Float, true, true),
-    row("brake", "0..1", Source::Planner, Kind::Float, true, true),
-    row("clutch", "0..1", Source::Planner, Kind::Float, true, true),
-    row("ai", "0/1", Source::Planner, Kind::Float, true, true),
-    row(
-        "ai_engine",
-        "-1/0/1",
-        Source::Planner,
-        Kind::Float,
-        true,
-        true,
-    ),
-    row(
-        "ai_target_index",
-        "hof row",
-        Source::Timetable,
-        Kind::Float,
-        true,
-        true,
-    ),
-    row(
-        "schedule_active",
-        "0/1",
-        Source::Timetable,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "humans_count",
-        "count",
-        Source::Passengers,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "envir_brightness",
-        "0..1",
-        Source::Environment,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "streetcond",
-        "0..1",
-        Source::Environment,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "dirtrate",
-        "0..1",
-        Source::Environment,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "wearlifespan",
-        "0..1",
-        Source::Environment,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "preciprate",
-        "0..1",
-        Source::Weather,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row(
-        "preciptype",
-        "0 none/1 rain/2 snow",
-        Source::Weather,
-        Kind::Float,
-        false,
-        true,
-    ),
-    row("relrange", "?", Source::Constant, Kind::Float, false, false),
-    row(
-        "driver_seat_verttransl",
-        "m",
-        Source::Constant,
-        Kind::Float,
-        false,
-        false,
-    ),
-    row(
-        "colorscheme",
-        "index",
-        Source::Constant,
-        Kind::Float,
-        true,
-        false,
-    ),
-    row(
-        "train_frontcoupling",
-        "0/1",
-        Source::Rail,
-        Kind::Float,
-        false,
-        false,
-    ),
-    row(
-        "train_backcoupling",
-        "0/1",
-        Source::Rail,
-        Kind::Float,
-        false,
-        false,
-    ),
-    row(
-        "train_me_reverse",
-        "0/1",
-        Source::Rail,
-        Kind::Float,
-        false,
-        false,
-    ),
-    row(
-        "trafficpriority",
-        "code",
-        Source::Traffic,
-        Kind::Float,
-        true,
-        false,
-    ),
-    row(
-        "trafficprioritywarningneeded",
-        "0/1",
-        Source::Traffic,
-        Kind::Float,
-        false,
-        false,
-    ),
-    // System values (`(L.S.x)`); `Timegap` and `GetTime` are set by `run_frame`.
-    row("time", "s of day", Source::Clock, Kind::System, false, true),
-    row("day", "1..31", Source::Clock, Kind::System, false, true),
-    row("month", "1..12", Source::Clock, Kind::System, false, true),
-    row("year", "year", Source::Clock, Kind::System, false, true),
-    row(
-        "dayofyear",
-        "1..366",
-        Source::Clock,
-        Kind::System,
-        false,
-        true,
-    ),
-    row("sunalt", "deg", Source::Clock, Kind::System, false, true),
-    row("pause", "0/1", Source::Clock, Kind::System, false, true),
-    row(
-        "nosound",
-        "0/1",
-        Source::Constant,
-        Kind::System,
-        false,
-        false,
-    ),
-    row(
-        "weather_temperature",
-        "°C",
-        Source::Weather,
-        Kind::System,
-        false,
-        true,
-    ),
-    row(
-        "weather_abshum",
-        "g/m³",
-        Source::Weather,
-        Kind::System,
-        false,
-        true,
-    ),
-    row(
-        "preciprate",
-        "0..1",
-        Source::Weather,
-        Kind::System,
-        false,
-        true,
-    ),
-    row(
-        "preciptype",
-        "0 none/1 rain/2 snow",
-        Source::Weather,
-        Kind::System,
-        false,
-        true,
-    ),
-    row(
-        "autoclutch",
-        "0/1",
-        Source::Planner,
-        Kind::System,
-        false,
-        true,
-    ),
-    row(
-        "coll_energy",
-        "J",
-        Source::Collision,
-        Kind::System,
-        false,
-        false,
-    ),
-    row(
-        "coll_pos_x",
-        "m",
-        Source::Collision,
-        Kind::System,
-        false,
-        false,
-    ),
-    row(
-        "coll_pos_y",
-        "m",
-        Source::Collision,
-        Kind::System,
-        false,
-        false,
-    ),
-    row(
-        "coll_pos_z",
-        "m",
-        Source::Collision,
-        Kind::System,
-        false,
-        false,
-    ),
-    row(
-        "wearlifespan",
-        "0..1",
-        Source::Environment,
-        Kind::System,
-        false,
-        true,
-    ),
-    row("mouse_x", "px", Source::Mouse, Kind::System, false, true),
-    row("mouse_y", "px", Source::Mouse, Kind::System, false, true),
+/// The sections in table order.
+const SECTIONS: &[&[InputRow]] = &[
+    &motion::ROWS,
+    &scene::ROWS,
+    &cab::ROWS,
+    &clock_weather::ROWS,
+    &collision_mouse::ROWS,
 ];
+
+/// Scalar inputs. Wheel and door families are in [`WHEEL_FAMILIES`] and [`DOOR_FAMILIES`].
+pub const INPUT_TABLE: &[InputRow] = &concat::<50>(SECTIONS);
+
+/// Joins the sections into one table; panics at compile time if the length is not `N`.
+const fn concat<const N: usize>(sections: &[&[InputRow]]) -> [InputRow; N] {
+    let mut out = [row("", "", Source::Constant, Kind::Float, false, false); N];
+    let mut i = 0;
+    let mut s = 0;
+    while s < sections.len() {
+        let section = sections[s];
+        let mut j = 0;
+        while j < section.len() {
+            out[i] = section[j];
+            i += 1;
+            j += 1;
+        }
+        s += 1;
+    }
+    assert!(i == N, "input table length mismatch");
+    out
+}
