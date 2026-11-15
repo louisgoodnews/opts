@@ -271,7 +271,6 @@ crates/opts-game/src/in_game/omsi_world/tile_ground.rs 208  # grandfathered: spl
 crates/opts-game/src/in_game/omsi_world/tile_ground/water_splines.rs 166  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/trace/records.rs 151  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic.rs 227  # grandfathered: extract 23 test lines to tests.rs, then split by concern to <= 150 LOC
-crates/opts-game/src/in_game/omsi_world/traffic/ai_script.rs 243  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic/graph.rs 202  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic/motion.rs 239  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic/scheduled.rs 154  # grandfathered: split production file by concern to <= 150 LOC
