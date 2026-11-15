@@ -29,29 +29,29 @@ Suggested order: M-0068 (sessions) before M-0069 (save needs the registry); M-00
 
 *Mirrored from the [roadmap](../README.md), which is canonical; update it there first.*
 
-*Goal: Turn the driving demo into a session-based simulator: water and correct content in the world, sessions with several user vehicles that can be saved and restored, and vehicles whose own mass, axles, suspension and brakes are respected by a shared world physics. Status: planned 2026-10-13 from the project lead's [field report](../../quality/field-report-2026-10-13.md); not started. Documents: [phase page](README.md).*
+*Goal: Turn the driving demo into a session-based simulator: water and correct content in the world, sessions with several user vehicles that can be saved and restored, and vehicles whose own mass, axles, suspension and brakes are respected by a shared world physics. Status: planned 2026-10-13 from the project lead's [field report](../../quality/field-report-2026-10-13.md); in progress (status sync 2026-10-25: M-0068/69/73/78/106 done, M-0066 awaiting acceptance, M-0079/M-0138 deferred, M-0104 obsolete). Documents: [phase page](README.md).*
 
-- [~] **🚗 Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns** — [M-0066](M-0066.md)
+- [~] **🚗 Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns** — [M-0066](M-0066.md) — 🟡 in progress: all tasks done and merged 2026-10-19; awaiting the project lead's acceptance (not yet accepted)
   - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); flipped or misaligned building meshes (R-17); scrambled lantern posts (R-18); fixes with regression tests, remaining content defects registered.
 - [ ] **🔬 UV Decoder Fleet Validation** — [M-0079](M-0079.md) — ⏸ deferred by the project lead 2026-10-13
-  - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The decoder (P-1013 phases A–C) is done and merged.
-- [ ] **🧪 UV Decoder Texture Evidence** — [M-0104](M-0104.md) — ✅ approved 2026-10-14
+  - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The heuristic decoder (P-1013 phases A–C) was retired 2026-10-16 (exact decoding, o3d.md Addendum 15), so this validation has no subject; candidate for retirement.
+- [ ] **🧪 UV Decoder Texture Evidence** — [M-0104](M-0104.md) — ⛔ obsolete since 2026-10-16 (exact decoding, o3d.md Addendum 14)
   - [ ] Feasibility first: does the plain texture atlas rank the true scrambler offset on the twin truth set; integrate into the smooth stage only on a go ([design](../../architecture/uv-decoder-texture-evidence.md)).
-- [ ] **🚆 Train Formation Editor v1** — [M-0106](M-0106.md) — 📝 proposed 2026-10-15
-  - [ ] `.zug` parser and presets, formation editor in the spawn menu, consist spawner with summed mass, TOML store ([design](../../architecture/train-formation-editor.md)).
-- [ ] **🌊 Water Rendering** — [M-0067](M-0067.md)
+- [x] **🚆 Train Formation Editor v1** — [M-0106](M-0106.md) — ✅ done 2026-10-15
+  - [x] `.zug` parser and presets, formation editor in the spawn menu, consist spawner with summed mass, TOML store ([design](../../architecture/train-formation-editor.md)).
+- [ ] **🌊 Water Rendering** — [M-0067](M-0067.md) — 🟡 drawn since 2026-10-16, depth tint 2026-10-18; Q-M07 (marker rule, interpolation) and Q-M08 (water textures) open
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
 - [x] **🚌 Session Vehicles** — [M-0068](M-0068.md)
   - [x] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
 - [x] **💾 Session Save and Restore** — [M-0069](M-0069.md)
-  - [ ] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
-- [x] **🧰 Bus Configurations** — [M-0077](M-0077.md)
+  - [x] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
+- [x] **🧰 Bus Configurations** — [M-0077](M-0077.md) — 🟢 complete 2026-10-30
   - [x] Named, quick-loadable configurations of bus, repaint and setvars (R-15).
 - [x] **🎛️ Setvars** — [M-0078](M-0078.md)
-  - [ ] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
+  - [x] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
 - [x] **⚙️ Vehicle Dynamics** — [M-0073](M-0073.md)
-  - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
-- [ ] **🚌 BRT C2 Full Fix** — [M-0138](M-0138.md) — requested 2026-10-20
+  - [x] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
+- [ ] **🚌 BRT C2 Full Fix** — [M-0138](M-0138.md) — requested 2026-10-20, ⏸ deferred the same day (first slice unmerged on `agent/c2-full-fix`)
   - [ ] Complete part census of `C2_2T.bus`, every part built, bound and drawn as authored or registered as a content defect; regression gate; the project lead's look.
-- [ ] **🏙️ Content Fidelity Pass** — [M-0090](M-0090.md)
+- [ ] **🏙️ Content Fidelity Pass** — [M-0090](M-0090.md) — 🟡 R-34/35/37–39/41 done or re-checked, R-36 partly, R-42 needs a position
   - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).
