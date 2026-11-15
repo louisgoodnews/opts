@@ -19,7 +19,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 *Status 2026-10-25: all items done. The repository is hosted (github.com/louisgoodnews/opts) and the book is live at https://louisgoodnews.github.io/opts/ (`deploy-docs.yml` green since 2026-10-13). ADR-0002 is dated 2026-10-04.*
 
 - [x] **📦 Workspace Setup** *(`cargo check --workspace --offline` passes, verified 2026-10-04)*
-  - [x] Initialize Cargo workspace with `opts-core`, `opts-bevy`, `opts-sim`, `opts-tools`, `opts-utils`, and `opts-game`. *(Historical scope. `opts-utils` was removed in `07de1b0` (annotation 2026-10-10, with the other placeholder crates), so it is no longer a workspace member. Current workspace, checked 2026-11-15 against the root `Cargo.toml`: 17 members — benchmark, bevy, catalogue, cli, core (temporary facade over `opts-omsi` and `opts-l10n` since `3f22ff2e`), game, gui, hardware, importer, l10n, logging, model, omsi, sim, tools, traffic, types.)*
+  - [x] Initialize Cargo workspace with `opts-core`, `opts-bevy`, `opts-sim`, `opts-tools`, `opts-utils`, and `opts-game`. *(Annotation 2026-10-10: `opts-utils` and other placeholder crates were removed in `07de1b0`; the workspace now has bevy, catalogue, cli, core, game, gui, logging, sim, tools.) (Status sync 2026-10-25: 17 members — benchmark, bevy, catalogue, cli, core (facade), game, gui, hardware, importer, l10n, logging, model, omsi, sim, tools, traffic, types.)*
   - [x] Configure root `Cargo.toml` with shared dependencies and build profiles.
 - [ ] **📚 Documentation Pipeline**
   - [x] Set up `mdBook` in the `docs/` directory. *(`docs/book.toml` was a 0-byte file until M-0007; `mdbook build docs` succeeds locally with mdbook 0.5.4, verified 2026-10-25, warnings only)*
