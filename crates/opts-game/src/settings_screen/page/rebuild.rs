@@ -2,89 +2,6 @@
 
 use super::*;
 
-/// The category buttons that have a visible setting.
-fn spawn_category_buttons(commands: &mut Commands, cat_list: Entity, registry: &SettingsRegistry) {
-    for cat in registry.categories() {
-        let visible = registry.in_category(cat).iter().any(|d| !d.hidden);
-        if !visible {
-            continue;
-        }
-        let b = ButtonBuilder::text(cat.label_key())
-            .with_key(cat.label_key())
-            .spawn(commands);
-        commands.entity(b).insert((
-            SettingOp::Category(cat),
-            UiId::new(format!("settings/category/{}", cat.id())),
-            ChildOf(cat_list),
-        ));
-    }
-}
-
-/// The page of a search: the settings that match, under the headline of their category.
-fn spawn_search_results(
-    commands: &mut Commands,
-    pane: Entity,
-    ctx: &Ctx,
-    (query, notice): (&str, Option<&str>),
-) {
-    spawn_notice(commands, pane, notice);
-    let found = search::search(ctx.registry, ctx.loc, query);
-    if found.is_empty() {
-        label(
-            commands,
-            pane,
-            "settings-no-results",
-            TypeScale::BodyLarge,
-            ColorRole::OnSurfaceVariant,
-        );
-    }
-    let mut last = None;
-    for d in found.into_iter().filter(|d| !d.hidden) {
-        if last != Some(d.category) {
-            last = Some(d.category);
-            label(
-                commands,
-                pane,
-                d.category.label_key(),
-                TypeScale::TitleLarge,
-                ColorRole::Primary,
-            );
-        }
-        light_section(commands, pane, ctx, d);
-        spawn_row(commands, pane, ctx, d);
-    }
-}
-
-/// The page of one category: its headline, notice, rows and info lines.
-fn spawn_category(
-    commands: &mut Commands,
-    pane: Entity,
-    ctx: &Ctx,
-    (category, notice, theme_kind): (Category, Option<&str>, &str),
-) {
-    label(
-        commands,
-        pane,
-        category.label_key(),
-        TypeScale::TitleLarge,
-        ColorRole::Primary,
-    );
-    spawn_notice(commands, pane, notice);
-    for d in ctx
-        .registry
-        .in_category(category)
-        .into_iter()
-        .filter(|d| !d.hidden)
-    {
-        light_section(commands, pane, ctx, d);
-        spawn_row(commands, pane, ctx, d);
-        if d.key == "content.rescan" {
-            super::super::scan_status::spawn_chip(commands, pane);
-        }
-    }
-    super::super::info::spawn_info(commands, pane, ctx, category, theme_kind);
-}
-
 /// Fills the category list and the pane.
 pub fn rebuild_page(
     mut commands: Commands,
@@ -171,62 +88,9 @@ fn spawn_notice(commands: &mut Commands, pane: Entity, notice: Option<&str>) {
         ChildOf(pane),
     ));
 }
+mod categories;
+mod light;
+use categories::{spawn_category, spawn_category_buttons, spawn_search_results};
+use light::light_section;
+pub use light::level_key;
 
-/// The "Lighting quality" section heading and its note, above the mode row.
-fn light_section(
-    commands: &mut Commands,
-    pane: Entity,
-    ctx: &Ctx,
-    d: &crate::settings_registry::SettingDescriptor,
-) {
-    use crate::settings_registry::lighting as l;
-    if d.key != l::MODE_KEY {
-        return;
-    }
-    let heading = label(
-        commands,
-        pane,
-        "set-light-section",
-        TypeScale::TitleMedium,
-        ColorRole::Primary,
-    );
-    commands.entity(heading).insert(Node {
-        margin: UiRect::top(Val::Px(20.0)),
-        ..default()
-    });
-    label(
-        commands,
-        pane,
-        "set-light-section-note",
-        TypeScale::BodyMedium,
-        ColorRole::OnSurfaceVariant,
-    );
-    if l::is_automatic(ctx.settings) {
-        let level = ctx.light.map_or(0, |q| q.level);
-        commands.spawn((
-            Text::new("set-light-auto-note"),
-            opts_gui::l10n::L10nKey("set-light-auto-note"),
-            L10nArgs(vec![
-                ("level".into(), usize::from(level).into()),
-                ("name".into(), ctx.loc.t(level_key(level)).into()),
-            ]),
-            TextColor::default(),
-            TypeStyleToken(TypeScale::BodyMedium),
-            ForegroundRole(ColorRole::Info),
-            ChildOf(pane),
-        ));
-    }
-}
-
-/// The message key of the name of a ladder level.
-#[must_use]
-pub fn level_key(level: u8) -> &'static str {
-    match level {
-        0 => "set-light-level-0",
-        1 => "set-light-level-1",
-        2 => "set-light-level-2",
-        3 => "set-light-level-3",
-        4 => "set-light-level-4",
-        _ => "set-light-level-5",
-    }
-}
