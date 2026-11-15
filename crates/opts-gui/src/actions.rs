@@ -4,15 +4,14 @@
 //! Keyboard and gamepad feed the same message. The control protocol injects actions with
 //! `ui.action`, so tests drive the UI exactly as users do.
 
-use bevy::input::{
-    gamepad::{Gamepad, GamepadAxis, GamepadButton},
-    keyboard::KeyboardInput,
-    ButtonState,
-};
-use bevy::prelude::*;
 
-use crate::components::{text_area::TextArea, text_field::M3TextField};
-use crate::interaction::state::Focused;
+mod devices;
+mod keys;
+
+pub use devices::*;
+pub use keys::*;
+
+use bevy::prelude::*;
 
 /// A direction of spatial focus movement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -122,128 +121,6 @@ impl UiAction {
     ];
 }
 
-/// Stick deflection that counts as a direction press.
-const STICK_THRESHOLD: f32 = 0.6;
-
-/// The keyboard table: action for a key, given the modifier state and whether a text entry has
-/// focus (where Backspace, `/`, `[` and `]` are text).
-pub fn key_action(key: KeyCode, ctrl: bool, shift: bool, in_text: bool) -> Option<UiAction> {
-    use Direction::*;
-    let action = match key {
-        KeyCode::ArrowUp => UiAction::Navigate(Up),
-        KeyCode::ArrowDown => UiAction::Navigate(Down),
-        KeyCode::ArrowLeft => UiAction::Navigate(Left),
-        KeyCode::ArrowRight => UiAction::Navigate(Right),
-        KeyCode::Tab if ctrl && shift => UiAction::PrevTab,
-        KeyCode::Tab if ctrl => UiAction::NextTab,
-        KeyCode::Tab if shift => UiAction::PrevRegion,
-        KeyCode::Tab => UiAction::NextRegion,
-        KeyCode::Enter | KeyCode::NumpadEnter => UiAction::Confirm,
-        KeyCode::Space if !in_text => UiAction::Confirm,
-        KeyCode::Escape => UiAction::Back,
-        KeyCode::Backspace if !in_text => UiAction::Back,
-        KeyCode::KeyF if ctrl => UiAction::Search,
-        KeyCode::Slash if !in_text && !ctrl => UiAction::Search,
-        KeyCode::BracketLeft if !in_text && !ctrl => UiAction::PrevTab,
-        KeyCode::BracketRight if !in_text && !ctrl => UiAction::NextTab,
-        KeyCode::PageUp if !in_text => UiAction::Scroll(ScrollStep::Page(-1)),
-        KeyCode::PageDown if !in_text => UiAction::Scroll(ScrollStep::Page(1)),
-        KeyCode::Home if !in_text => UiAction::Scroll(ScrollStep::Home),
-        KeyCode::End if !in_text => UiAction::Scroll(ScrollStep::End),
-        _ => return None,
-    };
-    Some(action)
-}
-
-/// The gamepad table for one button.
-pub fn button_action(button: GamepadButton) -> Option<UiAction> {
-    use Direction::*;
-    Some(match button {
-        GamepadButton::DPadUp => UiAction::Navigate(Up),
-        GamepadButton::DPadDown => UiAction::Navigate(Down),
-        GamepadButton::DPadLeft => UiAction::Navigate(Left),
-        GamepadButton::DPadRight => UiAction::Navigate(Right),
-        GamepadButton::South => UiAction::Confirm,
-        GamepadButton::East => UiAction::Back,
-        GamepadButton::North => UiAction::Search,
-        GamepadButton::Start => UiAction::Menu,
-        GamepadButton::Select => UiAction::Help,
-        GamepadButton::LeftTrigger => UiAction::PrevTab,
-        GamepadButton::RightTrigger => UiAction::NextTab,
-        _ => return None,
-    })
-}
-
-/// Text entries, where several keys are text instead of actions.
-type FocusedTextEntry = (
-    With<Focused>,
-    Or<(With<M3TextField>, With<TextArea>, With<EditableTextMarker>)>,
-);
-
-/// Stand-in for Bevy's `EditableText` so the query type stays nameable here.
-pub type EditableTextMarker = bevy::text::EditableText;
-
-/// Keyboard to actions. Reads key events (so OS key repeat repeats navigation).
-pub fn keyboard_actions(
-    mut keys: MessageReader<KeyboardInput>,
-    held: Res<ButtonInput<KeyCode>>,
-    text_focus: Query<(), FocusedTextEntry>,
-    mut actions: MessageWriter<UiAction>,
-) {
-    let ctrl = held.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
-    let shift = held.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
-    let in_text = !text_focus.is_empty();
-    for event in keys.read() {
-        if event.state != ButtonState::Pressed {
-            continue;
-        }
-        if let Some(action) = key_action(event.key_code, ctrl, shift, in_text) {
-            actions.write(action);
-        }
-    }
-}
-
-/// Gamepad to actions: buttons, plus the left stick as edge-triggered directions.
-pub fn gamepad_actions(
-    gamepads: Query<&Gamepad>,
-    mut stick_was: Local<[bool; 4]>,
-    mut actions: MessageWriter<UiAction>,
-) {
-    let mut stick = [false; 4];
-    for pad in &gamepads {
-        for button in pad.get_just_pressed() {
-            if let Some(action) = button_action(*button) {
-                actions.write(action);
-            }
-        }
-        let x = pad.get(GamepadAxis::LeftStickX).unwrap_or(0.0);
-        let y = pad.get(GamepadAxis::LeftStickY).unwrap_or(0.0);
-        stick[0] |= y > STICK_THRESHOLD;
-        stick[1] |= y < -STICK_THRESHOLD;
-        stick[2] |= x < -STICK_THRESHOLD;
-        stick[3] |= x > STICK_THRESHOLD;
-        let ry = pad.get(GamepadAxis::RightStickY).unwrap_or(0.0);
-        if ry.abs() > STICK_THRESHOLD {
-            actions.write(UiAction::Scroll(ScrollStep::Line(if ry > 0.0 {
-                -1
-            } else {
-                1
-            })));
-        }
-    }
-    let dirs = [
-        Direction::Up,
-        Direction::Down,
-        Direction::Left,
-        Direction::Right,
-    ];
-    for (i, dir) in dirs.into_iter().enumerate() {
-        if stick[i] && !stick_was[i] {
-            actions.write(UiAction::Navigate(dir));
-        }
-    }
-    *stick_was = stick;
-}
 
 /// Registers [`UiAction`] and the device mappings.
 pub fn build(app: &mut App) {
