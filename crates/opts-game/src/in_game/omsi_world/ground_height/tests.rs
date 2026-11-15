@@ -116,18 +116,17 @@ fn a_deck_over_the_apron_is_not_climbed_but_is_driven_on() {
 fn a_surface_plate_is_the_ground_and_a_high_deck_is_not() {
     use opts_bevy::TileTerrain;
     use opts_core::formats::map::MapTerrain;
-    let flat = || GroundIndex {
-        terrain: HashMap::from([(
-            (0, 0),
-            TileTerrain::new(
-                MapTerrain {
-                    grid_cells: 60,
-                    heights: vec![0.0; 61 * 61],
-                },
-                5.0,
-            ),
-        )]),
-        ..GroundIndex::default()
+    let flat = || {
+        let mut index = GroundIndex::default();
+        let terrain = TileTerrain::new(
+            MapTerrain {
+                grid_cells: 60,
+                heights: vec![0.0; 61 * 61],
+            },
+            5.0,
+        );
+        index.insert_tile((0, 0), (0.0, 0.0), Some(terrain), &[]);
+        index
     };
     let mut index = flat();
     let plate =
@@ -143,4 +142,53 @@ fn a_surface_plate_is_the_ground_and_a_high_deck_is_not() {
     assert!(under.abs() < 0.01, "under the deck: {under}");
     let on_deck = over.height_at(100.0, 100.0, 6.0).expect("height");
     assert!((on_deck - 6.0).abs() < 0.01, "on the deck: {on_deck}");
+}
+
+/// A sample tile of undulating terrain (60 cells of 5 m), in the tile's own metres.
+fn sample_terrain() -> TileTerrain {
+    let cell = 5.0_f32;
+    let mut heights = Vec::with_capacity(61 * 61);
+    for j in 0..61 {
+        for i in 0..61 {
+            let (x, y) = (i as f32 * cell, j as f32 * cell);
+            heights.push(7.0 + 0.03 * x - 0.02 * y + 1.5 * (x * 0.07).sin() * (y * 0.05).cos());
+        }
+    }
+    TileTerrain::new(
+        opts_core::formats::map::MapTerrain {
+            grid_cells: 60,
+            heights,
+        },
+        cell,
+    )
+}
+
+/// Before the terrain moved into `GroundElevationQuery`: both height services answer the same
+/// bits for the same points of a resident tile (anchor at tile `(0, 0)`, so session and absolute
+/// frames coincide).
+#[test]
+fn ground_index_and_elevation_query_agree_on_a_sample_tile() {
+    let grid = TileGrid::Uniform { pitch: 300.0 };
+    let index = GroundIndex::for_tile(
+        (0, 0),
+        (0.0, 0.0),
+        Some(sample_terrain()),
+        &[],
+        (0, 0),
+        grid.clone(),
+    );
+    let mut query = opts_bevy::GroundElevationQuery::new(grid);
+    query.insert((0, 0), sample_terrain());
+    let mut checked = 0;
+    for i in 0..=120 {
+        for j in 0..=120 {
+            let (x, y) = (i as f32 * 2.5 + 0.1, j as f32 * 2.5 + 0.3);
+            let a = index.terrain_at(x, y);
+            let b = query.height_at(x, y);
+            assert_eq!(a.map(f32::to_bits), b.map(f32::to_bits), "at ({x}, {y})");
+            checked += 1;
+        }
+    }
+    assert!(checked > 10_000);
+    assert!(index.terrain_at(-1.0, 10.0).is_none(), "outside the tile");
 }

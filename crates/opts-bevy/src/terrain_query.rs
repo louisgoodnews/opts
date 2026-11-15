@@ -55,10 +55,19 @@ impl GroundElevationQuery {
         self.tiles.is_empty()
     }
 
-    fn locate(&self, x: f32, y: f32) -> Option<(&TileTerrain, f32, f32)> {
-        let (key, local) = self
-            .grid
-            .tile_at(DVec2::new(f64::from(x), f64::from(y)), (0, 0));
+    /// Replaces the map's grid (the tiles already held keep their keys).
+    pub fn set_grid(&mut self, grid: TileGrid) {
+        self.grid = grid;
+    }
+
+    /// The map's grid.
+    #[must_use]
+    pub fn grid(&self) -> &TileGrid {
+        &self.grid
+    }
+
+    fn locate(&self, point: DVec2, anchor: (i32, i32)) -> Option<(&TileTerrain, f32, f32)> {
+        let (key, local) = self.grid.tile_at(point, anchor);
         let t = self.tiles.get(&key)?;
         Some((t, local.x as f32, local.y as f32))
     }
@@ -66,7 +75,15 @@ impl GroundElevationQuery {
     /// Terrain height at `(x, y)`; `None` when no tile holds the point.
     #[must_use]
     pub fn height_at(&self, x: f32, y: f32) -> Option<f32> {
-        let (t, lx, ly) = self.locate(x, y)?;
+        self.height_at_from(DVec2::new(f64::from(x), f64::from(y)), (0, 0))
+    }
+
+    /// Terrain height at `point`, measured from the south-west corner of tile `anchor` (the
+    /// session frame of a floating origin is `anchor` = the start tile); `None` when no tile holds
+    /// the point. [`Self::height_at`] is this with `anchor` `(0, 0)`.
+    #[must_use]
+    pub fn height_at_from(&self, point: DVec2, anchor: (i32, i32)) -> Option<f32> {
+        let (t, lx, ly) = self.locate(point, anchor)?;
         Some(t.height(lx, ly))
     }
 
@@ -75,7 +92,7 @@ impl GroundElevationQuery {
     /// neighbour is held.
     #[must_use]
     pub fn normal_at(&self, x: f32, y: f32) -> Option<Vec3> {
-        let (t, _, _) = self.locate(x, y)?;
+        let (t, _, _) = self.locate(DVec2::new(f64::from(x), f64::from(y)), (0, 0))?;
         let d = t.cell;
         let h = |px: f32, py: f32| self.height_at(px, py).or_else(|| self.height_at(x, y));
         let (hx0, hx1) = (h(x - d, y)?, h(x + d, y)?);

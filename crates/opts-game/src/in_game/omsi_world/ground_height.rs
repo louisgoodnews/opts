@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use opts_bevy::scenery::spline_pose;
-use opts_bevy::TileTerrain;
+use opts_bevy::{GroundElevationQuery, TileTerrain};
 use opts_core::formats::map::{MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::SplineProfile;
 use opts_sim::collision::{ColliderGrid, Obb};
@@ -90,10 +90,11 @@ pub struct GroundIndex {
     /// The drivable surfaces of `[surface]` objects (junction and street plates): boxes whose top
     /// is the ground, per tile.
     plates: ColliderGrid<(i32, i32)>,
-    terrain: HashMap<(i32, i32), TileTerrain>,
+    /// The carved terrain of the resident tiles: the one height service of the game
+    /// (`opts_bevy::GroundElevationQuery`, see terrain-rendering.md section 5).
+    terrain: GroundElevationQuery,
     cells: HashMap<(i32, i32), Vec<TileSample>>,
     start_tile: (i32, i32),
-    grid: TileGrid,
     /// The strips with a height map of each spline profile (by `.sli` name, M-0146).
     surf: HashMap<String, std::sync::Arc<Vec<super::road_surf::TexStrip>>>,
     /// The upward triangles of the surface plates by cell, with their tile (M-0146).
@@ -104,10 +105,9 @@ impl Default for GroundIndex {
     fn default() -> Self {
         Self {
             plates: ColliderGrid::new(CELL_M),
-            terrain: HashMap::new(),
+            terrain: GroundElevationQuery::default(),
             cells: HashMap::new(),
             start_tile: (0, 0),
-            grid: TileGrid::default(),
             surf: HashMap::new(),
             plate_tris: HashMap::new(),
         }
@@ -131,9 +131,9 @@ impl GroundIndex {
     ) -> Self {
         let mut g = Self {
             start_tile,
-            grid,
             ..Self::default()
         };
+        g.terrain.set_grid(grid);
         g.insert_tile(key, origin, terrain, roads);
         g
     }
@@ -259,7 +259,7 @@ impl GroundIndex {
     /// Forgets a tile.
     pub fn remove_tile(&mut self, key: (i32, i32)) {
         self.plates.remove(&key);
-        self.terrain.remove(&key);
+        self.terrain.remove(key);
         self.plate_tris.retain(|_, v| {
             v.retain(|(k, _)| *k != key);
             !v.is_empty()
@@ -273,11 +273,8 @@ impl GroundIndex {
     /// Terrain height at a session-frame position.
     #[must_use]
     pub fn terrain_at(&self, x: f32, y: f32) -> Option<f32> {
-        let (key, local) = self
-            .grid
-            .tile_at(Vec2::new(x, y).as_dvec2(), self.start_tile);
-        let t = self.terrain.get(&key)?;
-        Some(t.height(local.x as f32, local.y as f32))
+        self.terrain
+            .height_at_from(Vec2::new(x, y).as_dvec2(), self.start_tile)
     }
 
     /// Height of the road at `(x, y)` when the point lies on one (`near_z` picks among overlapping
@@ -365,7 +362,7 @@ pub(super) fn register(
     commands.queue(move |world: &mut World| {
         if let Some(mut g) = world.get_resource_mut::<GroundIndex>() {
             g.start_tile = start_tile;
-            g.grid = grid;
+            g.terrain.set_grid(grid);
             g.insert_tile(key, origin, terrain, &roads);
         }
     });
