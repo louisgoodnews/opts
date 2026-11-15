@@ -1,6 +1,6 @@
 //! Unit tests for `super` (`control_ui.rs`).
 
-use super::*;
+use super::wait::{validate, Cond, KNOWN};
 
 fn cond(until: &str) -> Cond {
     Cond {
