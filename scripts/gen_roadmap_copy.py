@@ -55,6 +55,10 @@ def phase_sections(roadmap: str) -> dict:
     for line in roadmap.split("\n"):
         m = re.match(r"^## .*Phase (\d+):", line)
         if m:
+            # Flush the previous phase first: a phase heading directly after another phase
+            # heading (no `---` or body in between) must not discard the earlier phase.
+            if current is not None:
+                sections[current] = buf
             current, buf = int(m.group(1)), []
             continue
         if current is not None:
