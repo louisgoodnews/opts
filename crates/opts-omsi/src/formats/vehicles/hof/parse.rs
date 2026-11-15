@@ -2,6 +2,14 @@
 
 use super::*;
 
+mod entries;
+mod lists;
+mod routes;
+
+use entries::{parse_single_busstop, parse_single_terminus};
+use lists::{parse_busstop_list, parse_suite_dirs, parse_terminus_list};
+use routes::parse_infosystem_trip;
+
 fn parse_name(lines: &[&str], i: usize, target: &mut String) -> usize {
     if let Some((val, next_i)) = next_param(lines, i) {
         *target = val.to_string();
@@ -28,200 +36,6 @@ fn parse_global_strings(lines: &[&str], i: usize, hof: &mut HofFile) -> usize {
     } else {
         i
     }
-}
-
-fn parse_suite_dirs(lines: &[&str], mut i: usize, hof: &mut HofFile) -> usize {
-    while i < lines.len() {
-        let raw = lines[i].trim_end_matches(['\r', '\n']);
-        let trimmed = raw.trim();
-        if trimmed.eq_ignore_ascii_case("[hof_suite_directories_end]") {
-            return i + 1;
-        }
-        if trimmed.starts_with('[') && trimmed.ends_with(']') {
-            return i;
-        }
-        if !trimmed.is_empty() {
-            hof.suite_directories.push(trimmed.to_string());
-        }
-        i += 1;
-    }
-    i
-}
-
-fn parse_terminus_list(lines: &[&str], mut i: usize, hof: &mut HofFile) -> usize {
-    while i < lines.len() {
-        let raw = lines[i].trim_end_matches(['\r', '\n']);
-        let trimmed = raw.trim();
-        if trimmed.eq_ignore_ascii_case("[end]") {
-            return i + 1;
-        }
-        if is_keyword(raw) {
-            return i;
-        }
-        if !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with("...") {
-            if let Some(term) = parse_terminus_list_row(raw, hof.stringcount_terminus) {
-                hof.termini.push(term);
-            }
-        }
-        i += 1;
-    }
-    i
-}
-
-fn parse_busstop_list(lines: &[&str], mut i: usize, hof: &mut HofFile) -> usize {
-    while i < lines.len() {
-        let raw = lines[i].trim_end_matches(['\r', '\n']);
-        let trimmed = raw.trim();
-        if trimmed.eq_ignore_ascii_case("[end]") {
-            return i + 1;
-        }
-        if is_keyword(raw) {
-            return i;
-        }
-        if !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with("...") {
-            if let Some(stop) = parse_busstop_list_row(raw, hof.stringcount_busstop) {
-                hof.busstops.push(stop);
-            }
-        }
-        i += 1;
-    }
-    i
-}
-
-fn parse_single_terminus(lines: &[&str], i: usize, all_exit: bool, hof: &mut HofFile) -> usize {
-    let Some((code_str, mut next_i)) = next_param(lines, i) else {
-        return i;
-    };
-    let Ok(code) = code_str.parse::<i32>() else {
-        return i;
-    };
-    let mut ident = String::new();
-    if let Some((id_str, ni)) = next_param_raw(lines, next_i) {
-        ident = id_str.to_string();
-        next_i = ni;
-    }
-    let mut strings = Vec::new();
-    let target_count = hof.stringcount_terminus;
-    for _ in 0..target_count {
-        if next_i < lines.len() {
-            let raw = lines[next_i].trim_end_matches(['\r', '\n']);
-            if is_keyword(raw) || raw.trim().starts_with("...") {
-                break;
-            }
-            strings.push(raw.to_string());
-            next_i += 1;
-        }
-    }
-    while next_i < lines.len() {
-        let raw = lines[next_i].trim_end_matches(['\r', '\n']);
-        let trimmed = raw.trim();
-        if trimmed.starts_with("...") || trimmed.starts_with('#') {
-            next_i += 1;
-        } else {
-            break;
-        }
-    }
-    while strings.len() < target_count {
-        strings.push(String::new());
-    }
-    hof.termini.push(HofTerminus {
-        code,
-        ident,
-        strings,
-        all_exit,
-    });
-    next_i
-}
-
-fn parse_single_busstop(lines: &[&str], i: usize, hof: &mut HofFile) -> usize {
-    let Some((ident, mut next_i)) = next_param_raw(lines, i) else {
-        return i;
-    };
-    let mut strings = Vec::new();
-    let target_count = hof.stringcount_busstop;
-    for _ in 0..target_count {
-        if next_i < lines.len() {
-            let raw = lines[next_i].trim_end_matches(['\r', '\n']);
-            if is_keyword(raw) || raw.trim().starts_with("...") {
-                break;
-            }
-            strings.push(raw.to_string());
-            next_i += 1;
-        }
-    }
-    while next_i < lines.len() {
-        let raw = lines[next_i].trim_end_matches(['\r', '\n']);
-        let trimmed = raw.trim();
-        if trimmed.starts_with("...") || trimmed.starts_with('#') {
-            next_i += 1;
-        } else {
-            break;
-        }
-    }
-    while strings.len() < target_count {
-        strings.push(String::new());
-    }
-    hof.busstops.push(HofBusStop {
-        ident: ident.to_string(),
-        strings,
-    });
-    next_i
-}
-
-fn parse_trip_busstops(lines: &[&str], mut trip_i: usize) -> (Vec<String>, usize) {
-    let mut busstops = Vec::new();
-    while trip_i < lines.len() {
-        let raw = lines[trip_i].trim_end_matches(['\r', '\n']);
-        if is_keyword(raw) {
-            let k = raw.trim()[1..raw.trim().len() - 1]
-                .trim()
-                .to_ascii_lowercase();
-            if k == "infosystem_busstop_list" {
-                trip_i += 1;
-                if let Some((cnt_str, mut stop_i)) = next_param(lines, trip_i) {
-                    if let Ok(count) = cnt_str.parse::<usize>() {
-                        for _ in 0..count {
-                            if let Some((stop_ident, next_stop_i)) = next_param_raw(lines, stop_i) {
-                                busstops.push(
-                                    stop_ident
-                                        .split('\t')
-                                        .next()
-                                        .unwrap_or_default()
-                                        .to_string(),
-                                );
-                                stop_i = next_stop_i;
-                            }
-                        }
-                    }
-                    trip_i = stop_i;
-                }
-            }
-            break;
-        }
-        trip_i += 1;
-    }
-    (busstops, trip_i)
-}
-
-fn parse_infosystem_trip(lines: &[&str], i: usize, hof: &mut HofFile) -> usize {
-    let Some((c_str, n1)) = next_param(lines, i) else {
-        return i;
-    };
-    let route_code = c_str.parse::<i32>().unwrap_or(0);
-    let (route_str, n2) = next_param(lines, n1).unwrap_or(("", n1));
-    let (t_code_str, n3) = next_param(lines, n2).unwrap_or(("", n2));
-    let terminus_code = t_code_str.parse::<i32>().unwrap_or(0);
-    let (line_str, n4) = next_param(lines, n3).unwrap_or(("", n3));
-
-    let (busstops, trip_i) = parse_trip_busstops(lines, n4);
-    hof.routes.push(HofRoute {
-        route_code,
-        route_string: route_str.to_string(),
-        terminus_code,
-        line_string: line_str.to_string(),
-        busstops,
-    });
-    trip_i
 }
 
 fn handle_bracket_keyword(kw: &str, lines: &[&str], i: usize, hof: &mut HofFile) -> usize {
