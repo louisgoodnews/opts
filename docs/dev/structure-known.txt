@@ -290,7 +290,6 @@ crates/opts-game/src/in_game/omsi_world/trees.rs 238  # grandfathered: extract 6
 crates/opts-game/src/in_game/omsi_world/vehicle.rs 252  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/vehicle/scripts.rs 190  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/vehicle/segments/overrides.rs 164  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/in_game/omsi_world/vehicle/trailers/follower.rs 252  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/vehicle_script_texture.rs 207  # grandfathered: extract 21 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-game/src/in_game/sky/spawn.rs 202  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/stream_budget.rs 238  # grandfathered: extract 99 inline test lines to tests.rs (then <= 150 LOC)
