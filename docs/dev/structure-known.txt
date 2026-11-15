@@ -355,7 +355,6 @@ crates/opts-game/src/pause/tests/environment_page.rs 187  # grandfathered: overs
 crates/opts-game/src/save/container.rs 201  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/save/registry.rs 180  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/save/restore.rs 291  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/save/sections.rs 319  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/save/sections_runtime.rs 215  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/save/store.rs 217  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/save/ui/dialogs.rs 261  # grandfathered: split production file by concern to <= 150 LOC
