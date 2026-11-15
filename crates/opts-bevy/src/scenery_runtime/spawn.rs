@@ -58,7 +58,7 @@ pub fn needs_runtime(input: &SceneryObjectInput<'_>) -> bool {
             .any(|p| p.light_variable.is_some())
 }
 
-fn resolve(name: &str, engine: Option<&mut ScriptEngine>) -> VarRef {
+pub(super) fn resolve(name: &str, engine: Option<&mut ScriptEngine>) -> VarRef {
     match engine {
         Some(e) => VarRef::Engine(e.variable_id(name)),
         None => VarRef::Host(HostVar::of(name)),
@@ -66,190 +66,21 @@ fn resolve(name: &str, engine: Option<&mut ScriptEngine>) -> VarRef {
 }
 
 /// Bevy position of an object-local OMSI point.
-fn local(p: Vec3) -> Vec3 {
+pub(super) fn local(p: Vec3) -> Vec3 {
     omsi_to_bevy_pos(p)
 }
 
 /// Bevy → OMSI axes for a pivot.
-fn to_omsi(p: Vec3) -> Vec3 {
+pub(super) fn to_omsi(p: Vec3) -> Vec3 {
     Vec3::new(p.x, -p.z, p.y)
 }
 
-/// Spawns the LOD group entities (one per distinct mesh threshold) under `root`. Light sprites
-/// are not part of a LOD group: a lantern's `[light_enh_2]` written after `[LOD] 0` would
-/// otherwise vanish with its mesh band within ~70 m, while the glow is what is seen from afar.
-fn lod_groups(commands: &mut Commands, root: Entity, sco: &SceneryObject) -> Vec<(Entity, f32)> {
-    let mut thresholds: Vec<f32> = Vec::new();
-    let all = sco.meshes.iter().map(|m| m.lod_threshold);
-    for t in all.flatten() {
-        if !thresholds.contains(&t) {
-            thresholds.push(t);
-        }
-    }
-    thresholds
-        .into_iter()
-        .map(|t| {
-            let e = commands
-                .spawn((
-                    Transform::default(),
-                    Visibility::Inherited,
-                    Name::new(format!("LOD_{t}")),
-                ))
-                .id();
-            commands.entity(root).add_child(e);
-            (e, t)
-        })
-        .collect()
-}
-
-/// Bounding sphere (centre, radius) of all parts in the object's frame.
-fn bounds(parts: &[Vec<ModelPart>], meshes: &Assets<Mesh>) -> (Vec3, f32) {
-    let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
-    for part in parts.iter().flatten() {
-        let positions = meshes
-            .get(&part.mesh)
-            .and_then(|m| m.attribute(Mesh::ATTRIBUTE_POSITION));
-        if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) = positions {
-            for p in pos {
-                lo = lo.min(Vec3::from(*p));
-                hi = hi.max(Vec3::from(*p));
-            }
-        }
-    }
-    if lo.x > hi.x {
-        return (Vec3::ZERO, 1.0);
-    }
-    ((lo + hi) * 0.5, ((hi - lo) * 0.5).length().max(0.1))
-}
-
-struct MeshBuildArgs<'a, 'w, 's> {
-    commands: &'a mut Commands<'w, 's>,
-    root: Entity,
-    parent: Entity,
-    sco: &'a SceneryObject,
-    index: usize,
-    parts: &'a [ModelPart],
-    engine: Option<&'a mut ScriptEngine>,
-    rt: &'a mut SceneryObjectRuntime,
-}
-
-/// Builds the mesh entities of `[mesh]` number `i` under `parent`; returns the rule entity.
-fn build_mesh(mut args: MeshBuildArgs<'_, '_, '_>) {
-    let def = &args.sco.meshes[args.index];
-    let pivot = args.parts.iter().find_map(|p| p.pivot).map(to_omsi);
-    let steps: Vec<_> = def
-        .animations
-        .iter()
-        .flat_map(|a| anim_steps(a, if a.origin_from_mesh { pivot } else { None }))
-        .collect();
-    let visible: Vec<(String, f32)> = def.visible.iter().cloned().collect();
-    let holder = if steps.is_empty() && visible.is_empty() {
-        args.parent
-    } else {
-        let vars = steps
-            .iter()
-            .map(|s| s.variable.as_str())
-            .chain(visible.iter().map(|v| v.0.as_str()))
-            .map(|n| resolve(n, args.engine.as_deref_mut()))
-            .collect();
-        let rule = SceneryMeshRule {
-            anim: MeshAnimation {
-                owner: args.root,
-                steps,
-                visible,
-                shown: Vec::new(),
-            },
-            vars,
-        };
-        let e = args
-            .commands
-            .spawn((
-                Transform::default(),
-                Visibility::Inherited,
-                rule,
-                Name::new(format!("Mesh_{}", args.index)),
-            ))
-            .id();
-        args.commands.entity(args.parent).add_child(e);
-        args.rt.meshes.push(e);
-        e
-    };
-    let spawned = attach_model_parts(args.commands, holder, args.parts, &def.file);
-    super::bind_alpha_scale(args.commands, &spawned, args.parts);
-    // `[mouseevent]`: a click on the mesh raises the trigger (the tongue of rail points).
-    let click = def
-        .mouse_event
-        .as_deref()
-        .map(str::trim)
-        .filter(|t| !t.is_empty());
-    for (e, part) in spawned.into_iter().zip(args.parts) {
-        if let Some(trigger) = click {
-            args.commands
-                .entity(e)
-                .insert(crate::vehicle_triggers::SceneryMouseTrigger {
-                    owner: args.root,
-                    trigger: trigger.to_owned(),
-                });
-        }
-        if let Some(var) = &part.light_variable {
-            let in_place = var.eq_ignore_ascii_case(NIGHT_VARIABLE);
-            args.commands.entity(e).insert(SceneryLightMap {
-                var: resolve(var, args.engine.as_deref_mut()),
-                in_place,
-                applied: f32::NAN,
-            });
-            args.rt.light_maps.push(e);
-        }
-    }
-}
-
-/// Spawns the sprite of one light effect under `parent`.
-fn build_light(
-    commands: &mut Commands,
-    parent: Entity,
-    light: &ScoLight,
-    engine: Option<&mut ScriptEngine>,
-    assets: &mut SceneryBuildAssets<'_>,
-) -> Entity {
-    let var = if light.variable.trim().is_empty() {
-        VarRef::One
-    } else {
-        resolve(light.variable.trim(), engine)
-    };
-    // Cone angles are full angles (as for Direct3D spotlights) ❓.
-    let half = |deg: f32| (deg.clamp(0.0, 360.0) * 0.5).to_radians().cos();
-    let sprite = SceneryLight {
-        var,
-        factor: light.factor,
-        size_m: light.size_m.max(0.01),
-        direction: if light.omni {
-            Vec3::ZERO
-        } else {
-            local(light.direction).normalize_or_zero()
-        },
-        cos_inner: half(light.cone_inner_deg),
-        cos_outer: half(light.cone_outer_deg),
-        level: 0.0,
-    };
-    let mesh = assets.lights.glow_mesh(assets.meshes);
-    let material = assets.lights.material(assets.materials, light.color);
-    let e = spawn_light_sprite(commands, sprite, local(light.position), mesh, material);
-    commands.entity(parent).add_child(e);
-    // A directional light with the `cone` flag also draws a visible cone, next to the glow; its
-    // brightness is the glow's level (the same variable, switched by the same night rule).
-    if let Some(shape) = crate::light_cones::lantern_cone_shape(light) {
-        crate::light_cones::spawn_light_cone(
-            commands,
-            parent,
-            crate::light_cones::LightCone {
-                kind: crate::light_cones::ConeKind::Lantern,
-                shape,
-                level: crate::light_cones::ConeLevel::Glow(e),
-            },
-        );
-    }
-    e
-}
+mod groups;
+mod meshes;
+mod sprites;
+use groups::*;
+use meshes::*;
+use sprites::*;
 
 /// Builds the runtime hierarchy of an object under `root` (which carries the placement
 /// transform) and inserts its runtime components. Returns the number of part entities.

@@ -95,7 +95,6 @@ crates/opts-bevy/src/scenery/tests.rs 234  # grandfathered: oversized test or ex
 crates/opts-bevy/src/scenery_runtime/effects.rs 217  # grandfathered: extract 39 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-bevy/src/scenery_runtime/lights.rs 169  # grandfathered: extract 26 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-bevy/src/scenery_runtime/scripts.rs 218  # grandfathered: extract 41 test lines to tests.rs, then split by concern to <= 150 LOC
-crates/opts-bevy/src/scenery_runtime/spawn.rs 265  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/scenery_runtime/tick.rs 240  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/sky_cube.rs 256  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/sky_cube/tests.rs 216  # grandfathered: oversized test or example file, split by concern

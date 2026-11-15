@@ -93,7 +93,7 @@ impl VehicleScripts {
 mod inputs;
 mod system;
 pub use inputs::*;
-use system::*;
+pub use system::*;
 
 
 /// What the passengers tell the scripts of their vehicle (`humans_count`, `PAX_Entry<n>_Req`,
