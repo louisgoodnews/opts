@@ -283,7 +283,6 @@ crates/opts-game/src/in_game/omsi_world/traffic/graph.rs 202  # grandfathered: s
 crates/opts-game/src/in_game/omsi_world/traffic/motion.rs 239  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic/scheduled.rs 154  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic/scheduled/plan.rs 192  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/in_game/omsi_world/traffic/spawn/agent.rs 273  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic/spawn/models.rs 164  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic/variants.rs 191  # grandfathered: extract 18 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-game/src/in_game/omsi_world/traffic_chain.rs 176  # grandfathered: extract 95 inline test lines to tests.rs (then <= 150 LOC)
