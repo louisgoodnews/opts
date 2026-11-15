@@ -303,7 +303,6 @@ crates/opts-game/src/in_game/vehicle_menu/build.rs 239  # grandfathered: split p
 crates/opts-game/src/in_game/vehicle_menu/change_map_page.rs 194  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/vehicle_menu/entries.rs 241  # grandfathered: extract 20 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-game/src/in_game/vehicle_menu/rebuild.rs 200  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/in_game/vehicle_menu/route_page.rs 260  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/vehicle_menu/route_page/build.rs 168  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/vehicle_menu/select_page.rs 234  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/vehicle_menu/setvars_page.rs 222  # grandfathered: extract 88 inline test lines to tests.rs (then <= 150 LOC)
