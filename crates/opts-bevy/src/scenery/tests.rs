@@ -1,7 +1,12 @@
 //! Unit tests for `super` (`scenery.rs`).
 
+use bevy::math::Vec3;
+use bevy::mesh::Mesh;
+use opts_core::formats::map::MapSplineInstance;
+use opts_core::formats::scenery::{SplineGraphicalProfile, SplineProfile, SplineProfilePoint};
+
+use super::pose::height_offset;
 use super::*;
-use opts_core::formats::scenery::{SplineGraphicalProfile, SplineProfilePoint};
 
 #[test]
 fn test_extrude_spline_profile() {
@@ -156,103 +161,5 @@ fn spline_h_reaches_its_explicit_height_with_a_smooth_ramp() {
     assert!(height_offset(&inst, 1.0, 10.0) < 0.05, "starts flat");
 }
 
-mod pose_tests {
-    use super::super::*;
-
-    fn straight() -> MapSplineInstance {
-        MapSplineInstance {
-            flag: 0,
-            sli_file: String::new(),
-            id_code: 1,
-            conn_id_1: 0,
-            conn_id_2: 0,
-            position: Vec3::new(10.0, 20.0, 5.0),
-            heading_deg: 90.0,
-            length_m: 100.0,
-            radius_m: 0.0,
-            gradient_start: 0.02,
-            gradient_end: 0.02,
-            has_height_profile: false,
-            mirrored: false,
-            raw_params: vec![],
-        }
-    }
-
-    #[test]
-    fn straight_pose_heads_east_and_climbs() {
-        let p = spline_pose(&straight(), 50.0);
-        assert!((p.x - 60.0).abs() < 1e-3 && (p.y - 20.0).abs() < 1e-3);
-        assert!((p.z - 6.0).abs() < 1e-4);
-    }
-
-    #[test]
-    fn right_turn_arc_ends_south_of_east_start() {
-        let mut inst = straight();
-        inst.radius_m = 100.0;
-        inst.length_m = 200.0;
-        let p = spline_pose(&inst, 100.0 * std::f32::consts::FRAC_PI_2);
-        // Heading east, turning right by 90° ends heading south, 100 m east and 100 m south.
-        assert!((p.x - 110.0).abs() < 0.05 && (p.y - -80.0).abs() < 0.05);
-    }
-}
-
-mod mirror_tests {
-    use super::super::*;
-    use opts_core::formats::scenery::sli::{SplineGraphicalProfile, SplineProfilePoint};
-
-    fn x_extent(mirrored: bool) -> (f32, f32) {
-        let pt = |x: f32| SplineProfilePoint {
-            x,
-            z: 0.0,
-            u: 0.0,
-            v_slope: 1.0,
-        };
-        let profile = SplineProfile {
-            graphical_profiles: vec![SplineGraphicalProfile {
-                texture_index: 0,
-                points: vec![pt(0.0), pt(4.0)],
-            }],
-            ..Default::default()
-        };
-        let mut inst = pose_tests_instance();
-        inst.heading_deg = 0.0; // north: right is +x
-        inst.position = Vec3::ZERO;
-        inst.mirrored = mirrored;
-        let meshes = extrude_spline_segment(&profile, &inst, (0.0, 0.0));
-        let positions = meshes[0]
-            .1
-            .attribute(Mesh::ATTRIBUTE_POSITION)
-            .and_then(|a| a.as_float3().map(<[_]>::to_vec))
-            .unwrap();
-        let xs: Vec<f32> = positions.iter().map(|p| p[0]).collect();
-        (
-            xs.iter().copied().fold(f32::MAX, f32::min),
-            xs.iter().copied().fold(f32::MIN, f32::max),
-        )
-    }
-
-    fn pose_tests_instance() -> MapSplineInstance {
-        MapSplineInstance {
-            flag: 0,
-            sli_file: String::new(),
-            id_code: 1,
-            conn_id_1: 0,
-            conn_id_2: 0,
-            position: Vec3::ZERO,
-            heading_deg: 0.0,
-            length_m: 10.0,
-            radius_m: 0.0,
-            gradient_start: 0.0,
-            gradient_end: 0.0,
-            has_height_profile: false,
-            mirrored: false,
-            raw_params: vec![],
-        }
-    }
-
-    #[test]
-    fn mirrored_spline_flips_the_profile_to_the_left() {
-        assert_eq!(x_extent(false), (0.0, 4.0));
-        assert_eq!(x_extent(true), (-4.0, 0.0));
-    }
-}
+mod mirror_tests;
+mod pose_tests;
