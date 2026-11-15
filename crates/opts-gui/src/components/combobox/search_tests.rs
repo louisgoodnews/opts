@@ -87,6 +87,6 @@ fn state(app: &App, combo: Entity) -> (bool, Option<usize>) {
     (c.is_open, c.selected)
 }
 
-mod filter;
-mod keyboard;
-mod labels;
+mod filter_tests;
+mod keyboard_tests;
+mod labels_tests;
