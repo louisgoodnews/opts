@@ -2,6 +2,8 @@
 
 use super::*;
 
+use opts_core::formats::vehicles::model::ModelConfig;
+
 fn tmp_root(tag: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("opts_repaints_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
