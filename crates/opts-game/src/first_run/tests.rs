@@ -3,7 +3,14 @@
 use std::sync::mpsc::channel;
 
 use super::*;
+
+use crate::shell::dialog::DialogChoice;
+
+use std::path::PathBuf;
+
+use crate::settings::GameSettings;
 use crate::shell::ShellPlugin;
+use crate::shell::keys;
 use opts_gui::prelude::*;
 
 fn app() -> App {
