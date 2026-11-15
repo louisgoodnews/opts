@@ -69,7 +69,6 @@ crates/opts-bevy/src/control/handlers/ui.rs 195  # grandfathered: split producti
 crates/opts-bevy/src/control/handlers/ui_ext.rs 295  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/control/handlers/ui_ext/text_input.rs 304  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/control/keys.rs 220  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/control/server.rs 319  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/coords.rs 218  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/door_camera.rs 211  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/door_camera/systems.rs 252  # grandfathered: split production file by concern to <= 150 LOC
@@ -128,7 +127,6 @@ crates/opts-bevy/src/scenery.rs 258  # grandfathered: split production file by c
 crates/opts-bevy/src/scenery/tests.rs 234  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/scenery_runtime/effects.rs 217  # grandfathered: extract 39 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-bevy/src/scenery_runtime/lights.rs 169  # grandfathered: extract 26 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-bevy/src/scenery_runtime/maplights.rs 313  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/scenery_runtime/scripts.rs 218  # grandfathered: extract 41 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-bevy/src/scenery_runtime/spawn.rs 265  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/scenery_runtime/tick.rs 240  # grandfathered: split production file by concern to <= 150 LOC
@@ -160,7 +158,6 @@ crates/opts-bevy/src/vehicle_script.rs 266  # grandfathered: split production fi
 crates/opts-bevy/src/vehicle_script/drive.rs 231  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_setup.rs 241  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_setup/tests.rs 245  # grandfathered: oversized test or example file, split by concern
-crates/opts-bevy/src/vehicle_sim.rs 321  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_triggers.rs 246  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_triggers/bindings.rs 234  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_triggers/tests.rs 193  # grandfathered: oversized test or example file, split by concern
