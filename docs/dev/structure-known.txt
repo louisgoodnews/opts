@@ -67,7 +67,6 @@ crates/opts-bevy/src/control/handlers/input.rs 177  # grandfathered: split produ
 crates/opts-bevy/src/control/handlers/query.rs 214  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/control/handlers/ui.rs 195  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/control/handlers/ui_ext.rs 295  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/control/handlers/ui_ext/scroll.rs 344  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/control/handlers/ui_ext/text_input.rs 304  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/control/keys.rs 220  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/control/server.rs 319  # grandfathered: split production file by concern to <= 150 LOC
@@ -75,11 +74,9 @@ crates/opts-bevy/src/coords.rs 218  # grandfathered: split production file by co
 crates/opts-bevy/src/door_camera.rs 211  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/door_camera/systems.rs 252  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/door_camera/tests.rs 340  # grandfathered: oversized test or example file, split by concern
-crates/opts-bevy/src/environment.rs 317  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/environment/calendar.rs 167  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/environment/tests.rs 307  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/free_texture.rs 176  # grandfathered: extract 63 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-bevy/src/glass.rs 347  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/glass/tests.rs 218  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/ground.rs 231  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/ground_material.rs 207  # grandfathered: split production file by concern to <= 150 LOC
@@ -94,7 +91,6 @@ crates/opts-bevy/src/instancing.rs 281  # grandfathered: split production file b
 crates/opts-bevy/src/lib.rs 185  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/light_cones/pool.rs 284  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/light_cones/render.rs 180  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/light_cones/tests.rs 323  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/light_cones/tests/mapping.rs 156  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/light_quality.rs 196  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/light_quality/governor.rs 294  # grandfathered: split production file by concern to <= 150 LOC
@@ -140,7 +136,6 @@ crates/opts-bevy/src/sky_cube.rs 256  # grandfathered: split production file by 
 crates/opts-bevy/src/sky_cube/tests.rs 216  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/sun_rays.rs 287  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/sun_rays/tests.rs 293  # grandfathered: oversized test or example file, split by concern
-crates/opts-bevy/src/terrain.rs 322  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/terrain/align.rs 221  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/terrain/cut.rs 160  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/terrain/cut/mesh.rs 229  # grandfathered: split production file by concern to <= 150 LOC
@@ -151,13 +146,11 @@ crates/opts-bevy/src/texture.rs 293  # grandfathered: split production file by c
 crates/opts-bevy/src/texture/bc_mips/tests.rs 156  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/texture/chain_cache.rs 217  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/texture/decode.rs 194  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/texture/mips.rs 340  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/texture/mips/tests.rs 211  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/texture/tests.rs 181  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/texture_filter.rs 187  # grandfathered: extract 45 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-bevy/src/tree_wind.rs 188  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle.rs 277  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/vehicle_anim.rs 335  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_anim/tests.rs 296  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/vehicle_glow.rs 179  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_glow/headlight_pool.rs 158  # grandfathered: split production file by concern to <= 150 LOC
@@ -179,7 +172,6 @@ crates/opts-bevy/src/weather/fog.rs 167  # grandfathered: split production file 
 crates/opts-bevy/src/weather/tests.rs 225  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/weather/tests/fog_tests.rs 222  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/ai_variables.rs 224  # grandfathered: oversized test or example file, split by concern
-crates/opts-bevy/tests/articulation.rs 330  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/camera.rs 279  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/camera/drive.rs 167  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/capture_record.rs 305  # grandfathered: oversized test or example file, split by concern
