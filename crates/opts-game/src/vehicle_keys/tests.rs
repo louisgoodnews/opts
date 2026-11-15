@@ -1,14 +1,12 @@
 //! Unit tests for `super` (`vehicle_keys.rs`).
 
 use super::*;
-use crate::settings_registry::SettingsCapabilities;
+use crate::settings::GameSettings;
+use crate::settings_registry::{SettingKind, SettingsCapabilities, SettingsRegistry};
+use opts_bevy::{KeyChord, ScriptKeyBinding};
 
 fn parts() -> (SettingsRegistry, SettingsCapabilities, GameSettings) {
-    (
-        SettingsRegistry::with_builtin(),
-        SettingsCapabilities::default(),
-        GameSettings::default(),
-    )
+    (SettingsRegistry::with_builtin(), SettingsCapabilities::default(), GameSettings::default())
 }
 
 #[test]
