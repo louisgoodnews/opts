@@ -4,18 +4,24 @@ use bevy::prelude::*;
 
 use crate::icons::icon_text;
 use crate::interaction::focus::PointerOnly;
-use crate::interaction::state::Selected;
 use crate::interaction::tooltip::Tooltip;
-use crate::l10n::{wizard_keys::md, L10nTooltip};
+use crate::l10n::{L10nTooltip, wizard_keys::md};
 use crate::patterns::glyphs;
-use crate::patterns::list_model::{ListEntry, Section, ITEM_HEIGHT};
-use crate::patterns::master_detail::{MasterDetail, MasterRowButton, MasterStarButton, RowThumb};
-use crate::theme::{color::ColorRole, shape::RadiusLevel, typography::TypeScale};
-use crate::tokens::components::{BackgroundRole, ForegroundRole, RadiusToken, TypeStyleToken};
-use crate::ui_id::{slug, UiId};
-use crate::ui_tree::{A11yHidden, ListRow};
+use crate::patterns::list_model::{ITEM_HEIGHT, ListEntry, Section};
+use crate::patterns::master_detail::{MasterDetail, MasterStarButton};
+use crate::theme::{color::ColorRole, shape::RadiusLevel};
+use crate::tokens::components::{ForegroundRole, RadiusToken};
+use crate::ui_id::{UiId, slug};
+use crate::ui_tree::A11yHidden;
 
-use super::{section_key, ThumbGlyph, BAR_GUTTER};
+use super::{BAR_GUTTER, section_key};
+
+mod row;
+mod text;
+
+use row::spawn_row_button;
+#[cfg(test)]
+pub use text::ellipsize;
 
 pub(super) struct ItemContext<'a> {
     pub root: Entity,
@@ -64,173 +70,6 @@ pub(super) fn spawn_item(commands: &mut Commands, ctx: &ItemContext<'_>) -> Enti
     }
     wrap
 }
-
-fn spawn_row_button(
-    commands: &mut Commands,
-    ctx: &ItemContext<'_>,
-    selected: bool,
-    key: &str,
-) -> Entity {
-    let mut button = commands.spawn((
-        crate::components::button::Button,
-        PointerOnly,
-        ListRow,
-        Node {
-            flex_grow: 1.0,
-            height: Val::Percent(100.0),
-            min_width: Val::Px(0.0),
-            align_items: AlignItems::Center,
-            column_gap: Val::Px(12.0),
-            padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
-            overflow: Overflow::clip(),
-            ..default()
-        },
-        RadiusToken(RadiusLevel::Medium),
-        MasterRowButton {
-            root: ctx.root,
-            row: ctx.row,
-            id: ctx.entry.id.clone(),
-        },
-        UiId::new(format!("{}.{}.{key}", ctx.prefix, section_key(ctx.section))),
-    ));
-    if ctx.entry.title.chars().count() > ctx.max_chars {
-        // Cut titles say their full text on hover and focus.
-        button.insert(Tooltip::new(ctx.entry.title.clone()));
-    }
-    if selected {
-        button.insert((Selected, BackgroundRole(ColorRole::SecondaryContainer)));
-    }
-    let button = button.id();
-    let fg = if selected {
-        ColorRole::OnSecondaryContainer
-    } else {
-        ColorRole::OnSurface
-    };
-    let marker = commands
-        .spawn((
-            Node {
-                width: Val::Px(4.0),
-                height: Val::Px(32.0),
-                flex_shrink: 0.0,
-                ..default()
-            },
-            RadiusToken(RadiusLevel::Full),
-            Name::new("SelectionMarker"),
-        ))
-        .id();
-    if selected {
-        commands
-            .entity(marker)
-            .insert(BackgroundRole(ColorRole::Primary));
-    }
-    let thumb = spawn_thumb(commands, ctx.root, ctx.entry);
-    let texts = spawn_texts(commands, ctx.entry, fg, ctx.max_chars);
-    commands
-        .entity(button)
-        .add_children(&[marker, thumb, texts]);
-    button
-}
-
-fn spawn_thumb(commands: &mut Commands, root: Entity, entry: &ListEntry) -> Entity {
-    let mut slot = commands.spawn((
-        Node {
-            width: Val::Px(40.0),
-            height: Val::Px(40.0),
-            flex_shrink: 0.0,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            overflow: Overflow::clip(),
-            ..default()
-        },
-        BackgroundRole(ColorRole::SurfaceContainerHigh),
-        RadiusToken(RadiusLevel::Small),
-        Name::new("RowThumbSlot"),
-    ));
-    if let Some(key) = &entry.thumb {
-        slot.insert(RowThumb {
-            root,
-            key: key.clone(),
-        });
-    }
-    let slot = slot.id();
-    if let Some(glyph) = entry.glyph {
-        let g = commands
-            .spawn((
-                icon_text(glyph, 22.0, TextColor::default().0),
-                ForegroundRole(ColorRole::OnSurfaceVariant),
-                A11yHidden,
-                ThumbGlyph,
-                Pickable::IGNORE,
-            ))
-            .id();
-        commands.entity(slot).add_child(g);
-    }
-    slot
-}
-
-/// `text` cut to `max` characters with an ellipsis.
-pub fn ellipsize(text: &str, max: usize) -> String {
-    if text.chars().count() <= max {
-        return text.to_string();
-    }
-    let mut out: String = text.chars().take(max.saturating_sub(1)).collect();
-    out.push('…');
-    out
-}
-
-fn spawn_texts(
-    commands: &mut Commands,
-    entry: &ListEntry,
-    fg: ColorRole,
-    max_chars: usize,
-) -> Entity {
-    let col = commands
-        .spawn((
-            Node {
-                flex_direction: FlexDirection::Column,
-                flex_grow: 1.0,
-                min_width: Val::Px(0.0),
-                overflow: Overflow::clip(),
-                ..default()
-            },
-            Name::new("RowTexts"),
-        ))
-        .id();
-    let title = commands
-        .spawn((
-            Text::new(ellipsize(&entry.title, max_chars)),
-            TextLayout {
-                linebreak: LineBreak::NoWrap,
-                ..default()
-            },
-            TextColor::default(),
-            ForegroundRole(fg),
-            TypeStyleToken(TypeScale::TitleMedium),
-        ))
-        .id();
-    commands.entity(col).add_child(title);
-    if !entry.subtitle.is_empty() {
-        let sub = commands
-            .spawn((
-                Text::new(ellipsize(&entry.subtitle, max_chars + 6)),
-                TextLayout {
-                    linebreak: LineBreak::NoWrap,
-                    ..default()
-                },
-                TextColor::default(),
-                ForegroundRole(if fg == ColorRole::OnSurface {
-                    ColorRole::OnSurfaceVariant
-                } else {
-                    fg
-                }),
-                TypeStyleToken(TypeScale::Label),
-            ))
-            .id();
-        commands.entity(col).add_child(sub);
-    }
-    col
-}
-
 fn spawn_star(
     commands: &mut Commands,
     root: Entity,
