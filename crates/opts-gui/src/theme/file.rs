@@ -20,6 +20,8 @@
 //!
 //! Role names are the variant names of [`ColorRole`] (`Surface`, `OnSurface`, `Primary`, ...).
 
+use std::collections::BTreeMap;
+
 use serde::Deserialize;
 
 use super::color::ColorRole;

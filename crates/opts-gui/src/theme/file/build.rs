@@ -61,7 +61,7 @@ pub fn parse_theme_file(text: &str) -> Result<CustomTheme, ThemeFileError> {
         })?),
         None => None,
     };
-    let seed = accent.unwrap_or_else(|| super::accent::AccentPreset::default().color());
+    let seed = accent.unwrap_or_else(|| super::super::accent::AccentPreset::default().color());
     let mut corrected = Vec::new();
     let mut schemes = Vec::new();
     for (kind, overrides) in [
