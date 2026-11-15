@@ -17,6 +17,12 @@ use super::{CameraSetup, WorldLoadJob, WorldStats};
 
 pub(super) mod doors;
 mod hot_spots;
+mod report;
+use report::{record_vehicle, trace_vehicle};
+mod attach;
+use attach::{attach_trailers, attach_vehicle_parts};
+mod driver;
+use driver::{cockpit_offset_of, seat_driver};
 mod passengers;
 mod segments;
 use segments::{ensure_repaints, repaint_map};
@@ -45,151 +51,6 @@ pub struct SpawnedVehicle {
     pub name: String,
     /// Camera parameters derived from the vehicle.
     pub camera: CameraSetup,
-}
-
-/// What the world statistics say about the new vehicle.
-fn record_vehicle(
-    (job, stats): (&WorldLoadJob, &mut WorldStats),
-    (vehicle_name, activate): (&str, bool),
-    (session_id, mesh_count, vertex_count): (crate::session_vehicles::VehicleId, usize, usize),
-) {
-    if activate {
-        stats.vehicle_name.clone_from(&vehicle_name.to_owned());
-    }
-    stats.vehicle_meshes = mesh_count;
-    stats.vehicle_vertices = vertex_count;
-    stats.scene_vertices += vertex_count;
-    stats.asset_failures = job.cache.stats.failures.len();
-    tracing::info!(
-        vehicle = %vehicle_name,
-        session_id,
-        meshes = mesh_count,
-        vertices = vertex_count,
-        "vehicle meshes loaded"
-    );
-}
-
-/// The scene trace record of the new vehicle.
-fn trace_vehicle(
-    (vehicle_name, bus_path, cfg_path): (&str, &Path, &Path),
-    (root, root_tf, trace_frame): (Entity, &Transform, &super::trace::Frame),
-    (session_id, activate, mesh_count, vertex_count): (
-        crate::session_vehicles::VehicleId,
-        bool,
-        usize,
-        usize,
-    ),
-) {
-    super::trace::spawned(
-        opts_bevy::scene_trace::kind::VEHICLE,
-        vehicle_name,
-        &opts_bevy::scene_trace::relative(bus_path),
-        (root, root_tf),
-        trace_frame,
-        "ok",
-        serde_json::json!({
-            "session_id": session_id, "active": activate,
-            "model_cfg": opts_bevy::scene_trace::relative(cfg_path),
-            "meshes": mesh_count, "vertices": vertex_count,
-        }),
-    );
-}
-
-/// The scripts, sounds, door points, passengers and key bindings of the vehicle.
-fn attach_vehicle_parts(
-    job: &mut WorldLoadJob,
-    commands: &mut Commands,
-    root: Entity,
-    (manifest, bus_dir): (&BusManifest, &Path),
-    (script_seed, activate): (u64, bool),
-) {
-    attach_scripts(job, commands, root, manifest, bus_dir, script_seed, None);
-    crate::player_sound::attach(job, commands, root, manifest, bus_dir);
-    doors::attach_door_points(job, commands, root, manifest, bus_dir);
-    if activate {
-        passengers::attach_passengers(job, commands, root, manifest, bus_dir, script_seed);
-    }
-    load_key_bindings(job, commands);
-}
-
-/// The trailing units of an articulated vehicle and the cameras they bring.
-fn attach_trailers(
-    job: &mut WorldLoadJob,
-    commands: &mut Commands,
-    (meshes, materials, images): (
-        &mut Assets<Mesh>,
-        &mut Assets<StandardMaterial>,
-        &mut Assets<Image>,
-    ),
-    root: Entity,
-    (bus_dir, manifest): (&Path, &BusManifest),
-) {
-    let (trailer_cams, trailer_driver_cams) = spawn_trailer_chain(
-        job,
-        commands,
-        meshes,
-        materials,
-        images,
-        root,
-        (bus_dir, manifest),
-    );
-    if !trailer_cams.is_empty() || !trailer_driver_cams.is_empty() {
-        commands.queue(move |world: &mut World| {
-            if let Some(mut bus) = world.get_mut::<opts_bevy::BusVehicle>(root) {
-                bus.trailer_pax_cameras = trailer_cams;
-                bus.trailer_driver_cameras = trailer_driver_cams;
-            }
-        });
-    }
-}
-
-/// The driver's eye point of the standard camera, in Bevy space (vehicle space → Bevy by the
-/// shared helper).
-fn cockpit_offset_of(manifest: &BusManifest) -> Vec3 {
-    let driver_cam = manifest
-        .driver_cameras
-        .get(manifest.std_camera_index.unwrap_or(0))
-        .or_else(|| manifest.driver_cameras.first());
-    driver_cam
-        .map(|c| {
-            camera_preset_to_bevy_transform(
-                Vec3::new(c.x, c.y, c.z),
-                c.dist,
-                c.yaw_deg,
-                c.pitch_deg,
-            )
-            .translation
-        })
-        .unwrap_or(Vec3::new(0.0, 1.2, 0.0))
-}
-
-/// Seats the player's character at the driver position.
-fn seat_driver(
-    (job, commands): (&mut WorldLoadJob, &mut Commands),
-    (meshes, materials, images, bindposes): (
-        &mut Assets<Mesh>,
-        &mut Assets<StandardMaterial>,
-        &mut Assets<Image>,
-        &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
-    ),
-    root: Entity,
-    (bus_dir, manifest, cockpit_offset): (&Path, &BusManifest, Vec3),
-) {
-    match load_driver_human(
-        (job, commands),
-        (meshes, materials, images, bindposes),
-        root,
-        (
-            bus_dir,
-            manifest.passengercabin_cfg.as_deref(),
-            cockpit_offset,
-        ),
-    ) {
-        Ok(name) => tracing::info!(human = %name, "player character seated at the driver position"),
-        Err(e) => {
-            tracing::error!(at = %opts_bevy::position_tag(), "cannot load the player character: {e}")
-        }
-    }
 }
 
 /// Loads a user vehicle from its `.bus` file and spawns it at the session's spawn point

@@ -7,6 +7,10 @@ use super::state::{Act, FormationEditor, FormationList, FormationRoot, ListKind}
 
 mod columns;
 use columns::{summary_column, train_column};
+mod tabs;
+use tabs::{list_tabs, search_field};
+mod catalogue;
+use catalogue::catalogue_column;
 
 pub(super) fn label(
     p: &mut ChildSpawnerCommands,
@@ -156,117 +160,4 @@ pub(super) fn build_formation(commands: &mut Commands, ed: &FormationEditor, ent
             }
         });
     });
-}
-
-/// The three tabs that choose which list the column shows.
-fn list_tabs(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
-    c.spawn(Node {
-        flex_direction: FlexDirection::Row,
-        column_gap: Val::Px(8.0),
-        ..default()
-    })
-    .with_children(|tabs| {
-        let cars = button(
-            tabs,
-            "Rail cars",
-            ed.list == ListKind::Cars,
-            Act::List(ListKind::Cars),
-        );
-        id(&mut tabs.commands(), cars, "formation.list.cars");
-        let presets = button(
-            tabs,
-            "Trains",
-            ed.list == ListKind::Presets,
-            Act::List(ListKind::Presets),
-        );
-        id(&mut tabs.commands(), presets, "formation.list.presets");
-        let saved = button(
-            tabs,
-            "Saved",
-            ed.list == ListKind::Saved,
-            Act::List(ListKind::Saved),
-        );
-        id(&mut tabs.commands(), saved, "formation.list.saved");
-    });
-}
-
-/// The search box above the list.
-fn search_field(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
-    c.spawn((
-        Node {
-            width: Val::Percent(100.0),
-            padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
-            border: UiRect::all(Val::Px(1.0)),
-            ..default()
-        },
-        BorderRole(ColorRole::Outline),
-        BackgroundRole(ColorRole::SurfaceContainerLowest),
-        RadiusToken(RadiusLevel::Small),
-    ))
-    .with_children(|f| {
-        let text = if ed.search.is_empty() {
-            "Search: type to filter…".to_string()
-        } else {
-            format!("Search: {}|", ed.search)
-        };
-        label(f, text, 13.0, ColorRole::OnSurface);
-    });
-}
-
-fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
-    list_tabs(c, ed);
-    let shown = ed.shown_list();
-    label(
-        c,
-        match ed.list {
-            ListKind::Cars => format!("Rail vehicles ({} of {})", shown.len(), ed.cars.len()),
-            ListKind::Presets => format!("Consists ({} of {})", shown.len(), ed.presets.len()),
-            ListKind::Saved => format!("Saved trains ({} of {})", shown.len(), ed.saved.len()),
-        },
-        15.0,
-        ColorRole::Primary,
-    );
-    search_field(c, ed);
-    scroll_list(c, 0, ed.scroll[0], |list| {
-        if shown.is_empty() {
-            label(list, "Nothing matches.", 12.0, ColorRole::OnSurfaceVariant);
-        }
-        for (i, text) in shown {
-            let (act, selected) = match ed.list {
-                ListKind::Cars => (Act::Pick(i), ed.pick == Some(i)),
-                ListKind::Presets => (Act::PickPreset(i), false),
-                ListKind::Saved => (
-                    Act::PickSaved(i),
-                    ed.saved_id.as_deref() == ed.saved.get(i).map(|s| s.0.as_str()),
-                ),
-            };
-            if ed.list == ListKind::Saved {
-                list.spawn(Node {
-                    flex_direction: FlexDirection::Row,
-                    column_gap: Val::Px(6.0),
-                    width: Val::Percent(100.0),
-                    ..default()
-                })
-                .with_children(|row| {
-                    let load = button(row, &text, selected, act);
-                    id(&mut row.commands(), load, &format!("formation.saved.{i}"));
-                    let del = button(row, "✕", false, Act::DeleteSaved(i));
-                    id(
-                        &mut row.commands(),
-                        del,
-                        &format!("formation.saved.{i}.delete"),
-                    );
-                });
-            } else {
-                button(list, &text, selected, act);
-            }
-        }
-    });
-    if ed.list == ListKind::Cars {
-        let add = button(c, "Add to train ▶", true, Act::Add);
-        id(&mut c.commands(), add, "formation.add");
-        if ed.pick.is_none() {
-            c.commands().entity(add).insert(Disabled);
-        }
-    }
 }
