@@ -324,6 +324,7 @@
 - [ADR Template](adr/template.md)
 - [ADR-0001: Why Bevy and Rust?](adr/0001-why-bevy-and-rust.md)
 - [ADR-0002: Clean-Room Reverse Engineering Policy](adr/0002-clean-room-policy.md)
+- [ADR-0003: Layered, Highly Modular Crate Architecture](adr/0003-layered-crate-architecture.md)
 - [ADR-0004: Unified Logging Architecture](adr/0004-logging-architecture.md)
 - [ADR-0005: Workspace Crate Architecture](adr/0005-crate-architecture.md)
 - [ADR-0006: Control Protocol](adr/0006-control-protocol.md)

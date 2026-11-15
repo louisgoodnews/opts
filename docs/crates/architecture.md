@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Proposed — pending [ADR-0003](adr/0003-layered-crate-architecture.md) |
+| **Status** | 🟡 Proposed — pending [ADR-0003](../src/adr/0003-layered-crate-architecture.md) |
 | **Supersedes (once accepted)** | The dependency tree in [Coding Standards §2.11](https://github.com/louisgoodnews/opts/blob/main/docs/src/contributing/standards.md) |
 | **Last Updated** | 2026-10-04 |
 
@@ -431,4 +431,4 @@ Otherwise it starts as a module in the nearest existing crate and is promoted la
 
 - [Crate Catalog](catalog.md) · [Crate Conventions](conventions.md) · [Workspace Audit & Migration Plan](audit.md)
 - [ADR-0001: Why Bevy and Rust?](../src/adr/0001-why-bevy-and-rust.md) — "the Cargo workspace allows strict separation of concerns"
-- [ADR-0003: Layered, Highly Modular Crate Architecture](adr/0003-layered-crate-architecture.md)
+- [ADR-0003: Layered, Highly Modular Crate Architecture](../src/adr/0003-layered-crate-architecture.md)

@@ -19,6 +19,7 @@
   - [opts-types](opts-types.md)
   - [opts-l10n](opts-l10n.md)
   - [opts-logging](opts-logging.md)
+  - [opts-hardware](opts-hardware.md)
 - [Model]()
   - [opts-core](opts-core/README.md) (temporary re-export facade)
   - [opts-model](opts-model.md)
@@ -39,8 +40,3 @@
 - [Development]()
   - [opts-benchmark](opts-benchmark.md)
 
----
-
-# 📜 Decisions
-
-- [ADR-0003: Layered, Highly Modular Crate Architecture](adr/0003-layered-crate-architecture.md)
