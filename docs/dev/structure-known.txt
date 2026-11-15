@@ -524,7 +524,6 @@ crates/opts-game/tests/wizard_tests/step_rules.rs 176  # grandfathered: oversize
 crates/opts-gui/examples/font_compare.rs 249  # grandfathered: oversized test or example file, split by concern
 crates/opts-gui/examples/layout_demo.rs 153  # grandfathered: oversized test or example file, split by concern
 crates/opts-gui/src/actions.rs 203  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-gui/src/components/checkbox.rs 283  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/combobox/search.rs 211  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-gui/src/components/datetime_select.rs 156  # grandfathered: extract 27 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-gui/src/components/modal.rs 156  # grandfathered: extract 35 inline test lines to tests.rs (then <= 150 LOC)

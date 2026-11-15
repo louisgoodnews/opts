@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`checkbox.rs`).
 
 use super::*;
+use crate::interaction::activation::Activated;
 
 #[test]
 fn test_checkbox_builder_spawn() {
