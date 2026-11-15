@@ -21,7 +21,6 @@ crates/opts-bevy/examples/instancing_inventory.rs 209  # grandfathered: oversize
 crates/opts-bevy/examples/lighting_bench/apply.rs 224  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/lighting_bench/apply/scene.rs 199  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/lighting_bench/main.rs 163  # grandfathered: oversized test or example file, split by concern
-crates/opts-bevy/examples/lighting_bench/setup.rs 261  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/load_bus.rs 224  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/reflection_census.rs 248  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/reflections_probe.rs 254  # grandfathered: oversized test or example file, split by concern
