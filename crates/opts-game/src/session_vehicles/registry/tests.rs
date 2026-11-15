@@ -1,5 +1,8 @@
 //! Unit tests for `super` (`registry.rs`).
 
+use bevy::prelude::Entity;
+use serde_json::json;
+
 use super::*;
 
 fn params(name: &str) -> SpawnParams {
