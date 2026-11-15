@@ -3,9 +3,13 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Date** | 2026-10-28 (status sync 2026-10-29) |
-| **Baseline** | `master` (`9b00249b`; re-synced against `606e50ef` on 2026-10-29) — 144 numbered milestones (71 done, 70 open, 3 deferred/obsolete) + un-numbered Phase 1/5/6/7/13 items |
+| **Baseline** | `master` (`9b00249b`; re-synced against `606e50ef` on 2026-10-29) — 145 numbered milestone files (corrected 2026-11-15 from 144; 83 done, 36 in progress, 23 open, 2 deferred, 1 obsolete) + un-numbered Phase 1/5/6/7/13 items |
 | **Sources** | [`ROADMAP.md`](ROADMAP.md), [`docs/dev/BOARD.md`](docs/dev/BOARD.md), [`docs/src/architecture/ai-token-optimization.md`](docs/src/architecture/ai-token-optimization.md) |
 
+> **Sync 2026-11-15 (count and audit check):** the milestone count is corrected from 144 to **145**. The figure was taken from the milestone files `docs/src/roadmap/*/M-*.md` (IDs `M-0000` to `M-0150`, six IDs without a file), counting each file's status row by its leading status symbol. Result: 83 done (✅/🟢), 36 in progress (🟡), 23 open (📝/⏳), 2 deferred (`M-0079`, `M-0138`), 1 obsolete (`M-0104`); 83+36+23+2+1 = 145. The 144 was short by one because `M-0028.md` was added in `1beb969d` (2026-10-29), after the count was taken. An earlier survey gave 37 in progress and 22 open; the difference is `M-0062`, whose row starts with ⏳ although its sync note says all deliverables are implemented and only the acceptance is pending, so it is counted open here. Known gaps, not created here: ROADMAP.md refers to `M-0030`, `M-0031`, `M-0033`, `M-0034` and `M-0036`, which have no milestone file; `M-0107` also has no file. The line "73 open milestones" in the rationale below is superseded: 62 are not done (59 open or in progress, 2 deferred, 1 obsolete).
+>
+> **Sync 2026-11-15 (function and file sizes):** `scripts/structure_audit.py` run on this tree reports 0 functions over 80 code lines (0 over 200), 0 signature allows and 0 files over 350 code lines (1,477 files, 227,846 code lines). This matches the present-tense claims in rank 24 and the 2026-10-30 note. The "191 production functions > 80 lines" in rank 24 is the original 2026-10-28 scope, kept as history; the "149 functions over 80 lines" of the 2026-10-29 (later) note is superseded by the same audit.
+>
 > **Status sync 2026-11-05:** `M-0040`, `M-0042` and `M-0052` are done (closed by the project lead 2026-11-05); ranks 4 and 24 are closed. `M-0028` is done (`agent/m0028-bench`); rank 30 is open for `M-0081` only.
 >
 > **Status sync 2026-10-30:** `M-0150` is done (`0edc9f31`): `function-known.txt` is empty, 0 functions over 80 lines and 0 signature allows remain; `M-0040` is separate. Rank 24 below is closed for `M-0150`.

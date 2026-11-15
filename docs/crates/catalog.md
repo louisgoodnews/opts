@@ -12,7 +12,7 @@ Every crate OPTS has or is expected to need, by layer. Phases refer to the [road
 
 **Status legend:** ✅ exists · 🔁 exists, to be renamed/repurposed · 🆕 planned · 💭 speculative · 🗑️ removed
 
-> **Current workspace (2026-10-11):** `opts-benchmark` ([guide](opts-benchmark.md); the scenery verification of M-0054), `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-core`, `opts-game`, `opts-gui`, `opts-logging`, `opts-sim`, `opts-tools`, `opts-traffic` (the first slice of the planned `opts-sim-traffic`; see [AI Road Traffic](../src/architecture/ai-traffic.md)). The folders `opts-assets`, `opts-discovery`, `opts-editor`, `opts-graphics`, `opts-parsers` and `opts-utils` describe crates that no longer exist or were never created; they are kept as design history.
+> **Current workspace (2026-11-15):** the 17 members of `Cargo.toml` are `opts-benchmark` ([guide](opts-benchmark.md); the scenery verification of M-0054), `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-core` (temporary re-export facade, see [its page](opts-core.md)), `opts-game`, `opts-gui`, `opts-hardware`, `opts-importer`, `opts-l10n`, `opts-logging`, `opts-model`, `opts-omsi`, `opts-sim`, `opts-tools`, `opts-traffic` (the first slice of the planned `opts-sim-traffic`; see [AI Road Traffic](../src/architecture/ai-traffic.md)) and `opts-types`. The authoritative crate graph is [Crate Graph](../src/architecture/crate-graph.md). The folders `opts-assets`, `opts-discovery`, `opts-graphics`, `opts-parsers` and `opts-utils` were removed from this book because their crates no longer exist; the decision is recorded in [ADR-0005](../src/adr/0005-crate-architecture.md) and the history is in git.
 
 ---
 
@@ -20,7 +20,7 @@ Every crate OPTS has or is expected to need, by layer. Phases refer to the [road
 
 | Crate | Status | Purpose | Key deps | Phase |
 | :--- | :---: | :--- | :--- | :---: |
-| `opts-utils` | 🗑️ | Removed in `07de1b0` (placeholder crate); its folder here is history | — | — |
+| `opts-utils` | 🗑️ | Removed in `07de1b0` (placeholder crate); no page here, see [ADR-0005](../src/adr/0005-crate-architecture.md) | — | — |
 | `opts-diagnostics` | 🆕 | Spans, severities, multi-error reports | `thiserror` | 2 |
 | `opts-text` | 🆕 | CP1252/UTF-8 decoding, `[keyword]` line lexer | `encoding_rs`, `nom` | 2 |
 | `opts-vfs` | 🆕 | `FileSource`, case-insensitive paths, overlays | — | 2 |
