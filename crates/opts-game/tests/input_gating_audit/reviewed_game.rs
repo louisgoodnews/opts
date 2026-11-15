@@ -69,4 +69,6 @@ pub(super) const REVIEWED: &[&str] = &[
     "opts-game/src/session_vehicles/tests.rs",
     // F5 / F9 (quick save and load); gated with `not_modal_active` where they are registered.
     "opts-game/src/save/quick.rs",
+    // Split out of `vehicle_menu/entries.rs`: the search keys, same rule (the open menu holds `MenuModalActive`).
+    "opts-game/src/in_game/vehicle_menu/entries/search.rs",
 ];

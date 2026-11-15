@@ -25,4 +25,10 @@ pub(super) const REVIEWED: &[&str] = &[
     "opts-gui/src/patterns/master_detail_input.rs",
     // Split out of `master_detail_input.rs`, same rule.
     "opts-gui/src/patterns/master_detail_input/keys.rs",
+    // Split out of `actions.rs`: device input for the action registry, same rule.
+    "opts-gui/src/actions/devices.rs",
+    // Test module of `modal.rs`: presses keys to test the modal.
+    "opts-gui/src/components/modal/tests.rs",
+    // Test module of `text_area/input.rs`: presses keys to test the editor on purpose.
+    "opts-gui/src/components/text_area/input/tests.rs",
 ];

@@ -35,4 +35,6 @@ pub(super) const REVIEWED: &[&str] = &[
     // Left click on scenery hot-spots (M-0113); registered in `VehicleTriggerPlugin` with
     // `not_modal_active`.
     "opts-bevy/src/vehicle_triggers/scenery_click.rs",
+    // Split out of `camera/viewpoint.rs`: the Tab key of the viewpoint editor, gated as its parent.
+    "opts-bevy/src/camera/viewpoint/keys.rs",
 ];
