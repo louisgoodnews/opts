@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`not_yet.rs`).
 
 use super::*;
+use crate::interaction::state::Disabled;
 use std::path::PathBuf;
 
 fn docs() -> PathBuf {
