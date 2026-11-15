@@ -5,13 +5,26 @@ use super::*;
 #[test]
 fn defaults_parse_and_are_unique() {
     let keys = ActionKeys::default();
-    let mut seen = std::collections::HashSet::new();
+    // Two actions may share a chord only when their vehicles differ (a bus's W is the throttle,
+    // a tram's W the direction selector).
+    let mut seen: Vec<&ActionDef> = Vec::new();
     for a in ACTIONS {
         let chord = keys
             .chord(a.id)
             .unwrap_or_else(|| panic!("{} parses", a.id));
         assert_eq!(chord.to_text().as_deref(), Some(a.default), "{}", a.id);
-        assert!(seen.insert(a.default), "{} duplicates {}", a.id, a.default);
+        for other in &seen {
+            let overlap = a.scope == ActionScope::All
+                || other.scope == ActionScope::All
+                || a.scope == other.scope;
+            assert!(
+                !(overlap && other.default == a.default),
+                "{} duplicates {}",
+                a.id,
+                other.id
+            );
+        }
+        seen.push(a);
         assert!(!a.id.is_empty() && !a.group.is_empty());
     }
 }

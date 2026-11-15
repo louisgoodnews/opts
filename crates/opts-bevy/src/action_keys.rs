@@ -68,6 +68,14 @@ const fn rail(group: &'static str, id: &'static str, default: &'static str) -> A
 /// The actions, in the order of the settings page.
 pub const ACTIONS: &[ActionDef] = &[
     road("drive", "parking_brake", "Period"),
+    // The pedals and the steering of a road vehicle: one action per chord, the arrow keys are
+    // the second chord of the pedals (`throttle_alt`, `brake_alt`).
+    road("drive", "throttle", "W"),
+    road("drive", "throttle_alt", "ArrowUp"),
+    road("drive", "brake", "S"),
+    road("drive", "brake_alt", "ArrowDown"),
+    road("drive", "steer_left", "ArrowLeft"),
+    road("drive", "steer_right", "ArrowRight"),
     // The controls of rail vehicles: no pedals and no parking brake. W and S choose the
     // direction of travel, Q and Y (the key at the Z position of a QWERTY keyboard) move the
     // power lever up (towards traction) and down (towards braking), the arrows choose the way at

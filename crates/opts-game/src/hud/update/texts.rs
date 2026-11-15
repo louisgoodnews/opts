@@ -74,6 +74,10 @@ pub(super) fn controls_hint(
                 Arg::from(bound.label("parking_brake")),
             ),
             ("help".to_owned(), Arg::from(bound.label("help"))),
+            ("throttle".to_owned(), Arg::from(bound.label("throttle"))),
+            ("brake".to_owned(), Arg::from(bound.label("brake"))),
+            ("steer_left".to_owned(), Arg::from(bound.label("steer_left"))),
+            ("steer_right".to_owned(), Arg::from(bound.label("steer_right"))),
         ],
     )
 }

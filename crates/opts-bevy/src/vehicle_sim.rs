@@ -227,9 +227,13 @@ pub fn vehicle_input_system(
             continue;
         }
 
-        // 1. Throttle pedal (W or ArrowUp)
+        // The keys of the pedals and the steering are the registry's actions (`throttle`,
+        // `throttle_alt`, ... `steer_right`; W, S, the arrows by default).
+        let keys = crate::action_keys::resolve(&action_keys);
+
+        // 1. Throttle pedal (`throttle` or `throttle_alt`)
         let throttle_pressed =
-            keyboard.pressed(KeyCode::KeyW) || keyboard.pressed(KeyCode::ArrowUp);
+            keys.pressed(&keyboard, "throttle") || keys.pressed(&keyboard, "throttle_alt");
         let current_throttle = inputs.throttle();
         if throttle_pressed {
             inputs.set_throttle((current_throttle + config.throttle_rate * dt).min(1.0));
@@ -237,8 +241,8 @@ pub fn vehicle_input_system(
             inputs.set_throttle((current_throttle - config.throttle_rate * 2.5 * dt).max(0.0));
         }
 
-        // 2. Service brake pedal (S or ArrowDown)
-        let brake_pressed = keyboard.pressed(KeyCode::KeyS) || keyboard.pressed(KeyCode::ArrowDown);
+        // 2. Service brake pedal (`brake` or `brake_alt`)
+        let brake_pressed = keys.pressed(&keyboard, "brake") || keys.pressed(&keyboard, "brake_alt");
         let current_brake = inputs.service_brake();
         if brake_pressed {
             inputs.set_service_brake((current_brake + config.brake_rate * dt).min(1.0));
@@ -246,9 +250,9 @@ pub fn vehicle_input_system(
             inputs.set_service_brake((current_brake - config.brake_rate * 2.5 * dt).max(0.0));
         }
 
-        // 3. Steering wheel (ArrowLeft/ArrowRight; A and D belong to the gear selector)
-        let steer_left = keyboard.pressed(KeyCode::ArrowLeft);
-        let steer_right = keyboard.pressed(KeyCode::ArrowRight);
+        // 3. Steering wheel (`steer_left` / `steer_right`, the arrows by default)
+        let steer_left = keys.pressed(&keyboard, "steer_left");
+        let steer_right = keys.pressed(&keyboard, "steer_right");
         let current_steer = inputs.steering();
 
         if steer_left && !steer_right {
