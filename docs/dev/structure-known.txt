@@ -237,7 +237,6 @@ crates/opts-game/src/in_game/attachments.rs 232  # grandfathered: split producti
 crates/opts-game/src/in_game/change_map/tests.rs 216  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/in_game/formation_menu/state.rs 174  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/hot_reload.rs 165  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/in_game/load_report.rs 246  # grandfathered: extract 78 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-game/src/in_game/loading_pipeline/stages.rs 178  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/loading_ui.rs 228  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/loading_ui/dialogs.rs 193  # grandfathered: split production file by concern to <= 150 LOC
