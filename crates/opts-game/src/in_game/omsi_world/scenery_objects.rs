@@ -19,6 +19,10 @@ use opts_traffic::SignalProgram;
 
 use super::WorldLoadJob;
 
+mod template;
+mod signal;
+mod finish;
+
 /// A `.sco`'s script set, compiled once and forked per placed object.
 pub struct ScriptTemplate {
     /// The compiled engine (a mutex because the load job is a shared resource).
@@ -119,164 +123,6 @@ fn problems(diags: &[Diagnostic]) -> usize {
         .count()
 }
 
-impl WorldLoadJob {
-    /// The compiled script set of `sco` (`None` when it has no scripts or string lists).
-    pub(super) fn script_template(
-        &mut self,
-        sco_path: &Path,
-        sco: &SceneryObject,
-    ) -> Option<Arc<ScriptTemplate>> {
-        if sco.scripts.is_empty() && sco.stringvarnamelists.is_empty() {
-            return None;
-        }
-        if let Some(t) = self.scenery.templates.get(sco_path) {
-            return t.clone();
-        }
-        let dir = sco_path.parent().map(Path::to_path_buf).unwrap_or_default();
-        let set = load_scenery_scripts(sco, |rel| self.install.find_in(&dir, rel));
-        let bad = problems(&set.diagnostics);
-        self.scenery.stats.script_sets += 1;
-        if bad > 0 {
-            self.scenery.stats.script_sets_with_problems += 1;
-            tracing::warn!(sco = %sco_path.display(), problems = bad, first = ?set.diagnostics.first().map(|d| &d.message), "scenery script set has problems");
-        }
-        let template = Arc::new(ScriptTemplate {
-            engine: Mutex::new(set.engine),
-            string_names: set.string_names,
-            diagnostics: set.diagnostics,
-            has_scripts: !sco.scripts.is_empty(),
-        });
-        self.scenery
-            .templates
-            .insert(sco_path.to_path_buf(), Some(template.clone()));
-        Some(template)
-    }
-
-    /// The light program behind `TrafficLightPhase` of `obj`: its `[varparent]` junction's
-    /// program, else its own first program.
-    fn signal_for(
-        &mut self,
-        obj: &MapObjectInstance,
-        sco: &SceneryObject,
-    ) -> Option<SignalProgram> {
-        let program_of = |s: &SceneryObject, i: usize| {
-            let (g, p) = s.traffic_light(i)?;
-            let phases = p
-                .phases
-                .iter()
-                .map(|ph| (ph.state, f64::from(ph.duration_sec)))
-                .collect();
-            SignalProgram::in_period(
-                phases,
-                f64::from(g.period_sec()),
-                f64::from(p.approach_distance_m.unwrap_or(0.0)),
-            )
-        };
-        let Some(&(parent, index)) = self.scenery.links.get(&obj.id_code) else {
-            return program_of(sco, 0);
-        };
-        let linked = self
-            .scenery
-            .objects
-            .get(&parent)
-            .cloned()
-            .and_then(|parent_sco| self.sco(&parent_sco))
-            .and_then(|(_, s)| program_of(&s, index));
-        if linked.is_some() {
-            self.scenery.stats.signals_linked += 1;
-        } else {
-            self.scenery.stats.signals_unlinked += 1;
-            tracing::debug!(
-                object = obj.id_code,
-                parent,
-                index,
-                "signal head: junction program not found"
-            );
-        }
-        linked
-    }
-
-    /// Whether an object is flat static scenery: no script, light, animation, visibility rule,
-    /// LOD group or driven light map, and no tree that moves in the wind (M-0144), so it is only
-    /// ever drawn at its placement (`needs_runtime` would be false and nothing changes its parts).
-    pub(super) fn is_flat_static(
-        sco: &SceneryObject,
-        mesh_parts: &[Vec<ModelPart>],
-        template: Option<&Arc<ScriptTemplate>>,
-    ) -> bool {
-        template.is_none_or(|t| !t.has_scripts)
-            && sco.sound.is_none()
-            && !super::trees::is_mesh_tree(sco)
-            && sco.lights.is_empty()
-            && sco.meshes.iter().all(|m| {
-                m.lod_threshold.is_none() && m.visible.is_none() && m.animations.is_empty()
-            })
-            && mesh_parts
-                .iter()
-                .flatten()
-                .all(|p| p.light_variable.is_none())
-    }
-
-    /// Hangs a placed object's parts under `root`: flat as before, or as a runtime hierarchy
-    /// when the object has LOD groups, rules, lights, light maps or scripts.
-    pub(super) fn finish_object(
-        &mut self,
-        commands: &mut Commands,
-        (meshes, materials): (&mut Assets<Mesh>, &mut Assets<StandardMaterial>),
-        root: Entity,
-        (sco, obj): (&SceneryObject, &MapObjectInstance),
-        mesh_parts: Vec<Vec<ModelPart>>,
-        template: Option<Arc<ScriptTemplate>>,
-    ) {
-        self.scenery.dev_look.offer(&obj.sco_file, root);
-        commands
-            .entity(root)
-            .insert((opts_bevy::SceneryDrawRoot, Visibility::Inherited));
-        // `[nomaplighting]`: recorded on the root (version 1 has no behaviour yet).
-        if sco.no_map_lighting {
-            commands.entity(root).insert(opts_bevy::NoMapLighting);
-        }
-        // A tree modelled as a mesh: its foliage moves in the wind (M-0144 phase C).
-        if super::trees::is_mesh_tree(sco) {
-            commands
-                .entity(root)
-                .insert(opts_bevy::tree_wind::MeshTreeRoot);
-        }
-        // `[maplight]` ground lights: markers the map light pool hands its point lights to.
-        opts_bevy::scenery_runtime::spawn_map_lights(commands, root, sco);
-        let scripts = template.filter(|t| t.has_scripts).and_then(|t| {
-            let engine = t.engine.lock().ok()?.fork();
-            Some(SceneryScripts::new(
-                engine,
-                &t.string_names,
-                &obj.string_vars,
-                t.diagnostics.clone(),
-            ))
-        });
-        let mut input = SceneryObjectInput {
-            sco,
-            mesh_parts,
-            scripts,
-            signal: None,
-        };
-        if !needs_runtime(&input) {
-            let parts: Vec<ModelPart> = input.mesh_parts.into_iter().flatten().collect();
-            let spawned = attach_model_parts(commands, root, &parts, "Mesh");
-            opts_bevy::bind_alpha_scale(commands, &spawned, &parts);
-            return;
-        }
-        if input.scripts.is_some() {
-            self.scenery.stats.scripted_objects += 1;
-        }
-        input.signal = self.signal_for(obj, sco);
-        let mut assets = SceneryBuildAssets {
-            meshes,
-            materials,
-            lights: &mut self.scenery.lights,
-        };
-        build_scenery_object(commands, root, input, &mut assets);
-    }
-}
 
 /// Copies the session environment (date, time, sun, night, temperature) into the scenery
 /// runtime's [`SceneryClock`] (unless a host drives it: `follow_session == false`). Light
