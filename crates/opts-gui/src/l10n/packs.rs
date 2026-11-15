@@ -10,7 +10,7 @@ use opts_l10n::fluent::Table;
 use opts_l10n::pack::{self, Direction};
 
 use super::pseudo::PSEUDO_TAG;
-use super::{LanguageInfo, LanguageReport, LoadedPack, Localization};
+use super::{report::LoadedPack, LanguageInfo, LanguageReport, Localization};
 
 impl Localization {
     /// The English source as a reference for checks (all tables the application has added).

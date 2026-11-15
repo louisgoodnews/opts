@@ -139,15 +139,15 @@ const LITERAL_OK_FILES: &[&str] = &[
     "actions.rs",              // `ui.action` spellings
     "ui_tree.rs",              // protocol role names
     "ui_tree/snapshot.rs",     // snapshot role names and state
-    "ui_id.rs",                // id syntax
+    "ui_id.rs", "ui_id/assign.rs", "ui_id/sync.rs", // id syntax
     "showcase.rs",             // demo content of the gallery and the CI fixture
-    "showcase/sections.rs",    // gallery sections
+    "showcase/sections.rs", "showcase/sections/controls.rs", "showcase/sections/composites.rs", // gallery sections
     "not_yet.rs",              // developer registry text (the user-visible marker text is a key)
     "fonts.rs",                // asset paths
     "icons.rs",                // code points
     "l10n/keys.rs",            // key table
     "l10n/wizard_keys.rs",     // key table of the wizard, the patterns and the loading screen
-    "l10n/wizard_keys/wiz.rs", // wizard keys
+    "l10n/wizard_keys/wiz.rs", "l10n/wizard_keys/load.rs", // wizard keys and the loading screen
     "patterns/glyphs.rs",      // icon code points
     "l10n/mod.rs",             // `⟦key⟧` marker and the env name
     "l10n/pseudo.rs",          // transformation tables
