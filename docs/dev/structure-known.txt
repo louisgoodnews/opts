@@ -17,7 +17,6 @@ crates/opts-benchmark/src/scenery/supervisor.rs 161  # grandfathered: split prod
 crates/opts-benchmark/src/scenery/verdict.rs 209  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-benchmark/tests/run_control.rs 162  # grandfathered: oversized test or example file, split by concern
 crates/opts-benchmark/tests/seeded_faults.rs 162  # grandfathered: oversized test or example file, split by concern
-crates/opts-bevy/examples/drive_bus.rs 270  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/instancing_inventory.rs 209  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/lighting_bench/apply.rs 224  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/lighting_bench/apply/scene.rs 199  # grandfathered: oversized test or example file, split by concern
