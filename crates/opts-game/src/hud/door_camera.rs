@@ -22,6 +22,14 @@ use crate::in_game::instruments::{InstrumentFade, InstrumentInk};
 use crate::in_game::types::InGameEntity;
 use crate::settings::GameSettings;
 
+mod env;
+mod fit;
+mod spawn;
+
+use env::{OverlayEnv, Roots};
+use fit::{fit_captions, fit_images, Captions, Images};
+use spawn::spawn;
+
 /// Key of the setting that turns the door camera on.
 pub const SETTING: &str = "camera.door_overlay";
 
@@ -68,177 +76,6 @@ pub fn sync_setting(settings: Res<GameSettings>, mut cam: ResMut<DoorCamera>) {
             cam.manual = None;
             cam.auto = None;
             cam.open.clear();
-        }
-    }
-}
-
-fn spawn(
-    commands: &mut Commands,
-    palette: &InstrumentPalette,
-    image: Handle<Image>,
-    width: f32,
-    door: usize,
-    y: f32,
-) {
-    commands
-        .spawn((
-            panel(
-                Node {
-                    position_type: PositionType::Absolute,
-                    right: Val::Px(20.0),
-                    top: Val::Px(y),
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(4.0),
-                    padding: UiRect::all(Val::Px(6.0)),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                RadiusLevel::Large,
-                palette,
-            ),
-            DoorOverlay { door, y },
-            GlobalZIndex(55),
-            InGameEntity,
-            UiId::new(format!("hud.door_camera.{}", door + 1)),
-        ))
-        .with_children(|p| {
-            p.spawn((
-                Node {
-                    width: Val::Px(width),
-                    aspect_ratio: Some(16.0 / 9.0),
-                    ..default()
-                },
-                ImageNode::new(image),
-                DoorOverlayImage(door),
-                UiId::new(format!("hud.door_camera.{}.image", door + 1)),
-            ));
-            p.spawn((
-                texts("", TypeScale::Label, InstrumentInk::TextDim, palette),
-                DoorOverlayCaption(door),
-                UiId::new(format!("hud.door_camera.{}.caption", door + 1)),
-            ));
-        });
-}
-
-/// The words of a door's name: its number, kind, place along the vehicle and side.
-fn caption(loc: &Localization, doors: &DoorPoints, door: usize) -> String {
-    let Some(d) = doors.0.get(door) else {
-        return String::new();
-    };
-    let zone = match doors.zone(door) {
-        Zone::Front => keys::DOOR_FRONT,
-        Zone::Middle => keys::DOOR_MIDDLE,
-        Zone::Rear => keys::DOOR_REAR,
-    };
-    loc.t_args(
-        keys::DOOR_TITLE,
-        &[
-            ("number".to_owned(), Arg::from(door as i32 + 1)),
-            (
-                "kind".to_owned(),
-                Arg::from(loc.t(if d.entry {
-                    keys::DOOR_ENTRY
-                } else {
-                    keys::DOOR_EXIT
-                })),
-            ),
-            ("zone".to_owned(), Arg::from(loc.t(zone))),
-            (
-                "side".to_owned(),
-                Arg::from(loc.t(if d.side < 0 {
-                    keys::DOOR_LEFT
-                } else {
-                    keys::DOOR_RIGHT
-                })),
-            ),
-        ],
-    )
-}
-
-type Roots<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static mut DoorOverlay,
-        &'static mut Node,
-        &'static mut InstrumentFade,
-    ),
->;
-
-/// The resources [`update_overlay`] reads.
-#[derive(SystemParam)]
-pub struct OverlayEnv<'w> {
-    /// Real time.
-    pub time: Res<'w, Time<Real>>,
-    /// The door cameras' slots.
-    pub cam: Res<'w, DoorCamera>,
-    /// The HUD layout.
-    pub layout: Res<'w, HudLayout>,
-    /// The texts.
-    pub loc: Res<'w, Localization>,
-    /// The theme, once there.
-    pub theme: Option<Res<'w, MaterialTheme>>,
-    /// The instrument variant.
-    pub variant: Res<'w, InstrumentVariant>,
-    /// The viewpoint editor's state.
-    pub editor: Option<Res<'w, opts_bevy::ViewpointState>>,
-}
-
-type Images<'w, 's> = Query<
-    'w,
-    's,
-    (
-        &'static DoorOverlayImage,
-        &'static mut Node,
-        &'static mut ImageNode,
-    ),
-    Without<DoorOverlay>,
->;
-type Captions<'w, 's> = Query<
-    'w,
-    's,
-    (
-        &'static DoorOverlayCaption,
-        &'static mut Text,
-        &'static mut InstrumentFade,
-    ),
-    Without<DoorOverlay>,
->;
-
-/// Every picture takes the common width and the fade of its slot.
-fn fit_images(images: &mut Images, slots: &[DoorSlot], width: f32) {
-    for (marker, mut node, mut image) in images {
-        let w = Val::Px(width);
-        if node.width != w {
-            node.width = w;
-        }
-        if let Some(slot) = slots.iter().find(|s| s.door == marker.0) {
-            let color = image.color.with_alpha(slot.fade);
-            if image.color != color {
-                image.color = color;
-            }
-        }
-    }
-}
-
-/// Every caption names its door and fades with its slot.
-fn fit_captions(
-    captions: &mut Captions,
-    slots: &[DoorSlot],
-    doors: Option<&DoorPoints>,
-    loc: &Localization,
-) {
-    for (marker, mut text, mut fade) in captions {
-        let Some(slot) = slots.iter().find(|s| s.door == marker.0) else {
-            continue;
-        };
-        let words = doors.map_or_else(String::new, |d| caption(loc, d, marker.0));
-        if text.0 != words {
-            text.0 = words;
-        }
-        if fade.0 != slot.fade {
-            fade.0 = slot.fade;
         }
     }
 }
