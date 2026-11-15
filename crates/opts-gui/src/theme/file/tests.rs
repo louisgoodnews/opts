@@ -2,8 +2,8 @@
 
 use super::*;
 
-use super::*;
-use crate::theme::contrast::contrast_ratio;
+use crate::theme::audit::audit;
+use crate::theme::contrast::{contrast_ratio, to_hex};
 
 #[test]
 fn a_minimal_file_loads_and_is_sound() {
