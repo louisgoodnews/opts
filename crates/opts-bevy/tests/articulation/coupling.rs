@@ -1,0 +1,103 @@
+//! Coupling: the segment stays hitched, drives straight and its wheels roll with its own travel.
+
+use super::*;
+
+#[test]
+pub(super) fn the_segment_stays_hitched_and_the_joint_angle_is_published() {
+    let mut app = app();
+    let (root, segment) = spawn_articulated(&mut app, 0.6);
+    for _ in 0..600 {
+        app.update();
+    }
+    let controller = app.world().get::<VehicleController>(root).unwrap();
+    let chassis = &controller.sim.chassis;
+    assert!(
+        controller.forward_speed_km_h() > 3.0,
+        "the vehicle did not move"
+    );
+    // The vehicle turns, so the segment lags against it: |α| clearly non-zero, within the limit.
+    let engine = app
+        .world()
+        .get::<VehicleScripts>(root)
+        .unwrap()
+        .engine
+        .lock()
+        .unwrap();
+    let alpha = engine.get("articulation_0_alpha");
+    assert!(alpha.abs() > 3.0 && alpha.abs() <= 52.5, "α = {alpha}°");
+    assert_eq!(engine.get("articulation_0_beta"), 0.0);
+    drop(engine);
+
+    // Front coupling of the segment sits on the rear coupling of the leader (flat, world space).
+    let heading = f64::from(chassis.heading_rad);
+    let leader =
+        bevy::math::DVec2::new(f64::from(chassis.position.x), f64::from(chassis.position.y));
+    let hitch = leader
+        + bevy::math::DVec2::new(heading.cos(), -heading.sin()) * 0.0
+        + bevy::math::DVec2::new(heading.sin(), heading.cos()) * -5.0;
+    let tf = app.world().get::<Transform>(segment).unwrap();
+    // Bevy → OMSI: x east, y = -z. The segment's heading comes from its rotation about Y.
+    let (yaw, _, _) = tf.rotation.to_euler(EulerRot::YXZ);
+    let seg_heading = -f64::from(yaw);
+    let origin = bevy::math::DVec2::new(f64::from(tf.translation.x), -f64::from(tf.translation.z));
+    let front = origin + bevy::math::DVec2::new(seg_heading.sin(), seg_heading.cos()) * 1.0;
+    assert!(
+        front.distance(hitch) < 0.05,
+        "gap between the couplings: {} m",
+        front.distance(hitch)
+    );
+}
+
+#[test]
+pub(super) fn driving_straight_keeps_the_segment_in_line() {
+    let mut app = app();
+    let (root, _) = spawn_articulated(&mut app, 0.0);
+    for _ in 0..300 {
+        app.update();
+    }
+    let engine = app
+        .world()
+        .get::<VehicleScripts>(root)
+        .unwrap()
+        .engine
+        .lock()
+        .unwrap();
+    assert!(engine.get("articulation_0_alpha").abs() < 0.5);
+}
+
+#[test]
+pub(super) fn trailer_wheels_roll_with_the_segments_own_travel() {
+    for reversed in [false, true] {
+        let mut app = app();
+        let (root, _) = spawn_articulated_with(&mut app, 0.0, reversed);
+        for _ in 0..300 {
+            app.update();
+        }
+        let engine = app
+            .world()
+            .get::<VehicleScripts>(root)
+            .unwrap()
+            .engine
+            .lock()
+            .unwrap();
+        // Axle 2 is the trailer's; both sides spin alike and the speed matches rolling at 0.5 m.
+        let spin = engine.get("wheel_rotation_2_l");
+        assert_eq!(spin, engine.get("wheel_rotation_2_r"));
+        let rpm = engine.get("wheel_rotationspeed_2_l");
+        let speed = app
+            .world()
+            .get::<VehicleController>(root)
+            .unwrap()
+            .sim
+            .chassis
+            .forward_speed_m_s();
+        let expected = speed / 0.5 * 60.0 / std::f32::consts::TAU;
+        // A segment hanging backwards rolls the other way along its model.
+        let expected = if reversed { -expected } else { expected };
+        assert!(
+            (rpm - expected).abs() < expected.abs() * 0.1 + 1.0,
+            "reversed={reversed}: {rpm} rpm, expected {expected}"
+        );
+        assert!(spin != 0.0);
+    }
+}
