@@ -56,21 +56,6 @@ const SPAWN_INTERVAL_S: f32 = 0.5;
 /// Load attempts per vehicle type before it is given up (scrambled meshes decode in the background).
 const MAX_LOAD_TRIES: u32 = 8;
 
-/// Traffic settings.
-#[derive(Resource, Clone, Copy)]
-pub struct TrafficSettings {
-    /// Baseline of driving AI vehicles around the player (`0` disables traffic).
-    pub baseline: usize,
-}
-
-impl Default for TrafficSettings {
-    fn default() -> Self {
-        Self {
-            baseline: DEFAULT_TRAFFIC_BASELINE,
-        }
-    }
-}
-
 /// The lane network of the resident tiles and the agents on it.
 #[derive(Resource)]
 pub struct TrafficState {
@@ -328,6 +313,10 @@ pub use scheduled::{plan_scheduled, ScheduledStats, ScheduledTraffic};
 
 mod motion;
 pub use motion::{move_traffic, update_ai_variables};
+pub(crate) mod lane_overlay;
+
+mod settings;
+pub use settings::TrafficSettings;
 
 #[cfg(test)]
 mod density_tests;
