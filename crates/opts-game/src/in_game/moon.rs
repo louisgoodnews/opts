@@ -24,58 +24,14 @@ use crate::in_game::world::FallbackLight;
 #[derive(Component, Debug, Clone, Copy, Default)]
 pub struct MoonLight;
 
-/// Edge of the moon disc quad in metres (7.7° at the dome radius: artistic, the real moon is 0.5°).
-pub const MOON_DISC_SIZE_M: f32 = 120.0;
-/// Brightness of the disc in full daylight (it is additive, so by day it stays a faint pale disc).
-pub const MOON_DISC_DAY_BRIGHTNESS: f32 = 0.35;
-/// Relative margin by which the other light must beat the carrier to take over the shadows.
-pub const CARRIER_HYSTERESIS: f32 = 0.15;
-/// Illuminance (lx) below which a directional light is hidden and cannot carry shadows.
-pub const MIN_LIGHT_LX: f32 = 1.0;
-
-/// The light that currently carries the shadows (`None` when neither gives light).
-#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct ShadowCarrier(pub Option<LightRole>);
-
-/// The carrier after one step. `sun` and `moon` are the scores (illuminance, 0 when the light is
-/// below the horizon). The current carrier is kept until the other light beats it by
-/// [`CARRIER_HYSTERESIS`] (or the current one falls below half of [`MIN_LIGHT_LX`]); with no
-/// carrier, or on a tie, the larger score wins and the sun wins ties.
-#[must_use]
-pub fn choose_carrier(current: Option<LightRole>, sun: f32, moon: f32) -> Option<LightRole> {
-    let score = |r: LightRole| match r {
-        LightRole::Sun => sun,
-        LightRole::Moon => moon,
-    };
-    let other = |r: LightRole| match r {
-        LightRole::Sun => LightRole::Moon,
-        LightRole::Moon => LightRole::Sun,
-    };
-    match current {
-        Some(cur) if score(cur) >= MIN_LIGHT_LX * 0.5 => {
-            let o = other(cur);
-            if score(o) >= MIN_LIGHT_LX && score(o) > score(cur) * (1.0 + CARRIER_HYSTERESIS) {
-                Some(o)
-            } else {
-                Some(cur)
-            }
-        }
-        _ => {
-            let best = if moon > sun {
-                LightRole::Moon
-            } else {
-                LightRole::Sun
-            };
-            (score(best) >= MIN_LIGHT_LX).then_some(best)
-        }
-    }
-}
+mod carrier;
+mod disc;
+pub use carrier::{choose_carrier, shadow_carrier_system, ShadowCarrier, CARRIER_HYSTERESIS, MIN_LIGHT_LX};
+pub use disc::{disc_brightness, setup_moon_disc, MOON_DISC_DAY_BRIGHTNESS, MOON_DISC_SIZE_M};
 
 /// Any sun light (data-driven or fallback).
 type SunsQuery<'w, 's> = Query<'w, 's, (), Or<(With<SunLight>, With<FallbackLight>)>>;
-/// Moon discs still without a mesh.
-type NewDiscsQuery<'w, 's> =
-    Query<'w, 's, (Entity, &'static MoonDiscTexture), (With<MoonDisc>, Without<Mesh3d>)>;
+
 /// The main camera's transform.
 type CameraQuery<'w, 's> =
     Query<'w, 's, &'static GlobalTransform, (With<opts_bevy::MainCamera>, Without<MoonDisc>)>;
@@ -120,33 +76,6 @@ pub fn spawn_moon_light(
         InGameEntity,
         Name::new("Moon_Light"),
     ));
-}
-
-/// Gives the moon disc its mesh and phase material (needs the material plugin; without it the
-/// disc stays invisible, as in headless tests).
-pub fn setup_moon_disc(
-    mut commands: Commands,
-    discs: NewDiscsQuery,
-    mut meshes: ResMut<Assets<Mesh>>,
-    materials: Option<ResMut<Assets<MoonMaterial>>>,
-) {
-    let Some(mut materials) = materials else {
-        return;
-    };
-    for (entity, texture) in &discs {
-        commands.entity(entity).insert((
-            Mesh3d(meshes.add(Rectangle::new(MOON_DISC_SIZE_M, MOON_DISC_SIZE_M))),
-            MeshMaterial3d(materials.add(MoonMaterial::new(texture.0.clone(), 0.0, 0.0, 1.0))),
-            Transform::from_scale(Vec3::ZERO),
-        ));
-    }
-}
-
-/// Brightness of the moon disc: faint by day, full at night, dimmed by cloud.
-#[must_use]
-pub fn disc_brightness(sun_elevation_deg: f32, weather_moon: f32) -> f32 {
-    let night = moon_night_factor(sun_elevation_deg);
-    (MOON_DISC_DAY_BRIGHTNESS + (1.0 - MOON_DISC_DAY_BRIGHTNESS) * night) * weather_moon
 }
 
 /// Moves the moon light and the disc to the model's position and sets the light and the disc's
@@ -196,51 +125,6 @@ pub fn update_moon(
             if let Some(mut m) = materials.get_mut(&material.0) {
                 m.params = want;
             }
-        }
-    }
-}
-
-/// Keeps exactly one directional light with shadow maps ([`choose_carrier`]) and hides the
-/// lights that give no light (a hidden light is not extracted for shadow work).
-pub fn shadow_carrier_system(
-    env: Res<SessionEnvironment>,
-    mut carrier: ResMut<ShadowCarrier>,
-    mut lights: Query<(&LightRole, &mut DirectionalLight, &mut Visibility)>,
-) {
-    let score = |role: LightRole, light: &DirectionalLight| {
-        let up = match role {
-            LightRole::Sun => env.sun_alt_deg() > 0.0,
-            LightRole::Moon => env.moon().elevation_deg > 0.0,
-        };
-        if up {
-            light.illuminance
-        } else {
-            0.0
-        }
-    };
-    let (mut sun, mut moon) = (0.0_f32, 0.0_f32);
-    for (role, light, _) in &lights {
-        match role {
-            LightRole::Sun => sun = sun.max(score(*role, light)),
-            LightRole::Moon => moon = moon.max(score(*role, light)),
-        }
-    }
-    let next = choose_carrier(carrier.0, sun, moon);
-    if carrier.0 != next {
-        carrier.0 = next;
-    }
-    for (role, mut light, mut visibility) in &mut lights {
-        let shadows = next == Some(*role);
-        if light.shadow_maps_enabled != shadows {
-            light.shadow_maps_enabled = shadows;
-        }
-        let want = if light.illuminance < MIN_LIGHT_LX {
-            Visibility::Hidden
-        } else {
-            Visibility::Inherited
-        };
-        if *visibility != want {
-            *visibility = want;
         }
     }
 }
