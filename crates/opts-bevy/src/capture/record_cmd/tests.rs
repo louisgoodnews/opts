@@ -1,5 +1,10 @@
 //! Unit tests for `super` (`record_cmd.rs`).
 
+use serde_json::json;
+
+use super::super::recording::RecFormat;
+use super::parse::parse;
+
 use super::*;
 
 #[test]
