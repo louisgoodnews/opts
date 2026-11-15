@@ -27,57 +27,13 @@ pub use filter::{Filters, Radius};
 pub use store::{Status, TileSummary};
 pub use types::*;
 
-/// How much the trace keeps.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Mode {
-    /// Nothing is kept (default).
-    #[default]
-    Off,
-    /// Counts per tile and kind, and a record for every thing with an issue.
-    Summary,
-    /// A record for every placed thing.
-    Full,
-}
+mod access;
+mod mode;
+mod notes;
 
-impl Mode {
-    /// Parses `off`, `summary` or `full` (case-insensitive); the empty text is `off`.
-    #[must_use]
-    pub fn parse(text: &str) -> Option<Self> {
-        match text.trim().to_ascii_lowercase().as_str() {
-            "" | "off" | "false" | "0" | "no" => Some(Self::Off),
-            "summary" | "sum" | "true" | "1" | "on" => Some(Self::Summary),
-            "full" | "all" | "2" => Some(Self::Full),
-            _ => None,
-        }
-    }
-
-    /// The text form (`off`, `summary`, `full`).
-    #[must_use]
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Off => "off",
-            Self::Summary => "summary",
-            Self::Full => "full",
-        }
-    }
-
-    const fn code(self) -> u8 {
-        match self {
-            Self::Off => 0,
-            Self::Summary => 1,
-            Self::Full => 2,
-        }
-    }
-
-    const fn from_code(c: u8) -> Self {
-        match c {
-            1 => Self::Summary,
-            2 => Self::Full,
-            _ => Self::Off,
-        }
-    }
-}
+pub use access::*;
+pub use mode::*;
+pub use notes::*;
 
 static MODE: AtomicU8 = AtomicU8::new(0);
 static STATE: Mutex<Option<store::Store>> = Mutex::new(None);
@@ -233,126 +189,6 @@ pub fn record(probe: &Probe<'_>, build: impl FnOnce() -> TraceRecord) -> Option<
     Some(s.add(&mut rec))
 }
 
-/// Stores what the loader learned about a mesh file; later records pick it up with [`note_for`].
-pub fn note_mesh(path: &Path, mut note: MeshNote) {
-    if !enabled() {
-        return;
-    }
-    if let Ok(mut state) = STATE.lock() {
-        if let Some(s) = state.as_mut() {
-            note.file = s.relative(path);
-            s.notes.insert(store::norm(path), note);
-        }
-    }
-}
-
-/// Whether a note is stored for the file.
-#[must_use]
-pub fn has_note(path: &Path) -> bool {
-    STATE
-        .lock()
-        .ok()
-        .and_then(|s| s.as_ref().map(|s| s.notes.contains_key(&store::norm(path))))
-        .unwrap_or(false)
-}
-
-/// The note stored for a mesh file, or a bare `plain` note when the file was served from the
-/// loader's caches without a fresh load.
-#[must_use]
-pub fn note_for(path: &Path) -> MeshNote {
-    let Ok(state) = STATE.lock() else {
-        return MeshNote::default();
-    };
-    let Some(s) = state.as_ref() else {
-        return MeshNote::default();
-    };
-    s.notes
-        .get(&store::norm(path))
-        .cloned()
-        .unwrap_or_else(|| MeshNote {
-            file: s.relative(path),
-            stage: "unknown".into(),
-            ..MeshNote::default()
-        })
-}
-
-/// A path relative to the OMSI folder (privacy: never an absolute path).
-#[must_use]
-pub fn relative(path: &Path) -> String {
-    STATE
-        .lock()
-        .ok()
-        .and_then(|s| s.as_ref().map(|s| s.relative(path)))
-        .unwrap_or_else(|| store::file_name_of(path))
-}
-
-/// Run status for `trace.set`.
-#[must_use]
-pub fn status() -> Status {
-    STATE
-        .lock()
-        .ok()
-        .and_then(|s| s.as_ref().map(store::Store::status))
-        .unwrap_or_default()
-}
-
-/// Records matching a query, newest tile order preserved, at most `limit`.
-#[must_use]
-pub fn query(q: &Query) -> Vec<TraceRecord> {
-    STATE
-        .lock()
-        .ok()
-        .and_then(|s| s.as_ref().map(|s| s.query(q)))
-        .unwrap_or_default()
-}
-
-/// The record with `id`.
-#[must_use]
-pub fn get(id: u64) -> Option<TraceRecord> {
-    STATE
-        .lock()
-        .ok()?
-        .as_ref()?
-        .records
-        .iter()
-        .find(|r| r.id == id)
-        .cloned()
-}
-
-/// Per-tile counts.
-#[must_use]
-pub fn tile_summary(key: (i32, i32)) -> Option<TileSummary> {
-    STATE.lock().ok()?.as_ref()?.summary_of(key)
-}
-
-/// Summaries of all tiles seen.
-#[must_use]
-pub fn summaries() -> Vec<TileSummary> {
-    STATE
-        .lock()
-        .ok()
-        .and_then(|s| s.as_ref().map(store::Store::summaries))
-        .unwrap_or_default()
-}
-
-/// Every in-memory record that matches, as JSON Lines (for `trace.export`).
-#[must_use]
-pub fn export_lines(q: &Query) -> Vec<String> {
-    query(q)
-        .iter()
-        .filter_map(|r| serde_json::to_string(r).ok())
-        .collect()
-}
-
-/// A snapshot of records for the overlay (id, kind, quality, transform, bounds); bounded.
-#[must_use]
-pub fn overlay_snapshot(center: [f32; 2], radius: f32, limit: usize) -> Vec<TraceRecord> {
-    query(&Query {
-        near: Some((center, radius)),
-        limit,
-        ..Query::default()
-    })
-}
 
 #[cfg(test)]
 mod tests;
