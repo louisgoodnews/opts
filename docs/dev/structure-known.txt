@@ -135,7 +135,6 @@ crates/opts-bevy/src/weather/fog.rs 167  # grandfathered: split production file 
 crates/opts-bevy/src/weather/tests.rs 225  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/weather/tests/fog_tests.rs 222  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/ai_variables.rs 224  # grandfathered: oversized test or example file, split by concern
-crates/opts-bevy/tests/camera.rs 279  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/camera/drive.rs 167  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/control.rs 261  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/tests/control_ui.rs 166  # grandfathered: oversized test or example file, split by concern
