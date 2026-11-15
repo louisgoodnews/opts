@@ -2,7 +2,10 @@
 
 use super::*;
 
+mod joints;
+mod mesh;
 mod overrides;
+mod parts;
 mod state;
 use state::{SegmentAssets, SegmentState};
 
