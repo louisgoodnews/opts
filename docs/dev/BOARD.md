@@ -360,6 +360,10 @@ _Small items discovered during implementation that don't warrant a milestone._
 
 ### 🗄️ Recently Done
 
+**2026-11-15 — owner decision: 150-line file limit**
+
+- [x] 🟠 **One size limit for all source files: 150 lines of code per file** (chore, tooling + docs) — `agent/size-limit`: `structure_audit.py` `FILE_LIMIT` 350 → 150 (inline-test check folded into it); `size_check.py` now imports the audit (was 500 lines total); `standards.md` §3.7, §3.14 and `CONTRIBUTING.md` say 150; the function limit stays 80 (no doc ties it to the file limit). `structure-known.txt` regenerated with `seed`: 736 files over 150 lines (168,237 lines of code) grandfathered, `check` passes; 0 functions over 80 lines, `function-known.txt` empty. No source file was split.
+
 _Completed items from the last two cycles. Older items live in git history and milestone files (pruned under Rule 3 on 2026-10-25: the groups of 2026-10-04 to 2026-10-14)._
 
 **2026-10-29 – 2026-11-05 — items moved out of Ready by the status sync 2026-11-05**
@@ -654,3 +658,4 @@ The agent should check these during P-001 audits:
 - `2026-11-05` — M-0029 step 2 (`agent/m0029-lod`): per-part shadow culling behind `graphics.shadow_detail`, `shadow_casters` in `render.stats --parts`, `scripts/shadow-cull-bench.sh`; A/B on Berlin-Spandau: casters −44 %, frame time and shadow-pass GPU time unchanged, so the setting stays off and hidden.
 - `2026-11-05` — M-0029 step 3 (`agent/m0029-dedupe`): asset de-duplication not made default (research §5: no CPU, memory or load-time gain; the `Debug` key is the safe one). `render.stats --parts` lists the cameras; `render.stats --parts` lists the cameras.
 - `2026-11-06` — M-0029 mirrors (`agent/mirror-cost`): measured the mirror cameras on Berlin-Spandau in custom lighting mode: two mirrors at the default rate cost 9 ms of a 17 ms frame (CPU, not GPU), independent of the cameras' far plane, scaling with the scene's mesh entities; static merge halves it. The ladder sheds mirrors only at level 4. Options in lod-culling §3.6 for the project lead; `scripts/shadow-cull-bench.sh` takes `PRE`.
+- `2026-11-15` — Owner decision (`agent/size-limit`): source files max 150 lines of code (was 500 in standards and `size_check.py`, 350 in the ratchet). Ratchet regenerated: 736 files grandfathered; functions stay at 80.

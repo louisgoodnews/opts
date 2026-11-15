@@ -629,19 +629,21 @@ opts-core/src/formats/
     └── ...
 ```
 
-Each file is under 500 lines and has a single concern.
+Each file is under 150 lines of code and has a single concern.
 
-### 3.7 The 500-Line Rule
+### 3.7 The 150-Line Rule
 
-**No `.rs` file exceeds 500 lines of code**, excluding doc comments
-and blank lines.
+**No `.rs` source file exceeds 150 lines of code**, excluding doc
+comments, other comments and blank lines. Test code counts: a
+`#[cfg(test)]` module is part of its file's total. Functions are held
+to the separate 80-line rule of §1.6.
 
-**Why 500?** Because it is roughly the point at which a reader can
-no longer keep the file's contents in their head. Files under 500
-lines can be read in one sitting; files over 500 require scrolling
-and paging.
+**Why 150?** A file this size fits in one read by a reader or an agent,
+and a single concern usually fits in it. The rule is set by the
+project owner (2026-11-15) and replaces the earlier 500-line and
+350-line limits.
 
-**When a file hits 500 lines:**
+**When a file hits 150 lines:**
 
 1. Identify the two or three distinct concerns in the file.
 2. Split into submodules under a directory of the same name.
@@ -653,10 +655,13 @@ file whose first 5 lines contain `structure-audit: generated` is not
 measured, one with `structure-audit: table` is measured but not held
 against the limit (`scripts/structure_audit.py`, M-0125).
 
-**Enforcement:** `scripts/local-ci.sh` runs `structure_audit.py check`
-against the ratchet `docs/dev/structure-known.txt` (the files already
-over the limit may only shrink; a new file over 500 lines of code
-fails).
+**Enforcement:** `scripts/local-ci.sh`, `scripts/pre-commit` and CI run
+`structure_audit.py check` against the ratchet
+`docs/dev/structure-known.txt` (the files already over the limit may
+only shrink; a new file over 150 lines of code fails). On 2026-11-15
+the ratchet grandfathers 736 files (168,237 lines of code) that were
+already over the limit; splitting them is separate work
+(refactoring cycle, Phase 999 / Phase 15).
 
 ### 3.8 Module Documentation
 
@@ -761,7 +766,7 @@ A short, non-exhaustive list of things OPTS does **not** do:
 | Circular crate dependencies | Restructure or introduce a shared crate |
 | `unsafe` without `// SAFETY:` comment | Document, test, or avoid |
 | `println!` in library code | `tracing` events |
-| Files over 500 lines | Split into submodules |
+| Files over 150 lines of code | Split into submodules |
 | Functions over 80 lines | Extract helpers |
 | File-system, database or image work in a UI system | A worker task and a "Calculating…" placeholder (§3.13) |
 
@@ -795,12 +800,12 @@ texture cache (M-0088, field report R-31). The frame budget is 1 ms per UI syste
 
 ### 3.14 AI-Agent Token Efficiency & File/Function Budgets
 
-OPTS is developed with heavy participation from autonomous AI coding agents. To minimize both **input token consumption** (`read_file` context pollution) and **output token payloads** (`edit_file` target/replacement block sizes), all source files follow the two-tier structural budget established in [AI-Agent Token Optimization](../architecture/ai-token-optimization.md) ([Phase 15](../roadmap/phase-15/README.md)):
+OPTS is developed with heavy participation from autonomous AI coding agents. To minimize both **input token consumption** (`read_file` context pollution) and **output token payloads** (`edit_file` target/replacement block sizes), all source files follow the structural budget below, set in [§3.7](#37-the-150-line-rule) (150 lines per file, 80 per function) and grounded in [AI-Agent Token Optimization](../architecture/ai-token-optimization.md) ([Phase 15](../roadmap/phase-15/README.md)):
 
 | Rule | Target / Optimum | Hard Ceiling (Ratcheted) | Rationale |
 | :--- | :--- | :--- | :--- |
-| **R1 — Production File Size** (`crates/*/src/**/*.rs`, excl. `tests.rs`) | **150–200 code lines** (~1,600–2,100 tokens) | **350 code lines** (ratcheted down from 500 in [M-0147](../roadmap/phase-15/M-0147.md)) | Prevents multi-concern 400–500 line files without forcing micro-file fragmentation (~131 boilerplate tokens + extra tool calls per split file). |
-| **R2 — Inline Test Separation** (`#[cfg(test)]` in `src/`) | **0 inline test lines** when file > 250 code lines | **250 code lines** when `test_code > 0` ([M-0148](../roadmap/phase-15/M-0148.md)) | Agents reading production logic never pay input tokens for test fixtures; tests in files > 250 lines belong in a sibling `tests.rs`. |
+| **R1 — File Size** (`crates/**/*.rs`) | **≤ 150 code lines** (~1,600 tokens) | **150 code lines**, hard (ratcheted in `docs/dev/structure-known.txt`; was 350 and 500, see §3.7) | Keeps a file small enough to read or edit in one call; the cost of splitting is extra `//!` and `use` boilerplate per file. |
+| **R2 — Inline Test Separation** (`#[cfg(test)]` in `src/`) | Tests in a sibling `tests.rs` | **150 code lines** including inline tests (the R1 limit; the message names the `#[cfg(test)]` lines to move) | Agents reading production logic never pay input tokens for test fixtures; moving the tests out is the first step of a split. |
 | **R3 — Function Size Limit** (`fn` bodies in `src/`) | **≤ 40 code lines** (~430 tokens) | **80 code lines** (`docs/dev/function-known.txt`, [M-0150](../roadmap/phase-15/M-0150.md)) | Directly bounds `edit_file` output token payloads to < 900 tokens per function edit and reduces indentation/context-mismatch retries. |
 | **R4 — ECS `SystemParam` Bundling** | **≤ 7 system parameters** | **0 new `#[allow(clippy::too_many_arguments \| clippy::type_complexity)]`** ([M-0150](../roadmap/phase-15/M-0150.md)) | Replaces 10–16 argument Bevy system signatures with reusable `#[derive(SystemParam)]` structs, saving 15–25 lines per system. |
 
@@ -855,7 +860,7 @@ Before submitting a pull request, verify:
 - [ ] `cargo test --workspace --all-features` passes.
 - [ ] Every new public item has rustdoc.
 - [ ] Every new module has a `//!` doc comment.
-- [ ] Every new file is under 500 lines.
+- [ ] Every new file is under 150 lines of code.
 - [ ] Every new function is under 80 lines.
 - [ ] No `unwrap()` in library code paths.
 - [ ] No `println!` in library code.
@@ -890,6 +895,7 @@ Before submitting a pull request, verify:
 
 ## 📝 Changelog
 
+- `2026-11-15` — §3.7 is now the 150-line rule (was 500); §3.14 R1 and R2 use the same 150-line limit (was 150–200 optimum / 350 ceiling and 250 inline-test trigger). Owner decision; the ratchet grandfathers existing files.
 - `2026-10-28` — Added §3.14 on AI-agent token efficiency, two-tier file budgets (150–200 optimum, 250 inline-test trigger, 350 ceiling), function ratchets, and `SystemParam` bundling (Phase 15).
 - `2026-10-14` — Added the rule on generated files and test artefacts.
 - `2026-10-04` — Initial version. Three-part structure: universal

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests of `structure_audit.py` on a fixture tree (M-0125, M-0147): a 400-line file, a 280-line
+"""Tests of `structure_audit.py` on a fixture tree (M-0125, M-0147): a 400-line file, a 153-line
 production file with inline tests, a 100-line function, a signature-complexity allow, a single-file
 module, and the ratchets (`check` fails when a known entry grows or a new violation appears, passes
 when entries shrink). Run: python3 scripts/test_structure_audit.py"""
@@ -117,43 +117,44 @@ class Fixture(unittest.TestCase):
         code, out = run(self.root, "check")
         self.assertEqual(code, 0)
         self.assertIn("known 397", out)
-        # a new file over the 350-line limit
+        # a new file over the 150-line limit
         lib.write_text(original)
         (self.root / "crates/demo/src/new.rs").write_text(
-            "//! New.\n" + "".join(f"pub const N{i}: u32 = {i};\n" for i in range(351))
+            "//! New.\n" + "".join(f"pub const N{i}: u32 = {i};\n" for i in range(151))
         )
         code, out = run(self.root, "check")
         self.assertEqual(code, 1)
-        self.assertIn("crates/demo/src/new.rs: 351 lines of code", out)
+        self.assertIn("crates/demo/src/new.rs: 151 lines of code", out)
 
-    def test_a_file_just_under_the_limit_is_fine_and_the_351st_line_is_not(self):
+    def test_a_file_at_the_limit_is_fine_and_the_151st_line_is_not(self):
         (self.root / "crates/demo/src/edge.rs").write_text(
-            "//! Edge.\n" + "".join(f"pub const E{i}: u32 = {i};\n" for i in range(350))
+            "//! Edge.\n" + "".join(f"pub const E{i}: u32 = {i};\n" for i in range(150))
         )
         run(self.root, "seed")
         self.assertNotIn("edge.rs", (self.root / "docs/dev/structure-known.txt").read_text())
         (self.root / "crates/demo/src/edge.rs").write_text(
-            "//! Edge.\n" + "".join(f"pub const E{i}: u32 = {i};\n" for i in range(351))
+            "//! Edge.\n" + "".join(f"pub const E{i}: u32 = {i};\n" for i in range(151))
         )
         self.assertEqual(run(self.root, "check")[0], 1)
 
-    def test_inline_tests_over_250_lines_fail_check_until_extracted(self):
+    def test_inline_tests_push_a_file_over_the_limit_until_extracted(self):
         run(self.root, "seed")
         prod = self.root / "crates/demo/src/with_tests.rs"
         prod.write_text(
             "//! Prod with inline tests.\n"
-            + "".join(f"pub const P{i}: u32 = {i};\n" for i in range(245))
+            + "".join(f"pub const P{i}: u32 = {i};\n" for i in range(140))
             + "#[cfg(test)]\nmod tests {\n"
             + "".join(f"    const T{i}: u32 = {i};\n" for i in range(10))
             + "}\n"
         )
         code, out = run(self.root, "check")
         self.assertEqual(code, 1)
-        self.assertIn("over the 250-line inline-test limit", out)
-        # Extracting the inline tests so only the 245 prod lines remain passes immediately
+        self.assertIn("with_tests.rs: 153 lines of code", out)
+        self.assertIn("move its 13 #[cfg(test)] lines to tests.rs", out)
+        # Extracting the inline tests so only the 140 prod lines remain passes immediately
         prod.write_text(
             "//! Prod without inline tests.\n"
-            + "".join(f"pub const P{i}: u32 = {i};\n" for i in range(245))
+            + "".join(f"pub const P{i}: u32 = {i};\n" for i in range(140))
         )
         self.assertEqual(run(self.root, "check")[0], 0)
 
