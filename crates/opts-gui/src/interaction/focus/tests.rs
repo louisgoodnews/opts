@@ -1,10 +1,12 @@
 //! Unit tests for `super` (`focus.rs`).
 
 use super::*;
-use crate::actions::Direction;
+use crate::actions::{Direction, UiAction};
 use crate::components::{button::ButtonBuilder, modal::ModalBuilder};
+use crate::interaction::state::Focused;
 use crate::interaction::state::{Disabled, DisabledReason};
 use crate::testing::{act, button_column, focused, headless_app};
+use bevy::input_focus::FocusCause;
 
 #[test]
 fn tab_walks_the_layout_order_and_wraps() {

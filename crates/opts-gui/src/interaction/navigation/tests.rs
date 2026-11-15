@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`navigation.rs`).
 
 use super::*;
+use crate::actions::Direction;
 
 fn cand(i: u32, region: Option<u32>, rect: Option<Rect>) -> Candidate {
     Candidate {
