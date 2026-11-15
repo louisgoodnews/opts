@@ -1,7 +1,12 @@
 //! The combobox search: filter, keys, reveal and no-match row.
 
 use super::*;
-use bevy::ecs::system::SystemParam;
+
+mod filter;
+mod reveal;
+
+pub use filter::*;
+pub use reveal::*;
 
 /// Menus with more options than this get a search field (see [`ComboboxBuilder::with_search_threshold`]).
 pub const DEFAULT_SEARCH_THRESHOLD: usize = 8;
@@ -86,149 +91,6 @@ pub fn combobox_search_keys_system(
         };
         if let Some(input) = focused.iter().next() {
             request(input.0, choose);
-        }
-    }
-}
-
-/// Parameters for [`combobox_filter_system`].
-#[derive(SystemParam)]
-pub struct ComboboxFilterParams<'w, 's> {
-    pub time: Option<Res<'w, Time>>,
-    pub roots: Query<'w, 's, (Entity, &'static M3Combobox, &'static mut ComboboxFilter)>,
-    pub searches: Query<'w, 's, (&'static ComboboxSearch, &'static M3TextField)>,
-    pub items: Query<
-        'w,
-        's,
-        (Entity, &'static ComboboxMenuItem, &'static mut Node),
-        Without<ComboboxNoMatch>,
-    >,
-    pub no_match:
-        Query<'w, 's, (&'static ComboboxNoMatch, &'static mut Node), Without<ComboboxMenuItem>>,
-    pub focus: MessageWriter<'w, FocusEvent>,
-    pub activated: MessageWriter<'w, Activated>,
-}
-
-/// Applies the search text to the options after the debounce, shows the "No match" row and acts
-/// on a pending Down / Enter.
-pub fn combobox_filter_system(mut params: ComboboxFilterParams) {
-    let dt = params.time.map_or(0.0, |t| t.delta_secs());
-    for (root, combo, mut filter) in &mut params.roots {
-        let Some((_, field)) = params.searches.iter().find(|(s, _)| s.0 == root) else {
-            continue;
-        };
-        if field.text != filter.seen {
-            filter.seen.clone_from(&field.text);
-            filter.wait = Some(if field.text.is_empty() {
-                0.0
-            } else {
-                FILTER_DEBOUNCE_SECS
-            });
-        }
-        let Some(wait) = filter.wait else { continue };
-        if wait > dt {
-            filter.wait = Some(wait - dt);
-            continue;
-        }
-        let query = filter.seen.clone();
-        filter.wait = None;
-        filter.applied.clone_from(&query);
-        let mut visible = Vec::new();
-        for (entity, item, mut node) in &mut params.items {
-            if item.combobox_entity != root {
-                continue;
-            }
-            let shown = combo
-                .options
-                .get(item.index)
-                .is_some_and(|o| matches_query(o, &query));
-            let display = if shown { Display::Flex } else { Display::None };
-            if node.display != display {
-                node.display = display;
-            }
-            if shown {
-                visible.push((item.index, entity));
-            }
-        }
-        for (n, mut node) in &mut params.no_match {
-            if n.0 == root {
-                let display = if visible.is_empty() {
-                    Display::Flex
-                } else {
-                    Display::None
-                };
-                if node.display != display {
-                    node.display = display;
-                }
-            }
-        }
-        let target = visible
-            .iter()
-            .find(|(i, _)| Some(*i) == combo.selected)
-            .or_else(|| visible.iter().min_by_key(|(i, _)| *i))
-            .map(|(_, e)| *e);
-        if let Some(target) = target {
-            if filter.choose {
-                params.activated.write(Activated(target));
-            } else if filter.focus_item {
-                params.focus.write(FocusEvent::Set(target));
-            }
-        }
-        filter.choose = false;
-        filter.focus_item = false;
-    }
-}
-
-/// Scrolls the selected option into view a frame after the menu opened (when it has a layout).
-pub fn combobox_reveal_system(
-    mut commands: Commands,
-    mut roots: Query<(Entity, &M3Combobox, &mut ComboboxReveal)>,
-    items: Query<(Entity, &ComboboxMenuItem)>,
-    parents: Query<&ChildOf>,
-    geometry: Query<(&ComputedNode, &UiGlobalTransform)>,
-    mut lists: Query<(Entity, &ComboboxList, &mut ScrollPosition)>,
-) {
-    for (root, combo, mut reveal) in &mut roots {
-        if !combo.is_open {
-            commands.entity(root).try_remove::<ComboboxReveal>();
-            continue;
-        }
-        if reveal.0 < 1 {
-            reveal.0 += 1;
-            continue;
-        }
-        commands.entity(root).try_remove::<ComboboxReveal>();
-        let Some(selected) = combo.selected else {
-            continue;
-        };
-        let Some((item, _)) = items
-            .iter()
-            .find(|(_, i)| i.combobox_entity == root && i.index == selected)
-        else {
-            continue;
-        };
-        let Some((list, _, mut position)) = lists.iter_mut().find(|(_, l, _)| l.0 == root) else {
-            continue;
-        };
-        if parents.get(item).map(ChildOf::parent) != Ok(list) {
-            continue;
-        }
-        let (Ok((ic, it)), Ok((lc, lt))) = (geometry.get(item), geometry.get(list)) else {
-            continue;
-        };
-        let rect = |c: &ComputedNode, t: &UiGlobalTransform| {
-            let k = c.inverse_scale_factor;
-            let half = c.size() / 2.0;
-            ((t.translation - half) * k, (t.translation + half) * k)
-        };
-        let (imin, imax) = rect(ic, it);
-        let (lmin, lmax) = rect(lc, lt);
-        if imax.y - imin.y <= 0.0 || lmax.y - lmin.y <= 0.0 {
-            continue;
-        }
-        if imin.y < lmin.y || imax.y > lmax.y {
-            // Centre it when there is room.
-            let slack = ((lmax.y - lmin.y) - (imax.y - imin.y)).max(0.0) / 2.0;
-            position.y = (position.y + (imin.y - lmin.y) - slack).max(0.0);
         }
     }
 }
