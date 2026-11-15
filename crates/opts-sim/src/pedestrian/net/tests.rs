@@ -1,5 +1,6 @@
 //! Unit tests for `super` (`net.rs`).
 
+
 use super::*;
 
 fn lane(a: Vec3, b: Vec3, travel: Travel) -> FootLane {
@@ -168,7 +169,7 @@ fn no_lateral_offset_walks_on_the_centre_line_as_before() {
 fn the_offset_is_capped_on_a_wide_lane_and_ignores_a_broken_width() {
     let wide = north_lane(20.0);
     let (p, _) = walker_on(0, 1, 1.0).pose(&wide).unwrap();
-    assert!((p.x - MAX_OFFSET_M).abs() < 1e-5, "{p}");
+    assert!((p.x - super::walker::MAX_OFFSET_M).abs() < 1e-5, "{p}");
     for width in [f32::NAN, f32::INFINITY, -3.0, 0.0] {
         let odd = north_lane(width);
         let (p, _) = walker_on(0, 1, 0.8).pose(&odd).unwrap();

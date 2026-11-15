@@ -667,37 +667,28 @@ crates/opts-omsi/tests/world_parse/corpus.rs 163  # grandfathered: oversized tes
 crates/opts-sim/examples/vehicle_scripts.rs 158  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/src/collision.rs 208  # grandfathered: extract 59 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-sim/src/passengers/graph.rs 198  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-sim/src/passengers/sim.rs 250  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/passengers/sim/step.rs 210  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-sim/src/passengers/tests.rs 283  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/src/passengers/tests/crowds.rs 183  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/src/passengers/tests_trailer.rs 211  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/pedestrian/lane.rs 244  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/pedestrian/lane/tests.rs 179  # grandfathered: oversized test or example file, split by concern
-crates/opts-sim/src/pedestrian/net.rs 335  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/pedestrian/net/tests.rs 173  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/src/rail/dynamics/tests.rs 176  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/src/rail/train.rs 208  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/rail/train/switches.rs 151  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/rail/train_tests.rs 165  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/script/callbacks.rs 224  # grandfathered: extract 56 test lines to tests.rs, then split by concern to <= 150 LOC
-crates/opts-sim/src/script/compiler.rs 341  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/script/consist/tests.rs 194  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/src/script/inputs.rs 200  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/script/inputs/plan.rs 197  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/script/inputs/table.rs 322  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-sim/src/script/mod.rs 269  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/script/variables.rs 158  # grandfathered: extract 29 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-sim/src/script/vm.rs 295  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/vehicle/axle.rs 205  # grandfathered: extract 45 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-sim/src/vehicle/consist_ops.rs 172  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/vehicle/drivetrain.rs 221  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/vehicle/mod.rs 200  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-sim/src/vehicle/step.rs 276  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-sim/src/vehicle/suspension.rs 274  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-sim/src/vehicle/tests.rs 346  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/src/vehicle/trailer/tests.rs 161  # grandfathered: oversized test or example file, split by concern
-crates/opts-sim/tests/script_vm.rs 341  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/tests/vehicle_dynamics_validation.rs 211  # grandfathered: oversized test or example file, split by concern
 crates/opts-sim/tests/vehicle_kinematics.rs 184  # grandfathered: oversized test or example file, split by concern
 crates/opts-tools/src/l10n.rs 334  # grandfathered: split production file by concern to <= 150 LOC
