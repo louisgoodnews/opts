@@ -6,71 +6,11 @@
 use opts_core::formats::vehicles::bus::BusAxle;
 use serde::{Deserialize, Serialize};
 
-/// Physical state of an individual road wheel.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct WheelState {
-    /// Cumulative rotation angle around the spin axis in radians (used for mesh spinning).
-    pub rotation_rad: f32,
-    /// Rotational angular velocity in radians per second.
-    pub angular_velocity_rad_s: f32,
-    /// Current steering turn angle relative to the chassis centerline in radians.
-    pub steer_angle_rad: f32,
-    /// Effective dynamic rolling radius in meters.
-    pub rolling_radius_m: f32,
-    /// Vertical normal contact force in Newtons.
-    pub vertical_load_n: f32,
-}
+mod config;
+mod wheel;
 
-impl Default for WheelState {
-    fn default() -> Self {
-        Self {
-            rotation_rad: 0.0,
-            angular_velocity_rad_s: 0.0,
-            steer_angle_rad: 0.0,
-            rolling_radius_m: 0.49, // ~0.98m wheel diameter default
-            vertical_load_n: 0.0,
-        }
-    }
-}
-
-/// Static mechanical configuration and limits of an axle.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AxleConfig {
-    /// Longitudinal position relative to vehicle coordinate origin in meters (+Y = forward).
-    pub longitudinal_m: f32,
-    /// Wheel track width between left and right tire centers in meters.
-    pub track_width_m: f32,
-    /// Nominal outer wheel tire diameter in meters.
-    pub wheel_diameter_m: f32,
-    /// Suspension spring stiffness rate in Newtons per meter.
-    pub spring_rate_n_m: f32,
-    /// Maximum suspension travel force rating in Newtons.
-    pub max_force_n: f32,
-    /// Shock absorber damping rate in Newton-seconds per meter.
-    pub damping_n_s_m: f32,
-    /// Whether this axle receives tractive torque from the powertrain.
-    pub is_driven: bool,
-    /// Whether this axle steers the vehicle.
-    pub is_steered: bool,
-    /// Maximum mechanical road wheel steering angle limit in radians.
-    pub max_steer_angle_rad: f32,
-}
-
-impl Default for AxleConfig {
-    fn default() -> Self {
-        Self {
-            longitudinal_m: 0.0,
-            track_width_m: 2.45,
-            wheel_diameter_m: 0.98,
-            spring_rate_n_m: 250_000.0,
-            max_force_n: 115_000.0,
-            damping_n_s_m: 15_000.0,
-            is_driven: false,
-            is_steered: false,
-            max_steer_angle_rad: 0.82, // ~47 degrees
-        }
-    }
-}
+pub use config::AxleConfig;
+pub use wheel::WheelState;
 
 /// Dynamic state and kinematics of an axle assembly.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -232,57 +172,4 @@ impl AxleState {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_ackermann_straight_line_safe() {
-        // Zero steering angle must return (0.0, 0.0) without NaN or panic
-        let (left, right) = AxleState::compute_ackermann_angles(5.8, 2.45, 0.0);
-        assert_eq!(left, 0.0);
-        assert_eq!(right, 0.0);
-        assert!(!left.is_nan());
-        assert!(!right.is_nan());
-    }
-
-    #[test]
-    fn test_ackermann_steering_geometry() {
-        let wheelbase = 5.85; // Standard 12m bus wheelbase
-        let track_width = 2.45;
-        let steer_input = 0.5; // ~28.6 degrees right turn
-
-        let (left_angle, right_angle) =
-            AxleState::compute_ackermann_angles(wheelbase, track_width, steer_input);
-
-        // For a right turn: right wheel is inner, left wheel is outer.
-        // Inner wheel must turn sharper than outer wheel: right_angle > left_angle > 0
-        assert!(
-            right_angle > left_angle,
-            "Right inner wheel must turn sharper than left outer"
-        );
-        assert!(left_angle > 0.0);
-        assert!(right_angle > 0.0);
-    }
-
-    #[test]
-    fn test_wheel_rotation_advancement() {
-        let mut axle = AxleState::from_manifest(
-            &BusAxle {
-                longitudinal_m: 3.2,
-                max_width_m: Some(2.45),
-                min_width_m: None,
-                wheel_diameter_m: Some(1.0), // r = 0.5m
-                spring_rate: None,
-                max_force: None,
-                damping: None,
-                is_driven: false,
-            },
-            true,
-        );
-
-        // At 10 m/s with r = 0.5m, ang_vel = 20 rad/s
-        axle.update_rotation(10.0, 0.1);
-        assert!((axle.left_wheel.angular_velocity_rad_s - 20.0).abs() < 1e-3);
-        assert!((axle.left_wheel.rotation_rad - 2.0).abs() < 1e-3);
-    }
-}
+mod tests;

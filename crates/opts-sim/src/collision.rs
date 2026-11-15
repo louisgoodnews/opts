@@ -4,9 +4,9 @@
 //! Headings are compass angles in radians (0 = +Y, clockwise): the forward axis of a box is
 //! `(sin h, cos h)`, its right axis `(cos h, -sin h)`, as in the vehicle chassis.
 
-use std::collections::HashMap;
-
 use glam::Vec2;
+
+mod grid;
 
 /// An oriented box on the ground plane with a height range.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -128,148 +128,7 @@ pub fn respond(velocity: Vec2, normal: Vec2, restitution: f32, friction: f32) ->
     normal * (-vn * restitution) + tangent * (1.0 - friction)
 }
 
-/// Static boxes in a uniform grid; entries carry a key (the tile) so a tile's boxes can be
-/// dropped together.
-#[derive(Debug, Clone)]
-pub struct ColliderGrid<K> {
-    cell: f32,
-    cells: HashMap<(i32, i32), Vec<(K, Obb)>>,
-}
-
-impl<K: Clone + PartialEq> ColliderGrid<K> {
-    /// A grid with square cells of `cell` metres.
-    #[must_use]
-    pub fn new(cell: f32) -> Self {
-        Self {
-            cell,
-            cells: HashMap::new(),
-        }
-    }
-
-    fn index(&self, p: Vec2) -> (i32, i32) {
-        (
-            (p.x / self.cell).floor() as i32,
-            (p.y / self.cell).floor() as i32,
-        )
-    }
-
-    /// Adds a box to every cell its bounding circle touches.
-    pub fn insert(&mut self, key: K, obb: Obb) {
-        let r = obb.radius();
-        let (lo, hi) = (
-            self.index(obb.centre - Vec2::splat(r)),
-            self.index(obb.centre + Vec2::splat(r)),
-        );
-        for x in lo.0..=hi.0 {
-            for y in lo.1..=hi.1 {
-                self.cells
-                    .entry((x, y))
-                    .or_default()
-                    .push((key.clone(), obb));
-            }
-        }
-    }
-
-    /// Drops every box inserted under `key`.
-    pub fn remove(&mut self, key: &K) {
-        self.cells.retain(|_, v| {
-            v.retain(|(k, _)| k != key);
-            !v.is_empty()
-        });
-    }
-
-    /// The boxes in the cells within `radius` of `centre` (a box can appear in several cells).
-    pub fn query(&self, centre: Vec2, radius: f32) -> impl Iterator<Item = &Obb> {
-        let (lo, hi) = (
-            self.index(centre - Vec2::splat(radius)),
-            self.index(centre + Vec2::splat(radius)),
-        );
-        (lo.0..=hi.0)
-            .flat_map(move |x| (lo.1..=hi.1).map(move |y| (x, y)))
-            .filter_map(|c| self.cells.get(&c))
-            .flatten()
-            .map(|(_, o)| o)
-    }
-
-    /// Number of stored (box, cell) entries.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.cells.values().map(Vec::len).sum()
-    }
-
-    /// Whether the grid is empty.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.cells.is_empty()
-    }
-}
+pub use grid::ColliderGrid;
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn bx(x: f32, y: f32, hr: f32, hf: f32, h: f32) -> Obb {
-        Obb::new(Vec2::new(x, y), Vec2::new(hr, hf), h, 0.0, 2.0)
-    }
-
-    #[test]
-    fn separated_boxes_do_not_touch() {
-        assert!(bx(0.0, 0.0, 1.0, 2.0, 0.0)
-            .contact(&bx(5.0, 0.0, 1.0, 1.0, 0.0))
-            .is_none());
-    }
-
-    #[test]
-    fn overlap_gives_the_shortest_push_away_from_the_other() {
-        // `a` 2 m wide and 4 m long heading north; `b` 1 m to its right and overlapping by 1 m.
-        let a = bx(0.0, 0.0, 1.0, 2.0, 0.0);
-        let b = bx(1.5, 0.0, 1.0, 1.0, 0.0);
-        let c = a.contact(&b).expect("overlap");
-        assert!((c.depth - 0.5).abs() < 1e-4, "{c:?}");
-        assert!(c.normal.x < -0.99, "pushed to the left: {c:?}");
-    }
-
-    #[test]
-    fn rotated_boxes_use_their_own_axes() {
-        // Turned by 90° the long side lies along x and reaches x = 2; the box at 2.25 starts at 1.75.
-        let a = bx(0.0, 0.0, 1.0, 2.0, std::f32::consts::FRAC_PI_2);
-        let b = bx(2.25, 0.0, 0.5, 0.5, 0.0);
-        let c = a.contact(&b).expect("overlap");
-        assert!((c.depth - 0.25).abs() < 1e-3, "{c:?}");
-        assert!(bx(0.0, 0.0, 1.0, 2.0, std::f32::consts::FRAC_PI_2)
-            .contact(&bx(3.0, 0.0, 0.5, 0.5, 0.0))
-            .is_none());
-    }
-
-    #[test]
-    fn response_stops_the_normal_component_and_keeps_part_of_the_tangent() {
-        let v = respond(Vec2::new(-3.0, 4.0), Vec2::new(1.0, 0.0), 0.0, 0.25);
-        assert!(v.x.abs() < 1e-6);
-        assert!((v.y - 3.0).abs() < 1e-6);
-        // Moving away is left alone.
-        assert_eq!(
-            respond(Vec2::new(2.0, 1.0), Vec2::new(1.0, 0.0), 0.0, 0.5),
-            Vec2::new(2.0, 1.0)
-        );
-    }
-
-    #[test]
-    fn height_slack_lets_a_vehicle_drive_over_a_kerb() {
-        let car = Obb::new(Vec2::ZERO, Vec2::ONE, 0.0, 0.0, 1.5);
-        let kerb = Obb::new(Vec2::ZERO, Vec2::ONE, 0.0, 0.0, 0.15);
-        assert!(!car.overlaps_height(&kerb, 0.3));
-        let wall = Obb::new(Vec2::ZERO, Vec2::ONE, 0.0, 0.0, 1.0);
-        assert!(car.overlaps_height(&wall, 0.3));
-    }
-
-    #[test]
-    fn grid_finds_nearby_boxes_and_drops_a_tile() {
-        let mut g = ColliderGrid::new(10.0);
-        g.insert(1, bx(5.0, 5.0, 1.0, 1.0, 0.0));
-        g.insert(2, bx(95.0, 5.0, 1.0, 1.0, 0.0));
-        assert_eq!(g.query(Vec2::new(5.0, 5.0), 3.0).count(), 1);
-        g.remove(&1);
-        assert_eq!(g.query(Vec2::new(5.0, 5.0), 3.0).count(), 0);
-        assert!(!g.is_empty());
-    }
-}
+mod tests;
