@@ -43,7 +43,7 @@ mod tile_build;
 mod tile_ground;
 mod tile_mode;
 pub(crate) mod trace;
-mod traffic;
+pub(crate) mod traffic;
 mod traffic_chain;
 mod traffic_variant;
 pub(crate) use pedestrians::passenger_factor;

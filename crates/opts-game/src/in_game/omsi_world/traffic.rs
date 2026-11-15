@@ -328,6 +328,7 @@ pub use scheduled::{plan_scheduled, ScheduledStats, ScheduledTraffic};
 
 mod motion;
 pub use motion::{move_traffic, update_ai_variables};
+pub(crate) mod lane_overlay;
 
 #[cfg(test)]
 mod density_tests;

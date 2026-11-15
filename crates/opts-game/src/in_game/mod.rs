@@ -289,6 +289,7 @@ fn add_late_systems(app: &mut App) {
             .run_if(resource_exists::<crate::settings_registry::SettingsRegistry>),
     );
 
+    omsi_world::traffic::lane_overlay::add_lane_overlay(app);
     // Input-driven systems stand still while the report modal is open.
     app.add_systems(
         Update,
