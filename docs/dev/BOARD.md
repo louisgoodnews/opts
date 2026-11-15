@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-11-05 by Agent (M-0029 started: design page; M-0028 done; M-0040, M-0042 and M-0052 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
+_Last updated: 2026-11-15 by Agent (roadmap status reconciliation on `agent/roadmap-status`: M-0150 done in the roadmap, M-0059 in progress, M-0144 mesh trees ticked, M-0066 awaiting acceptance, M-0077 thumbnails ticked, M-0112 scheduled AI done in the roadmap; M-0124 and the debug-overlay claim left for owner decision; previously 2026-11-05: M-0029 started: design page; M-0028 done; M-0040, M-0042 and M-0052 done; status sync: M-0053 limit fixtures merged, M-0042 broken-link proof done, finished Ready items moved to Recently Done; M-0124 per-unit passenger load, M-0077 thumbnails, M-0110, M-0113 done; M-0150 function-size ratchet done; M-0080 wizard switch, memory guard and automatic radius done; M-0084 export/import done; M-0124 save field done; status sync of 2026-10-28 and M-0150 first batch)_
 
 ---
 
@@ -203,7 +203,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### M-0057–M-0060, M-0091 — Phase 8: Visual Quality & Realism (decided 2026-10-12)
 - [ ] 🟠 **Reference-view sweep (6–8 views on three maps) for the scripted A/B run** (M-0057, code) — the minimal harness exists (`scripts/visual-ab.sh`); results outside the repository.
-- [ ] 🟠 **Coverage-preserving alpha mips and alpha-to-coverage** (M-0059, code) — coverage-preserving mips partly in place (the coverage mode of `generate_mip_chain`, `2e8e2338`; DXT chains `23f669cd`); alpha-to-coverage open.
+- [~] 🟠 **Coverage-preserving alpha mips and alpha-to-coverage** (M-0059, code) — coverage-preserving mips partly in place (the coverage mode of `generate_mip_chain`, `2e8e2338`; DXT chains `23f669cd`); alpha-to-coverage open.
 - [ ] 🟠 **Physical light calibration with cited reference values; reference-surface test; a stronger *Vivid* grade and a calibrated *Natural* look** (M-0060 step 2, spec + code) — the step 1 review (2026-10-25) found the colour effect too weak.
 - [ ] 🟡 **Cold-cache first-run measurement on the three reference maps** (M-0058, test) — Köln measured 2026-10-25 (about 4 s cold, 0.2 s from the cache); the other two reference maps open.
 - [ ] 🟠 **Shadow quality and realism** (M-0091, research + code) — R-40; the shadow-distance setting exists since 2026-10-24 (`4d2a4955`).
@@ -654,3 +654,4 @@ The agent should check these during P-001 audits:
 - `2026-11-05` — M-0029 step 2 (`agent/m0029-lod`): per-part shadow culling behind `graphics.shadow_detail`, `shadow_casters` in `render.stats --parts`, `scripts/shadow-cull-bench.sh`; A/B on Berlin-Spandau: casters −44 %, frame time and shadow-pass GPU time unchanged, so the setting stays off and hidden.
 - `2026-11-05` — M-0029 step 3 (`agent/m0029-dedupe`): asset de-duplication not made default (research §5: no CPU, memory or load-time gain; the `Debug` key is the safe one). `render.stats --parts` lists the cameras; `render.stats --parts` lists the cameras.
 - `2026-11-06` — M-0029 mirrors (`agent/mirror-cost`): measured the mirror cameras on Berlin-Spandau in custom lighting mode: two mirrors at the default rate cost 9 ms of a 17 ms frame (CPU, not GPU), independent of the cameras' far plane, scaling with the scene's mesh entities; static merge halves it. The ladder sheds mirrors only at level 4. Options in lod-culling §3.6 for the project lead; `scripts/shadow-cull-bench.sh` takes `PRE`.
+- `2026-11-15` — Roadmap status reconciliation (`agent/roadmap-status`, docs only): M-0150 done 2026-10-30 (`structure_audit.py check`: 0 functions over 80 LOC, 0 signature allows); M-0059 set to in progress (coverage-preserving mips exist, alpha-to-coverage absent); M-0144 mesh trees ticked (`80990224`); M-0077 thumbnails ticked (`c5de0b71`); M-0066 set to in progress, awaiting the project lead's acceptance; M-0112 scheduled AI marked done in the roadmap. M-0124's steering-effort sub-item left open for owner decision.

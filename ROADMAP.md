@@ -27,7 +27,7 @@
 | 🎨 **Phase 12** — Visual Fidelity & Advanced Physics | dirt and light maps, wetness and snow, graphics overhaul, fuel and battery, passenger load | 🟡 approved 2026-10-20 — M-0124 done (mass, axle loads, ride height, override, save field, audit, per-unit load); M-0120–M-0123 not started | [`phase-12/`](docs/src/roadmap/phase-12/README.md) |
 | 🏗️ **Phase 13** — Crate Architecture: Legacy vs. Native Separation | `opts-omsi` (legacy parsers, leaf adapter), `opts-model` (native TOML), shared base crate; no engine crate depends on `opts-omsi` | ✅ delivered 2026-10-19 (no direct Cargo dependency on opts-omsi); consumer migration not started — engine crates still reach OMSI types through the opts-core facade (omsi_uses.py: bevy 130, sim 31, traffic 14, catalogue 5, unchanged since 2026-10-19) | [`phase-13/`](docs/src/roadmap/phase-13/README.md) |
 | 🛠️ **Phase 14** — Vehicle Overrides & Visual Editor | `VehicleProfile` TOML patch layer (sound, script, constant, mesh swaps with validation) and an in-game visual mesh editor | 📝 proposed 2026-10-19, design first | [`phase-14/`](docs/src/roadmap/phase-14/README.md) |
-| 🤖 **Phase 15** — AI-Optimized Code Structure & Pre-Commit Enforcement | two-tier file budget (150–200 optimum, 250 inline-test split, 350 ceiling), 80-line function ratchet, `SystemParam` bundling, and `< 1.5 s` pre-commit enforcement | 🟡 in progress — M-0147, M-0148, and M-0149 done 2026-10-28 (120 files split, structure-known.txt emptied); M-0150 in progress since 2026-10-29 ([research](docs/src/architecture/ai-token-optimization.md)) | [`phase-15/`](docs/src/roadmap/phase-15/README.md) |
+| 🤖 **Phase 15** — AI-Optimized Code Structure & Pre-Commit Enforcement | two-tier file budget (150–200 optimum, 250 inline-test split, 350 ceiling), 80-line function ratchet, `SystemParam` bundling, and `< 1.5 s` pre-commit enforcement | 🟡 in progress — M-0147, M-0148, and M-0149 done 2026-10-28 (120 files split, structure-known.txt emptied); M-0150 done 2026-10-30 (0 functions over 80 lines, 0 signature allows) ([research](docs/src/architecture/ai-token-optimization.md)) | [`phase-15/`](docs/src/roadmap/phase-15/README.md) |
 | ♾️ **Phase 999** — Refactoring Taskforce (continuous) | a structural cleanup without behaviour change at the end of every development cycle and before every versioned release | ♾️ continuous; set-up and cycle 1 done 2026-10-19 (63 → 0 files over 500 lines of code, still 0 on 2026-10-25); cycle 2 not started | [`phase-999/`](docs/src/roadmap/phase-999/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
@@ -178,7 +178,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
   - [x] Script VM (compiles all 6,062 corpus scripts; 1,216 scripted vehicles load and run) wired to the vehicle through a passive and an active Bevy bridge — OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](docs/src/roadmap/phase-4/M-0026.md) — traces to F-008, F-019).
   - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, `[visible]`, interior lights, `Spot_Select` headlights, light maps, `keyboard.cfg` key triggers and `[mouseevent]` hot-spots done; vehicle night maps (2026-10-25) and `[light_enh_2]` done; in-game screenshot check and `delay` open ([M-0045](docs/src/roadmap/phase-4/M-0045.md)).
-  - [~] AI road traffic — [M-0049](docs/src/roadmap/phase-4/M-0049.md): research and plan ([`ai-traffic.md`](docs/src/architecture/ai-traffic.md)), AI list parsers and the `opts-traffic` crate (lane graph, car following, spawning helpers) done; traffic runs in the game (IDM lane following, speed limits and density rules, signals, conflict zones, right of way, lane changes, trailer chains); scheduled AI in M-0112, depth work in M-0111; debug overlay/`traffic.*` methods, `[splinehelper]` arms, script-driven driving and calibration open.
+  - [~] AI road traffic — [M-0049](docs/src/roadmap/phase-4/M-0049.md): research and plan ([`ai-traffic.md`](docs/src/architecture/ai-traffic.md)), AI list parsers and the `opts-traffic` crate (lane graph, car following, spawning helpers) done; traffic runs in the game (IDM lane following, speed limits and density rules, signals, conflict zones, right of way, lane changes, trailer chains); scheduled AI done in M-0112 (2026-10-23), depth work in M-0111; debug overlay/`traffic.*` methods, `[splinehelper]` arms, script-driven driving and calibration open.
   - [x] Sound engine in `opts-bevy` (2026-10-20): clips, emitters, voice budget, distance fading, listener, buses with the Audio settings, `audio.*` protocol ([M-0027](docs/src/roadmap/phase-4/M-0027.md), [audio-system](docs/src/architecture/audio-system.md)).
   - [~] Sounds of scenery objects and splines ([M-0139](docs/src/roadmap/phase-4/M-0139.md)), of AI traffic ([M-0140](docs/src/roadmap/phase-4/M-0140.md)), then the player's vehicle: engine RPM and pneumatic pressure to spatial audio ([M-0102](docs/src/roadmap/phase-4/M-0102.md)); first slices 2026-10-20, AI doors/horn/second unit 2026-10-24; announcements, `Snd_*`, force feedback, brake squeal open.
   - [x] Interior rattling ([M-0146](docs/src/roadmap/phase-4/M-0146.md), 2026-10-26): the road textures' unevenness (`.surf` height maps, else the surface type) shakes the body on its springs, `A_Trans_Z` reaches the vehicles' rattle scripts.
@@ -318,7 +318,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🪜 Mipmaps & Derived Cache** — [M-0058](docs/src/roadmap/phase-8/M-0058.md)
   - [x] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload (accepted 2026-10-25).
   - [x] Chains for the DXT textures without one (48,217 in the installation) through a derived cache, re-encoded with `texpresso` (done 2026-10-25; Köln: +4 s on the first load, 0.2 s from the cache; far below the 120 s limit, so the budget machinery was dropped).
-- [ ] **🌿 Foliage & Cutout Coverage** — [M-0059](docs/src/roadmap/phase-8/M-0059.md)
+- [~] **🌿 Foliage & Cutout Coverage** — [M-0059](docs/src/roadmap/phase-8/M-0059.md)
   - [~] Coverage-preserving alpha mips (in place for detected cutouts since M-0058, fixed cutoff 0.5); alpha-to-coverage with MSAA and per-class cutoffs open.
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](docs/src/roadmap/phase-8/M-0060.md)
   - [~] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted (implemented; reviewed 2026-10-25: the effect is too weak and needs expanding; *Natural* equals *Bevy default* until the calibration).
@@ -328,7 +328,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **🌳 Trees Move in the Wind** — [M-0144](docs/src/roadmap/phase-8/M-0144.md) — requested by the project lead 2026-10-26 (OMSI's trees are static: an OPTS extension)
   - [x] Specification: [vegetation wind](docs/src/architecture/vegetation-wind.md).
   - [x] `[tree]` billboards bend in a vertex stage (shadows included) with the weather's wind; setting `graphics.tree_wind` (2026-10-26).
-  - [ ] Mesh trees (`.o3d` trunk and foliage cards).
+  - [x] Mesh trees (`.o3d` trunk and foliage cards): phase C, 2026-10-26 (`80990224`); the foliage cards are tagged `WindTree` (`opts-bevy/src/tree_wind.rs`).
 
 ---
 
@@ -381,7 +381,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## 🧩 Phase 10: Sessions, World Completeness & Vehicle Dynamics
 *Goal: Turn the driving demo into a session-based simulator: water and correct content in the world, sessions with several user vehicles that can be saved and restored, and vehicles whose own mass, axles, suspension and brakes are respected by a shared world physics. Status: planned 2026-10-13 from the project lead's [field report](docs/src/quality/field-report-2026-10-13.md); in progress (status sync 2026-10-25: M-0068/69/73/78/106 done, M-0066 awaiting acceptance, M-0079/M-0138 deferred, M-0104 obsolete). Documents: [phase page](docs/src/roadmap/phase-10/README.md).*
 
-- [ ] **🚗 Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns** — [M-0066](docs/src/roadmap/phase-10/M-0066.md) — 🟢 tasks done and merged 2026-10-19, awaiting the project lead's acceptance
+- [~] **🚗 Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns** — [M-0066](docs/src/roadmap/phase-10/M-0066.md) — 🟡 in progress: all tasks done and merged 2026-10-19; awaiting the project lead's acceptance (not yet accepted)
   - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); flipped or misaligned building meshes (R-17); scrambled lantern posts (R-18); fixes with regression tests, remaining content defects registered.
 - [ ] **🔬 UV Decoder Fleet Validation** — [M-0079](docs/src/roadmap/phase-10/M-0079.md) — ⏸ deferred by the project lead 2026-10-13
   - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The heuristic decoder (P-1013 phases A–C) was retired 2026-10-16 (exact decoding, o3d.md Addendum 15), so this validation has no subject; candidate for retirement.
@@ -396,7 +396,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **💾 Session Save and Restore** — [M-0069](docs/src/roadmap/phase-10/M-0069.md)
   - [x] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
 - [x] **🧰 Bus Configurations** — [M-0077](docs/src/roadmap/phase-10/M-0077.md) — 🟢 complete 2026-10-30
-  - [ ] Named, quick-loadable configurations of bus, repaint and setvars (R-15).
+  - [x] Named, quick-loadable configurations of bus, repaint and setvars (R-15).
 - [x] **🎛️ Setvars** — [M-0078](docs/src/roadmap/phase-10/M-0078.md)
   - [x] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
 - [x] **⚙️ Vehicle Dynamics** — [M-0073](docs/src/roadmap/phase-10/M-0073.md)
@@ -489,7 +489,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **✂️ Batch 2: Production File Splits to the 350-Line Ceiling** — [M-0149](docs/src/roadmap/phase-15/M-0149.md) — ✅ done 2026-10-28
   - [x] Split the 102 remaining production files > 350 non-test code lines (and 18 oversized test/example files) along concern boundaries into 150–220 line modules.
 - [x] **🧩 Batch 3: Function Size Ratchet (< 80 Lines) & ECS `SystemParam` Bundling** — [M-0150](docs/src/roadmap/phase-15/M-0150.md) — ✅ done 2026-10-30: `function-known.txt` empty, 0 functions over 80 lines, 0 signature allows.
-  - [ ] Decompose the 191 production functions > 80 code lines into ≤ 40-line helpers and replace the 155 `too_many_arguments`/`type_complexity` allows across 113 files with `#[derive(SystemParam)]` structs.
+  - [x] Decompose the production functions > 80 code lines into helpers and replace the `too_many_arguments`/`type_complexity` allows with `#[derive(SystemParam)]` structs: done 2026-10-30 (M-0150); `python3 scripts/structure_audit.py check` on 2026-11-15 reports 0 functions > 80 LOC and 0 signature allows.
 
 ---
 

@@ -22,7 +22,7 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
 
 - [M-0057 — Texture Filtering and Measurement Harness](M-0057.md) — 🟡 In progress (sampler accepted 2026-10-25, image-metrics tool done)
 - [M-0058 — Mipmaps: Generation, Derived Cache and the 2-Minute Budget](M-0058.md) — 🟡 Phases A, B and C done 2026-10-25 (DXT chains through `texpresso` and a derived cache); open: the full acceptance run on three maps
-- [M-0059 — Foliage and Cutout Coverage](M-0059.md) — ⏳ Planned (coverage-preserving mips, alpha-to-coverage)
+- [M-0059 — Foliage and Cutout Coverage](M-0059.md) — 🟡 In progress (coverage-preserving mips in place for detected cutouts; alpha-to-coverage open)
 - [M-0060 — Realistic Colour and Looks](M-0060.md) — 🟡 Step 1 implemented, too weak (review 2026-10-25) (physical light calibration, Vivid default, look presets)
 
 ## Checklist
@@ -37,7 +37,7 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
 - [ ] **🪜 Mipmaps & Derived Cache** — [M-0058](M-0058.md)
   - [x] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload (accepted 2026-10-25).
   - [x] Chains for the DXT textures without one (48,217 in the installation) through a derived cache, re-encoded with `texpresso` (done 2026-10-25; Köln: +4 s on the first load, 0.2 s from the cache; far below the 120 s limit, so the budget machinery was dropped).
-- [ ] **🌿 Foliage & Cutout Coverage** — [M-0059](M-0059.md)
+- [~] **🌿 Foliage & Cutout Coverage** — [M-0059](M-0059.md)
   - [~] Coverage-preserving alpha mips (in place for detected cutouts since M-0058, fixed cutoff 0.5); alpha-to-coverage with MSAA and per-class cutoffs open.
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](M-0060.md)
   - [~] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted (implemented; reviewed 2026-10-25: the effect is too weak and needs expanding; *Natural* equals *Bevy default* until the calibration).
@@ -47,4 +47,4 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
 - [x] **🌳 Trees Move in the Wind** — [M-0144](M-0144.md) — requested by the project lead 2026-10-26 (OMSI's trees are static: an OPTS extension)
   - [x] Specification: [vegetation wind](../../architecture/vegetation-wind.md).
   - [x] `[tree]` billboards bend in a vertex stage (shadows included) with the weather's wind; setting `graphics.tree_wind` (2026-10-26).
-  - [ ] Mesh trees (`.o3d` trunk and foliage cards).
+  - [x] Mesh trees (`.o3d` trunk and foliage cards): phase C, 2026-10-26 (`80990224`); the foliage cards are tagged `WindTree` (`opts-bevy/src/tree_wind.rs`).
