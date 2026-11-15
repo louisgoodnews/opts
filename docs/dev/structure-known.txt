@@ -117,7 +117,6 @@ crates/opts-bevy/src/texture/mips/tests.rs 211  # grandfathered: oversized test 
 crates/opts-bevy/src/texture/tests.rs 181  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/texture_filter.rs 187  # grandfathered: extract 45 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-bevy/src/tree_wind.rs 188  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-bevy/src/vehicle.rs 277  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_glow.rs 179  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_glow/headlight_pool.rs 158  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/vehicle_lights.rs 227  # grandfathered: split production file by concern to <= 150 LOC
