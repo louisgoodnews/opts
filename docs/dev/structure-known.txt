@@ -40,7 +40,6 @@ crates/opts-game/src/in_game/weather/fog.rs 154  # grandfathered: extract 49 inl
 crates/opts-game/src/new_game_screen/setvars_discovery/tests.rs 163  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/passengers/rig.rs 164  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/settings_screen/tests/content.rs 166  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/ui_typography.rs 171  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/vehicle_keys/tests.rs 166  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/vehicle_sound/tests.rs 167  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/viewpoints/plugin.rs 156  # grandfathered: split production file by concern to <= 150 LOC
