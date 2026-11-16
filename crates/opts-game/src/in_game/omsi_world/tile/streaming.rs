@@ -2,6 +2,10 @@
 
 use super::*;
 
+mod hybrid;
+
+use hybrid::{evictions, plan_frame, refill, HybridState};
+
 /// Loads the next queued tile completely: terrain, splines and scenery objects. The loading
 /// screen's and the benchmark's way; streaming in the game uses [`advance_tile_loading`] with a
 /// frame budget instead.
@@ -68,14 +72,18 @@ pub struct TileRoot(pub (i32, i32));
 /// Keeps the tiles around the camera loaded and unloads distant ones (one tile load per frame).
 ///
 /// The observer is the 3D camera. In radius mode the tiles within the radius (Chebyshev
-/// distance) are resident and tiles beyond the radius + 1 are despawned (hysteresis avoids
-/// thrashing at borders); in *load all* mode every tile is wanted and none is despawned
-/// ([`tile_loading`], M-0080). Parsed objects and textures stay cached, so revisiting a tile is
-/// cheap.
+/// distance) are resident and tiles beyond the radius + the hysteresis are despawned; in *load
+/// all* mode every tile is wanted and none is despawned ([`tile_loading`], M-0080). The speed of
+/// the player picks the regime (M-0114, [`hybrid`]): at speed the queue is ordered by the heading
+/// and tiles are loaded ahead; when slow the tile being built places its nearest objects first.
+/// Parsed objects and textures stay cached, so revisiting a tile is cheap.
 pub fn stream_world_tiles(
     job: Option<ResMut<WorldLoadJob>>,
     state: Res<crate::in_game::types::SimulationLoadState>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
+    vehicle: Query<&GlobalTransform, With<opts_bevy::PlayerVehicle>>,
+    time: Res<Time>,
+    mut hybrid: Local<HybridState>,
     mut stats: ResMut<WorldStats>,
     mut commands: Commands,
     mut assets: LoadAssets,
@@ -87,10 +95,13 @@ pub fn stream_world_tiles(
     let Ok(cam) = camera.single() else { return };
     let p = cam.translation();
     let centre = job.grid.key_at(Vec2::new(p.x, -p.z), job.start_tile);
-    let mode = job.tile_mode();
-    let far = tile_loading::evict(mode, centre, job.resident.keys().copied());
+    // The track is the vehicle (the camera when there is none); the observer stays the camera.
+    let track = vehicle
+        .single()
+        .map_or((p.x, -p.z), |v| (v.translation().x, -v.translation().z));
+    let plan = plan_frame(&mut job, &mut hybrid, track, time.delta_secs());
     let _t_evict = opts_logging::stream_trace::span("stream.evict");
-    for key in far {
+    for key in evictions(&job, centre, &plan) {
         if let Some(unload) = job.unload_tile(key, false) {
             unload.apply(&mut commands);
         }
@@ -99,20 +110,7 @@ pub fn stream_world_tiles(
     stats.tiles_loaded = job.resident.len();
 
     if job.queue.is_empty() && job.building.is_none() {
-        let wanted = tile_loading::wanted(mode, centre, job.listed_tiles(), |k| {
-            job.resident.contains_key(&k) || job.missing_tiles.contains(&k)
-        });
-        // The nearest few, so that a frame with budget left can go on with the next one.
-        let mut queued = 0;
-        for key in wanted {
-            if queued == REFILL {
-                break;
-            }
-            if job.tile_available(key) {
-                job.queue.push_back(key);
-                queued += 1;
-            }
-        }
+        refill(&mut job, centre, track, &plan);
     }
     if job.has_tile_work() {
         let (meshes, materials, images) = (

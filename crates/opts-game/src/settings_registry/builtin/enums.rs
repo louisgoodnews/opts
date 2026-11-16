@@ -84,6 +84,12 @@ pub(super) const MINIMAP_ZOOM_MODES: &[crate::settings_registry::EnumOption] = &
     opt("fixed", "set-opt-minimap-zoom-mode-fixed"),
 ];
 
+pub(super) const STREAMING_MODES: &[crate::settings_registry::EnumOption] = &[
+    opt("auto", "set-opt-streaming-mode-auto"),
+    opt("tile", "set-opt-streaming-mode-tile"),
+    opt("object", "set-opt-streaming-mode-object"),
+];
+
 pub(super) const LOG_LEVELS: &[crate::settings_registry::EnumOption] = &[
     opt("error", "set-opt-log-error"),
     opt("warn", "set-opt-log-warn"),

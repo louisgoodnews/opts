@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 
+use crate::in_game::stream_budget::policy::StreamMode;
 use crate::in_game::tile_loading;
 use crate::settings::GameSettings;
 
@@ -42,5 +43,10 @@ pub fn sync_tile_loading(
     let budget = tile_loading::stream_budget_of(&settings);
     if job.stream_budget != budget {
         job.stream_budget = budget;
+    }
+    // `streaming.mode` (M-0114): auto follows the speed, tile or object forces the regime.
+    let mode = StreamMode::from_setting(settings.raw("streaming.mode").as_deref());
+    if job.stream_mode != mode {
+        job.stream_mode = mode;
     }
 }

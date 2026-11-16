@@ -56,5 +56,9 @@ fn tiles(world: &mut World, _: &Value) -> Outcome {
         "queued": job.queued_tiles().len(),
         "building": job.building_tile().map(|k| json!([k.0, k.1])),
         "stream_budget_ms": job.stream_budget.as_millis(),
+        "stream_mode": job.stream_mode.name(),
+        "regime": job.stream_status.regime.name(),
+        "speed_mps": job.stream_status.speed_mps,
+        "blend": job.stream_status.blend,
     }))
 }
