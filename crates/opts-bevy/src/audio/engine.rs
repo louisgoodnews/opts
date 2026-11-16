@@ -11,95 +11,16 @@ use super::clip::PcmClip;
 use super::curves::percent_to_gain;
 use super::emitter::{SoundBus, SoundEmitter, Voice};
 use crate::MainCamera;
+mod select;
+mod settings;
+mod stats;
 
-/// The volume settings (percent) and limits; the game keeps it in step with its settings.
-#[derive(Resource, Debug, Clone, PartialEq)]
-pub struct AudioSettings {
-    /// Sound on or off altogether.
-    pub enabled: bool,
-    /// Master volume, 0 to 100.
-    pub master: f32,
-    /// Effects bus, 0 to 100.
-    pub effects: f32,
-    /// Ambient bus, 0 to 100.
-    pub ambient: f32,
-    /// Vehicles bus, 0 to 100.
-    pub vehicles: f32,
-    /// Interface bus, 0 to 100.
-    pub ui: f32,
-    /// Most voices playing at once (the loudest win).
-    pub max_voices: usize,
-}
-
-impl Default for AudioSettings {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            master: 80.0,
-            effects: 80.0,
-            ambient: 60.0,
-            vehicles: 80.0,
-            ui: 60.0,
-            max_voices: 32,
-        }
-    }
-}
-
-impl AudioSettings {
-    /// The linear gain of a bus including the master volume.
-    #[must_use]
-    pub fn bus_gain(&self, bus: SoundBus) -> f32 {
-        if !self.enabled {
-            return 0.0;
-        }
-        let percent = match bus {
-            SoundBus::Effects => self.effects,
-            SoundBus::Ambient => self.ambient,
-            SoundBus::Vehicles => self.vehicles,
-            SoundBus::Ui => self.ui,
-        };
-        percent_to_gain(self.master) * percent_to_gain(percent)
-    }
-}
+pub use select::*;
+pub use settings::*;
+pub use stats::*;
 
 /// Levels below this are not worth a voice.
 pub const AUDIBLE_MIN: f32 = 0.002;
-
-/// One emitter as the statistics list it.
-#[derive(Debug, Clone, PartialEq)]
-pub struct EmitterReport {
-    /// The entity.
-    pub entity: Entity,
-    /// Computed level (source × distance × bus × master).
-    pub gain: f32,
-    /// Metres from the listener (`None` for a source that is not spatial).
-    pub distance: Option<f32>,
-    /// Whether it has a playing voice.
-    pub voice: bool,
-    /// The bus.
-    pub bus: SoundBus,
-    /// Where it is (Bevy world metres), when it has a position.
-    pub position: Option<Vec3>,
-}
-
-/// What the engine did last frame.
-#[derive(Resource, Debug, Clone, Default)]
-pub struct AudioStats {
-    /// All emitters.
-    pub emitters: usize,
-    /// Emitters loud enough to be heard.
-    pub audible: usize,
-    /// Emitters with a voice.
-    pub voices: usize,
-    /// Audible emitters left without a voice by the budget.
-    pub virtualized: usize,
-    /// Voices whose sink exists (the sound card accepted them).
-    pub playing: usize,
-    /// The listener's position, if there is one.
-    pub listener: Option<Vec3>,
-    /// The loudest emitters (at most 16).
-    pub top: Vec<EmitterReport>,
-}
 
 /// Puts a [`SpatialListener`] on the main camera (a head about 0.2 m wide).
 pub fn ensure_listener(
@@ -109,20 +30,6 @@ pub fn ensure_listener(
     for e in &cameras {
         commands.entity(e).insert(SpatialListener::new(0.2));
     }
-}
-
-/// Which of `levels` (index, gain) get a voice: the loudest `budget`, none below
-/// [`AUDIBLE_MIN`]. Pure; the engine's budget rule.
-#[must_use]
-pub fn choose_voices(levels: &[(usize, f32)], budget: usize) -> Vec<usize> {
-    let mut audible: Vec<(usize, f32)> = levels
-        .iter()
-        .copied()
-        .filter(|(_, g)| *g >= AUDIBLE_MIN)
-        .collect();
-    audible.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
-    audible.truncate(budget);
-    audible.into_iter().map(|(i, _)| i).collect()
 }
 
 type EmitterQuery<'w, 's> = Query<
@@ -204,86 +111,6 @@ fn stop_voice(commands: &mut Commands, entity: Entity, e: &SoundEmitter) {
     if e.despawn_when_done && !e.looping {
         commands.entity(entity).despawn();
     }
-}
-
-/// Decides every frame which emitters are heard: computes their level, gives the loudest ones
-/// a voice (an [`AudioPlayer`]) and takes it away from the others, and despawns one-shots that
-/// finished or could not be heard when they were triggered.
-pub fn select_voices(
-    settings: Res<AudioSettings>,
-    listener: Query<&GlobalTransform, With<MainCamera>>,
-    mut emitters: EmitterQuery,
-    mut stats: ResMut<AudioStats>,
-    mut commands: Commands,
-) {
-    let listener_pos = listener.iter().next().map(GlobalTransform::translation);
-    stats.listener = listener_pos;
-    let all = emitter_levels(&settings, listener_pos, &emitters);
-    let levels: Vec<(usize, f32)> = all
-        .iter()
-        .enumerate()
-        .map(|(i, (_, g, _, _))| (i, *g))
-        .collect();
-    let chosen: std::collections::HashSet<usize> = choose_voices(&levels, settings.max_voices)
-        .into_iter()
-        .collect();
-
-    let (mut audible, mut voices) = (0, 0);
-    let mut report: Vec<EmitterReport> = Vec::new();
-    for (i, (entity, gain, distance, position)) in all.iter().enumerate() {
-        let Ok((_, e, _, voice, has_player)) = emitters.get_mut(*entity) else {
-            continue;
-        };
-        if *gain >= AUDIBLE_MIN {
-            audible += 1;
-        }
-        let want = chosen.contains(&i);
-        let has_voice = voice.is_some();
-        match (want, has_voice, has_player) {
-            // A new voice.
-            (true, false, _) => {
-                voices += 1;
-                start_voice(&mut commands, *entity, e, *gain);
-            }
-            // A running voice: keep it, remember its level.
-            (true, true, true) => {
-                voices += 1;
-                if let Some(mut v) = voice {
-                    v.gain = *gain;
-                }
-            }
-            // A one-shot whose player finished and was removed by Bevy.
-            (_, true, false) => {
-                commands.entity(*entity).remove::<Voice>();
-                if e.despawn_when_done && !e.looping {
-                    commands.entity(*entity).despawn();
-                }
-            }
-            // Lost the slot or fell silent: stop the voice.
-            (false, true, true) => stop_voice(&mut commands, *entity, e),
-            // Never had a voice and has none: a one-shot nobody can hear is dropped at once.
-            (false, false, _) => {
-                if e.despawn_when_done && !e.looping {
-                    commands.entity(*entity).despawn();
-                }
-            }
-        }
-        report.push(EmitterReport {
-            entity: *entity,
-            gain: *gain,
-            distance: *distance,
-            voice: want,
-            bus: e.bus,
-            position: *position,
-        });
-    }
-    report.sort_by(|a, b| b.gain.total_cmp(&a.gain));
-    report.truncate(16);
-    stats.emitters = all.len();
-    stats.audible = audible;
-    stats.voices = voices;
-    stats.virtualized = audible.saturating_sub(voices);
-    stats.top = report;
 }
 
 /// Applies the computed level and the emitter's speed to the sinks of the running voices.
