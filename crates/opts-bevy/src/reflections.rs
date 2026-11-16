@@ -31,7 +31,7 @@ mod wet;
 
 pub use flags::{switches, ReflectionSwitches};
 pub use notes::{note_material, MaterialNote};
-pub use wet::{material_wetness, wet_objects_on, wet_standard, Wetness};
+pub use wet::{material_wetness, wet_objects_on, wet_standard, Wetness, WetnessHold};
 
 use bevy::pbr::ScreenSpaceReflections;
 use bevy::prelude::*;
@@ -70,6 +70,7 @@ impl Plugin for ReflectionsResearchPlugin {
         // The wet pass is not a prototype any more: objects take it through the setting.
         app.insert_resource(sw.clone())
             .insert_resource(Wetness(wet0.clamp(0.0, 1.0)))
+            .init_resource::<WetnessHold>()
             .init_resource::<WetState>()
             .add_systems(
                 Update,

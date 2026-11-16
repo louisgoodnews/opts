@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
-use opts_bevy::reflections::Wetness;
+use opts_bevy::reflections::{Wetness, WetnessHold};
 use opts_bevy::weather::{road_surface, surface_state_for, SurfaceState};
 use opts_bevy::{SessionEnvironment, WeatherEffects};
 use opts_sim::surface_grip::approach;
@@ -45,17 +45,29 @@ pub fn next_wetness(current: f32, target: f32, dt: f32) -> f32 {
     approach(current, target.clamp(0.0, 1.0), dt).clamp(0.0, 1.0)
 }
 
-/// Writes the weather's wetness, ramped by [`next_wetness`], into the [`Wetness`] resource, the
-/// single driver of wet surfaces (the reflections prototype's parameter,
-/// `docs/src/architecture/reflections-research.md`).
+/// The wetness after one frame: the held value while a hold is set (`sim.set_time hold=true`,
+/// not ramped), else the ramp of [`next_wetness`] toward the weather's target.
+#[must_use]
+pub fn drive_step(current: f32, target: f32, dt: f32, hold: Option<f32>) -> f32 {
+    match hold {
+        Some(held) => held.clamp(0.0, 1.0),
+        None => next_wetness(current, target, dt),
+    }
+}
+
+/// Writes the weather's wetness, ramped by [`next_wetness`] unless a hold is set
+/// ([`drive_step`]), into the [`Wetness`] resource, the single driver of wet surfaces (the
+/// reflections prototype's parameter, `docs/src/architecture/reflections-research.md`).
 pub fn drive_wetness(
     time: Res<Time>,
     env: Res<SessionEnvironment>,
     effects: Res<WeatherEffects>,
+    hold: Option<Res<WetnessHold>>,
     mut wetness: ResMut<Wetness>,
 ) {
     let target = wanted_state(&env, &effects).wet;
-    let next = next_wetness(wetness.0, target, time.delta_secs());
+    let held = hold.and_then(|h| h.0);
+    let next = drive_step(wetness.0, target, time.delta_secs(), held);
     if (wetness.0 - next).abs() > 1e-4 {
         wetness.0 = next;
     }
@@ -129,54 +141,4 @@ pub fn update_surfaces(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use opts_bevy::WeatherCatalogue;
-
-    fn env_of(id: &str) -> SessionEnvironment {
-        let mut env = SessionEnvironment::default();
-        env.apply(&opts_bevy::EnvironmentChange {
-            weather: Some(id.into()),
-            ..default()
-        });
-        env
-    }
-
-    #[test]
-    fn wetness_ramps_without_a_pop() {
-        // One 60 Hz frame moves at most 0.5 / 60; a full shower takes 2 s to arrive.
-        let step = next_wetness(0.0, 1.0, 1.0 / 60.0);
-        assert!(step > 0.0 && step <= 0.5 / 60.0 + 1e-6, "{step}");
-        let mut w = 0.0;
-        for _ in 0..120 {
-            let next = next_wetness(w, 1.0, 1.0 / 60.0);
-            assert!((next - w).abs() <= 0.5 / 60.0 + 1e-6);
-            w = next;
-        }
-        assert!((w - 1.0).abs() < 1e-4, "{w}");
-        // Drying is ramped the same way, and out-of-range targets are clamped.
-        assert!((next_wetness(1.0, 0.0, 1.0) - 0.5).abs() < 1e-6);
-        assert_eq!(next_wetness(0.9, 7.0, 10.0), 1.0);
-    }
-
-    #[test]
-    fn rain_snow_and_the_switch_set_the_shader_uniform() {
-        let on = WeatherEffects::default();
-        let dry = wanted_state(&env_of("Clear Summer Day"), &on);
-        assert_eq!(ground_wet(&dry), Vec4::ZERO);
-        let rain = ground_wet(&wanted_state(&env_of("Rainy Afternoon"), &on));
-        assert!(rain.x > 0.9 && rain.y > 0.0 && rain.z == 0.0, "{rain}");
-        let snow = ground_wet(&wanted_state(&env_of("Winter Snowfall"), &on));
-        assert!(snow.z > 0.8, "{snow}");
-        let off = WeatherEffects {
-            wet_ground: false,
-            ..on
-        };
-        assert_eq!(
-            ground_wet(&wanted_state(&env_of("Rainy Afternoon"), &off)),
-            Vec4::ZERO
-        );
-        // Built-in presets only use the catalogue's built-ins.
-        assert!(!WeatherCatalogue::builtin().is_installed());
-    }
-}
+mod tests;

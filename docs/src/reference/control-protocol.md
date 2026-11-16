@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.34.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.35.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -293,7 +293,7 @@ Physical window pixels, like `x`/`y` of `input.mouse.click`. In the cockpit and 
 | `sim.resume` | - | 1.0 | Resume the simulation |
 | `sim.step` | `frames` (integer) | 1.0 | Advance N frames while paused |
 | `sim.time_scale` | `factor` (number) | 1.0 | Set the simulation speed |
-| [`sim.set_time`](#simset_time) | `seconds` (number)<br>`date?` (string)<br>`weather?` (string)<br>`rate?` (number)<br>`wetness?` (number) | 1.0 | Set the session clock (and date, weather, clock rate) |
+| [`sim.set_time`](#simset_time) | `seconds` (number)<br>`date?` (string)<br>`weather?` (string)<br>`rate?` (number)<br>`wetness?` (number)<br>`hold?` (boolean)<br>`release?` (boolean) | 1.0 | Set the session clock (and date, weather, clock rate) |
 
 ### `sim.pause`
 
@@ -305,9 +305,9 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 
 Set the session clock (and date, weather, clock rate).
 
-**Result:** `{clock, seconds_of_day, date, map_date, weather, rate, revision, wetness}` after the change
+**Result:** `{clock, seconds_of_day, date, map_date, weather, rate, revision, wetness, hold}` after the change
 
-Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (an installed preset's id such as `Sturm` or `#CAVOK`, its slug, its localised name or a word of it; the old ids `Clear Summer Day`, `Rainy Afternoon`, … work too and stand for the closest installed preset; `sim.get` lists the available ids as `weather_presets`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600), and `wetness` (since 1.34; 0 to 1, clamped; sets the global wetness that the wet surfaces and the wet-objects setting read, M-0121, and `wetness` in the answer is its value). The weather ramps the wetness toward its own target at most 0.5 per second, so a set wetness drifts back to the weather's during a drive. Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`, and the weather as `weather_canonical`, `weather_presets` and `weather_conditions`.
+Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (an installed preset's id such as `Sturm` or `#CAVOK`, its slug, its localised name or a word of it; the old ids `Clear Summer Day`, `Rainy Afternoon`, … work too and stand for the closest installed preset; `sim.get` lists the available ids as `weather_presets`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600), and `wetness` (since 1.34; 0 to 1, clamped; sets the global wetness that the wet surfaces and the wet-objects setting read, M-0121, and `wetness` in the answer is its value). The weather ramps the wetness toward its own target at most 0.5 per second, so a set wetness drifts back to the weather's during a drive. Since 1.35: `hold: true` (needs `wetness`) keeps that wetness through the drive: the weather's ramp stops writing it until it is released; `release: true` clears the hold, and the ramp resumes from the held value. A `wetness` without `hold` sets it once and clears any hold. `hold` and `release` cannot both be true. The answer's `hold` is the held wetness, or `null`. Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`, and the weather as `weather_canonical`, `weather_presets` and `weather_conditions`.
 
 ## Group `scene`
 

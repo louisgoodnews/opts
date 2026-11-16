@@ -16,6 +16,12 @@ use super::notes::note_of;
 #[derive(Debug, Clone, Copy, Default, Resource)]
 pub struct Wetness(pub f32);
 
+/// A wetness held by the control protocol (`sim.set_time hold=true`, since 1.35). While `Some`,
+/// the weather's ramp does not write [`Wetness`]: the drive keeps the held value until it is
+/// released (`None`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Resource)]
+pub struct WetnessHold(pub Option<f32>);
+
 // ---------------------------------------------------------------------------------------------
 // Wet surfaces
 // ---------------------------------------------------------------------------------------------

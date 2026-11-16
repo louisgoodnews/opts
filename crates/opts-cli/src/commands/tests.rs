@@ -133,4 +133,12 @@ fn vehicle_surface_and_the_wetness_of_sim_set_time_parse() {
         params("sim.set_time", &["3600", "--wetness", "0.4"]).unwrap(),
         json!({"seconds": 3600.0, "wetness": 0.4})
     );
+    assert_eq!(
+        params("sim.set_time", &["3600", "--wetness", "0.4", "--hold"]).unwrap(),
+        json!({"seconds": 3600.0, "wetness": 0.4, "hold": true})
+    );
+    assert_eq!(
+        params("sim.set_time", &["3600", "--release"]).unwrap(),
+        json!({"seconds": 3600.0, "release": true})
+    );
 }

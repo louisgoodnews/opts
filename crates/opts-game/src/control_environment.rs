@@ -13,6 +13,11 @@ use serde_json::{json, Value};
 
 use crate::app_state::AppState;
 
+mod wetness;
+
+pub use wetness::wetness_param;
+use wetness::{apply, hold_of, request};
+
 /// Highest clock rate `sim.set_time` accepts.
 pub const MAX_RATE: f64 = 3600.0;
 
@@ -28,11 +33,6 @@ pub fn weather_preset(catalogue: &WeatherCatalogue, name: &str) -> Option<String
     catalogue.find(name)
 }
 
-/// The `wetness` parameter (M-0121), clamped to `0..=1`; `None` when absent.
-pub fn wetness_param(params: &Value) -> Result<Option<f32>, RpcError> {
-    Ok(opt_f64(params, "wetness")?.map(|w| w.clamp(0.0, 1.0) as f32))
-}
-
 fn state(env: &SessionEnvironment) -> Value {
     json!({
         "clock": env.clock_text(),
@@ -45,10 +45,12 @@ fn state(env: &SessionEnvironment) -> Value {
     })
 }
 
-/// The answer after the change: the environment and the global wetness (`null` without one).
+/// The answer after the change: the environment, the global wetness (`null` without one) and the
+/// held wetness (`hold`, `null` when none is held).
 fn report(world: &World) -> Value {
     let mut answer = state(world.resource::<SessionEnvironment>());
     answer["wetness"] = json!(world.get_resource::<Wetness>().map(|w| w.0));
+    answer["hold"] = hold_of(world);
     answer
 }
 
@@ -105,18 +107,12 @@ fn set_time(world: &mut World, params: &Value) -> Outcome {
         Ok(c) => c,
         Err(e) => return Outcome::err(e),
     };
-    let wetness = match wetness_param(params) {
+    let wetness = match request(params) {
         Ok(w) => w,
         Err(e) => return Outcome::err(e),
     };
-    if let Some(w) = wetness {
-        let Some(mut global) = world.get_resource_mut::<Wetness>() else {
-            return Outcome::err(RpcError::new(
-                code::NOT_READY,
-                "no wetness state (start a drive first)",
-            ));
-        };
-        global.0 = w;
+    if let Err(e) = apply(world, &wetness) {
+        return Outcome::err(e);
     }
     world.write_message(change);
     // The change applies in the next frame's environment systems; answer with the result.

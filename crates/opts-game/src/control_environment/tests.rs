@@ -1,5 +1,6 @@
 //! Unit tests for the control environment: weather names resolve to presets and parameters are checked.
 use super::*;
+use opts_bevy::reflections::WetnessHold;
 
 fn installed() -> WeatherCatalogue {
     use opts_core::formats::weather::{PresetFile, WeatherFile, WeatherFolder};
@@ -79,4 +80,56 @@ fn the_wetness_parameter_is_clamped_to_zero_and_one() {
     assert_eq!(wetness_param(&json!({"wetness": 3.0})).unwrap(), Some(1.0));
     assert_eq!(wetness_param(&json!({"wetness": -2.0})).unwrap(), Some(0.0));
     assert!(wetness_param(&json!({"wetness": "wet"})).is_err());
+}
+
+#[test]
+fn a_hold_needs_its_wetness_and_excludes_a_release() {
+    // (c) `hold: true` without `wetness` is an error, as is `hold` with `release`.
+    assert!(request(&json!({"hold": true})).is_err());
+    assert!(request(&json!({"hold": true, "release": true, "wetness": 0.5})).is_err());
+    let held = request(&json!({"hold": true, "wetness": 0.8})).expect("valid");
+    assert_eq!(
+        held,
+        wetness::WetnessRequest {
+            wetness: Some(0.8),
+            hold: true,
+            release: false
+        }
+    );
+    // Without `hold`, `wetness` alone is valid and clears any hold (the ramp resumes).
+    let plain = request(&json!({"wetness": 0.2})).unwrap();
+    assert_eq!(wetness::hold_change(&plain), Some(None));
+    assert_eq!(wetness::hold_change(&held), Some(Some(0.8)));
+    let release = request(&json!({"release": true})).unwrap();
+    assert_eq!(wetness::hold_change(&release), Some(None));
+    let untouched = request(&json!({"seconds": 1.0})).unwrap();
+    assert_eq!(wetness::hold_change(&untouched), None);
+}
+
+#[test]
+fn the_answer_reports_the_hold() {
+    // (d) `hold` in the answer is the held value, or null when nothing is held.
+    let mut world = World::new();
+    assert_eq!(hold_of(&world), Value::Null);
+    world.insert_resource(WetnessHold(Some(0.6)));
+    assert_eq!(hold_of(&world), json!(0.6_f32));
+    world.insert_resource(WetnessHold(None));
+    assert_eq!(hold_of(&world), Value::Null);
+}
+
+#[test]
+fn a_hold_sets_the_global_wetness_and_a_release_clears_it() {
+    let mut world = World::new();
+    world.insert_resource(Wetness(0.0));
+    let held = request(&json!({"hold": true, "wetness": 0.9})).unwrap();
+    apply(&mut world, &held).expect("drive");
+    assert_eq!(world.resource::<Wetness>().0, 0.9);
+    assert_eq!(hold_of(&world), json!(0.9_f32));
+    apply(&mut world, &request(&json!({"release": true})).unwrap()).expect("release");
+    assert_eq!(hold_of(&world), Value::Null);
+    // Without a wetness state a wetness is refused before anything changes.
+    let mut bare = World::new();
+    let err = apply(&mut bare, &held).unwrap_err();
+    assert_eq!(err.code, code::NOT_READY);
+    assert!(!bare.contains_resource::<WetnessHold>());
 }
