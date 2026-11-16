@@ -7,6 +7,7 @@ mod clock;
 mod replace;
 mod spawn;
 mod speed;
+mod weather;
 
 /// Lane graph plus the agents driving on it.
 #[derive(Debug, Clone)]
@@ -31,6 +32,8 @@ pub struct TrafficWorld {
     pub(super) stuck_after_s: f64,
     /// Counters for the behaviour audit ([`TrafficStats`]).
     pub(crate) stats: TrafficStats,
+    /// Road grip and visibility every driver sees (M-0117).
+    pub(crate) weather: crate::weather::WeatherState,
 }
 
 /// Behaviour counters since the world was created (M-0111 audit).
@@ -63,6 +66,7 @@ impl TrafficWorld {
             obstacles: Vec::new(),
             last_phantoms: 0,
             stats: TrafficStats::default(),
+            weather: crate::weather::WeatherState::default(),
         }
     }
 

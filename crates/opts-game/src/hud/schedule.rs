@@ -24,6 +24,7 @@ pub(super) fn add_session_systems(app: &mut App) {
                     update::tick_session_clock,
                     update::camera_label_changes,
                     alerts::parking_brake_alert,
+                    alerts::weather_alerts,
                     alerts::update_queue,
                     fade::status_follows_pause,
                 ),
