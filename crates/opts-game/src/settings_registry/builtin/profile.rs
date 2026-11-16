@@ -13,6 +13,7 @@ pub(super) const MAP_PROFILE_KEYS: &[&str] = &[
     "graphics.weather_clouds",
     "graphics.weather_precipitation",
     "graphics.weather_wet_ground",
+    "graphics.weather_wet_objects",
     "graphics.rain_intensity",
     "graphics.snow_intensity",
     "graphics.light_quality_mode",

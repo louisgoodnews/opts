@@ -61,6 +61,24 @@ pub(super) fn world() -> Vec<D> {
         )
         .keywords(&["weather", "wet", "puddles", "snow cover", "road"])
         .since("0.3"),
+        D::new(
+            "graphics.weather_wet_objects",
+            K::Bool,
+            "false",
+            C::Graphics,
+            81,
+            "set-weather-wet-objects",
+            "set-weather-wet-objects-desc",
+        )
+        .keywords(&[
+            "weather",
+            "wet",
+            "vehicles",
+            "buildings",
+            "objects",
+            "gloss",
+        ])
+        .since("0.3"),
     ]
 }
 

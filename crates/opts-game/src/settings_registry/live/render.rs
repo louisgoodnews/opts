@@ -84,7 +84,9 @@ pub fn weather_effects_of(settings: &GameSettings) -> opts_bevy::WeatherEffects 
             .and_then(|q| opts_bevy::weather::PrecipitationQuality::parse(&q))
             .unwrap_or_default(),
         wet_ground: on("graphics.weather_wet_ground"),
-        wet_objects: false,
+        // All: objects and vehicles too, only while the ground is wet at all (Off, Ground only).
+        wet_objects: on("graphics.weather_wet_ground")
+            && settings.raw("graphics.weather_wet_objects").as_deref() == Some("true"),
         rain_percent: percent("graphics.rain_intensity"),
         snow_percent: percent("graphics.snow_intensity"),
     }
