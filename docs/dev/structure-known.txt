@@ -2,21 +2,6 @@
 # Format: <path> <lines of code>  # <reason>. A known file may only shrink;
 # a new file over 150 lines of code fails `structure_audit.py check`.
 # Regenerate (keeping the reasons) with `python3 scripts/structure_audit.py seed`.
-crates/opts-benchmark/benches/meshes.rs 172  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-benchmark/examples/offscreen_probe.rs 154  # grandfathered: oversized test or example file, split by concern
-crates/opts-benchmark/src/scenery/capture.rs 193  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/cli.rs 202  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/diag.rs 174  # grandfathered: extract 42 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-benchmark/src/scenery/framing.rs 215  # grandfathered: extract 48 test lines to tests.rs, then split by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/metrics.rs 171  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/mod.rs 170  # grandfathered: extract 16 test lines to tests.rs, then split by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/preflight.rs 218  # grandfathered: extract 21 test lines to tests.rs, then split by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/raster.rs 204  # grandfathered: extract 46 test lines to tests.rs, then split by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/script_check.rs 204  # grandfathered: extract 13 test lines to tests.rs, then split by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/supervisor.rs 161  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-benchmark/src/scenery/verdict.rs 209  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-benchmark/tests/run_control.rs 162  # grandfathered: oversized test or example file, split by concern
-crates/opts-benchmark/tests/seeded_faults.rs 162  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/instancing_inventory.rs 209  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/lighting_bench/apply.rs 224  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/examples/lighting_bench/apply/scene.rs 199  # grandfathered: oversized test or example file, split by concern
@@ -245,20 +230,5 @@ crates/opts-tools/src/l10n.rs 334  # grandfathered: split production file by con
 crates/opts-tools/src/l10n/scaffold.rs 169  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-tools/src/main.rs 200  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-tools/src/metrics.rs 202  # grandfathered: extract 68 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-traffic/src/agent.rs 192  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-traffic/src/agent/gaps.rs 152  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-traffic/src/agent/routing.rs 186  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-traffic/src/agent/tests/scheduled.rs 156  # grandfathered: oversized test or example file, split by concern
-crates/opts-traffic/src/agent/tests/standing.rs 166  # grandfathered: oversized test or example file, split by concern
-crates/opts-traffic/src/conflict.rs 210  # grandfathered: extract 63 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-traffic/src/density.rs 180  # grandfathered: extract 69 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-traffic/src/geometry.rs 197  # grandfathered: extract 107 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-traffic/src/graph/queries.rs 160  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-traffic/src/graph/tests.rs 210  # grandfathered: oversized test or example file, split by concern
-crates/opts-traffic/src/idm.rs 163  # grandfathered: extract 69 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-traffic/src/neighbours.rs 204  # grandfathered: extract 64 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-traffic/src/rightofway.rs 152  # grandfathered: extract 93 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-traffic/src/source.rs 216  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-traffic/src/traits/tests.rs 168  # grandfathered: oversized test or example file, split by concern
 crates/opts-types/src/grid.rs 259  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-types/src/grid/tests.rs 190  # grandfathered: oversized test or example file, split by concern

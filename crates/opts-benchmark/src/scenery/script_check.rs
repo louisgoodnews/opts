@@ -8,13 +8,16 @@
 
 use std::time::Instant;
 
-use serde::{Deserialize, Serialize};
-
 use super::expected::{Expected, Placement};
 use super::metrics::Matte;
 use super::preflight::Preflight;
 use super::worker::Harness;
 use super::{script_judge, script_run, Record, Verdict};
+
+mod record;
+mod thresholds;
+pub use record::ScriptCheck;
+pub use thresholds::ScriptThresholds;
 
 /// Stimulus scenarios (S5, the `[mouseevent]` triggers, is not run: Q-SR-07).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,96 +65,6 @@ const UNSUPPORTED_CHANNELS: &[&str] = &[
     "mouseevent",
     "texttexture_enh",
 ];
-
-/// Thresholds of the script check (written into `run.json`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct ScriptThresholds {
-    /// Step of `advance_scenery` (seconds).
-    pub dt_s: f32,
-    /// Changed share of the whole silhouette that makes a `lightmap` stimulus live.
-    pub live_changed_share: f32,
-    /// A `visible` or `anim` stimulus is live when at least this share of the mesh's own area
-    /// (in pixels) changed inside its region …
-    pub live_area_frac: f32,
-    /// … and at least this many pixels.
-    pub live_min_px: usize,
-    /// Share of stimuli that must be live.
-    pub live_fraction: f32,
-    /// A hidden mesh leaks when this share of its own area is drawn.
-    pub leak_share: f32,
-    /// A leak needs this many pixels of own area.
-    pub leak_min_px: usize,
-    /// A light must brighten its window by this share …
-    pub light_gain: f32,
-    /// … but at least this much (0..255).
-    pub light_gain_abs: f32,
-    /// A pixel counts as changed when a channel differs by this much (0..255).
-    pub delta: u8,
-    /// Most pixels that may differ between the two runs of S0 (share).
-    pub det_max_diff: f32,
-    /// A mesh region needs this many pixels in a view to be judged there.
-    pub min_region_px: usize,
-}
-
-impl Default for ScriptThresholds {
-    fn default() -> Self {
-        Self {
-            dt_s: 1.0 / 60.0,
-            live_changed_share: 0.02,
-            live_area_frac: 0.15,
-            live_min_px: 4,
-            live_fraction: 0.5,
-            leak_share: 0.5,
-            leak_min_px: 30,
-            light_gain: 0.10,
-            light_gain_abs: 8.0,
-            delta: 16,
-            det_max_diff: 0.001,
-            min_region_px: 10,
-        }
-    }
-}
-
-/// The record block of the script check.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct ScriptCheck {
-    /// `ok`, `no-channel`, `unobservable` or the first `S-*` category.
-    pub status: String,
-    /// Captured states (`s0`, `s1`, `s2`, `s3`, `s4_0` …, `s0b`).
-    pub states: Vec<String>,
-    /// Effect channels with at least one element the object binds.
-    pub channels: Vec<String>,
-    /// Stimuli judged (mesh, animation and light-map elements whose value differs between states).
-    pub stimuli: usize,
-    /// Of those, stimuli whose pixels changed.
-    pub live: usize,
-    /// Light stimuli judged.
-    pub light_stimuli: usize,
-    /// Of those, lights that showed.
-    pub light_live: usize,
-    /// Stimuli that changed nothing (`visible:2`, `anim:0`, `light:1` …).
-    pub dead: Vec<String>,
-    /// Consistency failures (`s2 v1 leak mesh 3`, `s0 v2 missing`, …).
-    pub mismatches: Vec<String>,
-    /// The bound variables (`[visible]`, `[newanim]`, lights) with their value in each state,
-    /// in the order of `states` (at most 12 variables).
-    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
-    pub bound: std::collections::BTreeMap<String, Vec<f32>>,
-    /// Script variables whose value differs between states (first 40).
-    pub changed_vars: Vec<String>,
-    /// Script diagnostics (messages of severity error, run-time messages, missing files).
-    pub errors: Vec<String>,
-    /// Channels the runtime or the check does not support (`[mouseevent]`, …).
-    pub unsupported: Vec<String>,
-    /// Share of pixels that differ between the two runs of S0.
-    pub nondeterministic: Option<f32>,
-    /// Script variables whose value differs between the two runs of S0.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub nondeterministic_vars: Vec<String>,
-    /// Wall-clock milliseconds of the whole check.
-    pub ms: u64,
-}
 
 /// Script status and effect channels of an object; `(None, [])` for objects without a script.
 /// Without `--scripts` a scripted object is `not-checked`.
@@ -268,16 +181,4 @@ pub fn stage(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn thresholds_round_trip_and_default_when_missing() {
-        let t = ScriptThresholds::default();
-        let json = serde_json::to_string(&t).unwrap_or_default();
-        let back: ScriptThresholds = serde_json::from_str(&json).unwrap_or_default();
-        assert_eq!(t, back);
-        let partial: ScriptThresholds = serde_json::from_str("{}").unwrap_or_default();
-        assert_eq!(partial, t);
-    }
-}
+mod tests;

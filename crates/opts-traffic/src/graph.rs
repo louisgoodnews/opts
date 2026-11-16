@@ -23,6 +23,7 @@ mod lane;
 mod lane_rules;
 mod queries;
 mod segment;
+mod shortest;
 
 pub use ids::{Direction, LaneId, LaneKind};
 pub use lane::{ConnectParams, Lane, SpawnError};
