@@ -12,6 +12,12 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 /// A decoded 8-bit RGBA image on the CPU (top row first).
+mod bc;
+mod compose;
+
+pub use compose::*;
+use bc::*;
+
 #[derive(Debug, Clone)]
 pub struct CpuImage {
     /// Width in pixels.
@@ -22,115 +28,6 @@ pub struct CpuImage {
     pub rgba: Vec<u8>,
 }
 
-fn rgb565(v: u16) -> [u8; 3] {
-    let (r, g, b) = ((v >> 11) & 31, (v >> 5) & 63, v & 31);
-    [
-        ((r * 255 + 15) / 31) as u8,
-        ((g * 255 + 31) / 63) as u8,
-        ((b * 255 + 15) / 31) as u8,
-    ]
-}
-
-fn decode_bc_color(block: &[u8], opaque_black: bool) -> [[u8; 4]; 4] {
-    let c0 = u16::from_le_bytes([block[0], block[1]]);
-    let c1 = u16::from_le_bytes([block[2], block[3]]);
-    let (a, b) = (rgb565(c0), rgb565(c1));
-    let mix = |x: u8, y: u8, wx: u32, wy: u32, d: u32| {
-        ((u32::from(x) * wx + u32::from(y) * wy) / d) as u8
-    };
-    let mut p = [[0u8; 4]; 4];
-    p[0] = [a[0], a[1], a[2], 255];
-    p[1] = [b[0], b[1], b[2], 255];
-    if c0 > c1 || !opaque_black {
-        p[2] = [
-            mix(a[0], b[0], 2, 1, 3),
-            mix(a[1], b[1], 2, 1, 3),
-            mix(a[2], b[2], 2, 1, 3),
-            255,
-        ];
-        p[3] = [
-            mix(a[0], b[0], 1, 2, 3),
-            mix(a[1], b[1], 1, 2, 3),
-            mix(a[2], b[2], 1, 2, 3),
-            255,
-        ];
-    } else {
-        p[2] = [
-            mix(a[0], b[0], 1, 1, 2),
-            mix(a[1], b[1], 1, 1, 2),
-            mix(a[2], b[2], 1, 1, 2),
-            255,
-        ];
-        p[3] = [0, 0, 0, 0];
-    }
-    p
-}
-
-fn decode_bc(data: &[u8], w: usize, h: usize, kind: u8) -> Option<Vec<u8>> {
-    let block_bytes = if kind == 1 { 8 } else { 16 };
-    let (bw, bh) = (w.div_ceil(4), h.div_ceil(4));
-    if data.len() < bw * bh * block_bytes {
-        return None;
-    }
-    let mut out = vec![0u8; w * h * 4];
-    for by in 0..bh {
-        for bx in 0..bw {
-            let blk = &data[(by * bw + bx) * block_bytes..][..block_bytes];
-            let (color_blk, alpha): (&[u8], [u8; 16]) = match kind {
-                1 => (blk, [255; 16]),
-                2 => {
-                    let mut a = [0u8; 16];
-                    for i in 0..16 {
-                        let nib = (blk[i / 2] >> ((i % 2) * 4)) & 15;
-                        a[i] = nib * 17;
-                    }
-                    (&blk[8..], a)
-                }
-                _ => {
-                    let (a0, a1) = (u32::from(blk[0]), u32::from(blk[1]));
-                    let mut table = [0u32; 8];
-                    table[0] = a0;
-                    table[1] = a1;
-                    for i in 2..8u32 {
-                        table[i as usize] = if a0 > a1 {
-                            ((8 - i) * a0 + (i - 1) * a1) / 7
-                        } else if i < 6 {
-                            ((6 - i) * a0 + (i - 1) * a1) / 5
-                        } else if i == 6 {
-                            0
-                        } else {
-                            255
-                        };
-                    }
-                    let bits =
-                        u64::from_le_bytes([blk[2], blk[3], blk[4], blk[5], blk[6], blk[7], 0, 0]);
-                    let mut a = [0u8; 16];
-                    for (i, v) in a.iter_mut().enumerate() {
-                        *v = table[((bits >> (3 * i)) & 7) as usize] as u8;
-                    }
-                    (&blk[8..], a)
-                }
-            };
-            let pal = decode_bc_color(color_blk, kind == 1);
-            let idx = u32::from_le_bytes([color_blk[4], color_blk[5], color_blk[6], color_blk[7]]);
-            for py in 0..4 {
-                for px in 0..4 {
-                    let (x, y) = (bx * 4 + px, by * 4 + py);
-                    if x >= w || y >= h {
-                        continue;
-                    }
-                    let i = py * 4 + px;
-                    let mut c = pal[((idx >> (2 * i)) & 3) as usize];
-                    if kind != 1 {
-                        c[3] = alpha[i];
-                    }
-                    out[(y * w + x) * 4..][..4].copy_from_slice(&c);
-                }
-            }
-        }
-    }
-    Some(out)
-}
 
 impl CpuImage {
     /// Decodes mip level 0 of a Bevy [`Image`] (RGBA8, R8 masks, BC1/BC2/BC3).
@@ -196,67 +93,6 @@ impl CpuImage {
         }
         out
     }
-}
-
-/// One ground layer: its texture and how often it repeats across the 300 m tile.
-pub struct GroundLayer<'a> {
-    /// Decoded layer texture.
-    pub texture: &'a CpuImage,
-    /// Repeats per tile edge (`[groundtex]` parameter 3; 60 = one repeat per 5 m cell).
-    pub repeats: f32,
-    /// Blend weight mask (alpha), `None` for the base layer.
-    pub mask: Option<&'a CpuImage>,
-}
-
-/// Blends `layers` (first = base) into a `size × size` RGBA texture of one tile.
-///
-/// Row 0 is the **north** edge. Masks are sampled without wrap (clamped) and their alpha is the
-/// blend weight of the layer above everything below it.
-#[must_use]
-pub fn compose_tile_ground(layers: &[GroundLayer], size: usize) -> Image {
-    let mut data = vec![255u8; size * size * 4];
-    let inv = 1.0 / size as f32;
-    for y in 0..size {
-        let v = (y as f32 + 0.5) * inv; // 0 = north
-        for x in 0..size {
-            let u = (x as f32 + 0.5) * inv;
-            let mut acc = [0.0f32; 3];
-            for (li, layer) in layers.iter().enumerate() {
-                let t = layer
-                    .texture
-                    .sample_wrap(u * layer.repeats, v * layer.repeats);
-                let w = match (li, layer.mask) {
-                    (0, _) => 1.0,
-                    (_, Some(m)) => {
-                        let mx = ((u * m.width as f32) as usize).min(m.width - 1);
-                        let my = ((v * m.height as f32) as usize).min(m.height - 1);
-                        f32::from(m.rgba[(my * m.width + mx) * 4 + 3]) / 255.0
-                    }
-                    _ => 0.0,
-                };
-                if w > 0.0 {
-                    for k in 0..3 {
-                        acc[k] = acc[k] * (1.0 - w) + t[k] * w;
-                    }
-                }
-            }
-            let o = (y * size + x) * 4;
-            data[o] = acc[0].round() as u8;
-            data[o + 1] = acc[1].round() as u8;
-            data[o + 2] = acc[2].round() as u8;
-        }
-    }
-    Image::new(
-        Extent3d {
-            width: size as u32,
-            height: size as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::default(),
-    )
 }
 
 #[cfg(test)]
