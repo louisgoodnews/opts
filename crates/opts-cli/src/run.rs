@@ -1,15 +1,18 @@
 //! Entry point logic of the `opts-cli` binary: argument handling, command execution, batch mode.
 
-use std::io::Read;
 use std::time::Duration;
 
 use clap::Parser;
-use serde_json::Value;
 
 use crate::client::{Client, ClientConfig, ClientError};
 use crate::commands::{build_params, find, COMMANDS};
 use crate::output::{render_error, render_result, OutputMode};
-use crate::protocol::{RpcError, DEFAULT_PORT};
+use crate::protocol::DEFAULT_PORT;
+
+mod batch;
+mod method;
+use batch::run_batch;
+use method::{apply_cli_defaults, is_slow, split_method};
 
 /// Remote control of a running OPTS instance.
 ///
@@ -71,56 +74,6 @@ pub fn out(text: &str) {
     let _ = writeln!(std::io::stdout(), "{text}");
 }
 
-/// Methods that legitimately take long (they reply after N frames or after loading).
-fn is_slow(method: &str) -> bool {
-    matches!(
-        method,
-        "sim.step"
-            | "scene.load_map"
-            | "scene.unload"
-            | "vehicle.set"
-            | "ui.wait_for"
-            | "ui.drag"
-            | "ui.text"
-            | "ui.select"
-            | "camera.look"
-            | "snapshot"
-            | "screenshot"
-            | "capture.burst"
-            | "capture.record.stop"
-            | "report"
-            | "batch"
-    )
-}
-
-/// Splits the command words into the method and its arguments. A method may be written with
-/// spaces instead of dots (`capture record start` for `capture.record.start`): the longest
-/// leading run of words whose dotted join is a known command wins.
-fn split_method(words: &[String]) -> Option<(String, &[String])> {
-    let (first, rest) = words.split_first()?;
-    if find(first).is_none() {
-        for n in (2..=words.len().min(3)).rev() {
-            let joined = words[..n].join(".");
-            if find(&joined).is_some() {
-                return Some((joined, &words[n..]));
-            }
-        }
-    }
-    Some((first.clone(), rest))
-}
-
-/// Defaults that only the command-line client applies (the protocol's own defaults differ): a
-/// recording started from a terminal is for quick iteration, so it lasts 30 s, not 60 s.
-fn apply_cli_defaults(method: &str, params: &mut serde_json::Value) {
-    if method == "capture.record.start" {
-        if let Some(obj) = params.as_object_mut() {
-            obj.entry("duration_ms")
-                .or_insert(serde_json::json!(30_000));
-        } else if params.is_null() {
-            *params = serde_json::json!({"duration_ms": 30_000});
-        }
-    }
-}
 
 /// Runs one command from words and prints the outcome; returns the process exit code.
 pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
@@ -172,81 +125,6 @@ fn print_list() {
         }
         out(&format!("  {:<22} {}", c.method, c.summary));
     }
-}
-
-fn run_batch(client: &mut Client, mode: OutputMode) -> u8 {
-    let mut input = String::new();
-    if let Err(e) = std::io::stdin().read_to_string(&mut input) {
-        errln!("cannot read stdin: {e}");
-        return 1;
-    }
-    let value: Value = match serde_json::from_str(&input) {
-        Ok(v) => v,
-        Err(e) => {
-            errln!("stdin is not JSON: {e}");
-            return 1;
-        }
-    };
-    let Some(items) = value.as_array() else {
-        errln!("batch input must be a JSON array of {{\"method\", \"params\"}} objects");
-        return 1;
-    };
-    let mut commands = Vec::new();
-    for item in items {
-        let Some(method) = item.get("method").and_then(Value::as_str) else {
-            errln!("every batch entry needs a `method`");
-            return 1;
-        };
-        commands.push((
-            method.to_string(),
-            item.get("params").cloned().unwrap_or(Value::Null),
-        ));
-    }
-    match client.batch(&commands, false) {
-        Ok(results) => print_batch(mode, &commands, &results),
-        Err(ClientError::Rpc(e)) => {
-            errln!("{}", render_error(mode, &e));
-            1
-        }
-        Err(e) => {
-            errln!("{e}");
-            e.exit_code()
-        }
-    }
-}
-
-fn print_batch(
-    mode: OutputMode,
-    commands: &[(String, Value)],
-    results: &[Result<Value, RpcError>],
-) -> u8 {
-    let mut failed = false;
-    if mode == OutputMode::Json {
-        let all: Vec<Value> = results
-            .iter()
-            .map(|r| match r {
-                Ok(v) => serde_json::json!({ "result": v }),
-                Err(e) => serde_json::json!({ "error": e }),
-            })
-            .collect();
-        out(&serde_json::to_string_pretty(&all).unwrap_or_default());
-        failed = results.iter().any(Result::is_err);
-    } else {
-        for ((method, _), r) in commands.iter().zip(results) {
-            match r {
-                Ok(v) => {
-                    if let Some(t) = render_result(mode, method, v) {
-                        out(&format!("[{method}] {t}"));
-                    }
-                }
-                Err(e) => {
-                    failed = true;
-                    errln!("[{method}] {}", render_error(mode, e));
-                }
-            }
-        }
-    }
-    u8::from(failed)
 }
 
 /// Runs the CLI and returns the exit code.
