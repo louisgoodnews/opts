@@ -9,6 +9,7 @@
 #![deny(unsafe_code)]
 
 mod bc_mips;
+pub mod cfg_flags;
 pub mod chain_cache;
 mod dds_chain;
 mod decode;
@@ -17,6 +18,7 @@ mod error;
 mod format;
 mod mips;
 mod pixel;
+pub use cfg_flags::{texture_wetness, TextureFlags};
 pub use bc_mips::{
     bc_chain, bc_chain_stats, prepare_block_compressed, BcChainStats, GENERATOR_VERSION,
 };
