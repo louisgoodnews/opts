@@ -2,30 +2,18 @@
 
 use super::*;
 
-mod text;
 mod diagnostics;
-mod variables;
 mod keys;
+mod text;
+mod variables;
 
-pub use text::*;
 use diagnostics::*;
-use variables::*;
 use keys::*;
+pub use text::*;
+use variables::*;
 
 /// Longest accepted text, in characters, of one message.
 pub const MAX_MESSAGE_CHARS: usize = 2000;
-
-
-
-
-
-
-
-
-
-
-
-
 
 /// Validates the parsed `.ftl` (or JSON) table `parsed` of file `file` for language `lang`
 /// against `reference`. Parse problems are included. Nothing here panics or aborts: every

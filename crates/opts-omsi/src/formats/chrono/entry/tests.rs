@@ -1,6 +1,6 @@
 //! Unit tests of `entry`, by concern.
 
-mod dates;
-mod cfg;
 mod activation;
+mod cfg;
+mod dates;
 mod scan;

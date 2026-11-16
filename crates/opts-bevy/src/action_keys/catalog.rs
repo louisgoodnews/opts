@@ -36,7 +36,11 @@ pub(super) const fn def(group: &'static str, id: &'static str, default: &'static
     }
 }
 
-pub(super) const fn road(group: &'static str, id: &'static str, default: &'static str) -> ActionDef {
+pub(super) const fn road(
+    group: &'static str,
+    id: &'static str,
+    default: &'static str,
+) -> ActionDef {
     ActionDef {
         id,
         group,
@@ -45,7 +49,11 @@ pub(super) const fn road(group: &'static str, id: &'static str, default: &'stati
     }
 }
 
-pub(super) const fn rail(group: &'static str, id: &'static str, default: &'static str) -> ActionDef {
+pub(super) const fn rail(
+    group: &'static str,
+    id: &'static str,
+    default: &'static str,
+) -> ActionDef {
     ActionDef {
         id,
         group,

@@ -4,7 +4,6 @@
 use super::*;
 
 impl ScheduledTraffic {
-
     /// Whether a train or tram drives `run` now.
     #[must_use]
     pub fn rail_has(&self, run: &RunRef) -> bool {

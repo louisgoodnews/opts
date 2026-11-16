@@ -1,8 +1,6 @@
 //! Esc, pause and leaving a drive.
 
-
 use super::*;
-
 
 #[test]
 fn esc_in_a_drive_opens_the_overlay_pauses_and_never_leaves() {

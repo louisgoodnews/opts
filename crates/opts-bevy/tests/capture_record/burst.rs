@@ -56,4 +56,3 @@ fn burst_parameters_and_paths_are_checked() {
     assert_eq!(codes[4..], [code::FORBIDDEN_PATH; 2]);
     let _ = std::fs::remove_dir_all(&root);
 }
-

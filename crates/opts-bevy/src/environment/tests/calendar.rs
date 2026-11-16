@@ -62,7 +62,6 @@ fn the_clock_wraps_and_rolls_the_date_over() {
     assert_eq!(env.clock_text(), "00:30:00");
 }
 
-
 #[test]
 fn the_moon_follows_the_clock() {
     let mut env = SessionEnvironment::new(CalendarDate::new(2026, 10, 17), 18.0 * 3600.0, "");

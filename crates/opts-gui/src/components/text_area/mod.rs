@@ -6,10 +6,10 @@
 //! to keep the cursor visible. Tab is *not* consumed; it moves focus.
 
 mod buffer;
+mod builder;
 mod clipboard;
 mod input;
 mod view;
-mod builder;
 
 pub use buffer::TextBuffer;
 pub use builder::TextAreaBuilder;

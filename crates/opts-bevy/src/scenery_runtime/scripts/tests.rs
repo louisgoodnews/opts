@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 #[test]
 fn host_values_and_overrides_reach_the_script() {
     let (engine, _) = ScriptEngine::from_sources(&[(

@@ -146,7 +146,6 @@ impl OmsiInstall {
         }
         maps.parent().map(Path::to_path_buf)
     }
-
 }
 
 mod index;

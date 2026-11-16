@@ -5,7 +5,7 @@ use opts_gui::prelude::*;
 
 use crate::bus_config::BusConfiguration;
 
-use super::{Env, now_unix};
+use super::{now_unix, Env};
 
 /// *Duplicate*: a copy of the configuration under the first free name.
 pub(super) fn duplicate_config(env: &mut Env, id: &str, commands: &mut Commands) {

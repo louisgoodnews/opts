@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 #[test]
 fn one_shots_clean_up_after_themselves() {
     let mut app = app();

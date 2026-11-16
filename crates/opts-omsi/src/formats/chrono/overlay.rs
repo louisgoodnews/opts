@@ -76,7 +76,6 @@ pub struct OverlayReport {
     pub warnings: Vec<String>,
 }
 
-
 impl TileOverlay {
     /// Parses an overlay tile from its bytes (UTF-16 or 8-bit, like base tiles).
     #[must_use]
@@ -167,7 +166,7 @@ impl TileOverlay {
 mod apply;
 mod blocks;
 
-use blocks::{flush_added_elements, parse_rule_op, parse_relabel_op, scan_overlay_blocks, ADDED};
+use blocks::{flush_added_elements, parse_relabel_op, parse_rule_op, scan_overlay_blocks, ADDED};
 
 #[cfg(test)]
 mod tests;

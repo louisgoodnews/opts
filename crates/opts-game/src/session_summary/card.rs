@@ -6,7 +6,7 @@ use opts_gui::l10n::{L10nKey, Localization};
 use opts_gui::prelude::*;
 
 use crate::shell::frame::ShellBanners;
-use crate::shell::{keys};
+use crate::shell::keys;
 
 use super::rows::{action_row, problems_row, stat_row};
 use super::{LastSession, SummaryCard};

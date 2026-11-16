@@ -5,12 +5,12 @@ use opts_gui::actions::UiAction;
 use opts_gui::prelude::*;
 
 use crate::app_state::AppState;
-use crate::new_game_screen::planner::{PlannerState, validate};
+use crate::new_game_screen::planner::{validate, PlannerState};
 use crate::new_game_screen::screen::step_invalid;
 use crate::shell::esc::{ScreenBack, ScreenBackSteps};
 use crate::shell::nav::NavigateBack;
 
-use super::{Env, now_unix};
+use super::{now_unix, Env};
 
 pub(super) fn back(env: &mut Env) {
     match env.state.prev_step() {

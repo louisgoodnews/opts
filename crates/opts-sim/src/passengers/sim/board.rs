@@ -3,7 +3,6 @@
 use super::*;
 
 impl PassengerSim {
-
     /// A passenger of `age` who rides `stops` stops arrives at entry `entry` (clamped to the
     /// entries there are). `None` when the unit has no entry.
     pub fn board(&mut self, age: u32, stops: u32, entry: usize) -> Option<u32> {
@@ -77,5 +76,4 @@ impl PassengerSim {
             })
             .count()
     }
-
 }

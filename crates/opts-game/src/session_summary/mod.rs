@@ -14,7 +14,7 @@ use bevy::prelude::*;
 use crate::app_state::AppState;
 use crate::drive_history::DriveRecord;
 use crate::new_game_screen::types::NewGameSetup;
-use crate::pause::stats::{SessionStats};
+use crate::pause::stats::SessionStats;
 
 /// The drive that just ended.
 #[derive(Resource, Debug, Clone)]

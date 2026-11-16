@@ -6,7 +6,7 @@ use opts_gui::l10n::L10nArgs;
 use crate::catalogue_service::start_catalogue_service;
 use crate::omsi_root::set_saved_root;
 use crate::settings::GameSettings;
-use crate::shell::banner::{BannerSeverity, BannerSpec, dismiss_banner, show_banner};
+use crate::shell::banner::{dismiss_banner, show_banner, BannerSeverity, BannerSpec};
 use crate::shell::keys;
 
 use super::BANNER_SAVE;

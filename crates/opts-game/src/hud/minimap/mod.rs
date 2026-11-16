@@ -97,7 +97,6 @@ pub struct MiniMapSurface;
 #[derive(Component, Debug, Clone, Copy)]
 pub struct MiniMapCaption;
 
-
 /// Keeps [`MiniMapState::config`] in step with the settings.
 pub fn sync_config(settings: Res<GameSettings>, mut state: ResMut<MiniMapState>) {
     if settings.is_changed() || state.frames == 0 {

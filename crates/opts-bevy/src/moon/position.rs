@@ -1,6 +1,8 @@
 //! The moon's place in the sky (elevation, azimuth, bright limb) and the state of its disc.
 
-use super::ephemeris::{centuries, julian_day, moon_ecliptic, norm360, sun_longitude, SYNODIC_MONTH_DAYS};
+use super::ephemeris::{
+    centuries, julian_day, moon_ecliptic, norm360, sun_longitude, SYNODIC_MONTH_DAYS,
+};
 use super::MoonState;
 use crate::environment::CalendarDate;
 

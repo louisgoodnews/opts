@@ -52,10 +52,9 @@ pub struct PendingDespawn(pub Option<VehicleId>);
 
 mod deferred;
 mod despawn_dialog;
+use deferred::frame_start;
 pub use deferred::{defer, DeferredOps};
 pub use despawn_dialog::{ask_despawn, despawn_choices};
-use deferred::frame_start;
-
 
 /// Computes the label from the registry.
 #[must_use]
@@ -64,7 +63,6 @@ pub fn place_label(reg: &SessionVehicles) -> Option<String> {
     (rec.is_alive() && !rec.place_dismissed && !rec.spawn_entry_name.trim().is_empty())
         .then(|| rec.spawn_entry_name.clone())
 }
-
 
 /// F8 switches to the next session vehicle, Shift+F8 to the previous one.
 ///

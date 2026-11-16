@@ -2,7 +2,12 @@
 
 use super::*;
 
-pub(super) fn push_diag(table: &mut Table, line: usize, key: Option<&str>, message: impl Into<String>) {
+pub(super) fn push_diag(
+    table: &mut Table,
+    line: usize,
+    key: Option<&str>,
+    message: impl Into<String>,
+) {
     table.diagnostics.push(fluent::Diagnostic {
         line,
         key: key.map(str::to_string),

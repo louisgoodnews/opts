@@ -1,7 +1,7 @@
 //! Fitting the pictures and captions of the door panels to the common width and the slots' fades.
 
-use super::*;
 use super::spawn::caption;
+use super::*;
 
 pub(super) type Images<'w, 's> = Query<
     'w,

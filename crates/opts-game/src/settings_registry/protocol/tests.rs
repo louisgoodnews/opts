@@ -5,15 +5,15 @@
 
 use bevy::prelude::*;
 use opts_bevy::control::state::Outcome;
-use opts_cli::protocol::{RpcError, code};
-use serde_json::{Value, json};
+use opts_cli::protocol::{code, RpcError};
+use serde_json::{json, Value};
 
 use crate::settings::GameSettings;
 use crate::settings_registry::protocol::{get, list, reset, set};
-use crate::settings_registry::protocol_confirm::{ProtocolRevert, confirm, revert, tick_by};
+use crate::settings_registry::protocol_confirm::{confirm, revert, tick_by, ProtocolRevert};
 use crate::settings_registry::{
-    Apply, Available, SettingChanged, SettingDescriptor, SettingKind, SettingsCapabilities,
-    SettingsRegistry, normalize,
+    normalize, Apply, Available, SettingChanged, SettingDescriptor, SettingKind,
+    SettingsCapabilities, SettingsRegistry,
 };
 
 fn world(name: &str) -> World {

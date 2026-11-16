@@ -1,7 +1,7 @@
 //! Help: tabs, F1, the overlay, the report keys.
 
-use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
+use bevy::input::ButtonState;
 
 use super::*;
 use opts_gui::prelude::*;

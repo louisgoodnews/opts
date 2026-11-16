@@ -5,7 +5,11 @@ use super::*;
 /// Spawns the LOD group entities (one per distinct mesh threshold) under `root`. Light sprites
 /// are not part of a LOD group: a lantern's `[light_enh_2]` written after `[LOD] 0` would
 /// otherwise vanish with its mesh band within ~70 m, while the glow is what is seen from afar.
-pub(super) fn lod_groups(commands: &mut Commands, root: Entity, sco: &SceneryObject) -> Vec<(Entity, f32)> {
+pub(super) fn lod_groups(
+    commands: &mut Commands,
+    root: Entity,
+    sco: &SceneryObject,
+) -> Vec<(Entity, f32)> {
     let mut thresholds: Vec<f32> = Vec::new();
     let all = sco.meshes.iter().map(|m| m.lod_threshold);
     for t in all.flatten() {

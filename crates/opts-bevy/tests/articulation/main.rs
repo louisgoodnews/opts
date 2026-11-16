@@ -68,7 +68,6 @@ mod limits;
 
 mod published;
 
-
 /// Moves the leader by `by` metres in one step (a spawn placement, a collision push-out, a reset).
 fn teleport(app: &mut App, root: Entity, by: Vec2) {
     let mut e = app.world_mut().entity_mut(root);

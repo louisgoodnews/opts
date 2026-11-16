@@ -3,7 +3,6 @@
 use super::*;
 
 impl Compiler {
-
     pub(super) fn header(&mut self, file: &str, tok: &Token, open: &mut Option<Open>) {
         let inner = tok.text[1..tok.text.len() - 1].to_lowercase();
         match inner.as_str() {
@@ -65,5 +64,4 @@ impl Compiler {
             failed: false,
         });
     }
-
 }

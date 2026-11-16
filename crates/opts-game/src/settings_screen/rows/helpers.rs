@@ -3,7 +3,12 @@
 use super::*;
 
 /// A plain value text (a number, a time, a path).
-pub(super) fn value_text(c: &mut Commands, parent: Entity, key: &'static str, text: String) -> Entity {
+pub(super) fn value_text(
+    c: &mut Commands,
+    parent: Entity,
+    key: &'static str,
+    text: String,
+) -> Entity {
     c.spawn((
         SettingValueText(key),
         Text::new(text),
@@ -104,7 +109,13 @@ pub(super) fn button(
 }
 
 /// A small localized note with variables below a language.
-pub(super) fn note(c: &mut Commands, parent: Entity, key: &'static str, args: Args, role: ColorRole) {
+pub(super) fn note(
+    c: &mut Commands,
+    parent: Entity,
+    key: &'static str,
+    args: Args,
+    role: ColorRole,
+) {
     c.spawn((
         Text::new(key),
         L10nKey(key),

@@ -1,7 +1,7 @@
 //! Text rendering: colours, the alpha bitmap, fitting long text, and the text sources.
 
-use super::*;
 use super::fixtures::*;
+use super::*;
 
 #[test]
 fn mono_uses_text_colour_and_colour_mode_uses_bitmap() {

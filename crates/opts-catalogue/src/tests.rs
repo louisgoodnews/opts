@@ -37,7 +37,6 @@ fn fixture() -> PathBuf {
     dir
 }
 
-
 #[test]
 fn staleness_tracks_age_and_root() {
     let root = fixture();
@@ -71,5 +70,3 @@ fn staleness_tracks_age_and_root() {
     ));
     let _ = fs::remove_dir_all(&root);
 }
-
-

@@ -86,4 +86,3 @@ impl SessionVehicles {
             .count()
     }
 }
-

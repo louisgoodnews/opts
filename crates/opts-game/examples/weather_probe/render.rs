@@ -1,5 +1,5 @@
-use super::*;
 use super::scene::step;
+use super::*;
 
 /// The camera heights (`OPTS_PROBE_HEIGHTS`, default 2 m) and the pitch (`OPTS_PROBE_PITCH`).
 pub(super) fn probe_view() -> (Vec<f32>, Option<f32>) {

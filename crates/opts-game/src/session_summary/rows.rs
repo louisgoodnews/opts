@@ -6,9 +6,9 @@ use opts_gui::l10n::{L10nArgs, L10nKey};
 use opts_gui::prelude::*;
 
 use crate::pause::stats::{format_duration, SessionStats};
-use crate::shell::{keys};
+use crate::shell::keys;
 
-use super::{SummaryAction};
+use super::SummaryAction;
 
 /// The decimal separator of the language.
 fn decimal(text: String, locale: &str) -> String {

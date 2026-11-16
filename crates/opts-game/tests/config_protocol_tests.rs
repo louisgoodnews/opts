@@ -88,9 +88,9 @@ fn setup(app: &App) -> NewGameSetup {
     app.world().resource::<NewGameSetup>().clone()
 }
 
-#[path = "config_protocol_tests/save_load.rs"]
-mod save_load;
 #[path = "config_protocol_tests/manage.rs"]
 mod manage;
+#[path = "config_protocol_tests/save_load.rs"]
+mod save_load;
 #[path = "config_protocol_tests/session.rs"]
 mod session;

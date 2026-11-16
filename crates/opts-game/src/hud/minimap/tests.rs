@@ -5,8 +5,8 @@ use opts_gui::theme::contrast::contrast_ratio;
 use opts_gui::theme::{InstrumentPalette, InstrumentTokens};
 use opts_traffic::PathGeometry;
 
-use super::raster::{Canvas, MapColors, MapLine, MapMarker, MapView, render};
-use super::source::{FixtureRoads, MapRoad, MapSource, push_chords};
+use super::raster::{render, Canvas, MapColors, MapLine, MapMarker, MapView};
+use super::source::{push_chords, FixtureRoads, MapRoad, MapSource};
 use super::*;
 
 fn day() -> InstrumentPalette {

@@ -84,4 +84,3 @@ impl WorldLoadJob {
         build_scenery_object(commands, root, input, &mut assets);
     }
 }
-

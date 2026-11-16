@@ -92,7 +92,6 @@ impl Compiler {
             message,
         });
     }
-
 }
 
 /// Number of registers.

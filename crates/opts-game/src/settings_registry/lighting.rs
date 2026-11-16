@@ -47,7 +47,6 @@ const MIRROR_RATES: &[super::EnumOption] = &[
     opt("4", "set-opt-mirror-rate-4"),
 ];
 
-
 /// Whether the stored mode is automatic (the default; an unknown text counts as automatic).
 #[must_use]
 pub fn is_automatic(settings: &GameSettings) -> bool {
@@ -85,4 +84,3 @@ pub fn target_fps_of(settings: &GameSettings) -> u32 {
         .and_then(|v| v.trim().parse::<u32>().ok())
         .map_or(60, |v| v.clamp(30, 240))
 }
-

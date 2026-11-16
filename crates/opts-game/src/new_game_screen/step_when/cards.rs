@@ -4,11 +4,11 @@ use bevy::prelude::*;
 use opts_gui::not_yet::NotAvailableYet;
 use opts_gui::prelude::*;
 
-use crate::new_game_screen::BuildCtx;
-use crate::new_game_screen::choice::{ChoiceStep, spawn_choice};
+use crate::new_game_screen::choice::{spawn_choice, ChoiceStep};
 use crate::new_game_screen::planner::PlannerStep;
-use crate::new_game_screen::ui::{PlannerAction, column, glyph, keyed, plain, row};
-use crate::new_game_screen::weather::{Label, MAX_WIZARD_PRESETS, presets};
+use crate::new_game_screen::ui::{column, glyph, keyed, plain, row, PlannerAction};
+use crate::new_game_screen::weather::{presets, Label, MAX_WIZARD_PRESETS};
+use crate::new_game_screen::BuildCtx;
 
 /// A text that is a message key or data text.
 fn label(commands: &mut Commands, label: Label, style: TypeScale, role: ColorRole) -> Entity {

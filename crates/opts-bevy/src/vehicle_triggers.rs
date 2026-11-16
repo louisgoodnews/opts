@@ -18,9 +18,9 @@ use crate::vehicle_sim::PlayerVehicle;
 
 mod bindings;
 mod click;
-mod keys;
 pub mod door_lock;
 mod hover;
+mod keys;
 mod mouse;
 mod pseudo;
 mod scenery_click;

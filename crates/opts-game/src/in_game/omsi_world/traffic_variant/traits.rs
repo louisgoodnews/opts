@@ -1,7 +1,7 @@
 //! The traffic traits of a vehicle type: the AI profile turned into the simulation's numbers.
 
-use opts_traffic::{VehicleClass, VehicleTraits};
 use super::*;
+use opts_traffic::{VehicleClass, VehicleTraits};
 
 impl Variant {
     /// The traits the traffic model needs, from the profile of the head, the measured size of

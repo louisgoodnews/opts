@@ -4,8 +4,8 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use bevy::prelude::*;
 use bevy::pbr::StandardMaterial;
+use bevy::prelude::*;
 
 use super::flags::switches;
 

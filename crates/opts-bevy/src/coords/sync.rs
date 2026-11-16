@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// One-way synchronization system updating Bevy [`Transform`] when [`OmsiTransform`] changes.
 pub fn sync_omsi_to_bevy_transforms(
     mut query: Query<(&OmsiTransform, &mut Transform), Changed<OmsiTransform>>,

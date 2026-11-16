@@ -7,8 +7,8 @@ use super::schedule::{pick_renders, renders_in_frame};
 use super::*;
 
 mod cleanup;
-mod pose;
 mod look;
+mod pose;
 mod render;
 mod slots;
 

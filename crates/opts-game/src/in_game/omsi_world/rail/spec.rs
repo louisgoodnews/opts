@@ -135,4 +135,3 @@ pub(super) fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, boo
     }
     Some((TrainSpec { name, units }, light))
 }
-

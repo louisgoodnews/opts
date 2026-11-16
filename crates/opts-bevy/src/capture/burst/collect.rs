@@ -1,6 +1,5 @@
 //! Frame requests, the collection of encoded frames and the loss bookkeeping of a burst.
 
-
 use std::time::{Duration, Instant};
 
 use bevy::ecs::world::World;
@@ -8,10 +7,10 @@ use bevy::prelude::{Time, Virtual};
 use bevy::tasks::{block_on, futures_lite::future, AsyncComputeTaskPool};
 use opts_cli::protocol::RpcError;
 
-use crate::control::state::ControlState;
 use super::super::screenshot::encode;
 use super::super::storage;
 use super::state::{Burst, Frame};
+use crate::control::state::ControlState;
 
 /// A requested frame that is not delivered within this time counts as dropped.
 const FRAME_WAIT: Duration = Duration::from_secs(2);

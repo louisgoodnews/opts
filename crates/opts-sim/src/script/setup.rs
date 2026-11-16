@@ -3,7 +3,6 @@
 use super::*;
 
 impl ScriptEngine {
-
     /// Creates an engine for `program`; compile diagnostics stay with the caller.
     #[must_use]
     pub fn new(program: Program) -> Self {
@@ -87,5 +86,4 @@ impl ScriptEngine {
     pub fn seed_random(&mut self, seed: u32) {
         self.rng = seed.max(1);
     }
-
 }

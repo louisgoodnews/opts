@@ -6,7 +6,7 @@ mod parts;
 mod spawn;
 mod systems;
 
-pub use systems::{SwitchPlugin, switch_sync_system, switch_toggle_system};
+pub use systems::{switch_sync_system, switch_toggle_system, SwitchPlugin};
 
 /// Marker component for an M3 Switch root entity.
 #[derive(Component, Debug, Clone, Default)]

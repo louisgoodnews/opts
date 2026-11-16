@@ -3,12 +3,12 @@
 use super::relocation::{best_candidate, normalize};
 use super::*;
 
-mod insert;
 mod entities;
+mod insert;
 mod links;
 
-use insert::*;
 use entities::*;
+use insert::*;
 use links::*;
 
 /// Rebuilds the catalogue for `root` into the database at `db_path`.
@@ -73,13 +73,6 @@ pub fn discover(db_path: &Path, root: &Path, progress: &(dyn Fn(Phase) + Sync)) 
     );
     Ok(summary)
 }
-
-
-
-
-
-
-
 
 fn write_metadata(tx: &rusqlite::Transaction<'_>, root: &Path, summary: &Summary) -> Result<()> {
     let root_str = root.to_string_lossy().into_owned();

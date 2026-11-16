@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Marks the camera whose [`AmbientLight`] [`interior_ambient_system`] wrote.
 #[derive(Component)]
 pub struct InteriorAmbient;

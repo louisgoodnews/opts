@@ -3,7 +3,6 @@
 use super::*;
 
 impl ScriptEngine {
-
     /// Runs every `{init}` block once.
     pub fn run_init(&mut self) {
         for i in 0..self.program.init.len() {
@@ -107,5 +106,4 @@ impl ScriptEngine {
         let mut stacks = Stacks::default();
         self.run_block(block, 0, &mut stacks);
     }
-
 }

@@ -3,7 +3,6 @@
 use super::*;
 
 impl PedestrianNet {
-
     /// Lanes that continue where `lane` ends at `end` and may be entered there.
     #[must_use]
     pub fn continuations(&self, lane: LaneId, end: End) -> Vec<(LaneId, End)> {
@@ -102,5 +101,4 @@ impl PedestrianNet {
         }
         None
     }
-
 }

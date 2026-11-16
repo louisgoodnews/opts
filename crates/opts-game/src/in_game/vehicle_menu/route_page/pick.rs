@@ -40,7 +40,12 @@ pub(in crate::in_game::vehicle_menu) fn pick_route_text(world: &mut World, text:
     }
 }
 
-pub(in crate::in_game::vehicle_menu) fn pick_run(world: &mut World, line_index: usize, tour: usize, run: usize) {
+pub(in crate::in_game::vehicle_menu) fn pick_run(
+    world: &mut World,
+    line_index: usize,
+    tour: usize,
+    run: usize,
+) {
     let mut q =
         world.query_filtered::<&opts_bevy::route::VehicleRoute, With<opts_bevy::PlayerVehicle>>();
     let line = q.iter(world).next().and_then(|r| {
@@ -58,7 +63,12 @@ pub(in crate::in_game::vehicle_menu) fn pick_run(world: &mut World, line_index: 
     }
 }
 
-pub(in crate::in_game::vehicle_menu) fn run_timetable(world: &mut World, line: &str, tour: usize, run: usize) {
+pub(in crate::in_game::vehicle_menu) fn run_timetable(
+    world: &mut World,
+    line: &str,
+    tour: usize,
+    run: usize,
+) {
     let result = crate::control_route::set_timetable_impl(
         world,
         &serde_json::json!({ "line": line, "tour": tour, "run": run }),

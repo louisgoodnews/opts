@@ -32,7 +32,6 @@ pub fn register(registry: &mut ControlRegistry) {
     registry.register("vehicle.setvars", setvars);
 }
 
-
 fn setvars(world: &mut World, params: &Value) -> Outcome {
     let Some(src) = source(world) else {
         return Outcome::err(RpcError::new(

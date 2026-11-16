@@ -26,7 +26,6 @@ pub struct FullMapScaleText;
 mod panels;
 mod spawn;
 mod system;
-pub use system::overlay;
 use panels::*;
 use spawn::*;
-
+pub use system::overlay;

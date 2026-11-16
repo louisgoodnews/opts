@@ -32,7 +32,6 @@ pub struct ButtonBuilder {
     pub label_key: Option<&'static str>,
 }
 
-
 impl ButtonBuilder {
     /// Creates a new filled button builder.
     pub fn filled(label: impl Into<String>) -> Self {

@@ -3,7 +3,11 @@
 use super::*;
 
 /// The category buttons that have a visible setting.
-pub(super) fn spawn_category_buttons(commands: &mut Commands, cat_list: Entity, registry: &SettingsRegistry) {
+pub(super) fn spawn_category_buttons(
+    commands: &mut Commands,
+    cat_list: Entity,
+    registry: &SettingsRegistry,
+) {
     for cat in registry.categories() {
         let visible = registry.in_category(cat).iter().any(|d| !d.hidden);
         if !visible {

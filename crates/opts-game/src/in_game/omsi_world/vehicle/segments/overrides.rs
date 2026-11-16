@@ -50,7 +50,6 @@ pub(crate) fn in_file_order(
     parts
 }
 
-
 /// Builds the texture overrides of `mesh_def`.
 /// Images by material index.
 pub(crate) type ImageMap = std::collections::HashMap<usize, Handle<Image>>;

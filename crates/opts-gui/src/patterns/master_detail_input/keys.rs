@@ -10,7 +10,9 @@ use crate::actions::{ScrollStep, UiAction};
 use crate::interaction::activation::Activated;
 use crate::interaction::state::Focused;
 use crate::patterns::list_model::{first_item, last_item, step_item, type_ahead, ITEM_HEIGHT};
-use crate::patterns::master_detail::{MasterDetail, MasterDetailFavourite, MasterDetailView, MasterList};
+use crate::patterns::master_detail::{
+    MasterDetail, MasterDetailFavourite, MasterDetailView, MasterList,
+};
 
 /// Seconds after which typed letters start a new type-ahead word.
 const TYPE_AHEAD_RESET: f32 = 0.8;

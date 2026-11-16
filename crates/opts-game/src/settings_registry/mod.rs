@@ -34,12 +34,12 @@ mod write;
 pub use api::SettingsApi;
 pub use change::{apply_change, apply_change_with};
 pub use descriptor::{
-    Apply, Available, Category, EnumOption, ProfileScope, SettingDescriptor, SettingKind, opt,
+    opt, Apply, Available, Category, EnumOption, ProfileScope, SettingDescriptor, SettingKind,
 };
 pub use messages::{add_messages, localization};
 pub use plugin::{SettingsAppExt, SettingsRegistryPlugin};
 pub use registry::SettingsRegistry;
-pub use value::{SettingError, SettingValue, normalize};
+pub use value::{normalize, SettingError, SettingValue};
 
 /// Where a change came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

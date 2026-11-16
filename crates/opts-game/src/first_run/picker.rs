@@ -1,17 +1,17 @@
 //! The folder dialog: it opens on its own thread, and its answer is checked and saved.
 
 use std::path::PathBuf;
+use std::sync::mpsc::{channel, Receiver, TryRecvError};
 use std::sync::Mutex;
-use std::sync::mpsc::{Receiver, TryRecvError, channel};
 
 use bevy::prelude::*;
 use opts_gui::l10n::L10nArgs;
 
 use crate::settings::GameSettings;
-use crate::shell::banner::{BannerSeverity, BannerSpec, dismiss_banner, show_banner};
+use crate::shell::banner::{dismiss_banner, show_banner, BannerSeverity, BannerSpec};
 use crate::shell::keys;
 
-use super::{BANNER_FOLDER, ChooseError, FirstRun, Step, adopt::adopt_root, check_choice};
+use super::{adopt::adopt_root, check_choice, ChooseError, FirstRun, Step, BANNER_FOLDER};
 
 /// The answer of the folder dialog (also sent when the choice came from Settings or Home): the
 /// installation root, already saved and in use, or the reason it was refused.

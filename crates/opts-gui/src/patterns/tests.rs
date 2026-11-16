@@ -3,10 +3,10 @@
 use super::*;
 use crate::actions::{Direction, ScrollStep, UiAction};
 use crate::interaction::focus::FocusEvent;
-use crate::l10n::{Localization, wizard_keys::md};
+use crate::l10n::{wizard_keys::md, Localization};
 use crate::testing::{act, click, layout_app};
-use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
+use bevy::input::ButtonState;
 
 fn entries(n: usize) -> Vec<ListEntry> {
     (0..n)

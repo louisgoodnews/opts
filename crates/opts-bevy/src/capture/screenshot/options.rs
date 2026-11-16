@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use opts_cli::protocol::RpcError;
 use serde_json::Value;
 
-use crate::control::params::{opt_bool, opt_str, opt_u64};
-use super::DEFAULT_JPEG_QUALITY;
 use super::super::error::CaptureError;
+use super::DEFAULT_JPEG_QUALITY;
+use crate::control::params::{opt_bool, opt_str, opt_u64};
 
 /// Still image formats.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

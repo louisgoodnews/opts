@@ -3,7 +3,6 @@
 use super::*;
 
 impl ScriptEngine {
-
     /// Reports an undefined constant (0), curve (1) or macro (2) once per name.
     pub(super) fn warn_missing(&mut self, what: u8, id: u32) {
         if !self.missing_seen.insert((what, id)) {
@@ -79,5 +78,4 @@ impl ScriptEngine {
         self.rng = x;
         (x >> 8) as f32 / 16_777_216.0
     }
-
 }

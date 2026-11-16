@@ -9,9 +9,7 @@ use std::time::Instant;
 
 use bevy::prelude::*;
 use opts_bevy::coords::omsi_to_bevy_pos;
-use opts_bevy::scene_trace::{
-    self as st, kind, Probe, TraceRecord, TraceTransform,
-};
+use opts_bevy::scene_trace::{self as st, kind, Probe, TraceRecord, TraceTransform};
 use opts_core::formats::map::{MapObjectInstance, MapTile};
 use serde_json::json;
 
@@ -43,8 +41,8 @@ mod records;
 pub(super) use records::{human_frame, remember_human, spawned, tile_content};
 mod site;
 pub(super) use site::{notes, to_transform, Counters, Site};
-mod parents;
 mod object;
+mod parents;
 pub(in crate::in_game::omsi_world) use object::object;
 
 /// Opens a frame (no-op while the trace is off).

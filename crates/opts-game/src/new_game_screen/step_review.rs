@@ -17,9 +17,9 @@ use super::BuildCtx;
 mod rows;
 mod summary;
 
+use rows::review_row;
 use rows::{what_row, where_row};
 use summary::{trip_row, when_row};
-use rows::review_row;
 
 /// Message key of the reason a drive cannot start.
 pub fn reason_key(reason: Invalid) -> &'static str {

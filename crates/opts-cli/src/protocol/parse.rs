@@ -3,7 +3,7 @@
 use serde_json::Value;
 
 use super::code;
-use super::message::{Request, RpcError, Response};
+use super::message::{Request, Response, RpcError};
 
 /// Parses one line of server output into a [`Response`].
 ///

@@ -3,7 +3,6 @@
 use super::*;
 
 impl Compiler {
-
     pub(super) fn control(&mut self, file: &str, line: usize, word: &str, block: &mut Open) {
         let here = block.ops.len();
         match word {
@@ -92,5 +91,4 @@ impl Compiler {
             Kind::Trigger(id) => self.program.triggers.entry(id).or_default().push(index),
         }
     }
-
 }

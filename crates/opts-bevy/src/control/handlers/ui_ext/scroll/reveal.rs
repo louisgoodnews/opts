@@ -34,7 +34,11 @@ pub(super) fn default_target(world: &mut World, all: &[Scrollable]) -> Option<Sc
         .map(|s| (*s).clone())
 }
 
-pub(super) fn reveal_item(world: &mut World, target: &Scrollable, id: &str) -> Result<Vec2, RpcError> {
+pub(super) fn reveal_item(
+    world: &mut World,
+    target: &Scrollable,
+    id: &str,
+) -> Result<Vec2, RpcError> {
     match target.kind {
         ScrollKind::List(root) => {
             let md = world

@@ -14,8 +14,7 @@ mod builders;
 mod components;
 mod instrument;
 mod readout;
-pub use components::*;
 pub(super) use builders::{panel, panel_node, texts};
+pub use components::*;
 pub(super) use instrument::{build_instrument, text_widget};
 pub(super) use readout::readout;
-

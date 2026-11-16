@@ -8,8 +8,8 @@ use opts_bevy::OmsiInstall;
 use opts_core::formats::cti::CtiFile;
 use opts_core::formats::vehicles::model::ModelConfig;
 
-use super::VehicleRepaints;
 use super::folders::dirs_ignoring_case;
+use super::VehicleRepaints;
 
 /// Folders a `[CTC]` texture path is resolved against: the vehicle folder, its parent and
 /// grandparent, then the installation root.

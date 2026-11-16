@@ -81,7 +81,6 @@ pub enum Problem {
     },
 }
 
-
 /// A configuration as it can be applied: the repaint and options that survived the check.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checked {
@@ -103,7 +102,6 @@ impl Checked {
 
 mod configuration;
 mod problem;
-
 
 mod store;
 use store::same_name;

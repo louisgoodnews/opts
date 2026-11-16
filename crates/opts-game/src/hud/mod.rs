@@ -101,6 +101,5 @@ impl Plugin for HudPlugin {
     }
 }
 
-
 #[cfg(test)]
 mod tests;

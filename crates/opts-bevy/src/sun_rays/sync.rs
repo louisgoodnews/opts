@@ -4,9 +4,9 @@ use bevy::camera::Hdr;
 use bevy::light::{FogVolume, VolumetricFog};
 use bevy::prelude::*;
 
+use super::*;
 use crate::light_quality::LightQuality;
 use crate::MainCamera;
-use super::*;
 
 pub(super) type CameraRayItem<'a> = (
     Entity,

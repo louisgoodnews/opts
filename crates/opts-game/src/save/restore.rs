@@ -19,11 +19,11 @@ mod stages;
 mod types;
 
 pub use stages::{drive_restore, forget_pending};
+use types::issue_text;
 pub use types::{
     LastRestore, PendingRestore, RestoreError, RestoreOutcome, RestoreStarted, QUIET_FRAMES,
     SETTLE_TIMEOUT_S,
 };
-use types::issue_text;
 
 /// Starts restoring save `id`: checks it, prepares the session and enters it. The caller is on
 /// Home or inside a running drive (that drive is left without asking: the UI asks first).

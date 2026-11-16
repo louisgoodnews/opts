@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Debug: traces the cab flags of the new cab for a while after it took over.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct CabTrace(pub f32);

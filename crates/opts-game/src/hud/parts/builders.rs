@@ -41,7 +41,11 @@ pub(in crate::hud) fn panel_node(padding: UiRect, direction: FlexDirection, gap:
     }
 }
 
-pub(in crate::hud) fn panel(node: Node, radius: RadiusLevel, palette: &InstrumentPalette) -> impl Bundle {
+pub(in crate::hud) fn panel(
+    node: Node,
+    radius: RadiusLevel,
+    palette: &InstrumentPalette,
+) -> impl Bundle {
     (
         node,
         BorderColor::all(palette.panel_border),

@@ -1,7 +1,7 @@
 //! The buttons of a save row and the row itself.
 
-use super::*;
 use super::details::row_details;
+use super::*;
 
 pub(super) fn row_button(
     parent: &mut ChildSpawnerCommands,

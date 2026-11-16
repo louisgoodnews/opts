@@ -13,10 +13,10 @@ mod hardware;
 mod interface;
 mod locations;
 
-pub use content::{fill_content_lines, ContentLine};
 use content::content_info;
 #[cfg(test)]
 use content::{catalogue_args, Args};
+pub use content::{fill_content_lines, ContentLine};
 use hardware::hardware_info;
 use interface::interface_info;
 use locations::advanced_info;

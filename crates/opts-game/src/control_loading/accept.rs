@@ -1,15 +1,13 @@
 //! The switches of loads that end with problems: `loading.accept_problems`, and the
 //! `accept_problems` parameter of the loading commands.
 
-
 use bevy::prelude::*;
-use opts_bevy::control::state::{Outcome};
-use opts_cli::protocol::{RpcError};
+use opts_bevy::control::state::Outcome;
+use opts_cli::protocol::RpcError;
 use serde_json::{json, Value};
 
 use crate::in_game::load_report::{AcceptLoadProblems, AcceptLoadProblemsAlways, LoadReport};
 use crate::in_game::types::SimulationLoadState;
-
 
 /// `loading.accept_problems {always?}`: with `always` set, every later load that ends with
 /// problems starts its drive without waiting for *Continue* (wizard loads too) until it is set to

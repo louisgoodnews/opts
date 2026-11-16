@@ -15,8 +15,8 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 mod bc;
 mod compose;
 
-pub use compose::*;
 use bc::*;
+pub use compose::*;
 
 #[derive(Debug, Clone)]
 pub struct CpuImage {
@@ -27,7 +27,6 @@ pub struct CpuImage {
     /// `width * height * 4` bytes, RGBA.
     pub rgba: Vec<u8>,
 }
-
 
 impl CpuImage {
     /// Decodes mip level 0 of a Bevy [`Image`] (RGBA8, R8 masks, BC1/BC2/BC3).

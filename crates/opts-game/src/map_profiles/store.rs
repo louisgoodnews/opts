@@ -40,8 +40,6 @@ pub struct Resolved {
 mod metrics;
 pub use metrics::SessionMetrics;
 
-
-
 /// The profile folder.
 #[derive(Debug, Clone)]
 pub struct ProfileStore {
@@ -181,9 +179,7 @@ impl ProfileStore {
         out.sort_by(|a, b| a.0.cmp(&b.0));
         out
     }
-
 }
-
 
 fn write_atomic(path: &Path, text: &str) -> io::Result<()> {
     if let Some(dir) = path.parent() {

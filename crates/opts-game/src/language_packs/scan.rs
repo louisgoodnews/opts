@@ -1,11 +1,9 @@
 //! Scanning the language folder: the packs are read into the localisation at start-up and on
 //! demand, what is wrong is logged, and a locale without a pack falls back to English.
 
-
 use bevy::prelude::*;
 use opts_gui::l10n::Localization;
 use opts_l10n::check::Severity;
-
 
 use super::packs_dir;
 

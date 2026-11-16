@@ -1,8 +1,6 @@
 //! Esc in a drive opens the overlay; Esc inside it resumes.
 
-
 use super::*;
-
 
 /// Esc (or Start) in a running drive opens the overlay; during loading Esc cancels the load.
 pub fn pause_input(

@@ -8,7 +8,6 @@ use super::panes::AmbientPaneItem;
 use super::spawn::mirror_material;
 use crate::mirrors::*;
 
-
 /// A camera of the pool, and the pane it serves.
 #[derive(Component, Debug, Clone)]
 pub struct AmbientCamera {

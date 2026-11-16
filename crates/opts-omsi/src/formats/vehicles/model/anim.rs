@@ -92,7 +92,6 @@ fn handle_origin_subtag(
     }
 }
 
-
 fn handle_tuning_subtag(
     anim: &mut ModelAnim,
     tag: &str,

@@ -28,7 +28,12 @@ fn over_with(alpha: Option<u32>, trans: Option<&str>, scaled: bool, name: &str) 
 fn glass_and_weather_overlays_are_built_and_follow_their_variable() {
     let glass = over_with(Some(2), None, true, "Envir_Brightness");
     assert_eq!(glass.runtime_alpha_variable(), Some("Envir_Brightness"));
-    for weather in ["Rain_Window_Norm_Wetness", "Dirt_Wiped", "Beschlag_Norm", "Precip_Mirror"] {
+    for weather in [
+        "Rain_Window_Norm_Wetness",
+        "Dirt_Wiped",
+        "Beschlag_Norm",
+        "Precip_Mirror",
+    ] {
         let o = over_with(Some(2), None, true, weather);
         assert!(o.is_weather_overlay_part(), "{weather}");
         assert_eq!(o.runtime_alpha_variable(), Some(weather));
@@ -48,15 +53,20 @@ fn glass_and_weather_overlays_are_built_and_follow_their_variable() {
 /// The weather classes: each prefix of the overlay variables maps to one class, others to none.
 #[test]
 fn overlay_classes_by_variable_prefix() {
-
     assert_eq!(overlay_class("Dirt_Norm"), Some(OverlayClass::Dirt));
     assert_eq!(overlay_class(" dirt_wiped "), Some(OverlayClass::Dirt));
     assert_eq!(
         overlay_class("Rain_Window_Norm_Wetness"),
         Some(OverlayClass::RainWindow)
     );
-    assert_eq!(overlay_class("Beschlag_Front"), Some(OverlayClass::Condensation));
-    assert_eq!(overlay_class("Precip_Mirror"), Some(OverlayClass::Precipitation));
+    assert_eq!(
+        overlay_class("Beschlag_Front"),
+        Some(OverlayClass::Condensation)
+    );
+    assert_eq!(
+        overlay_class("Precip_Mirror"),
+        Some(OverlayClass::Precipitation)
+    );
     assert_eq!(overlay_class("Envir_Brightness"), None);
     assert_eq!(overlay_class("szyby"), None);
 }
@@ -67,10 +77,28 @@ fn overlay_classes_by_variable_prefix() {
 #[test]
 fn only_alpha_materials_are_overlays() {
     assert!(!over(None, None, true).is_alpha_overlay(), "opaque body");
-    assert!(!over(Some(0), None, true).is_alpha_overlay(), "mode 0 is opaque");
-    assert!(over(Some(2), None, true).is_alpha_overlay(), "blended overlay");
-    assert!(over(Some(1), None, true).is_alpha_overlay(), "cutout overlay");
-    assert!(over(None, Some("mask.bmp"), true).is_alpha_overlay(), "transmap overlay");
-    assert!(!over(Some(2), None, false).is_weather_overlay_part(), "no variable");
-    assert!(over(Some(2), None, true).is_weather_overlay_part(), "Dirt_Norm overlay");
+    assert!(
+        !over(Some(0), None, true).is_alpha_overlay(),
+        "mode 0 is opaque"
+    );
+    assert!(
+        over(Some(2), None, true).is_alpha_overlay(),
+        "blended overlay"
+    );
+    assert!(
+        over(Some(1), None, true).is_alpha_overlay(),
+        "cutout overlay"
+    );
+    assert!(
+        over(None, Some("mask.bmp"), true).is_alpha_overlay(),
+        "transmap overlay"
+    );
+    assert!(
+        !over(Some(2), None, false).is_weather_overlay_part(),
+        "no variable"
+    );
+    assert!(
+        over(Some(2), None, true).is_weather_overlay_part(),
+        "Dirt_Norm overlay"
+    );
 }

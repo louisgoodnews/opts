@@ -49,7 +49,6 @@ use carving::*;
 mod carve;
 pub use carve::*;
 
-
 #[must_use]
 pub fn terrain_material(texture: Option<Handle<Image>>) -> StandardMaterial {
     StandardMaterial {

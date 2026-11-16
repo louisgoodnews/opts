@@ -1,7 +1,7 @@
 //! Trace queries of the control protocol: picking an object and running a query over the trace.
 
-use super::*;
 use super::ray::{pick_ray, tile_at};
+use super::*;
 
 /// The parents of a hit; one that has a record of its own is returned in full.
 fn full_parents(

@@ -9,7 +9,7 @@ mod spawn;
 mod systems;
 
 pub use builder::ToastBuilder;
-pub use systems::{ToastPlugin, toast_action_click_system, toast_timer_system};
+pub use systems::{toast_action_click_system, toast_timer_system, ToastPlugin};
 
 /// Marker component for an M3 Toast root entity.
 #[derive(Component, Debug, Clone)]

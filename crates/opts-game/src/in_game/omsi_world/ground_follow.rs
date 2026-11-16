@@ -40,8 +40,8 @@ mod sample;
 mod wheels;
 pub use elevation::BodyMotion;
 use elevation::{blend_tilt, settle_elevation};
-use wheels::{add_unevenness, axle_extent, set_wheel_twist, support_height};
 pub use sample::sample_consist_ground;
+use wheels::{add_unevenness, axle_extent, set_wheel_twist, support_height};
 
 /// Puts the player's vehicle on the ground: the height under each of its four wheel positions
 /// gives elevation, pitch and roll. Wheels over a drop carry nothing; when all wheels leave the

@@ -1,7 +1,7 @@
 //! The tooltip system: finds the hovered or focused target and shows, moves or removes the node.
 
 use super::{
-    TOOLTIP_DELAY_SECS, TOOLTIP_MAX_WIDTH, Tooltip, TooltipNode, TooltipState, tooltip_text,
+    tooltip_text, Tooltip, TooltipNode, TooltipState, TOOLTIP_DELAY_SECS, TOOLTIP_MAX_WIDTH,
 };
 use crate::interaction::state::{Disabled, DisabledReason, Focused, Hovered};
 use crate::theme::{color::ColorRole, typography::TypeScale};

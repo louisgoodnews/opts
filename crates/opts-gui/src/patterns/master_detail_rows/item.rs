@@ -5,16 +5,16 @@ use bevy::prelude::*;
 use crate::icons::icon_text;
 use crate::interaction::focus::PointerOnly;
 use crate::interaction::tooltip::Tooltip;
-use crate::l10n::{L10nTooltip, wizard_keys::md};
+use crate::l10n::{wizard_keys::md, L10nTooltip};
 use crate::patterns::glyphs;
-use crate::patterns::list_model::{ITEM_HEIGHT, ListEntry, Section};
+use crate::patterns::list_model::{ListEntry, Section, ITEM_HEIGHT};
 use crate::patterns::master_detail::{MasterDetail, MasterStarButton};
 use crate::theme::{color::ColorRole, shape::RadiusLevel};
 use crate::tokens::components::{ForegroundRole, RadiusToken};
-use crate::ui_id::{UiId, slug};
+use crate::ui_id::{slug, UiId};
 use crate::ui_tree::A11yHidden;
 
-use super::{BAR_GUTTER, section_key};
+use super::{section_key, BAR_GUTTER};
 
 mod row;
 mod text;

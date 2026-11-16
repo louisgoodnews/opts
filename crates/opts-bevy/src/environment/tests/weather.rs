@@ -116,4 +116,3 @@ fn the_environment_wrappers_agree_with_the_function() {
     );
     assert!(a.shafts < 0.2 && a.moon < 0.6);
 }
-

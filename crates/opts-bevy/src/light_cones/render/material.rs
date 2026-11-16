@@ -2,7 +2,8 @@
 
 use super::*;
 
-pub(super) const SHADER: Handle<Shader> = bevy::asset::uuid_handle!("6f707473-6c69-6768-7463-6f6e65000001");
+pub(super) const SHADER: Handle<Shader> =
+    bevy::asset::uuid_handle!("6f707473-6c69-6768-7463-6f6e65000001");
 
 /// Look of the cones (live-tunable).
 #[derive(Resource, Debug, Clone, Copy, PartialEq)]

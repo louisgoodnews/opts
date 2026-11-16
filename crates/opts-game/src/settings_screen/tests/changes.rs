@@ -71,7 +71,6 @@ fn planned_rows_are_visible_disabled_and_marked() {
     assert_eq!(labels, 1, "one red label per planned gameplay row");
 }
 
-
 #[test]
 fn a_preset_chip_sets_the_ui_scale_and_the_matching_chip_is_marked() {
     let (mut app, _, db) = page_app("scale-presets", "interface");

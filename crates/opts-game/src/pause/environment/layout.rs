@@ -72,7 +72,12 @@ pub(super) fn weather_chips(
     wrap
 }
 
-pub(super) fn button(commands: &mut Commands, key: &'static str, filled: bool, action: EnvAction) -> Entity {
+pub(super) fn button(
+    commands: &mut Commands,
+    key: &'static str,
+    filled: bool,
+    action: EnvAction,
+) -> Entity {
     let builder = if filled {
         ButtonBuilder::filled(key)
     } else {

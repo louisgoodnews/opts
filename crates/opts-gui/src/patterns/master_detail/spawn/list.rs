@@ -81,7 +81,12 @@ fn spawn_viewport(commands: &mut Commands, p: MasterDetailParts, prefix: &str) {
         .add_children(&[p.content, p.notice, p.track]);
 }
 
-pub(super) fn spawn_list_column(commands: &mut Commands, p: MasterDetailParts, wrap: Entity, prefix: &str) {
+pub(super) fn spawn_list_column(
+    commands: &mut Commands,
+    p: MasterDetailParts,
+    wrap: Entity,
+    prefix: &str,
+) {
     commands.entity(p.list_col).insert((
         Node {
             width: Val::Percent(40.0),

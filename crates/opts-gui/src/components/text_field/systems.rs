@@ -4,7 +4,13 @@
 use bevy::prelude::*;
 use bevy::text::{EditableText, TextEdit};
 
-use crate::interaction::{activation::Activated, events::TextChanged, focus::FocusEvent, layer::FocusProxy, state::{Disabled, Focused}};
+use crate::interaction::{
+    activation::Activated,
+    events::TextChanged,
+    focus::FocusEvent,
+    layer::FocusProxy,
+    state::{Disabled, Focused},
+};
 
 use super::{M3TextField, TextFieldClear, TextFieldInput, TextFieldPlaceholder, TextFieldSync};
 

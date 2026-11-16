@@ -8,8 +8,8 @@ use labels::{clock_text, route_labels, route_summary};
 mod timetable;
 use timetable::timetable_view;
 mod pick;
-pub(super) use pick::{clear_route, pick_route, pick_route_text, pick_run, run_timetable};
 use pick::set_status;
+pub(super) use pick::{clear_route, pick_route, pick_route_text, pick_run, run_timetable};
 
 /// Most depot routes the list builds buttons for; the search narrows the rest.
 pub(super) const MAX_ROUTE_ROWS: usize = 300;

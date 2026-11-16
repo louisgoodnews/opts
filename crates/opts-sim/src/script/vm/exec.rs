@@ -3,7 +3,6 @@
 use super::*;
 
 impl ScriptEngine {
-
     pub(super) fn warn_once(&mut self, key: String, message: String) {
         if self.warned.insert(key) {
             self.diagnostics.push(Diagnostic {
@@ -66,5 +65,4 @@ impl ScriptEngine {
             });
         }
     }
-
 }

@@ -8,7 +8,7 @@ use crate::actions::{Direction, UiAction};
 use crate::components::{
     combobox::ComboboxHeader, text_area::TextArea, text_field::M3TextField, treeview::M3TreeNode,
 };
-use crate::interaction::navigation::{FocusGraph, move_focus, next_linear, next_region};
+use crate::interaction::navigation::{move_focus, next_linear, next_region, FocusGraph};
 use crate::interaction::state::Focused;
 use bevy::text::EditableText;
 

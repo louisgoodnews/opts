@@ -105,7 +105,6 @@ use look::*;
 mod sync;
 pub use sync::*;
 
-
 /// Registers [`sync_glass`].
 #[derive(Default)]
 pub struct GlassReflectionsPlugin;

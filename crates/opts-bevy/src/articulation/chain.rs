@@ -69,4 +69,3 @@ pub(super) fn detect_position_jump(
     }
     announced || unannounced
 }
-

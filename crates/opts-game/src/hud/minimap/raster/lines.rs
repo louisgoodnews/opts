@@ -2,8 +2,8 @@
 
 use bevy::math::Vec2;
 
-use super::MapView;
 use super::canvas::Canvas;
+use super::MapView;
 
 /// Maps metres relative to the centre to pixels.
 #[derive(Debug, Clone, Copy)]

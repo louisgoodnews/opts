@@ -1,7 +1,7 @@
 //! The painter is deterministic, and a changed screen does not pass its golden.
 
-use super::*;
 use super::scenes::{render, SCENES};
+use super::*;
 
 #[test]
 fn the_painter_is_deterministic() {

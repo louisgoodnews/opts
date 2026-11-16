@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use crate::theme::color::ColorRole;
 use crate::tokens::components::BackgroundRole;
 
-use super::M3Toplevel;
 use super::populate::populate_toplevel_children;
+use super::M3Toplevel;
 
 /// Builder for constructing Material Design 3 toplevel floating dialog windows.
 ///

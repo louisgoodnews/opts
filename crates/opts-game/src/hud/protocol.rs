@@ -78,12 +78,11 @@ fn state(world: &mut World, _: &Value) -> Outcome {
     }))
 }
 
-
 mod maps_and_doors;
 mod minimap_rpc;
+pub(super) use maps_and_doors::{door_camera, fullmap};
 pub(super) use minimap_rpc::minimap;
 use minimap_rpc::minimap_json;
-pub(super) use maps_and_doors::{door_camera, fullmap};
 
 /// `hud.state` for the tests of this module tree.
 #[cfg(test)]

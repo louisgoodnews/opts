@@ -82,4 +82,3 @@ fn an_av1_recording_is_a_well_formed_ivf_that_stops_at_the_duration_limit() {
     }
     let _ = std::fs::remove_dir_all(&root);
 }
-

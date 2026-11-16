@@ -143,4 +143,3 @@ fn is_name(s: &str) -> bool {
         && s.chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
-

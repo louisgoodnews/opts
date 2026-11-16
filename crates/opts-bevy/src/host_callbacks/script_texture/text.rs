@@ -2,7 +2,11 @@
 
 use super::*;
 
-pub(super) fn handle_font_metrics(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
+pub(super) fn handle_font_metrics(
+    ctx: &VehicleHostContext,
+    name: &str,
+    st: &mut Stacks,
+) -> Option<bool> {
     match name {
         "getfontindex" => {
             let name = st.strings.pop().unwrap_or_default();
@@ -58,7 +62,11 @@ pub(super) fn handle_font_metrics(ctx: &VehicleHostContext, name: &str, st: &mut
         _ => None,
     }
 }
-pub(super) fn handle_st_lifecycle_text(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
+pub(super) fn handle_st_lifecycle_text(
+    ctx: &VehicleHostContext,
+    name: &str,
+    st: &mut Stacks,
+) -> Option<bool> {
     match name {
         "stnewtex" => mutate_tex(ctx, st, |t| t.new_tex()),
         "stlock" => mutate_tex(ctx, st, |t| t.lock()),

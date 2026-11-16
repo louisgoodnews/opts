@@ -52,4 +52,3 @@ fn the_disc_is_faint_by_day_and_dimmed_by_cloud() {
     assert!((disc_brightness(40.0, 1.0) - MOON_DISC_DAY_BRIGHTNESS).abs() < 1e-6);
     assert!(disc_brightness(-30.0, 0.35) < 0.4);
 }
-

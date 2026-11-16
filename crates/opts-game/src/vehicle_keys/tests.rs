@@ -8,5 +8,9 @@ use crate::settings::GameSettings;
 use crate::settings_registry::{SettingsCapabilities, SettingsRegistry};
 
 fn parts() -> (SettingsRegistry, SettingsCapabilities, GameSettings) {
-    (SettingsRegistry::with_builtin(), SettingsCapabilities::default(), GameSettings::default())
+    (
+        SettingsRegistry::with_builtin(),
+        SettingsCapabilities::default(),
+        GameSettings::default(),
+    )
 }

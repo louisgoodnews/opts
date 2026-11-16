@@ -5,7 +5,11 @@ use super::validate::decode_and_validate_o3d;
 use super::*;
 
 impl ContentLoader<'_> {
-    pub(super) fn o3d_parts_core(&mut self, args: O3dPartsArgs<'_>, sc: &mut TraceScratch) -> Vec<ModelPart> {
+    pub(super) fn o3d_parts_core(
+        &mut self,
+        args: O3dPartsArgs<'_>,
+        sc: &mut TraceScratch,
+    ) -> Vec<ModelPart> {
         let mut repaint: Vec<_> = self.cache.texture_replacements.iter().collect();
         repaint.sort();
         let key = parts_key(

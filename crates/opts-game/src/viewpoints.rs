@@ -179,11 +179,9 @@ impl ViewpointStore {
         }
         out
     }
-
 }
 
 mod io;
-
 
 /// A viewpoint as JSON with the f32 noise rounded away (0.08, not 0.07999999821186066).
 #[must_use]

@@ -48,9 +48,9 @@ fn full_localization() -> Localization {
 
 const CLEAR: &str = "widget-clear";
 const SETTINGS: &str = "menu-settings";
+#[path = "language_packs/control.rs"]
+mod control;
 #[path = "language_packs/packs.rs"]
 mod packs;
 #[path = "language_packs/reload.rs"]
 mod reload;
-#[path = "language_packs/control.rs"]
-mod control;

@@ -1,7 +1,6 @@
 //! The language list and the per-language report of the packs: what each language offers,
 //! its statistics and whether it can be selected.
 
-
 use opts_l10n::builtin;
 use opts_l10n::check::{self, Reference};
 use opts_l10n::pack::Direction;

@@ -12,7 +12,7 @@ use crate::not_yet::NotAvailableYet;
 use crate::testing::{act, focused};
 use crate::theme::contrast::{composite_over, contrast_ratio};
 use crate::ui_id::UiId;
-use crate::ui_tree::{UiRole, role_of, snapshot};
+use crate::ui_tree::{role_of, snapshot, UiRole};
 use bevy::prelude::*;
 use size::is_target;
 
@@ -30,7 +30,7 @@ pub use overflow::text_overflow;
 pub use size::{effective_size, small_targets, small_text};
 
 pub use traversal::{
-    ActivationLog, DirectionalTraversal, Traversal, directional_traversal, keyboard_traversal,
+    directional_traversal, keyboard_traversal, ActivationLog, DirectionalTraversal, Traversal,
 };
 
 /// Smallest interactive target (logical pixels).

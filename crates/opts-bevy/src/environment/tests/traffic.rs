@@ -57,4 +57,3 @@ fn weather_kinds_from_preset_words() {
     );
     assert_eq!(WeatherKind::of_preset("Winter Snowfall"), WeatherKind::Snow);
 }
-

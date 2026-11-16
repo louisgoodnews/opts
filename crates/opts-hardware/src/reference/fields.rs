@@ -1,6 +1,5 @@
 //! The field table of the hardware profile.
 
-
 /// One field: JSON path, value type, what decision uses it, where it comes from.
 pub struct Field {
     /// Path in the JSON document.

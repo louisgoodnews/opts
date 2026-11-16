@@ -20,4 +20,3 @@ fn the_plan_describes_itself_for_the_protocol() {
     assert_eq!(d["date"], "2026-03-14");
     assert_eq!(d["dropped"], serde_json::json!(["Citaro"]));
 }
-

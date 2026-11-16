@@ -17,7 +17,7 @@ mod problem;
 mod store;
 
 pub use problem::ProfileProblem;
-pub use store::{user_dir, unplaced, HudProfiles};
+pub use store::{unplaced, user_dir, HudProfiles};
 
 /// One widget of a profile.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,7 +40,6 @@ pub struct HudProfile {
     /// Its widgets.
     pub widgets: Vec<ProfileEntry>,
 }
-
 
 impl HudProfile {
     /// Parses and validates RON text. Entries with a problem are dropped and reported; syntax

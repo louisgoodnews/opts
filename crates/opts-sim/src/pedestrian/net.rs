@@ -120,7 +120,6 @@ impl PedestrianNet {
     pub fn total_length(&self) -> f32 {
         self.lanes.values().map(FootLane::length).sum()
     }
-
 }
 
 mod routing;

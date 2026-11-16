@@ -30,7 +30,11 @@ pub(super) fn check_texts_contrast(
         };
         let fg = composite_over(fg, bg);
         let need = if size >= 24.0 {
-            if text_min > 4.5 { 4.5 } else { 3.0 }
+            if text_min > 4.5 {
+                4.5
+            } else {
+                3.0
+            }
         } else {
             text_min
         };

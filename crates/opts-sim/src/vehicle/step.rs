@@ -40,7 +40,6 @@ pub(super) fn steering_authority(unladen_kg: f32, load_kg: f32) -> f32 {
 }
 
 impl VehicleSimulation {
-
     /// Steps the vehicle simulation by a fixed time delta `dt`.
     pub fn step(&mut self, dt: f32) {
         if dt <= 0.0 {
@@ -117,7 +116,6 @@ impl VehicleSimulation {
         // 6. Consist kinematics
         self.update_consist(dt);
     }
-
 }
 
 mod body;

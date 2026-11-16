@@ -33,7 +33,6 @@ pub struct ListState<'w> {
     trips: Res<'w, super::super::trips::TripState>,
 }
 
-
 /// A star on a list entry.
 fn on_favourite(s: &mut ListState, step: PlannerStep, ev: &MasterDetailFavourite) {
     if !matches!(step, PlannerStep::Where | PlannerStep::What) {
@@ -86,5 +85,3 @@ pub fn handle_list_events(
         }
     }
 }
-
-

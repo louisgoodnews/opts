@@ -191,7 +191,6 @@ pub struct BusManifest {
     pub extras: VehicleExtras,
 }
 
-
 mod blocks;
 mod extras;
 mod parse;

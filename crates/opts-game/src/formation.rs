@@ -2,7 +2,6 @@
 //! control-protocol methods `formation.validate` and `formation.spawn`.
 //! Design: `docs/src/architecture/train-formation-editor.md`, ADR-0013.
 
-
 pub mod store;
 
 mod library;

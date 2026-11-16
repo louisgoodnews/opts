@@ -104,4 +104,3 @@ fn a_vehicle_that_is_not_in_the_catalogue_is_asked_about_and_none_goes_on_withou
         "the setup's own vehicle choice is left alone"
     );
 }
-

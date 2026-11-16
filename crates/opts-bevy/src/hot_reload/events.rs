@@ -11,7 +11,6 @@ mod messages;
 pub use classify::*;
 pub use messages::*;
 
-
 /// Counters and recent outcomes of the reload pipeline.
 #[derive(Resource, Debug, Default)]
 pub struct ReloadStats {

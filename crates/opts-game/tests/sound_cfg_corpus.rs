@@ -48,9 +48,9 @@ fn vehicle_files(dir: &Path, out: &mut Vec<PathBuf>) {
         }
     }
 }
-#[path = "sound_cfg_corpus/scenery.rs"]
-mod scenery;
 #[path = "sound_cfg_corpus/ai.rs"]
 mod ai;
 #[path = "sound_cfg_corpus/player.rs"]
 mod player;
+#[path = "sound_cfg_corpus/scenery.rs"]
+mod scenery;

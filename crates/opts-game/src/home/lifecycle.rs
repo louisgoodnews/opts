@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use crate::drive_history::DriveHistory;
 use crate::shell::banner::dismiss_banner;
 
-use super::{HomeDrives, HomeRoot, BANNER_EMPTY, BANNER_NO_OMSI, view};
+use super::{view, HomeDrives, HomeRoot, BANNER_EMPTY, BANNER_NO_OMSI};
 use crate::new_game_screen::types::GameCatalogue;
 
 /// Reads the remembered drives once at startup (the only writer is Home itself, which keeps the

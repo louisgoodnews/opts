@@ -1,5 +1,5 @@
-use super::*;
 use super::input::escape;
+use super::*;
 
 /// The headless app with every screen plugin and fixture resource, before any layout.
 fn screens_base(screen: Screen, w: u32, kind: ThemeKind, accent: AccentPreset) -> App {

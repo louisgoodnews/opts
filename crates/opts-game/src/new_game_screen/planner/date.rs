@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use opts_bevy::CalendarDate;
 
 use super::super::types::NewGameSetup;
-use crate::shell::calendar;
 use super::Field;
+use crate::shell::calendar;
 
 /// Number of days of a month.
 pub fn days_in_month(year: i32, month: u32) -> u32 {

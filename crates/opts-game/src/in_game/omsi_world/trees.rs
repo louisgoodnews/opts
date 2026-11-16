@@ -101,4 +101,3 @@ pub(super) fn spawn_tree(
     stats.objects_loaded += 1;
     Some(id)
 }
-

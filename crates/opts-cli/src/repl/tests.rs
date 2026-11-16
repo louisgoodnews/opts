@@ -1,6 +1,5 @@
 use super::{is_incomplete, split_words};
 
-
 #[test]
 fn words_split_like_a_shell() {
     assert_eq!(

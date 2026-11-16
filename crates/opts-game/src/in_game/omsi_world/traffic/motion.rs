@@ -17,7 +17,6 @@ const RETIRE_AFTER_S: f64 = 8.0;
 /// other vehicle.
 const RETIRE_FAR_M: f64 = 80.0;
 
-
 /// A scheduled vehicle that finished its run is removed when nobody is near enough to see it go.
 fn retire_scheduled(
     state: &mut TrafficState,

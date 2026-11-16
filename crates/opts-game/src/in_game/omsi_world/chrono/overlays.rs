@@ -9,7 +9,10 @@ impl WorldLoadJob {
     }
 
     /// The overlay a tile without a base file comes from.
-    pub(in crate::in_game::omsi_world) fn chrono_new_tile(&self, key: (i32, i32)) -> Option<PathBuf> {
+    pub(in crate::in_game::omsi_world) fn chrono_new_tile(
+        &self,
+        key: (i32, i32),
+    ) -> Option<PathBuf> {
         self.chrono.new_tiles.get(&key).cloned()
     }
 

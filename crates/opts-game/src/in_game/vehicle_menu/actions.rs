@@ -11,7 +11,6 @@ use config::config_action;
 mod pick;
 use pick::pick_action;
 
-
 /// What the action handlers of the menu read and change.
 struct MenuCtx<'a> {
     menu: &'a mut VehicleMenu,

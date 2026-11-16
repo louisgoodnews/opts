@@ -7,8 +7,8 @@ use super::*;
 mod gears;
 mod variables;
 pub use gears::{ai_engine_rpm, ai_gear};
-pub use variables::{level_of, publish_sound_variables, speed_of};
 pub(super) use variables::ai_loop;
+pub use variables::{level_of, publish_sound_variables, speed_of};
 
 /// The clip loader and the counters of the AI voices.
 #[derive(SystemParam)]

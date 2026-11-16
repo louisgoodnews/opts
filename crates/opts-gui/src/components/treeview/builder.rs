@@ -27,7 +27,6 @@ pub struct TreeviewBuilder {
     pub root_nodes: Vec<TreeNode>,
 }
 
-
 impl TreeviewBuilder {
     /// Creates a new empty treeview builder.
     pub fn new() -> Self {

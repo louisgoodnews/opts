@@ -36,7 +36,7 @@ mod verdict;
 
 use chip_parts::{ChipParts, ReasonQuery};
 
-pub use chip::{ScanChip, ScanChipIcon, ScanChipLabel, ScanChipReason, spawn_chip};
+pub use chip::{spawn_chip, ScanChip, ScanChipIcon, ScanChipLabel, ScanChipReason};
 pub use labels::{level_key, look, reason_key};
 pub use refresh::refresh_scan_chip;
 pub use verdict::{assess, folder_changed_since};

@@ -88,7 +88,6 @@ pub use api::*;
 mod apply;
 pub use apply::*;
 
-
 /// Applies animation and visibility to every animated mesh.
 pub fn vehicle_animation_system(
     time: Res<Time>,

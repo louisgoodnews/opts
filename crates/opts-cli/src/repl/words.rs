@@ -1,6 +1,5 @@
 //! Splitting of an input line into words and the completeness check of multi-line input.
 
-
 /// Splits a line into words, honouring `'single'` and `"double"` quotes and `\` escapes.
 #[must_use]
 pub fn split_words(line: &str) -> Vec<String> {

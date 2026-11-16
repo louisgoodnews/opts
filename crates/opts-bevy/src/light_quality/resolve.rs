@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// What the game asks for: the mode and, for [`LightMode::Custom`], the user's values.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LightQualityInput {

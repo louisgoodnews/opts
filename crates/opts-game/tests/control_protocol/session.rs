@@ -131,7 +131,7 @@ fn session_spawn_queues_a_request_and_validates_its_parameters() {
     let _ = std::fs::remove_dir_all(dir);
 }
 
-#[path = "session/switch.rs"]
-mod switch;
 #[path = "session/change_map.rs"]
 mod change_map;
+#[path = "session/switch.rs"]
+mod switch;

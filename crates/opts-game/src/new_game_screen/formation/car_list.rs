@@ -3,7 +3,10 @@
 use super::*;
 
 /// The title and the list of the cars that can be added.
-pub(super) fn spawn_car_list(commands: &mut Commands, catalogue: &GameCatalogue) -> (Entity, Entity) {
+pub(super) fn spawn_car_list(
+    commands: &mut Commands,
+    catalogue: &GameCatalogue,
+) -> (Entity, Entity) {
     let add_title = commands
         .spawn(keyed(
             "wiz-formation-add",

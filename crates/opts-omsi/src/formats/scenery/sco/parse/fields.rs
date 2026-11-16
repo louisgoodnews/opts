@@ -27,7 +27,11 @@ pub(in crate::formats::scenery::sco) fn parse_u32(
         })
 }
 
-pub(in crate::formats::scenery::sco) fn parse_u8(s: &str, field: &'static str, line: usize) -> Result<u8, SceneryParseError> {
+pub(in crate::formats::scenery::sco) fn parse_u8(
+    s: &str,
+    field: &'static str,
+    line: usize,
+) -> Result<u8, SceneryParseError> {
     s.trim()
         .parse::<u8>()
         .map_err(|_| SceneryParseError::InvalidNumber {

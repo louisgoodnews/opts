@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 
-use crate::components::{text_area::TextArea, text_field::M3TextField, toast::M3Toast};
 use super::A11yHidden;
+use crate::components::{text_area::TextArea, text_field::M3TextField, toast::M3Toast};
 use crate::interaction::tooltip::Tooltip;
 
 /// Visible text below `entity` (depth-first, joined by one space).

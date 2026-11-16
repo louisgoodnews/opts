@@ -2,7 +2,7 @@
 //! the log level, the scene trace, the texture filter and the developer panel.
 
 use bevy::prelude::*;
-use opts_gui::l10n::{LOCALE_ENV, Localization};
+use opts_gui::l10n::{Localization, LOCALE_ENV};
 
 use crate::look::{ActiveLook, Look};
 use crate::settings::GameSettings;

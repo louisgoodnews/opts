@@ -8,7 +8,7 @@ use crate::theme::theme::MaterialTheme;
 use crate::tokens::components::BorderRole;
 
 use super::{
-    FOCUS_RING_OFFSET, FOCUS_RING_WIDTH, FocusProxy, ForcedState, SavedBorderRole, StateLayerLink,
+    FocusProxy, ForcedState, SavedBorderRole, StateLayerLink, FOCUS_RING_OFFSET, FOCUS_RING_WIDTH,
 };
 use bevy::input_focus::InputFocusVisible;
 

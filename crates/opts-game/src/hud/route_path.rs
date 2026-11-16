@@ -31,8 +31,8 @@ mod path;
 mod scheduled;
 mod systems;
 pub use path::{path_between, PlayerRoutePath, RouteStop};
-pub use scheduled::ScheduledVehicles;
 use scheduled::update_scheduled_vehicles;
+pub use scheduled::ScheduledVehicles;
 use systems::update_route_path;
 
 /// Registers the route path.

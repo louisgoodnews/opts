@@ -51,7 +51,6 @@ pub const HOST_EVENTS: [&str; 1] = ["ev_ai_horn"];
 mod select;
 pub use select::{ai_sound_set, choose, host_event, is_ai_name, playable, supported_variable};
 
-
 /// One continuous sound of an AI vehicle, a child at its `[3d]` position.
 #[derive(Component, Debug, Clone)]
 pub struct AiVoice {

@@ -99,4 +99,3 @@ fn a_translation_in_the_mesh_frame_is_scaled_like_the_mesh_matrix() {
     let moved = animation_matrix_from_values(&anim.steps, &[1.0]).transform_point3(Vec3::ZERO);
     assert!((moved.length() - 0.8).abs() < 1e-4, "{moved:?}");
 }
-

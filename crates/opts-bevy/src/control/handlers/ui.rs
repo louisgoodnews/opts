@@ -31,9 +31,8 @@ pub fn register(r: &mut ControlRegistry) {
 mod actions;
 mod json;
 
-pub use json::*;
 use actions::*;
-
+pub use json::*;
 
 pub(super) fn tree(world: &mut World, params: &Value) -> Outcome {
     let visible_only = match opt_bool(params, "visible_only") {

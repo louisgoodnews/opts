@@ -49,7 +49,11 @@ impl FontBitmaps {
     }
 }
 
-pub(super) fn load_bitmaps(install: &OmsiInstall, dir: &Path, font: &OftFont) -> Result<FontBitmaps, String> {
+pub(super) fn load_bitmaps(
+    install: &OmsiInstall,
+    dir: &Path,
+    font: &OftFont,
+) -> Result<FontBitmaps, String> {
     let find = |name: &str| {
         install
             .find_in(dir, name)

@@ -68,4 +68,3 @@ pub(super) const IBIS: &str = "
 {trigger:ibis_8}\n(L.L.input) 10 * 8 + (S.L.input)\n{end}
 {trigger:ibis_9}\n(L.L.input) 10 * 9 + (S.L.input)\n{end}
 ";
-

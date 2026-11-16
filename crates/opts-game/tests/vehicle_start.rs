@@ -9,11 +9,11 @@ mod vehicle_rig;
 use opts_core::formats::vehicles::bus::BusManifest;
 use vehicle_rig::{click, load, run, start_with_setup, tap};
 
-#[path = "vehicle_start/starts.rs"]
-mod starts;
+#[path = "vehicle_start/census.rs"]
+mod census;
 #[path = "vehicle_start/census_tram.rs"]
 mod census_tram;
 #[path = "vehicle_start/controls_report.rs"]
 mod controls_report;
-#[path = "vehicle_start/census.rs"]
-mod census;
+#[path = "vehicle_start/starts.rs"]
+mod starts;

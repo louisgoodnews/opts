@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use opts_bevy::control::params::{opt_bool, opt_u64};
 use opts_bevy::control::state::Outcome;
 use opts_bevy::route::{select_route_on, RouteError, RouteSelection, VehicleRoute};
-use opts_bevy::VehicleScripts;
 use opts_bevy::PlayerVehicle;
+use opts_bevy::VehicleScripts;
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
@@ -24,7 +24,6 @@ fn describe(s: &RouteSelection, terminus_text: Option<String>) -> Value {
         "terminus": terminus_text,
     })
 }
-
 
 fn terminus_text(route: &VehicleRoute, s: &RouteSelection) -> Option<String> {
     route.handle.with(|st| {

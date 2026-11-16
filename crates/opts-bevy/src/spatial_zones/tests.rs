@@ -17,7 +17,9 @@ fn tunnel() -> SpatialZone {
 
 /// Feeds `n` samples of `advance_m` each in state `covered`, collecting the transitions.
 fn drive(t: &mut ZoneTracker, covered: bool, n: usize, advance_m: f32) -> Vec<Transition> {
-    (0..n).filter_map(|_| t.update(covered, advance_m)).collect()
+    (0..n)
+        .filter_map(|_| t.update(covered, advance_m))
+        .collect()
 }
 
 #[test]

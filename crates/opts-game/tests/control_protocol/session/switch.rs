@@ -71,4 +71,3 @@ fn session_despawn_and_respawn_work_on_active_and_inactive_vehicles() {
     assert_eq!(list["count"], 0);
     assert_eq!(list["place_label"], Value::Null);
 }
-

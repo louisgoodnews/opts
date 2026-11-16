@@ -33,7 +33,6 @@ pub use shaping::*;
 pub use style::*;
 use sync::*;
 
-
 /// Which of the two sky lights an entity is.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LightRole {

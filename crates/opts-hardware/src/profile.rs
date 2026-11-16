@@ -19,18 +19,6 @@ pub use infos::*;
 /// become `Unknown(not_probed)`, unknown fields are ignored).
 pub const SCHEMA_VERSION: u32 = 1;
 
-
-
-
-
-
-
-
-
-
-
-
-
 /// Everything the probe knows.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -99,6 +87,3 @@ impl std::fmt::Display for LoadError {
 }
 
 impl std::error::Error for LoadError {}
-
-
-

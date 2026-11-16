@@ -45,7 +45,6 @@ fn spawn_unit_roots(commands: &mut Commands, variant: &Variant, origin: Transfor
         .collect()
 }
 
-
 pub(crate) fn build_unit_models(
     (commands, job): (&mut Commands, &mut WorldLoadJob),
     (meshes, materials, images): (

@@ -4,7 +4,7 @@ use crate::settings_registry::descriptor::{
     Category as C, SettingDescriptor as D, SettingKind as K,
 };
 
-use super::enums::{MINIMAP_ORIENTATIONS, MINIMAP_ZOOM_MODES, MINIMAP_ZOOMS};
+use super::enums::{MINIMAP_ORIENTATIONS, MINIMAP_ZOOMS, MINIMAP_ZOOM_MODES};
 
 /// The on/off switches of the HUD widgets (`hud.<name>`), one per widget of the HUD registry
 /// (`crate::hud::widget::WIDGETS`); the hints widget uses the older `interface.hud_hints`.

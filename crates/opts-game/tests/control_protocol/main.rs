@@ -23,8 +23,6 @@ use opts_game::in_game::omsi_world::WorldStats;
 use opts_sim::vehicle::inputs::GearPosition;
 use serde_json::{json, Value};
 
-
-
 fn scratch(name: &str) -> PathBuf {
     let dir = PathBuf::from(std::env::var_os("HOME").expect("HOME"))
         .join(".local/share/opts/benchmark/control-protocol/test-scratch")
@@ -100,7 +98,6 @@ fn inputs(app: &mut App) -> (f32, f32, f32, GearPosition, bool) {
 }
 
 mod commands;
-
 
 mod drive;
 

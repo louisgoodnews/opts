@@ -19,9 +19,9 @@ use opts_traffic::SignalProgram;
 
 use super::WorldLoadJob;
 
-mod template;
-mod signal;
 mod finish;
+mod signal;
+mod template;
 
 /// A `.sco`'s script set, compiled once and forked per placed object.
 pub struct ScriptTemplate {
@@ -122,7 +122,6 @@ fn problems(diags: &[Diagnostic]) -> usize {
         .filter(|d| d.severity == Severity::Error || d.message.contains("not found"))
         .count()
 }
-
 
 /// Copies the session environment (date, time, sun, night, temperature) into the scenery
 /// runtime's [`SceneryClock`] (unless a host drives it: `follow_session == false`). Light

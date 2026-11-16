@@ -40,4 +40,3 @@ pub fn average_colour(src: &Path) -> Option<[u8; 3]> {
     }
     Some([(sum[0] / n) as u8, (sum[1] / n) as u8, (sum[2] / n) as u8])
 }
-

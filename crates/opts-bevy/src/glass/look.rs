@@ -4,7 +4,11 @@ use super::*;
 
 /// The glass look applied to `m`, from the values it had before. `texture` is the premultiplied
 /// copy of the colour texture, when there is one.
-pub(super) fn apply_look(m: &mut StandardMaterial, original: &GlassOriginal, texture: Option<Handle<Image>>) {
+pub(super) fn apply_look(
+    m: &mut StandardMaterial,
+    original: &GlassOriginal,
+    texture: Option<Handle<Image>>,
+) {
     m.perceptual_roughness = original.roughness.min(GLASS_ROUGHNESS);
     m.reflectance = original.reflectance.max(GLASS_REFLECTANCE);
     m.alpha_mode = AlphaMode::Premultiplied;

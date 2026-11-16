@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Facts every application has; the game adds app state, map and vehicle on top.
 #[must_use]
 pub fn base_state(world: &World) -> Map<String, Value> {

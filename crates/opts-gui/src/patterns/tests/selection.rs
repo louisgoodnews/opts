@@ -119,10 +119,9 @@ fn clicking_a_row_selects_it_and_marks_it_with_fill_and_marker() {
     };
     let w = app.world();
     assert!(w.get::<crate::interaction::state::Selected>(row).is_some());
-    assert!(
-        w.get::<crate::tokens::components::BackgroundRole>(row)
-            .is_some()
-    );
+    assert!(w
+        .get::<crate::tokens::components::BackgroundRole>(row)
+        .is_some());
     let kids = w.get::<Children>(row).expect("children");
     let marker = kids
         .iter()

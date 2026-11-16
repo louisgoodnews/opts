@@ -30,7 +30,9 @@ use bevy::prelude::*;
 
 use crate::mirrors::*;
 
-use cameras::{assign_free_cameras, pose_ambient_cameras, AmbientCameraItem, MainCameraAmbientFilter};
+use cameras::{
+    assign_free_cameras, pose_ambient_cameras, AmbientCameraItem, MainCameraAmbientFilter,
+};
 use candidates::collect_candidates;
 use panes::AmbientPaneItem;
 use pool::{restore_pane_material, sync_pool_capacity};

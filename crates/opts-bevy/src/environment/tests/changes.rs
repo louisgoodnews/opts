@@ -58,7 +58,6 @@ fn changes_bump_the_revision_and_follow_the_map_date() {
     assert_eq!(env.rate(), 1.0);
 }
 
-
 #[test]
 fn the_systems_tick_with_virtual_time_and_apply_changes() {
     let mut app = App::new();
@@ -90,4 +89,3 @@ fn the_systems_tick_with_virtual_time_and_apply_changes() {
     assert_eq!(got.len(), 1);
     assert_eq!(got[0].new, CalendarDate::new(1995, 1, 2));
 }
-

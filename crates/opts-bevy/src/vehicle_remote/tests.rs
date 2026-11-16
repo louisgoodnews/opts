@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 #[test]
 fn held_values_override_and_expire_in_simulation_time() {
     let mut remote = RemoteControls {

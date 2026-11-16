@@ -32,7 +32,11 @@ impl MapLightPool {
     }
 }
 
-pub(super) fn ensure_pool_capacity(commands: &mut Commands, pool: &mut MapLightPool, size: usize) -> bool {
+pub(super) fn ensure_pool_capacity(
+    commands: &mut Commands,
+    pool: &mut MapLightPool,
+    size: usize,
+) -> bool {
     if pool.slots.len() < size {
         for _ in pool.slots.len()..size {
             let light = commands

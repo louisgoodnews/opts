@@ -8,8 +8,8 @@ use super::input::{RegenSnapshot, SkyCubeInput};
 use super::policy::{exposure, should_regenerate};
 use super::texels::{cube_data, cube_image};
 use super::tuning::{BASE_INTENSITY, CUBE_SIZE};
-use crate::MainCamera;
 use crate::light_quality::{LightQuality, LightQualitySet};
+use crate::MainCamera;
 
 /// The one shared cube and when it was built.
 #[derive(Resource, Default)]

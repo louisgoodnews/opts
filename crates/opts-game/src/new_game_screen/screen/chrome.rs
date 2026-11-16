@@ -96,4 +96,3 @@ pub fn refresh_chrome(
         &mut commands,
     );
 }
-

@@ -31,4 +31,3 @@ impl ContentLoader<'_> {
         }
     }
 }
-

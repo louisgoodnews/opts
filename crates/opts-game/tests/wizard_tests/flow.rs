@@ -88,5 +88,5 @@ pub(super) fn choose_in_what(app: &mut App, id: &str) {
     }
 }
 
-mod vehicle;
 mod validation;
+mod vehicle;

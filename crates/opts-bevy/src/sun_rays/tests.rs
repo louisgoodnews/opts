@@ -1,9 +1,9 @@
 //! Unit tests of `sun_rays`.
 
 use super::*;
+use crate::light_quality::{LightQuality, Shafts};
 use bevy::camera::Hdr;
 use bevy::light::{FogVolume, VolumetricFog, VolumetricLight};
-use crate::light_quality::{LightQuality, Shafts};
 
 fn app(shafts: Shafts, night: bool) -> App {
     let mut app = App::new();

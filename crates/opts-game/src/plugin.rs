@@ -7,11 +7,11 @@ use opts_gui::prelude::*;
 use crate::app_state::AppState;
 use crate::settings::GameSettings;
 use crate::{
-    action_settings, help, home, hardware, in_game, look, map_profiles, menu, passengers, pause,
-    player_sound, route_progress, save, scenery_sound, session_summary, settings_registry,
-    settings_theme, shell, trip_start, ui_typography, vehicle_keys, vehicle_sound,
-    viewpoints, hud, theme_files, transition_to_main_menu, MenuCamera, InGamePlugin,
-    NewGameMenuPlugin, SettingsScreenPlugin,
+    action_settings, hardware, help, home, hud, in_game, look, map_profiles, menu, passengers,
+    pause, player_sound, route_progress, save, scenery_sound, session_summary, settings_registry,
+    settings_theme, shell, theme_files, transition_to_main_menu, trip_start, ui_typography,
+    vehicle_keys, vehicle_sound, viewpoints, InGamePlugin, MenuCamera, NewGameMenuPlugin,
+    SettingsScreenPlugin,
 };
 
 /// Root game plugin adding state machine, GUI engine, main menu, and stub screens.

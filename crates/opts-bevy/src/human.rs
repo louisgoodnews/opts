@@ -30,7 +30,6 @@ pub use pose::*;
 pub use seat::*;
 pub use spawn::*;
 
-
 /// The 13 canonical bones in joint-index order.
 pub const HUMAN_BONES: [&str; 13] = [
     "Hip", "Main", "Head", "OS_L", "OS_R", "US_L", "US_R", "OA_L", "OA_R", "UA_L", "UA_R",
@@ -107,7 +106,6 @@ pub struct AlignEyes {
     /// Frames to wait for the first transform propagation of the new hierarchy.
     pub wait: u8,
 }
-
 
 #[cfg(test)]
 mod tests;

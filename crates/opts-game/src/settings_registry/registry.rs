@@ -5,8 +5,8 @@ use std::collections::BTreeMap;
 use bevy::prelude::*;
 
 use super::{
-    Available, Category, ProfileScope, SettingDescriptor, SettingError, SettingValue,
-    SettingsCapabilities, builtin, normalize, value,
+    builtin, normalize, value, Available, Category, ProfileScope, SettingDescriptor, SettingError,
+    SettingValue, SettingsCapabilities,
 };
 use crate::settings::GameSettings;
 

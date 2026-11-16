@@ -4,7 +4,7 @@ use accesskit::{Role, Toggled};
 use bevy::a11y::AccessibilityNode;
 use bevy::prelude::*;
 
-use crate::ui_tree::{UiRole, label_of, role_of};
+use crate::ui_tree::{label_of, role_of, UiRole};
 
 use super::UiId;
 

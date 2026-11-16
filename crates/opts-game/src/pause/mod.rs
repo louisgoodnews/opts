@@ -79,16 +79,14 @@ pub enum PauseItem {
     Leave,
 }
 
-
 mod input;
 mod items;
 mod overlay;
 
-pub(crate) use overlay::{close_pause, spawn_overlay};
-use overlay::open_pause;
 pub use input::{pause_cancel, pause_input};
 pub use items::pause_items;
-
+use overlay::open_pause;
+pub(crate) use overlay::{close_pause, spawn_overlay};
 
 mod leave;
 pub use leave::{

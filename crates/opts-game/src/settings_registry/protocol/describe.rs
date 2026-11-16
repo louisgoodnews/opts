@@ -30,7 +30,10 @@ pub(in crate::settings_registry) fn kind_name(k: &SettingKind) -> &'static str {
     }
 }
 
-pub(in crate::settings_registry) fn describe(d: &SettingDescriptor, value: Option<String>) -> Value {
+pub(in crate::settings_registry) fn describe(
+    d: &SettingDescriptor,
+    value: Option<String>,
+) -> Value {
     let options: Vec<&str> = match d.kind {
         SettingKind::Enum(o) => o.iter().map(|o| o.value).collect(),
         _ => Vec::new(),

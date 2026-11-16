@@ -5,7 +5,9 @@ use bevy::prelude::*;
 use crate::in_game::omsi_world::CameraSetup;
 
 use super::store::SessionVehicles;
-use super::types::{DespawnReason, Lifecycle, SessionVehicleRecord, SpawnParams, SpawnPoint, VehicleId};
+use super::types::{
+    DespawnReason, Lifecycle, SessionVehicleRecord, SpawnParams, SpawnPoint, VehicleId,
+};
 
 impl SessionVehicles {
     fn new_record(&mut self, params: SpawnParams, lifecycle: Lifecycle) -> VehicleId {

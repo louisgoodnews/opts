@@ -18,7 +18,6 @@
 use bevy::prelude::*;
 use opts_core::formats::scenery::ScoLight;
 
-
 mod spawn;
 mod system;
 

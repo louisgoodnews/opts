@@ -4,7 +4,7 @@
 //! use it); the [`Focused`] marker mirrors it so queries stay simple, and either side may write:
 //! [`sync_input_focus`] reconciles them every frame. Move focus with [`FocusEvent`].
 
-use bevy::input_focus::{InputFocus, tab_navigation::TabIndex};
+use bevy::input_focus::{tab_navigation::TabIndex, InputFocus};
 use bevy::prelude::*;
 
 use crate::actions::ActionInput;

@@ -51,7 +51,6 @@ pub use components::*;
 pub use convert::*;
 pub use sync::*;
 
-
 /// Converts an OMSI vehicle camera preset into a native Bevy [`Transform`].
 ///
 /// In OMSI camera definitions (`[add_camera_driver]`, `[add_camera_pax]`):

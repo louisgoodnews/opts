@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 
+use super::ListRow;
 use crate::components::{
     checkbox::M3Checkbox,
     combobox::{ComboboxHeader, ComboboxMenuItem},
@@ -14,7 +15,6 @@ use crate::components::{
     toast::M3Toast,
     treeview::{M3TreeNode, M3Treeview},
 };
-use super::ListRow;
 use crate::interaction::focus::{FocusRegion, Focusable};
 
 /// What an element is, in the vocabulary of the control protocol (ARIA-like).

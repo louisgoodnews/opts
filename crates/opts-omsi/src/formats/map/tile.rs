@@ -87,8 +87,8 @@ mod attached;
 mod spline;
 
 pub use attached::{MapAttachedObject, MapSplineAttachment, RepeaterLink};
-pub use spline::{spline_height_offset, MapSplineInstance};
 use spline::spline_end_pose;
+pub use spline::{spline_height_offset, MapSplineInstance};
 
 mod attachment;
 mod parse;

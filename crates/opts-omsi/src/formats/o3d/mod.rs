@@ -21,8 +21,8 @@ pub use chunks::{
 pub use error::{O3dParseError, Result};
 pub use header::Header;
 pub use index::{parse_face_chunk, Face, FACE_STRIDE_16BIT, FACE_STRIDE_32BIT};
-pub use material::{parse_material_chunk, Material, MATERIAL_FIXED_BYTES};
 pub use layout::VertexLayout;
+pub use material::{parse_material_chunk, Material, MATERIAL_FIXED_BYTES};
 pub use parse::parse;
 pub use vertex::{parse_vertex_chunk, Vertex, VERTEX_STRIDE};
 

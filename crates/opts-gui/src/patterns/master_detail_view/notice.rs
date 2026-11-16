@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
+use super::chrome::set_if;
 use crate::components::text_field::M3TextField;
 use crate::l10n::{wizard_keys::md, L10nArgs, L10nKey, Localization};
-use super::chrome::set_if;
 use crate::patterns::master_detail::{MasterDetail, MasterDetailView};
 
 pub(super) fn update_notice(

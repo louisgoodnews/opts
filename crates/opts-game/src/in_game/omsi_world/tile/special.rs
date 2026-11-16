@@ -43,7 +43,9 @@ pub(super) fn special_object(
         super::super::trace::skip_record();
         if !is_marker {
             if matches!(placement, Placement::Tile) {
-                super::super::traffic::register_parked_object(job, commands, key, origin, &replaced);
+                super::super::traffic::register_parked_object(
+                    job, commands, key, origin, &replaced,
+                );
             }
             spawn_object(
                 (job, stats, commands),

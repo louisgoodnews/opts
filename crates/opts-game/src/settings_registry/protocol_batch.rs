@@ -14,9 +14,9 @@ pub(crate) use export::{diff, export};
 
 use bevy::prelude::*;
 use opts_cli::protocol::RpcError;
-use serde_json::{Value};
+use serde_json::Value;
 
-use super::protocol::{text_of};
+use super::protocol::text_of;
 use super::{
     apply_change_with, normalize, Apply, ChangeSource, SettingKind, SettingsCapabilities,
     SettingsRegistry,

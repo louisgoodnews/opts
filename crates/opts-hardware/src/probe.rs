@@ -18,10 +18,10 @@ use crate::profile::{
     InputInfo, MemoryInfo, OsFamily, OsInfo, StorageClass, StorageInfo, SCHEMA_VERSION,
 };
 
-mod system;
 mod devices;
-use system::*;
+mod system;
 use devices::*;
+use system::*;
 
 /// Every ISA feature name the probe may report (x86_64 and aarch64).
 pub const ISA_FEATURES: &[&str] = &[
@@ -41,18 +41,6 @@ pub const GPU_FEATURES: &[&str] = &[
     "float32_filterable",
     "ray_query",
 ];
-
-
-
-
-
-
-
-
-
-
-
-
 
 /// Probes this machine with the default budget and no renderer data.
 #[must_use]

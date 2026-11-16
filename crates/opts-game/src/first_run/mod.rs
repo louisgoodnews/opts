@@ -24,12 +24,12 @@ use crate::home::{HomeDrives, StartDrive};
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup};
 
 pub use adopt::adopt_root;
-pub use decision::{ChooseError, StartupDecision, StartupFacts, check_choice, decide};
+pub use decision::{check_choice, decide, ChooseError, StartupDecision, StartupFacts};
 pub use picker::{
-    FolderOpener, FolderPicker, OmsiFolderChosen, choose_omsi_folder, poll_folder_pick,
+    choose_omsi_folder, poll_folder_pick, FolderOpener, FolderPicker, OmsiFolderChosen,
 };
 pub use state::{FirstRun, Step};
-pub use welcome::{FirstRunOut, close_welcome_on_leaving_home, first_run_choices, welcome_system};
+pub use welcome::{close_welcome_on_leaving_home, first_run_choices, welcome_system, FirstRunOut};
 
 /// Tag of the first-run dialogs.
 pub const DIALOG_TAG: &str = "first-run";

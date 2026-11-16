@@ -64,9 +64,9 @@ mod helpers;
 mod keys;
 mod pointer;
 
+use helpers::{check_modal_scope, check_usable, nearest_id, node_of, not_found};
 pub use helpers::{is_displayed, is_inside, open_modals};
+use keys::key;
 pub use keys::type_text;
 pub use pointer::move_cursor;
-use helpers::{check_modal_scope, check_usable, nearest_id, node_of, not_found};
-use keys::key;
 use pointer::{drag, hover};

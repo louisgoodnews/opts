@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Bounding box of the player vehicle in its own frame (Bevy axes), from its mesh bounds.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct VehicleFootprint {

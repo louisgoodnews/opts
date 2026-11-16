@@ -1,6 +1,5 @@
 //! Import and export directions of a pack.
 
-
 /// Writing direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Direction {

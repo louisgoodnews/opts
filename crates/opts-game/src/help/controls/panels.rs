@@ -2,11 +2,11 @@
 
 use bevy::prelude::KeyCode;
 
-use super::Group;
 use super::table::{
-    CAMERA, DEV, DOOR_CAMERA, EGO, FULLMAP, HELP, MINIMAP, PAUSE, QUICK_SAVE, SESSION, SIM_PAUSE,
-    THEME, VIRTUAL_MIRRORS, bind, rebindable,
+    bind, rebindable, CAMERA, DEV, DOOR_CAMERA, EGO, FULLMAP, HELP, MINIMAP, PAUSE, QUICK_SAVE,
+    SESSION, SIM_PAUSE, THEME, VIRTUAL_MIRRORS,
 };
+use super::Group;
 use crate::shell::keys;
 
 pub(super) const CAMERA_GROUP: Group = (

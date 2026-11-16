@@ -86,4 +86,3 @@ mod conditions_tests;
 mod fog_tests;
 
 mod look_tests;
-

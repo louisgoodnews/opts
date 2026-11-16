@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use opts_bevy::CalendarDate;
 
-use crate::shell::calendar;
 use super::TimeSource;
+use crate::shell::calendar;
 
 /// What a map's `global.cfg` says about its time: `[years]` and `[realyearoffset]`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

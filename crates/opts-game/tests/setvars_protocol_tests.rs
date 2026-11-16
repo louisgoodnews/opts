@@ -66,7 +66,7 @@ fn custom(app: &App, name: &str) -> Option<i32> {
         .copied()
 }
 
-#[path = "setvars_protocol_tests/listing.rs"]
-mod listing;
 #[path = "setvars_protocol_tests/batch.rs"]
 mod batch;
+#[path = "setvars_protocol_tests/listing.rs"]
+mod listing;

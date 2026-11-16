@@ -74,7 +74,6 @@ pub fn out(text: &str) {
     let _ = writeln!(std::io::stdout(), "{text}");
 }
 
-
 /// Runs one command from words and prints the outcome; returns the process exit code.
 pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
     let Some((method, rest)) = split_method(words) else {

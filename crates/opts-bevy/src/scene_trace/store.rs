@@ -20,7 +20,6 @@ mod writer;
 pub(super) use paths::*;
 pub use status::*;
 
-
 /// Records kept in memory; more are written to the file only.
 pub const MAX_MEMORY_RECORDS: usize = 150_000;
 /// Default size cap of one JSONL file.
@@ -107,4 +106,3 @@ impl Store {
         self.open_file_if_ready();
     }
 }
-

@@ -5,7 +5,9 @@
 
 use bevy::prelude::*;
 
-use crate::theme::{color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale};
+use crate::theme::{
+    color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
+};
 
 mod color_sync;
 mod shape_sync;
@@ -117,7 +119,6 @@ pub struct RadiusToken(pub RadiusLevel);
 /// ```
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ElevationToken(pub ElevationLevel);
-
 
 #[cfg(test)]
 mod tests;

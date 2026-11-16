@@ -2,9 +2,9 @@
 //! counted while it runs, the global settings restored and the metrics written when it ends
 //! (`docs/src/architecture/map-profiles.md` §3.2 and §4.4).
 
-use bevy::prelude::*;
 use super::profile::{MapKey, MapProfile};
 use super::store::{ProfileSource, ProfileStore};
+use bevy::prelude::*;
 
 mod apply;
 mod finish;

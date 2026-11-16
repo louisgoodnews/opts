@@ -61,11 +61,13 @@ pub struct WorldLoadJob {
     /// Parsed sound configurations by file (`None`: unreadable).
     pub(super) sound_cfgs: HashMap<PathBuf, Option<Arc<opts_core::formats::sound::SoundConfig>>>,
     /// `[crossing_heightdeformation]` base surfaces by file.
-    pub(super) crossing_bases: HashMap<PathBuf, Option<Arc<opts_core::formats::scenery::BaseSurface>>>,
+    pub(super) crossing_bases:
+        HashMap<PathBuf, Option<Arc<opts_core::formats::scenery::BaseSurface>>>,
     /// Ground faces of crossings and surface objects by `.sco` (mesh axes), for the carve.
     pub(super) ground_faces: HashMap<PathBuf, crossing::ObjectFaces>,
     /// The `[object]`s of tiles read for the carve of their neighbours.
-    pub(super) tile_objects: HashMap<(i32, i32), Arc<Vec<opts_core::formats::map::MapObjectInstance>>>,
+    pub(super) tile_objects:
+        HashMap<(i32, i32), Arc<Vec<opts_core::formats::map::MapObjectInstance>>>,
     /// The drawn ground surfaces of each tile (its splines' ribbons and its crossings' faces) in
     /// the tile's own frame, kept for the carve of the tile and its eight neighbours: one
     /// computation per tile instead of nine (M-0089 step 2). Pruned to the resident tiles'

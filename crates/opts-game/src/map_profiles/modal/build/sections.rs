@@ -106,7 +106,6 @@ pub(super) fn advice_section(p: &mut ChildSpawnerCommands, loc: &Localization, v
     }
 }
 
-
 /// *Apply*, *Apply and keep*, *Delete* and *Cancel*.
 pub(super) fn apply_buttons(p: &mut ChildSpawnerCommands, loc: &Localization) {
     p.spawn(Node {

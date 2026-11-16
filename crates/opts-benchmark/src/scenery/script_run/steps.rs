@@ -1,7 +1,7 @@
 //! One scenario step: placing the object afresh, advancing the runtime, and capturing a state.
 
-use super::*;
 use super::types::Handles;
+use super::*;
 
 use super::probing::probe;
 

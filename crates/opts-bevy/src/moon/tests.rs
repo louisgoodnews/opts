@@ -39,4 +39,3 @@ fn solve(reference: f64, target: f64) -> f64 {
 mod light;
 mod phases;
 mod sky;
-

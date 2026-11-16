@@ -20,6 +20,7 @@ pub mod action_keys;
 pub mod ai_variables;
 pub mod articulation;
 pub mod audio;
+pub mod bloom;
 pub mod bus_stops;
 pub mod cab_switch;
 pub mod camera;
@@ -39,7 +40,6 @@ pub mod human;
 pub mod install;
 pub mod instancing;
 pub mod light_cones;
-pub mod bloom;
 pub mod light_quality;
 pub mod light_rooms;
 pub mod loader;
@@ -87,7 +87,6 @@ pub mod weather;
 mod reexports;
 
 pub use reexports::*;
-
 
 /// System set of the rail-bound player's track step: runs after the road physics and before the
 /// articulation of the following units.

@@ -22,7 +22,6 @@ use board::{board_unseen, send_everybody_home};
 use doors::read_doors;
 use walk::walk_to_doors;
 
-
 /// The queries and resources the passengers' systems share.
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct PassengerEnv<'w, 's> {
@@ -40,9 +39,6 @@ pub struct PassengerEnv<'w, 's> {
 mod stop;
 
 use stop::{arrive_at_stop, leave_stop, spawn_forced_group};
-
-
-
 
 /// What a vehicle's passengers are driven from.
 type RigRow = (

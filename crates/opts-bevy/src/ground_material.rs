@@ -114,7 +114,6 @@ mod array;
 
 pub use array::*;
 
-
 /// Builds the extension for one tile from its slots (slot 0 is the base; at most
 /// [`MAX_TILE_LAYERS`] are used, `masks` holds one array layer per slot).
 #[must_use]

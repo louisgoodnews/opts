@@ -15,11 +15,11 @@
 
 use std::path::{Path, PathBuf};
 
+use opts_l10n::builtin;
 use opts_l10n::check::{self, Issue, Reference, Severity};
 use opts_l10n::fluent::{self, Table};
 use opts_l10n::interchange::{self, ExportOptions};
 use opts_l10n::pack::{self, Direction, PackMeta};
-use opts_l10n::builtin;
 
 /// What a command produced.
 #[derive(Debug, Default)]
@@ -44,7 +44,6 @@ impl Output {
 
 /// The usage text.
 pub const USAGE: &str = "usage: opts-tools l10n export --lang <code> [--format json|ftl] [--pack <dir>] [--missing] [--out <path>]\n       opts-tools l10n check <pack dir|file.json|file.ftl> [--lang <code>] [--json] [--strict] [--min-percent N]\n       opts-tools l10n new <code> [--name N] [--native-name N] [--author A] [--root <dir>] [--force]\n       opts-tools l10n import <file.json> [--root <dir>] [--force] [--lenient]\n       opts-tools l10n stats [--root <dir>] [--json]";
-
 
 /// Runs `opts-tools l10n <args>`.
 #[must_use]

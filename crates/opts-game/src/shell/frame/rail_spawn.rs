@@ -80,9 +80,7 @@ pub(super) fn spawn_rail(commands: &mut Commands, registry: &ScreenRegistry) -> 
     rail
 }
 
-
 fn spawn_registered(rail: &mut ChildSpawnerCommands, d: &ScreenDescriptor) {
     let entry = spawn_entry(rail, d.icon, d.title_key, format!("shell.nav.{}", d.id));
     rail.commands().entity(entry).insert(RailItem { id: d.id });
 }
-

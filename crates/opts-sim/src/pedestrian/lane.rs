@@ -5,7 +5,9 @@ mod object;
 mod spline;
 
 pub use model::{FootLane, Gate, Travel};
-pub use object::{lanes_from_object, lanes_from_object_of_type, lanes_from_points_object, SCO_STRAIGHT_RADIUS};
+pub use object::{
+    lanes_from_object, lanes_from_object_of_type, lanes_from_points_object, SCO_STRAIGHT_RADIUS,
+};
 pub use spline::{lanes_from_spline, lanes_of_kind};
 
 /// Path type of pedestrians in `[path]` records.

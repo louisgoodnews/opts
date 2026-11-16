@@ -6,10 +6,10 @@ mod alpha;
 mod light;
 mod transmap;
 
-pub use light::compose_light;
 pub(super) use alpha::compose_alpha;
-pub use transmap::{transmap_glass_rgba, TRANSMAP_OPAQUE, TRANSMAP_SPLIT_SHARE};
+pub use light::compose_light;
 pub(super) use transmap::transmap_glass;
+pub use transmap::{transmap_glass_rgba, TRANSMAP_OPAQUE, TRANSMAP_SPLIT_SHARE};
 
 /// Texture override for one `.o3d` material slot (from `[matl]` in `.sco` or `model.cfg`).
 #[derive(Debug, Clone, PartialEq)]

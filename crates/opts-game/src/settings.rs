@@ -146,6 +146,5 @@ impl Default for GameSettings {
     }
 }
 
-
 #[cfg(test)]
 mod tests;

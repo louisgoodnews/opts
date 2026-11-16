@@ -10,7 +10,6 @@ use opts_gui::theme::{
 use crate::settings::GameSettings;
 
 impl GameSettings {
-
     /// The time the light theme starts in the auto mode (the default when unreadable).
     pub fn light_from(&self) -> NaiveTime {
         parse_time(&self.auto_light_from).unwrap_or(DEFAULT_LIGHT_FROM)

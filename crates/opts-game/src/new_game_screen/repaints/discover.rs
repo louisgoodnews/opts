@@ -4,11 +4,11 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use opts_bevy::OmsiInstall;
-use opts_core::formats::vehicles::BusManifest;
 use opts_core::formats::vehicles::model::ModelConfig;
+use opts_core::formats::vehicles::BusManifest;
 
-use super::VehicleRepaints;
 use super::model::add_model_repaints;
+use super::VehicleRepaints;
 use crate::new_game_screen::types::VehicleItem;
 
 /// The first folder below `Vehicles` of a vehicle file or folder (the vendor's family folder).

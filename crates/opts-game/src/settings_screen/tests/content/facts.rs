@@ -14,16 +14,17 @@ fn the_content_page_builds_within_a_frame_and_fills_in_when_the_facts_arrive() {
         "content",
         Arc::new(SlowFacts(Duration::from_millis(1500))),
     );
-    let keys = |app: &mut App| -> Vec<(super::super::super::info::ContentLine, &'static str, String)> {
-        let mut q = app.world_mut().query::<(
-            &super::super::super::info::ContentLine,
-            &opts_gui::l10n::L10nKey,
-            &opts_gui::l10n::L10nArgs,
-        )>();
-        q.iter(app.world())
-            .map(|(l, k, a)| (*l, k.0, format!("{:?}", a.0)))
-            .collect()
-    };
+    let keys =
+        |app: &mut App| -> Vec<(super::super::super::info::ContentLine, &'static str, String)> {
+            let mut q = app.world_mut().query::<(
+                &super::super::super::info::ContentLine,
+                &opts_gui::l10n::L10nKey,
+                &opts_gui::l10n::L10nArgs,
+            )>();
+            q.iter(app.world())
+                .map(|(l, k, a)| (*l, k.0, format!("{:?}", a.0)))
+                .collect()
+        };
     assert!(
         started.elapsed() < Duration::from_millis(1500),
         "building the page waited for the facts"

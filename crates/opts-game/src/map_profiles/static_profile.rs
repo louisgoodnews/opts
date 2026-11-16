@@ -47,7 +47,6 @@ impl StaticProfile {
     }
 }
 
-
 /// The static profiles counted so far, by map id.
 #[derive(Resource)]
 pub struct StaticProfiles {

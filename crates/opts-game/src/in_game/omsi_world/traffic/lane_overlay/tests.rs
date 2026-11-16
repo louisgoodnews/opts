@@ -31,8 +31,14 @@ fn a_successor_arrow_runs_from_the_end_of_a_lane_to_the_start_of_the_next() {
     let graph = two_lanes();
     let succ = graph.successors(LaneId(0));
     assert!(succ.contains(&LaneId(1)), "{succ:?}");
-    let (a, b) = successor_arrow(graph.lane(LaneId(0)).unwrap(), graph.lane(LaneId(1)).unwrap());
-    assert!(a.distance(b) < 0.5, "a joined pair leaves a short arrow: {a:?} {b:?}");
+    let (a, b) = successor_arrow(
+        graph.lane(LaneId(0)).unwrap(),
+        graph.lane(LaneId(1)).unwrap(),
+    );
+    assert!(
+        a.distance(b) < 0.5,
+        "a joined pair leaves a short arrow: {a:?} {b:?}"
+    );
 }
 
 #[test]
@@ -49,8 +55,5 @@ fn the_status_line_shows_both_layers_and_their_keys() {
         lanes: true,
         agent_ids: false,
     };
-    assert_eq!(
-        layer_status(&o),
-        "[F11 lanes on | Shift+F11 agent ids off]"
-    );
+    assert_eq!(layer_status(&o), "[F11 lanes on | Shift+F11 agent ids off]");
 }

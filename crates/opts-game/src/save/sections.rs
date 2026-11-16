@@ -26,8 +26,11 @@ use crate::session_vehicles::{SAVE_SECTION, SAVE_SECTION_VERSION};
 mod session;
 mod vehicles;
 
-use session::{session_check, session_capture, session_prepare, weather_capture, weather_prepare};
-use vehicles::{active_apply, active_capture, vehicles_apply, vehicles_capture, vehicles_check, vehicles_migrate};
+use session::{session_capture, session_check, session_prepare, weather_capture, weather_prepare};
+use vehicles::{
+    active_apply, active_capture, vehicles_apply, vehicles_capture, vehicles_check,
+    vehicles_migrate,
+};
 
 pub(super) fn parse<T: for<'de> Deserialize<'de>>(data: &Value, what: &str) -> Result<T, String> {
     serde_json::from_value(data.clone()).map_err(|e| format!("{what}: {e}"))
@@ -67,8 +70,6 @@ pub fn resolve_bus_file(
 
 pub use super::sections_time::TimeData;
 use super::sections_time::{time_apply, time_capture, time_prepare};
-
-
 
 pub fn register(app: &mut App) {
     let base = SaveSection {

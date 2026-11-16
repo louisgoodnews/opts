@@ -25,14 +25,13 @@ mod hybrid_tests;
 #[cfg(test)]
 mod tests;
 
-pub use frame::FrameBudget;
-pub use spread::Spread;
 pub use cap::{over_cap, resident_cap};
+pub use frame::FrameBudget;
 pub use motion::Motion;
+pub use spread::Spread;
 pub use wanted::{
     chebyshev, evictable, priority, priority_weighted, wanted_tiles, wanted_tiles_weighted, Frame,
 };
 
 /// Integer tile key `(x, y)`; `y` grows north.
 pub type TileKey = (i32, i32);
-

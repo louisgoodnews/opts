@@ -9,7 +9,6 @@ mod assign;
 
 use assign::{assign_pool, grow_pool, shining_headlights};
 
-
 /// A vehicle keeps its spot light until it is this much farther than the nearest one without.
 pub const HEADLIGHT_HYSTERESIS: f32 = 1.25;
 /// Range (m) and intensity (lumens) of a pooled headlight.

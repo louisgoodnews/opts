@@ -1,6 +1,6 @@
 //! The time of the plan: the quick-time presets and the date and time steppers.
 
-use crate::new_game_screen::planner::{Field, QUICK_TIMES, quick_time_of, step_field};
+use crate::new_game_screen::planner::{quick_time_of, step_field, Field, QUICK_TIMES};
 
 use super::Env;
 

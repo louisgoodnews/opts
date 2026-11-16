@@ -4,13 +4,13 @@
 use bevy::prelude::*;
 use opts_bevy::audio::{Distance, SoundBus, SoundEmitter};
 use opts_bevy::control::params::{opt_bool, opt_f64, opt_str, str_param};
-use opts_bevy::control::state::{Outcome};
+use opts_bevy::control::state::Outcome;
 use opts_bevy::control::PathPolicy;
 use opts_bevy::PcmClip;
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
-use crate::audio_content::{ClipCache};
+use crate::audio_content::ClipCache;
 
 use super::{bus_name, ProtocolSound};
 

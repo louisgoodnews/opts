@@ -64,4 +64,3 @@ fn joints_inside_a_unit_are_the_leaders_rear_and_the_followers_front() {
     let (b, fr) = plan.followers[0].joint.expect("joint");
     assert_eq!((b.y, fr.y), (-12.0, 10.0));
 }
-

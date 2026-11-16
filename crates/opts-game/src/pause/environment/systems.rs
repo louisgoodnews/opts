@@ -2,8 +2,8 @@
 
 use super::*;
 mod refresh;
-pub use refresh::{refresh_environment_page, resume_after_rebuild};
 pub(crate) use refresh::resume_drive;
+pub use refresh::{refresh_environment_page, resume_after_rebuild};
 
 fn close(
     commands: &mut Commands,
@@ -91,7 +91,6 @@ pub fn environment_page_input(
         }
     }
 }
-
 
 /// Registers the page.
 pub fn build(app: &mut App) {

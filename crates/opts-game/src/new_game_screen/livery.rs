@@ -15,4 +15,4 @@ mod section;
 mod state;
 pub use fill::{fill_liveries, fill_options};
 pub use section::spawn_livery_section;
-pub use state::{poll_liveries, request, LiveryBox, LiverySwatch, LiveryState, OptionsBox};
+pub use state::{poll_liveries, request, LiveryBox, LiveryState, LiverySwatch, OptionsBox};

@@ -15,8 +15,8 @@ use super::WorldLoadJob;
 
 mod groups;
 pub(super) use groups::*;
-mod traits;
 mod load;
+mod traits;
 use load::load_unit;
 mod couple;
 use couple::{attach, front_door_y, measure_script};

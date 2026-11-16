@@ -1,13 +1,13 @@
 //! The key of a drive: the map folder, the Chrono entries active on its date, and what names the map.
 
-use std::path::PathBuf;
-use bevy::ecs::system::SystemParam;
-use bevy::prelude::*;
-use opts_core::formats::chrono::{ChronoDate, ChronoSet};
 use super::super::profile::MapKey;
 use crate::app::AppArgs;
 use crate::new_game_screen::planner::setup_date;
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup};
+use bevy::ecs::system::SystemParam;
+use bevy::prelude::*;
+use opts_core::formats::chrono::{ChronoDate, ChronoSet};
+use std::path::PathBuf;
 
 /// The folder of the chosen map, from the command line or the OMSI installation.
 fn map_dir(

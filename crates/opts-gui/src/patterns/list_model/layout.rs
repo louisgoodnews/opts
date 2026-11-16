@@ -2,7 +2,7 @@
 
 use std::ops::Range;
 
-use super::{MAX_ROW_ENTITIES, OVERSCAN, Row};
+use super::{Row, MAX_ROW_ENTITIES, OVERSCAN};
 
 /// Row positions of a flattened list: prefix sums of the row heights.
 #[derive(Debug, Clone, Default, PartialEq)]

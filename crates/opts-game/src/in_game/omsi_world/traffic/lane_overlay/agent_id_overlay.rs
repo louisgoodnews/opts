@@ -6,8 +6,8 @@ use bevy::math::DVec2;
 use bevy::prelude::*;
 use opts_bevy::MainCamera;
 
-use super::lanes::{bevy_point, session_xy};
 use super::super::TrafficState;
+use super::lanes::{bevy_point, session_xy};
 use super::LaneOverlay;
 use crate::in_game::omsi_world::WorldStats;
 use crate::in_game::types::InGameEntity;

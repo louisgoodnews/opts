@@ -15,14 +15,14 @@ use super::metrics::{self, ExpectedMasks, Matte};
 use super::preflight::{self, Preflight};
 use super::verdict::{decide, Evidence};
 use super::worker::Harness;
-use diagnostics::settle_object;
-use placement::{frame, placements};
-use base_record::base_record;
-use judging::judge;
-use script_job::{run_scripts, ScriptJob};
 use super::{
     diag, images, script_check, script_run, Audio, ObjectEntry, Record, Tags, TextCheck, Timing,
 };
+use base_record::base_record;
+use diagnostics::settle_object;
+use judging::judge;
+use placement::{frame, placements};
+use script_job::{run_scripts, ScriptJob};
 
 mod analysis;
 pub use analysis::Analysis;

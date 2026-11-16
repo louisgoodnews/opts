@@ -46,7 +46,11 @@ pub(super) fn articulated_segment(
 }
 
 /// The unit's load, and the running masses of the chain updated with it.
-pub(super) fn account_load(st: &mut ChainState, part: &PlannedPart, rail: bool) -> opts_sim::UnitLoad {
+pub(super) fn account_load(
+    st: &mut ChainState,
+    part: &PlannedPart,
+    rail: bool,
+) -> opts_sim::UnitLoad {
     let manifest = &part.manifest;
     // Road trailers assume the mass of the unit in front when they state none; rail cars
     // (bogies, joints and couplers are vehicles of their own and state 0) add what they state.

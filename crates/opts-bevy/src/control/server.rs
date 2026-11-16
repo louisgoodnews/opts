@@ -3,9 +3,9 @@
 
 use std::net::{IpAddr, SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{Sender, SyncSender};
 #[cfg(test)]
 use std::sync::mpsc;
+use std::sync::mpsc::{Sender, SyncSender};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -18,9 +18,9 @@ mod limiter;
 
 #[cfg(test)]
 use self::auth::constant_time_eq;
+use self::connection::serve_connection;
 #[cfg(test)]
 use self::limiter::Limiter;
-use self::connection::serve_connection;
 
 /// Capacity of the command queue.
 pub const QUEUE_CAPACITY: usize = 1024;

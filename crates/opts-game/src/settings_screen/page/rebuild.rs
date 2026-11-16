@@ -91,6 +91,5 @@ fn spawn_notice(commands: &mut Commands, pane: Entity, notice: Option<&str>) {
 mod categories;
 mod light;
 use categories::{spawn_category, spawn_category_buttons, spawn_search_results};
-use light::light_section;
 pub use light::level_key;
-
+use light::light_section;

@@ -1,6 +1,5 @@
 //! Typing into a text field, choosing from a list or combobox and switching toggles (`ui.text`, `ui.select`, `ui.toggle`).
 
-
 mod select;
 mod select_list;
 mod text;

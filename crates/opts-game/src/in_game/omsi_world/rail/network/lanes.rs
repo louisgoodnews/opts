@@ -96,7 +96,10 @@ pub(in crate::in_game::omsi_world) fn register_bike_tile(
 }
 
 /// Removes an unloaded tile's cycle-path lanes.
-pub(in crate::in_game::omsi_world) fn unregister_bike_tile(commands: &mut Commands, key: (i32, i32)) {
+pub(in crate::in_game::omsi_world) fn unregister_bike_tile(
+    commands: &mut Commands,
+    key: (i32, i32),
+) {
     commands.queue(move |world: &mut World| {
         if let Some(mut net) = world.get_resource_mut::<BikeNetwork>() {
             net.0.remove_tile(key);

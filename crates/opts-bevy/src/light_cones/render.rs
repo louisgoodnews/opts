@@ -10,7 +10,6 @@ pub use assets::*;
 pub use material::*;
 pub use mesh::*;
 
-
 /// The cone material, its shader and the systems that give cones their mesh. Needs the render
 /// app; the game adds it next to the ground material.
 #[derive(Default)]

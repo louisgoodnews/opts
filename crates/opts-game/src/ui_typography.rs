@@ -13,11 +13,11 @@
 mod choices;
 mod fonts;
 
-pub use fonts::read_font_files;
 use choices::{list_choices, refuse_unknown_font};
 use fonts::load_user_fonts;
+pub use fonts::read_font_files;
 
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 use bevy::prelude::*;
 use directories::ProjectDirs;

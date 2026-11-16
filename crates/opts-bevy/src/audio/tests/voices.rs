@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 #[test]
 fn the_budget_keeps_the_loudest_and_drops_the_inaudible() {
     let levels = [(0, 0.2), (1, 0.9), (2, 0.0005), (3, 0.5)];

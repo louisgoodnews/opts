@@ -1,9 +1,7 @@
 //! Applying the environment and resuming after a rebuild.
 
-
 use super::*;
 use opts_bevy::{CalendarDate, ChronoRebuild, MapDateChanged};
-
 
 #[test]
 fn apply_sets_the_date_and_announces_the_map_date() {

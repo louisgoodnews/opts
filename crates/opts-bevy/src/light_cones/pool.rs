@@ -6,9 +6,9 @@ mod levels;
 mod prepass;
 mod selection;
 
+use levels::*;
 pub use prepass::*;
 pub use selection::*;
-use levels::*;
 
 /// The cones the pool made visible, and when it last chose.
 #[derive(Resource, Debug, Default)]

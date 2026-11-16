@@ -7,7 +7,8 @@ use bevy::reflect::TypePath;
 use bevy::render::render_resource::{AsBindGroup, ShaderType};
 use bevy::shader::ShaderRef;
 
-pub(super) const SHADER: Handle<Shader> = bevy::asset::uuid_handle!("6f707473-7472-6565-7769-6e6400000001");
+pub(super) const SHADER: Handle<Shader> =
+    bevy::asset::uuid_handle!("6f707473-7472-6565-7769-6e6400000001");
 
 /// The wind of the tree material.
 ///

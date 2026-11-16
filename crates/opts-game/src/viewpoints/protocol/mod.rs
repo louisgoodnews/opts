@@ -2,7 +2,6 @@
 //! `.reset`, `.export` and `.import`. They work on the same [`ViewpointState`] as the keys and the panel, so a scripted run
 //! sees exactly what a player gets.
 
-
 use bevy::prelude::*;
 use opts_bevy::control::state::{ControlRegistry, Outcome};
 use serde_json::Value;

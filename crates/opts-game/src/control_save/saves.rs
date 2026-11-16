@@ -2,15 +2,15 @@
 //! and running state.
 
 use bevy::prelude::*;
-use opts_bevy::control::state::{Outcome};
-use opts_cli::protocol::{RpcError};
+use opts_bevy::control::state::Outcome;
+use opts_cli::protocol::RpcError;
 use serde_json::{json, Value};
 
 use crate::save::ops::{self};
 use crate::save::registry::{preflight, CheckEnv, SaveRegistry};
 
-use super::save_load::restore_status;
 use super::save_error;
+use super::save_load::restore_status;
 
 pub(super) fn saves(world: &mut World, _: &Value) -> Outcome {
     let result = (|| {

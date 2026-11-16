@@ -88,4 +88,3 @@ pub fn detect_open_doors(
         None => {}
     }
 }
-

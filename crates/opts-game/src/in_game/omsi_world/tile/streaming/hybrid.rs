@@ -2,10 +2,10 @@
 //! the heading weight and the regime label; the streamer applies them to the queue and to eviction.
 
 use super::super::*;
+use crate::in_game::stream_budget::order::near_first_for;
 use crate::in_game::stream_budget::policy::{
     effective_blend, heading_weight, hysteresis, latch, lookahead, Regime, StreamStatus,
 };
-use crate::in_game::stream_budget::order::near_first_for;
 use crate::in_game::stream_budget::{over_cap, resident_cap, Motion};
 use crate::in_game::tile_loading::TileMode;
 

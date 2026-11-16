@@ -88,11 +88,6 @@ impl Default for BenchOptions {
     }
 }
 
-
-
-
-
-
 /// Runs the benchmarks and stores the results (with the class hash) in `profile.bench`.
 /// `progress(step, index, total)` is called before each step. A cancelled run keeps the steps
 /// finished before and marks the rest `Unknown(cancelled)`.

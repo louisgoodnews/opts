@@ -1,8 +1,6 @@
 //! Building the pause overlay's widgets and closing it.
 
-
 use super::*;
-
 
 fn item(
     column: &mut ChildSpawnerCommands,

@@ -1,7 +1,9 @@
 //! Unit tests for `super` (`formation.rs`).
 
 use opts_cli::protocol::{code, RpcError};
-use opts_core::formats::trains::{FormationIssue, FormationSource, Orientation, TrainFormation, VehicleRef};
+use opts_core::formats::trains::{
+    FormationIssue, FormationSource, Orientation, TrainFormation, VehicleRef,
+};
 use serde_json::{json, Value};
 
 use super::methods::issues_json;

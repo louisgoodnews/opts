@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Which end of the vehicle a door is at.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Zone {

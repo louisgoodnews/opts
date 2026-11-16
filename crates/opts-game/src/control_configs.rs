@@ -17,19 +17,19 @@ use opts_bevy::control::state::{ControlRegistry, Outcome};
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
-use crate::bus_config::{BusConfigurations};
+use crate::bus_config::BusConfigurations;
 use crate::in_game::omsi_world::WorldLoadJob;
 use crate::new_game_screen::configs::ConfigLibrary;
 use crate::new_game_screen::livery::LiveryState;
 use crate::new_game_screen::planner::PlannerState;
-use crate::new_game_screen::types::{NewGameSetup};
+use crate::new_game_screen::types::NewGameSetup;
 
 mod save;
 mod view;
+use save::drive_vehicle;
 use save::save;
 use view::list;
 use view::{catalogue, describe, not_found, Repaints};
-use save::drive_vehicle;
 
 /// Where the configurations are stored; without this resource, beside the settings database
 /// ([`BusConfigurations::path`]). Tests point it into a temporary folder.

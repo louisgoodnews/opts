@@ -1,7 +1,7 @@
 //! Unit tests for `super` (`report.rs`).
 
-use super::*;
 use super::super::{Record, Verdict};
+use super::*;
 use std::io::Write;
 
 fn rec(key: &str, verdict: Verdict, cats: &[&str]) -> Record {

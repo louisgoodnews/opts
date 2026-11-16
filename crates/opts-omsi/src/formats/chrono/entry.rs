@@ -104,8 +104,8 @@ mod scan;
 mod set;
 
 pub use date::ChronoDate;
-use scan::{files_of, walk};
 pub use outputs::*;
+use scan::{files_of, walk};
 pub use set::*;
 
 #[cfg(test)]

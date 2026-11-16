@@ -7,8 +7,8 @@ use opts_cli::protocol::{code, RpcError};
 use opts_core::formats::trains::FormationIssue;
 use serde_json::{json, Value};
 
-use crate::session_vehicles::{EntrySel, SessionVehicles};
 use crate::in_game::omsi_world::WorldLoadJob;
+use crate::session_vehicles::{EntrySel, SessionVehicles};
 
 use super::lookup::JobLookup;
 use super::request::{formation_from, session_up};

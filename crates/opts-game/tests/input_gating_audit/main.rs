@@ -79,7 +79,10 @@ fn every_input_reading_file_has_been_reviewed() {
 fn every_reviewed_path_exists() {
     let root = workspace_root().join("crates");
     let missing: Vec<&str> = reviewed().filter(|p| !root.join(p).is_file()).collect();
-    assert!(missing.is_empty(), "reviewed lists name files that no longer exist (update them after a split): {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "reviewed lists name files that no longer exist (update them after a split): {missing:?}"
+    );
 }
 
 #[test]

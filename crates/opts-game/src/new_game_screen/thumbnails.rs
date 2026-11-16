@@ -56,8 +56,8 @@ mod decode;
 mod service;
 pub use cache::{load_thumb, prune};
 pub use decode::average_colour;
-pub use service::{Lookup, ThumbnailService};
 use decode::{pixels, to_image};
+pub use service::{Lookup, ThumbnailService};
 
 mod config_slot;
 mod slots;

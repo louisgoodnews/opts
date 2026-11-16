@@ -65,4 +65,3 @@ pub(in super::super) fn spawn_water(
             .id(),
     );
 }
-

@@ -20,7 +20,6 @@ pub(super) struct Local {
     pub(super) joint: Option<(Vec3, Vec3)>,
 }
 
-
 /// The unit that starts with `first`: follows `[couple_back]` links (a link flagged reversed ends
 /// the unit: the chain leads back into itself, as the NF6D's rear cab does), at most `budget`
 /// files.

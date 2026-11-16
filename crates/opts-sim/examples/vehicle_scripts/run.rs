@@ -31,7 +31,12 @@ fn report_line(
 }
 
 /// Loads the scripts of one `.bus`, runs 60 frames and records what happened.
-pub(crate) fn run_vehicle(f: &Path, root: &Path, report: &mut Option<std::fs::File>, tally: &mut Tally) {
+pub(crate) fn run_vehicle(
+    f: &Path,
+    root: &Path,
+    report: &mut Option<std::fs::File>,
+    tally: &mut Tally,
+) {
     let Ok(bytes) = std::fs::read(f) else {
         return;
     };

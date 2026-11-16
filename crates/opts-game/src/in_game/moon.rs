@@ -26,7 +26,9 @@ pub struct MoonLight;
 
 mod carrier;
 mod disc;
-pub use carrier::{choose_carrier, shadow_carrier_system, ShadowCarrier, CARRIER_HYSTERESIS, MIN_LIGHT_LX};
+pub use carrier::{
+    choose_carrier, shadow_carrier_system, ShadowCarrier, CARRIER_HYSTERESIS, MIN_LIGHT_LX,
+};
 pub use disc::{disc_brightness, setup_moon_disc, MOON_DISC_DAY_BRIGHTNESS, MOON_DISC_SIZE_M};
 
 /// Any sun light (data-driven or fallback).

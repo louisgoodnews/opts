@@ -13,7 +13,6 @@ mod params;
 mod status;
 mod view;
 
-
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use bevy::prelude::*;
@@ -23,13 +22,13 @@ use opts_gui::prelude::*;
 use opts_gui::theme::LayoutClass;
 
 pub use actions::start_drive_system;
-pub use inputs::sync_home_status;
 pub use hero::{cover_rect, HeroImage, HeroPending};
+pub use inputs::sync_home_status;
 pub use model::{stage_key, CatalogueStatus, DriveBlock, HomeBanner, HomeInputs};
 pub use params::{HomeFacts, HomeWidgets};
 
-use lifecycle::{despawn_home, load_drive_history, rebuild_when_content_arrives};
 use actions::{banner_actions, home_actions};
+use lifecycle::{despawn_home, load_drive_history, rebuild_when_content_arrives};
 
 use crate::app_state::AppState;
 use crate::drive_history::{DriveHistory, DriveRecord};

@@ -24,8 +24,7 @@ fn test_tokenize_basic_block() {
 
 #[test]
 fn test_tokenize_comments_and_strings() {
-    let text =
-        b"// Header comment\n# Hash comment\nTextureFilename { \"textures\\test.bmp\"; }";
+    let text = b"// Header comment\n# Hash comment\nTextureFilename { \"textures\\test.bmp\"; }";
     let tokens = tokenize(text, 0).expect("tokenization should succeed");
     assert_eq!(
         tokens[0].kind,

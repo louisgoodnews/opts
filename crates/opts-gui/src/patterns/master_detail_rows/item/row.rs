@@ -11,9 +11,9 @@ use crate::tokens::components::{BackgroundRole, ForegroundRole, RadiusToken};
 use crate::ui_id::UiId;
 use crate::ui_tree::{A11yHidden, ListRow};
 
-use super::super::{ThumbGlyph, section_key};
-use super::ItemContext;
+use super::super::{section_key, ThumbGlyph};
 use super::text::spawn_texts;
+use super::ItemContext;
 use crate::icons::icon_text;
 use crate::patterns::list_model::ListEntry;
 

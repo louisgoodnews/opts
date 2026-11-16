@@ -25,7 +25,7 @@ mod frame;
 mod systems;
 
 pub use frame::spawn_settings_page;
-pub use systems::{restore_focus_system, search_field_system, scroll_pane, style_categories};
+pub use systems::{restore_focus_system, scroll_pane, search_field_system, style_categories};
 
 /// What the page shows.
 #[derive(Resource, Debug, Clone)]

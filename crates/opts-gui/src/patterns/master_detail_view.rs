@@ -6,7 +6,9 @@ use bevy::prelude::*;
 use crate::components::text_field::M3TextField;
 use crate::l10n::{L10nArgs, L10nKey, Localization};
 use crate::patterns::list_model::{first_item, RowLayout};
-use crate::patterns::master_detail::{rows_of, MasterDetail, MasterDetailSelected, MasterDetailView, Rendered};
+use crate::patterns::master_detail::{
+    rows_of, MasterDetail, MasterDetailSelected, MasterDetailView, Rendered,
+};
 use crate::patterns::master_detail_rows::{spawn_rows, SpawnRowsContext};
 
 mod chips;

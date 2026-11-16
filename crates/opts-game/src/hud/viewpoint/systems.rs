@@ -156,4 +156,3 @@ pub fn update_panel(
     }
     show_row_marks(&state, &mut markers, &mut names, &mut unsaved);
 }
-

@@ -4,8 +4,8 @@
 use opts_sim::script::ScriptEngine;
 
 use super::steps::{drag, press, start, start_again, start_drag, tap, BATTERY, START};
-use super::{ELECTRICS, IGNITION};
 use super::Step;
+use super::{ELECTRICS, IGNITION};
 
 /// How a family of vehicles is recognised.
 #[derive(Debug, Clone, Copy)]

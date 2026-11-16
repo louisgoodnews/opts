@@ -1,12 +1,12 @@
 //! Reading the formation a control call describes, and the parameter and store error helpers.
 
+use bevy::prelude::*;
 use opts_bevy::control::params::opt_str;
 use opts_cli::protocol::{code, RpcError};
 use opts_core::formats::trains::{
     FormationSegment, FormationSource, Orientation, TrainFormation, VehicleRef,
 };
 use serde_json::Value;
-use bevy::prelude::*;
 
 use crate::in_game::omsi_world::WorldLoadJob;
 use crate::in_game::types::SimulationLoadState;

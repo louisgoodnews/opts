@@ -14,21 +14,20 @@
 //! force feedback, the horn and other definitions with a condition mode that is not understood
 //! (counted in [`PlayerAudioStats::unsupported`]).
 
-
 mod attach;
 mod listener;
 mod steps;
 mod stream;
-mod types;
 mod triggers;
+mod types;
 
 pub use attach::{attach, attach_defs, attach_unit};
-pub use listener::{listener_inside, listener_in_cabin, PlayerListener};
+pub use listener::{listener_in_cabin, listener_inside, PlayerListener};
 pub use stream::{stream_player_voices, PlayerVoiceState};
-pub use types::{PlayerAudioStats, PlayerSoundInfo, PlayerVoice};
 pub use triggers::{
     fire_player_triggers, preload_one_shots, smooth_player_voices, PlayerAudioPlugin,
 };
+pub use types::{PlayerAudioStats, PlayerSoundInfo, PlayerVoice};
 
 #[cfg(test)]
 mod tests;

@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 pub(super) fn click(world: &mut World, params: &Value) -> Outcome {
     let id = match str_param(params, "id") {
         Ok(i) => i.to_string(),

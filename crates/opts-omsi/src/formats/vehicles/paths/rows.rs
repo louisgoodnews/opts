@@ -54,7 +54,9 @@ pub(super) fn parse_pathpoint(
     })
 }
 
-pub(super) fn parse_pathlink(block: &crate::formats::text::OmsiBlock) -> Result<PathLink, PathsParseError> {
+pub(super) fn parse_pathlink(
+    block: &crate::formats::text::OmsiBlock,
+) -> Result<PathLink, PathsParseError> {
     if block.parameters.len() < 2 {
         return Err(PathsParseError::MissingParameters {
             keyword: block.keyword.clone(),

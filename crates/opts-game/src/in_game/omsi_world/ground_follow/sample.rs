@@ -40,4 +40,3 @@ pub fn sample_consist_ground(
         sim.apply_ground(&samples, dt);
     }
 }
-

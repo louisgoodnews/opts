@@ -1,8 +1,8 @@
 //! Unit tests for `super` (`components.rs`).
 
 use super::*;
-use crate::theme::ColorScheme;
 use crate::theme::theme::MaterialTheme;
+use crate::theme::ColorScheme;
 
 #[test]
 fn test_theme_change_updates_entities() {

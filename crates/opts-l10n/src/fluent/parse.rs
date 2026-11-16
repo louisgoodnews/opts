@@ -2,25 +2,10 @@
 
 use super::{Diagnostic, Part, Pattern, Table, LBRACE, RBRACE};
 
-mod scan;
 mod entries;
 mod patterns;
+mod scan;
 
-use scan::*;
 pub use entries::*;
 pub use patterns::*;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+use scan::*;

@@ -12,7 +12,7 @@ use opts_game::{
 use opts_gui::prelude::*;
 use opts_gui::testing::rules;
 
-#[path = "ui_rules/shell.rs"]
-mod shell;
 #[path = "ui_rules/overlays.rs"]
 mod overlays;
+#[path = "ui_rules/shell.rs"]
+mod shell;

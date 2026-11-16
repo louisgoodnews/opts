@@ -63,9 +63,7 @@ fn a_big_map_is_sampled_across_its_size_mix_and_marked() {
         bytes as f64 / total as f64
     );
     let sizes: Vec<u64> = picked.iter().map(|i| files[*i].1).collect();
-    assert!(
-        sizes.iter().min().unwrap() < &2_000_000 && sizes.iter().max().unwrap() > &8_000_000
-    );
+    assert!(sizes.iter().min().unwrap() < &2_000_000 && sizes.iter().max().unwrap() > &8_000_000);
 }
 
 #[test]

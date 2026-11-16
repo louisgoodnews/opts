@@ -6,13 +6,13 @@
 //! `font_compare.png` in the working directory); `OPTS_FONT_COMPARE_SIZE` the base size (14).
 
 use bevy::prelude::*;
-use bevy::render::view::screenshot::{Screenshot, save_to_disk};
+use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
 mod columns;
 mod fonts;
 
 use columns::{line, spawn_candidate_column};
-use fonts::{CANDIDATES, MONO, load_font_handles};
+use fonts::{load_font_handles, CANDIDATES, MONO};
 
 #[derive(Resource)]
 struct Out(String);

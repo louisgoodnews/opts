@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use opts_gui::l10n::Localization;
 
 use super::{
-    SettingChanged, SettingDescriptor, SettingsCapabilities, SettingsRegistry, add_messages,
-    builtin, display, lighting, live, protocol, protocol_confirm,
+    add_messages, builtin, display, lighting, live, protocol, protocol_confirm, SettingChanged,
+    SettingDescriptor, SettingsCapabilities, SettingsRegistry,
 };
 use crate::settings::GameSettings;
 

@@ -23,11 +23,11 @@ fn load_fixture(name: &str) -> Option<Vec<u8>> {
     }
 }
 
-#[path = "o3d_parse/geometry.rs"]
-mod geometry;
 #[path = "o3d_parse/chunks.rs"]
 mod chunks;
-#[path = "o3d_parse/versions.rs"]
-mod versions;
+#[path = "o3d_parse/geometry.rs"]
+mod geometry;
 #[path = "o3d_parse/robustness.rs"]
 mod robustness;
+#[path = "o3d_parse/versions.rs"]
+mod versions;

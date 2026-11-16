@@ -41,7 +41,6 @@ mod update;
 mod systems;
 pub use systems::*;
 
-
 /// The environment systems: the clock, then the changes. A host limits them to the session with
 /// `configure_sets`.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

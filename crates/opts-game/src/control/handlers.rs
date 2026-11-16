@@ -136,4 +136,3 @@ pub(super) fn vehicle_get(world: &mut World, _: &Value) -> Outcome {
         "speed_kmh": ch.forward_speed_km_h(),
     }))
 }
-

@@ -47,4 +47,3 @@ impl WorldLoadJob {
         linked
     }
 }
-

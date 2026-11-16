@@ -3,12 +3,10 @@
 use bevy::prelude::*;
 
 use crate::{
-    interaction::{
-        events::{
-            ButtonClicked, CheckboxToggled, ComboboxSelected, DateSelected, DateTimeSelected,
-            NotebookTabSelected, RadioSelected, SwitchToggled, TextChanged, ThemeChanged,
-            ToastDismissed, ToplevelClosed, TreeNodeSelected, TreeNodeToggled,
-        },
+    interaction::events::{
+        ButtonClicked, CheckboxToggled, ComboboxSelected, DateSelected, DateTimeSelected,
+        NotebookTabSelected, RadioSelected, SwitchToggled, TextChanged, ThemeChanged,
+        ToastDismissed, ToplevelClosed, TreeNodeSelected, TreeNodeToggled,
     },
     theme::{MaterialTheme, ThemeMode, ThemePreferences},
     tokens::{
@@ -41,7 +39,6 @@ fn register_messages(app: &mut App) {
 mod systems;
 
 use systems::{register_form_systems, register_widget_systems};
-
 
 impl Plugin for OptsGuiPlugin {
     fn build(&self, app: &mut App) {

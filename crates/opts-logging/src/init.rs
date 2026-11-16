@@ -108,7 +108,6 @@ pub fn init(config: LogConfig) -> LogResult<LogGuard> {
     Ok(LogGuard::new(worker_guards))
 }
 
-
 /// Dynamically updates the log level for a specific target module.
 pub fn set_level(target: &str, level: Level) -> LogResult<()> {
     let mut lock = ACTIVE_TARGETS

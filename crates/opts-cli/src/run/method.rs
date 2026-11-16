@@ -1,7 +1,6 @@
 //! Method names and the per-method defaults of the command-line client: which calls are slow,
 //! how a method written with spaces maps to its dotted name, and the CLI-only defaults.
 
-
 use crate::commands::find;
 
 /// Methods that legitimately take long (they reply after N frames or after loading).

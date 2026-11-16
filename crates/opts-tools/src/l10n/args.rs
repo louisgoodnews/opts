@@ -9,7 +9,11 @@ pub(super) struct Args {
 }
 
 impl Args {
-    pub(super) fn parse(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Result<Self, String> {
+    pub(super) fn parse(
+        args: &[String],
+        value_flags: &[&str],
+        bool_flags: &[&str],
+    ) -> Result<Self, String> {
         let mut a = Self::default();
         let mut it = args.iter();
         while let Some(x) = it.next() {

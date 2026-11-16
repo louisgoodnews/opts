@@ -4,7 +4,6 @@ use std::fmt::Write as _;
 
 use super::*;
 
-
 /// What `check` found, for printing.
 pub(super) struct Findings {
     pub(super) label: String,

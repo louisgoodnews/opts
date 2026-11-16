@@ -5,8 +5,9 @@ mod sky;
 
 pub use ground::{
     fog_density, fog_density_for, fog_layer_thickness, ground_fog, ground_fog_view, FogParams,
-    GroundFogView, FOG_LAYER_ABOVE, FOG_LAYER_INSIDE, FOG_LAYER_LOOK_UP_DEG, FOG_LAYER_LOOK_UP_GAIN,
-    FOG_LAYER_MAX_VISIBILITY_M, FOG_LAYER_THICKNESS_PER_VISIBILITY, FOG_LAYER_THICKNESS_RANGE_M,
+    GroundFogView, FOG_LAYER_ABOVE, FOG_LAYER_INSIDE, FOG_LAYER_LOOK_UP_DEG,
+    FOG_LAYER_LOOK_UP_GAIN, FOG_LAYER_MAX_VISIBILITY_M, FOG_LAYER_THICKNESS_PER_VISIBILITY,
+    FOG_LAYER_THICKNESS_RANGE_M,
 };
 pub use sky::{cloud_tint, fog_color, sky_veil, sky_veil_clear, FOG_MAX_SATURATION};
 

@@ -5,10 +5,10 @@ use std::path::PathBuf;
 
 use bevy::prelude::*;
 use opts_bevy::control::params::opt_str;
-use opts_bevy::control::state::{Outcome};
+use opts_bevy::control::state::Outcome;
 use opts_bevy::control::PathPolicy;
-use opts_cli::protocol::{RpcError};
-use serde_json::{Value};
+use opts_cli::protocol::RpcError;
+use serde_json::Value;
 
 use crate::app::AppArgs;
 use crate::new_game_screen::types::NewGameSetup;

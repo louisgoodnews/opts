@@ -2,7 +2,6 @@
 
 use std::path::Path;
 
-
 pub(super) fn build_mirror_test_app() -> bevy::prelude::App {
     use bevy::prelude::*;
     use opts_bevy::mirrors::{
@@ -108,4 +107,3 @@ pub(super) fn spawn_test_vehicle(
         app.world_mut().entity_mut(root).add_child(c);
     }
 }
-

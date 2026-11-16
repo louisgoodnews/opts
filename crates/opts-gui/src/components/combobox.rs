@@ -78,8 +78,6 @@ pub struct ComboboxMenuItem {
     pub index: usize,
 }
 
-
-
 /// Plugin registering Combobox widget systems and events.
 #[derive(Default)]
 pub struct ComboboxPlugin;

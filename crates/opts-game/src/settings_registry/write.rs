@@ -1,7 +1,7 @@
 //! Changing the registry's values: validated set, reset to the default and the migration of
 //! renamed keys.
 
-use super::{SettingError, SettingKind, SettingsCapabilities, SettingsRegistry, normalize};
+use super::{normalize, SettingError, SettingKind, SettingsCapabilities, SettingsRegistry};
 use crate::settings::GameSettings;
 
 impl SettingsRegistry {

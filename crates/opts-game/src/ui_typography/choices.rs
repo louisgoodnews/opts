@@ -1,7 +1,6 @@
 //! The choice of a font family: the family the database does not hold is given back, and the
 //! list of the families the user can choose.
 
-
 use bevy::prelude::*;
 use bevy::text::FontCx;
 use opts_gui::fonts::{FALLBACK_FAMILY, MONO_FAMILY, UI_FAMILY};

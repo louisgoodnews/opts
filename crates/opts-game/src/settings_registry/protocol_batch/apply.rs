@@ -7,12 +7,12 @@ use opts_bevy::control::state::Outcome;
 use opts_cli::protocol::RpcError;
 use serde_json::{json, Value};
 
-use crate::settings_registry::protocol::{code_of};
 use super::{apply_change_with, Apply, ChangeSource, SettingsCapabilities, SettingsRegistry};
 use crate::settings::GameSettings;
+use crate::settings_registry::protocol::code_of;
 
-use super::export::differences;
 use super::entries;
+use super::export::differences;
 
 /// What the batch would be refused for, found on a scratch copy of the settings.
 fn refusals(world: &World, batch: &[(String, String)]) -> Vec<Value> {

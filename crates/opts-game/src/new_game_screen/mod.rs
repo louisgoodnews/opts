@@ -62,7 +62,6 @@ pub struct BuildCtx<'a> {
     pub trips: &'a trips::TripState,
 }
 
-
 /// What a step is built from (read-only).
 #[derive(SystemParam)]
 struct WizardRead<'w> {
@@ -166,5 +165,3 @@ impl Plugin for NewGameMenuPlugin {
             );
     }
 }
-
-

@@ -22,7 +22,6 @@ mod names;
 pub use error::SaveError;
 pub use names::{clean_name, slug, valid_id};
 
-
 /// What the save list shows without reading any section.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct SaveMeta {
@@ -154,7 +153,6 @@ impl SaveFile {
         serde_json::from_value(value).map_err(|e| SaveError::Corrupt(e.to_string()))
     }
 }
-
 
 #[cfg(test)]
 mod tests;

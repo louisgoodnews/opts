@@ -1,13 +1,11 @@
 //! The JSON of the languages and of their problems, for the control methods.
 
-
 use bevy::prelude::*;
 use opts_gui::l10n::LanguageInfo;
 use opts_gui::l10n::Localization;
 use serde_json::{json, Value};
 
-
-use super::{packs_dir};
+use super::packs_dir;
 
 /// JSON of one language for the control methods.
 #[must_use]

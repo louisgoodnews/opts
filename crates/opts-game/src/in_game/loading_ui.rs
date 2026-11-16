@@ -27,7 +27,7 @@ mod components;
 mod texts;
 mod update;
 pub use components::{
-    CancelDialog, ConfirmCancelBtn, ChooseAnotherBtn, ContinueBtn, DetailsBtn, KeepLoadingBtn,
+    CancelDialog, ChooseAnotherBtn, ConfirmCancelBtn, ContinueBtn, DetailsBtn, KeepLoadingBtn,
     LoadingBackBtn, ManifestText, OutcomeBox, PercentText, RetryBtn, StageText, Tile,
 };
 pub use texts::{manifest_lines, stage_message};

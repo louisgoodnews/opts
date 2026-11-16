@@ -1,7 +1,7 @@
 //! The saves overlay: its frame, title, list and buttons, and the label helper of its rows.
 
-use super::*;
 use super::name_row::spawn_name_row;
+use super::*;
 
 pub(super) fn label(
     card: &mut ChildSpawnerCommands,

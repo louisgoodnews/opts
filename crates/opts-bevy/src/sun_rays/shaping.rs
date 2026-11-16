@@ -1,9 +1,8 @@
 //! The strength of the rays: the haze density from the weather, the light intensity of the volume
 //! and the choice of the carrier light.
 
-
-use crate::light_quality::Shafts;
 use super::*;
+use crate::light_quality::Shafts;
 
 /// The `density_factor` of the haze for a visibility in metres: the larger of the baseline
 /// [`HAZE_BASE`] and the weather's extinction (`β = 3.912 / V`, Koschmieder) times

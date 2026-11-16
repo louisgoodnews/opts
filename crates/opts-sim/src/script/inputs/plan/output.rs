@@ -1,6 +1,5 @@
 //! The output table: who consumes each output the scripts write, and lookup by name.
 
-
 /// Who consumes an output of the scripts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Consumer {

@@ -86,4 +86,3 @@ fn the_session_environment_carries_the_conditions_the_effects_read() {
     assert_eq!(env.conditions().precip, PrecipKind::Rain);
     assert!(env.conditions().fog_visibility_m < 10_000.0);
 }
-

@@ -5,7 +5,7 @@ use opts_bevy::KeyChord;
 use crate::settings::GameSettings;
 use crate::settings_registry::SettingsRegistry;
 
-use super::{action, VehicleKeyAction, ACTIONS, Scope};
+use super::{action, Scope, VehicleKeyAction, ACTIONS};
 
 /// Why `chord` cannot be the key of `setting`: a key OPTS uses itself, or another action's key.
 #[must_use]

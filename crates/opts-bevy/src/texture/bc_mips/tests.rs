@@ -60,4 +60,3 @@ fn levels_of(tex: texpresso::Format, chain: &[u8], w: u32, h: u32, levels: u32) 
         })
         .collect()
 }
-

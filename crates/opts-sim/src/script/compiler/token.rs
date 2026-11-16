@@ -1,10 +1,9 @@
 //! tokens of a block body and the register and accessor words.
 
-use super::*;
 use super::words::word_op;
+use super::*;
 
 impl Compiler {
-
     pub(super) fn token(&mut self, file: &str, tok: &Token, block: &mut Open) {
         if tok.is_string {
             let id = self.program.strings.len() as u32;
@@ -52,5 +51,4 @@ impl Compiler {
             },
         )
     }
-
 }

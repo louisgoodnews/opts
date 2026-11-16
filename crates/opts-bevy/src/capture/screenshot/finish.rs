@@ -7,8 +7,8 @@ use serde_json::{json, Map, Value};
 
 use super::super::error::CaptureError;
 use super::super::storage;
-use super::options::Options;
 use super::frame::encode;
+use super::options::Options;
 
 /// The sidecar path of a capture file: its name with `.json` appended.
 #[must_use]

@@ -81,4 +81,3 @@ pub(super) fn coerce(kind: Kind, name: &str, raw: &str) -> Result<Value, String>
         Kind::Json => Ok(serde_json::from_str(raw).unwrap_or_else(|_| json!(raw))),
     }
 }
-

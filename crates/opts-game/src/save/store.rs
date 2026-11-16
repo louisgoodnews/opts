@@ -106,12 +106,10 @@ impl SaveStore {
         }
         id
     }
-
 }
 
-mod read_write;
 mod listing;
-
+mod read_write;
 
 #[cfg(test)]
 mod tests;

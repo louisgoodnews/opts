@@ -21,10 +21,10 @@ use opts_bevy::{CalendarDate, ChronoRebuild, MapDateChanged};
 use opts_core::formats::chrono::{ActiveSet, ChronoDate, ChronoPlan, ChronoSet, TileOverlay};
 use opts_core::formats::map::MapTile;
 
-mod overlays;
 mod data;
-mod switch;
 mod live;
+mod overlays;
+mod switch;
 pub use live::{apply_map_date_changes, track_chrono_rebuild};
 
 use super::reload::TileUnload;
@@ -138,7 +138,6 @@ impl WorldLoadJob {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests;

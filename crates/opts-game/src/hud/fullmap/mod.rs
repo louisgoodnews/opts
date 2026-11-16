@@ -25,7 +25,7 @@ mod overlay;
 mod params;
 mod plugin;
 mod state;
-pub use draw::{FullMapCanvas, FullMapImage, redraw};
+pub use draw::{redraw, FullMapCanvas, FullMapImage};
 pub use input::input;
 pub use open::{follow, toggle};
 pub use plugin::FullMapPlugin;
@@ -37,25 +37,25 @@ use bevy::math::{DVec2, Vec2};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::window::PrimaryWindow;
-use opts_bevy::PlayerVehicle;
 use opts_bevy::reporting::{MenuModalActive, ModalActive};
+use opts_bevy::PlayerVehicle;
 use opts_gui::l10n::fluent::Arg;
 use opts_gui::l10n::{L10nKey, Localization};
 use opts_gui::prelude::*;
 use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
 
 pub use self::overview::OverviewRoads;
-use self::viewport::{Viewport, wheel_factor};
+use self::viewport::{wheel_factor, Viewport};
 use super::keys;
 use super::minimap::{
-    Canvas, FixtureRoads, MapLine, MapMarker, MapSource, MapView, colors_of, pose_of, push_chords,
-    raster,
+    colors_of, pose_of, push_chords, raster, Canvas, FixtureRoads, MapLine, MapMarker, MapSource,
+    MapView,
 };
 use super::parts::{panel, texts};
-use crate::in_game::SimulationLoadState;
 use crate::in_game::instruments::InstrumentInk;
 use crate::in_game::omsi_world::TrafficState;
 use crate::in_game::types::{InGameEntity, InGameSessionInfo};
+use crate::in_game::SimulationLoadState;
 use crate::session_vehicles::SessionVehicle;
 
 /// The size of vehicle markers on the large canvas, in mini-map units.
@@ -72,5 +72,5 @@ const IDLE_INTERVAL_S: f32 = 0.5;
 const FALLBACK_SCREEN: Vec2 = Vec2::new(1280.0, 720.0);
 
 pub use overlay::{
-    FullMapCaption, FullMapRoot, FullMapScaleBar, FullMapScaleText, FullMapSurface, overlay,
+    overlay, FullMapCaption, FullMapRoot, FullMapScaleBar, FullMapScaleText, FullMapSurface,
 };

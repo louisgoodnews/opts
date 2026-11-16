@@ -49,7 +49,11 @@ pub(in crate::in_game::omsi_world) fn tile_lanes(
 }
 
 /// Registers a tile's lanes with the network.
-pub(in crate::in_game::omsi_world) fn register_tile(commands: &mut Commands, key: (i32, i32), lanes: Vec<FootLane>) {
+pub(in crate::in_game::omsi_world) fn register_tile(
+    commands: &mut Commands,
+    key: (i32, i32),
+    lanes: Vec<FootLane>,
+) {
     commands.queue(move |world: &mut World| {
         if let Some(mut net) = world.get_resource_mut::<PedestrianNetwork>() {
             net.0.insert_tile(key, lanes);

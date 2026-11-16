@@ -1,7 +1,5 @@
 //! `OnExit(InGame)` and quitting: writes the metrics of the drive and gives the global settings back.
 
-use bevy::app::AppExit;
-use bevy::prelude::*;
 use super::super::profile::settings_hash;
 use super::super::store::SessionMetrics;
 use super::frames::FrameStats;
@@ -9,6 +7,8 @@ use super::{ActiveMapProfile, ProfileStoreRes};
 use crate::settings::GameSettings;
 use crate::settings_registry::SettingsRegistry;
 use crate::AppState;
+use bevy::app::AppExit;
+use bevy::prelude::*;
 
 /// The metrics of the drive that is ending, if long enough to count.
 fn session_metrics(

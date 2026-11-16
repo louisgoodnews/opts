@@ -29,8 +29,8 @@ mod panel;
 mod rows;
 
 use buttons::{action_buttons, small_button};
-use rows::value_row;
 pub use panel::spawn_panel;
+use rows::value_row;
 
 /// The root of the panel.
 #[derive(Component, Debug, Clone, Copy)]

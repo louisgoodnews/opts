@@ -5,7 +5,11 @@ use super::super::super::*;
 use super::super::*;
 
 /// Right: the map's timetables, by how far the user has drilled down.
-pub(super) fn timetable_column(row: &mut ChildSpawnerCommands, menu: &VehicleMenu, view: &RouteView) {
+pub(super) fn timetable_column(
+    row: &mut ChildSpawnerCommands,
+    menu: &VehicleMenu,
+    view: &RouteView,
+) {
     let right = column(row, 50.0);
     row.commands()
         .entity(right)

@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// The render layers of the main camera: the world, plus the cabin lights when `cabin`.
 #[must_use]
 pub fn camera_layers(cabin: bool) -> RenderLayers {

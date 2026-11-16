@@ -3,7 +3,11 @@
 use super::*;
 
 /// Whether door `n` of kind `kind` (`entry`/`exit`) is open in the engine of `store`.
-pub(super) fn door_open(engines: &Query<&VehicleScripts>, (store, n): (Entity, usize), kind: &str) -> bool {
+pub(super) fn door_open(
+    engines: &Query<&VehicleScripts>,
+    (store, n): (Entity, usize),
+    kind: &str,
+) -> bool {
     engines
         .get(store)
         .ok()

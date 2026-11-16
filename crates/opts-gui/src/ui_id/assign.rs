@@ -4,9 +4,9 @@ use std::collections::HashSet;
 
 use bevy::prelude::*;
 
-use crate::ui_tree::{UiRole, label_of, role_of};
+use crate::ui_tree::{label_of, role_of, UiRole};
 
-use super::{UiId, slug};
+use super::{slug, UiId};
 
 /// Elements that get an automatic id.
 type NeedsId = (

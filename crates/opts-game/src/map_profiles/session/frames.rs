@@ -1,7 +1,7 @@
 //! Frame times of the running drive: counted after the warm-up, averaged and the 95th percentile.
 
-use bevy::prelude::*;
 use crate::in_game::types::SimulationLoadState;
+use bevy::prelude::*;
 
 /// Seconds after the load finished that are not counted (shader and tile warm-up).
 pub const WARMUP_S: f32 = 10.0;

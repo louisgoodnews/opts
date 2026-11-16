@@ -24,7 +24,14 @@ pub(super) fn for_each_weight(start: f32, end: f32, src: u32, mut f: impl FnMut(
 pub(super) type Texel = [f32; 4];
 
 /// Any size ratio: every destination texel averages the exact (fractional) source area it covers.
-pub(super) fn downsample_general(src: &[u8], sw: u32, sh: u32, dw: u32, dh: u32, weighted: bool) -> Vec<u8> {
+pub(super) fn downsample_general(
+    src: &[u8],
+    sw: u32,
+    sh: u32,
+    dw: u32,
+    dh: u32,
+    weighted: bool,
+) -> Vec<u8> {
     let lut = srgb_to_linear_lut();
     // Horizontal pass: sw x sh -> dw x sh, in linear light. Channels 0..3 are colour (times the
     // alpha weight in coverage mode), channel 3 is alpha; the weight sum is kept per texel.

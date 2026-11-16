@@ -55,4 +55,3 @@ impl SceneryScripts {
         &self.diagnostics
     }
 }
-

@@ -3,7 +3,6 @@
 use super::*;
 
 impl ScriptEngine {
-
     /// Sets a system value read by `(L.S.name)`.
     pub fn set_system(&mut self, name: &str, value: f32) {
         let id = self.system_id(name);
@@ -90,5 +89,4 @@ impl ScriptEngine {
         let id = self.program.names.strvars.intern(name);
         self.vars.set_string(id, value.to_owned());
     }
-
 }

@@ -79,11 +79,11 @@ fn mode(app: &App) -> CameraMode {
     app.world().resource::<CameraState>().mode
 }
 
+#[path = "camera/drive.rs"]
+mod drive;
 #[path = "camera/modes.rs"]
 mod modes;
 #[path = "camera/shift.rs"]
 mod shift;
-#[path = "camera/drive.rs"]
-mod drive;
 #[path = "camera/sync.rs"]
 mod sync;

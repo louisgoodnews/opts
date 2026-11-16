@@ -50,7 +50,6 @@ pub use ambient::*;
 pub use footprint::*;
 pub use layers::*;
 
-
 /// Marker on the root of an object with `[nomaplighting]` (not lit by map lights). Version 1
 /// only records it; see `lighting-system.md` section 4.6.
 #[derive(Component, Debug, Clone, Copy, Default)]

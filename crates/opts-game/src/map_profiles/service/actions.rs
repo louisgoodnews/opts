@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// *Apply Selected*: the choice is used for the next drive of this map; with `make_default` it is
 /// also written as the profile of this key (`default.toml` or the Chrono entry's file).
 ///

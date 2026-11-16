@@ -1,14 +1,13 @@
 //! Saving the configuration of the vehicle being driven, or of the vehicle chosen in the plan
 //! (`config.save`).
 
-
 use bevy::prelude::*;
 use opts_bevy::control::params::{opt_bool, opt_str, str_param};
-use opts_bevy::control::state::{Outcome};
+use opts_bevy::control::state::Outcome;
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
-use crate::bus_config::{BusConfiguration};
+use crate::bus_config::BusConfiguration;
 use crate::in_game::omsi_world::WorldLoadJob;
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup};
 
@@ -22,7 +21,10 @@ pub(super) struct Driven {
     setvars: Vec<(String, i32)>,
 }
 
-pub(super) fn drive_vehicle(world: &mut World, cat: &GameCatalogue) -> Option<Result<Driven, RpcError>> {
+pub(super) fn drive_vehicle(
+    world: &mut World,
+    cat: &GameCatalogue,
+) -> Option<Result<Driven, RpcError>> {
     // The active session vehicle is the player's vehicle (the load job still names the first one
     // after a switch).
     if let Some(rec) = world

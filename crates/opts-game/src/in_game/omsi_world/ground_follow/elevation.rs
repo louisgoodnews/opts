@@ -52,7 +52,12 @@ pub(super) fn settle_elevation(
 }
 
 /// Eases the pitch and roll of the plane through the wheels towards what the ground asks.
-pub(super) fn blend_tilt(motion: &mut BodyMotion, heights: [f32; 4], (wheelbase, track): (f32, f32), dt: f32) {
+pub(super) fn blend_tilt(
+    motion: &mut BodyMotion,
+    heights: [f32; 4],
+    (wheelbase, track): (f32, f32),
+    dt: f32,
+) {
     let [fl, fr, rl, rr] = heights;
     let wheelbase = wheelbase.max(1.0);
     let pitch_goal = (((fl + fr) - (rl + rr)) * 0.5 / wheelbase)

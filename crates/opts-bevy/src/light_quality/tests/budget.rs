@@ -117,4 +117,3 @@ fn a_step_restarts_the_window() {
         "the window starts again after a step"
     );
 }
-

@@ -16,8 +16,7 @@ use crate::ui_id::UiId;
 use list::spawn_list_column;
 
 use super::{
-    MasterDetail, MasterDetailConfig, MasterDetailParts, MasterDetailRoot,
-    MasterDetailView,
+    MasterDetail, MasterDetailConfig, MasterDetailParts, MasterDetailRoot, MasterDetailView,
 };
 
 pub(super) fn container(direction: FlexDirection) -> Node {

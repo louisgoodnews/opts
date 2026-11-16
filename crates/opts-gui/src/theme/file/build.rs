@@ -9,7 +9,7 @@ use super::super::color::{ColorRole, ColorScheme};
 use super::super::contrast::{parse_hex, to_hex};
 use super::super::custom::CustomTheme;
 use super::super::mode::ThemeKind;
-use super::{THEME_FILE_VERSION, ThemeFile, ThemeFileError, role_from_name};
+use super::{role_from_name, ThemeFile, ThemeFileError, THEME_FILE_VERSION};
 
 fn build_scheme(
     kind: ThemeKind,

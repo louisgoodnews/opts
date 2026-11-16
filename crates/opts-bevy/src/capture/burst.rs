@@ -1,6 +1,5 @@
 //! `capture.burst`: N frames at a fixed interval, written as a PNG (or JPEG) sequence.
 
-
 mod collect;
 mod options;
 mod result;

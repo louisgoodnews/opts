@@ -57,7 +57,6 @@ mod codec;
 mod io;
 pub use codec::{decode, encode};
 
-
 /// One file of the store.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SavedFormation {
@@ -125,7 +124,6 @@ impl FormationStore {
         id
     }
 }
-
 
 #[cfg(test)]
 mod tests;

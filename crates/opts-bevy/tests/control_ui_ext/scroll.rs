@@ -1,6 +1,5 @@
 //! Scrolling of the list view: the scrollables listing, paging, item targets and argument errors.
 
-
 use opts_cli::protocol::code;
 use serde_json::json;
 

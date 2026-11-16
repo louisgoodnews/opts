@@ -6,7 +6,6 @@ use serde_json::{json, Value};
 
 use super::source::Source;
 
-
 pub(super) fn kind_name(k: SetvarKind) -> &'static str {
     match k {
         SetvarKind::Switch => "switch",

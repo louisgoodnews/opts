@@ -11,14 +11,9 @@ pub use systems::button_click_system;
 use bevy::prelude::*;
 use std::sync::Arc;
 
-use crate::{
-    interaction::{
-        activation::Activated,
-        events::ButtonClicked,
-        focus::Focusable,
-        layer::StateLayered,
-        state::Hovered,
-    },
+use crate::interaction::{
+    activation::Activated, events::ButtonClicked, focus::Focusable, layer::StateLayered,
+    state::Hovered,
 };
 
 /// Marker for an interactive control: every widget root carries it. It requires the pointer

@@ -1,7 +1,7 @@
 //! Tests of the static load profile: the cache, the signature and the off-thread count.
 
-use super::*;
 use super::cache::cache_path;
+use super::*;
 
 fn tile(objects: usize) -> String {
     let mut t = String::from("banner\n[version]\n3\n");

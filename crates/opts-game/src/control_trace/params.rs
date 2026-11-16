@@ -41,7 +41,11 @@ pub(super) fn camera_xz(world: &mut World) -> Option<[f32; 2]> {
         .map(|t| [t.translation().x, t.translation().z])
 }
 
-pub(super) fn parse_filters(world: &mut World, params: &Value, base: Filters) -> Result<Filters, RpcError> {
+pub(super) fn parse_filters(
+    world: &mut World,
+    params: &Value,
+    base: Filters,
+) -> Result<Filters, RpcError> {
     let mut f = base;
     if params.get("reset").and_then(Value::as_bool) == Some(true) {
         f = Filters::default();

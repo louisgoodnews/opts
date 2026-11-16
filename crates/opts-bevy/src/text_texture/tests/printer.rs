@@ -1,7 +1,7 @@
 //! Printer fonts: a taller alpha bitmap is read at the cells' own pixels.
 
-use super::*;
 use super::fixtures::*;
+use super::*;
 
 #[test]
 fn a_taller_alpha_bitmap_is_read_at_the_cells_own_pixels() {

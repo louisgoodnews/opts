@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use opts_bevy::control::state::{Outcome};
+use opts_bevy::control::state::Outcome;
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Map, Value};
 
@@ -58,7 +58,11 @@ pub(super) fn catalogue(world: &World) -> GameCatalogue {
         .unwrap_or_default()
 }
 
-pub(super) fn describe(c: &BusConfiguration, cat: &GameCatalogue, checked: Option<&Checked>) -> Value {
+pub(super) fn describe(
+    c: &BusConfiguration,
+    cat: &GameCatalogue,
+    checked: Option<&Checked>,
+) -> Value {
     let setvars: Map<String, Value> = c
         .setvars
         .iter()

@@ -95,7 +95,6 @@ fn check_bbox_and_outliers(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics:
     }
 }
 
-
 /// Geometric and structural plausibility checks on a (possibly decoded) mesh: non-finite values,
 /// index and material-index range, empty meshes, bounding-box extent, exploded vertices, degenerate
 /// and huge triangles, winding disagreement with the stored normals and texture-coordinate chaos.

@@ -35,11 +35,11 @@ use super::pack::PackMeta;
 mod export;
 pub use export::{export_ftl, export_json, import_to_ftl, ExportOptions};
 
-mod structured;
 mod entries;
+mod structured;
 
-use structured::*;
 pub use entries::*;
+use structured::*;
 
 /// The value of `format` in JSON files.
 pub const FORMAT: &str = "opts-l10n/1";
@@ -74,13 +74,6 @@ pub fn line_of_json_key(text: &str, key: &str, from: usize) -> Option<usize> {
     }
     None
 }
-
-
-
-
-
-
-
 
 #[cfg(test)]
 mod tests;

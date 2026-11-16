@@ -4,7 +4,9 @@ use bevy::prelude::*;
 
 use super::camera::vehicle_camera_system;
 use super::input::vehicle_input_system;
-use super::sync::{vehicle_physics_step_system, vehicle_transform_sync_system, wheel_transform_sync_system};
+use super::sync::{
+    vehicle_physics_step_system, vehicle_transform_sync_system, wheel_transform_sync_system,
+};
 
 /// Bevy plugin bundling vehicle physics simulation, input systems, and transform sync.
 #[derive(Default)]

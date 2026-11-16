@@ -18,12 +18,12 @@ use opts_gui::ui_tree::find_entity;
 use common::loading::{args_for, has, loading_app, outcome, run, screen_count, texts};
 use common::{fresh_root, write_map, MiniMap};
 
-#[path = "loading_tests/screen.rs"]
-mod screen;
-#[path = "loading_tests/missing.rs"]
-mod missing;
 #[path = "loading_tests/accepted.rs"]
 mod accepted;
+#[path = "loading_tests/missing.rs"]
+mod missing;
+#[path = "loading_tests/screen.rs"]
+mod screen;
 
 fn broken_tile_root(tag: &str) -> std::path::PathBuf {
     let root = fresh_root(tag);
@@ -39,9 +39,9 @@ fn broken_tile_root(tag: &str) -> std::path::PathBuf {
     root
 }
 
-#[path = "loading_tests/outcomes.rs"]
-mod outcomes;
 #[path = "loading_tests/camera.rs"]
 mod camera;
 #[path = "loading_tests/minor.rs"]
 mod minor;
+#[path = "loading_tests/outcomes.rs"]
+mod outcomes;

@@ -42,7 +42,6 @@ pub struct NotebookPanel {
     pub index: usize,
 }
 
-
 /// Plugin registering Notebook widget systems and events.
 #[derive(Default)]
 pub struct NotebookPlugin;

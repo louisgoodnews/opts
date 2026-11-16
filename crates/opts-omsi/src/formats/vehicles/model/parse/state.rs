@@ -84,7 +84,10 @@ impl ModelParserState {
         }
     }
 
-    pub(super) fn handle_mesh_property_block(&mut self, block: &OmsiBlock) -> Result<(), ModelParseError> {
+    pub(super) fn handle_mesh_property_block(
+        &mut self,
+        block: &OmsiBlock,
+    ) -> Result<(), ModelParseError> {
         if let Some(mesh) = self.active_mesh_mut() {
             handle_mesh_property(mesh, block)?;
         } else {
@@ -97,7 +100,10 @@ impl ModelParserState {
         Ok(())
     }
 
-    pub(super) fn handle_material_modifier_block(&mut self, block: &OmsiBlock) -> Result<(), ModelParseError> {
+    pub(super) fn handle_material_modifier_block(
+        &mut self,
+        block: &OmsiBlock,
+    ) -> Result<(), ModelParseError> {
         if let Some(mesh) = self.active_mesh_mut() {
             handle_material_block(mesh, block)?;
         } else {

@@ -22,7 +22,7 @@ mod populate;
 mod systems;
 
 pub use builder::ToplevelBuilder;
-pub use systems::{ToplevelPlugin, toplevel_close_system};
+pub use systems::{toplevel_close_system, ToplevelPlugin};
 
 #[cfg(test)]
 mod tests;

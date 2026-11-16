@@ -4,10 +4,9 @@
 mod accept;
 mod load_map;
 
-pub(crate) use accept::{accept_problems_param, accepted_and_starting};
-pub(crate) use load_map::{load_map};
 use accept::loading_accept_problems;
-
+pub(crate) use accept::{accept_problems_param, accepted_and_starting};
+pub(crate) use load_map::load_map;
 
 use bevy::prelude::*;
 use opts_bevy::control::state::{ControlRegistry, Outcome};

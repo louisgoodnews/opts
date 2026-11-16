@@ -80,4 +80,3 @@ fn a_chain_that_loops_back_ends_its_unit_and_the_next_car_still_follows() {
     assert!(plan.followers[1].turned, "the reversed link turns `c`");
     assert_continuous(&head, &plan);
 }
-

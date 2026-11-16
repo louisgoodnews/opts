@@ -1,12 +1,12 @@
 //! `OnEnter(InGame)`: applies the profile of the drive to the session settings before it loads.
 
-use bevy::prelude::*;
 use super::super::store::ProfileSource;
-use super::key::{key_of, DriveChoice};
 use super::frames::FrameStats;
+use super::key::{key_of, DriveChoice};
 use super::{ActiveMapProfile, MapProfilePick, ProfileStoreRes};
 use crate::settings::GameSettings;
 use crate::settings_registry::SettingsRegistry;
+use bevy::prelude::*;
 
 /// `OnEnter(InGame)`, before the session is set up: resolves the profile (the picked one, else
 /// the fallback chain) and applies it to the session's settings.

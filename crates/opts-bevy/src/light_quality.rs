@@ -33,7 +33,6 @@ pub use ladder::*;
 pub use levels::*;
 pub use resolve::*;
 
-
 /// The effective lighting quality. The default is ladder level 0 in automatic mode.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LightQuality {

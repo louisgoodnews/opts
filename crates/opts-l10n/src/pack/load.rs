@@ -59,12 +59,6 @@ impl Pack {
     }
 }
 
-
-
-
-
-
-
 /// Reads and checks the pack in `dir` against `reference`.
 #[must_use]
 pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {

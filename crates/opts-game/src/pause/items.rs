@@ -1,8 +1,6 @@
 //! The entries of the pause overlay.
 
-
 use super::*;
-
 
 /// The overlay's entries.
 pub fn pause_items(

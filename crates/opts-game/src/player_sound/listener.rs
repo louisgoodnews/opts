@@ -1,8 +1,8 @@
 //! Where the listener is: inside the vehicle's body box, or in the cabin by the camera mode.
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_bevy::MainCamera;
-use bevy::ecs::system::SystemParam;
 
 /// Whether `listener` (world position) is inside the vehicle at `vehicle`: a box about the body
 /// of a solo bus (1.7 m either side, up to 3.6 m high, 8 m either way; ❓ the model's own bounds

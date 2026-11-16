@@ -32,7 +32,6 @@ mod yuv;
 
 pub use yuv::*;
 
-
 /// AV1 in IVF.
 pub struct Av1Ivf {
     ctx: Context<u8>,

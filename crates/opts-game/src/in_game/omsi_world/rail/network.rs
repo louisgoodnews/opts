@@ -10,8 +10,8 @@ const MIN_HALF_SPAN: f32 = 1.0;
 
 mod lanes;
 pub(in crate::in_game::omsi_world) use lanes::{
-    register_bike_tile, register_tile, tile_bike_lanes, tile_rail_lanes,
-    unregister_bike_tile, unregister_tile,
+    register_bike_tile, register_tile, tile_bike_lanes, tile_rail_lanes, unregister_bike_tile,
+    unregister_tile,
 };
 mod pose;
 pub use pose::{rail_player_pose, unit_frame, unit_pose};

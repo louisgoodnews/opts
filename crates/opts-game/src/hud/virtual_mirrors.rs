@@ -18,9 +18,9 @@ use super::keys;
 use super::parts::texts;
 
 mod slot;
-use slot::spawn_slot;
 use crate::in_game::instruments::{InstrumentInk, InstrumentPanel};
 use crate::in_game::types::InGameEntity;
+use slot::spawn_slot;
 
 /// The area or panel of one mirror.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]

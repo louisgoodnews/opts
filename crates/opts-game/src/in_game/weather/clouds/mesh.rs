@@ -1,6 +1,5 @@
 //! The cloud disc mesh: radial rings with vertex alpha falling to zero at the rim.
 
-
 use super::*;
 
 /// The disc: radial rings, vertex alpha falling to 0 at the rim, UVs in metres.

@@ -116,7 +116,6 @@ impl PassengerSim {
     pub fn take_events(&mut self) -> Vec<Event> {
         std::mem::take(&mut self.events)
     }
-
 }
 
 mod board;

@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// One picture: a door with its camera and image.
 #[derive(Debug, Clone)]
 pub struct DoorSlot {

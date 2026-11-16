@@ -131,6 +131,5 @@ fn all_problems_are_reported_not_only_the_first() {
     }));
 }
 
-
 #[path = "validation/coupling.rs"]
 mod coupling;

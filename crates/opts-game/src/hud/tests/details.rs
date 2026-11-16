@@ -4,7 +4,6 @@ use super::*;
 
 mod toast_tests;
 
-
 #[test]
 fn the_vehicle_kind_follows_the_components() {
     assert_eq!(values::kind_of(true, false), VehicleKind::Tram);

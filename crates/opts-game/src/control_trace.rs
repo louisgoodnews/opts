@@ -28,7 +28,6 @@ pub fn register(registry: &mut ControlRegistry) {
 mod overlay;
 pub use overlay::{add_overlay, TraceOverlay};
 
-
 fn record_json(r: &st::TraceRecord) -> Value {
     serde_json::to_value(r).unwrap_or(Value::Null)
 }

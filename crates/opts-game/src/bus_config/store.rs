@@ -137,8 +137,6 @@ impl BusConfigurations {
             .find(|id| !taken(id))
             .unwrap_or(base)
     }
-
 }
 
 mod mutate;
-

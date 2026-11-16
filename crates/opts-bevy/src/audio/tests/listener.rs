@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 #[test]
 fn a_muted_source_is_not_heard_and_a_spatial_one_needs_a_listener() {
     let mut app = App::new();

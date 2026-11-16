@@ -1,7 +1,7 @@
 //! Text layout: cell widths, the gap between glyphs, and alignment.
 
-use super::*;
 use super::fixtures::*;
+use super::*;
 
 #[test]
 fn width_sums_cells_and_skips_unknown() {

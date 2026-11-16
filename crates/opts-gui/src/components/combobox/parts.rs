@@ -6,7 +6,9 @@ use super::{ComboboxHeader, ComboboxLabelText, ComboboxMenuItem};
 use crate::components::Button;
 use crate::interaction::state::Disabled;
 use crate::theme::{color::ColorRole, shape::RadiusLevel, typography::TypeScale};
-use crate::tokens::components::{BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken};
+use crate::tokens::components::{
+    BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken,
+};
 
 pub(super) fn spawn_header(
     parent: &mut ChildSpawnerCommands,

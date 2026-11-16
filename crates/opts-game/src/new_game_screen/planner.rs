@@ -6,9 +6,9 @@
 use bevy::prelude::*;
 
 #[cfg(test)]
-use opts_bevy::CalendarDate;
-#[cfg(test)]
 use super::types::{GameCatalogue, NewGameSetup};
+#[cfg(test)]
+use opts_bevy::CalendarDate;
 
 mod date;
 mod era;
@@ -17,7 +17,9 @@ mod validation;
 
 pub use date::{clamp_date, days_in_month, set_setup_date, setup_date, step_field, today, Today};
 pub use era::{default_map_date, default_start_clock, era_hint, MapEra};
-pub use quick::{clock_text, matching_quick_time, quick_time_of, round_to_five, QuickTime, QUICK_TIMES};
+pub use quick::{
+    clock_text, matching_quick_time, quick_time_of, round_to_five, QuickTime, QUICK_TIMES,
+};
 pub use validation::{ensure_valid, validate, Invalid};
 
 /// The steps of the wizard; *Trip* is shown only when the plan has runs to offer.

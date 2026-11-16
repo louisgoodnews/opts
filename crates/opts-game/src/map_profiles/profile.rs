@@ -139,7 +139,7 @@ impl MapProfile {
     }
 }
 
-mod ids;
 mod builtin;
+mod ids;
 pub use builtin::presets;
 pub use ids::{chrono_id, settings_hash, slug, MapKey};

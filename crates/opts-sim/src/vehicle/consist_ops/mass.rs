@@ -62,8 +62,10 @@ impl VehicleSimulation {
         };
         // `compute_static_loads` takes at least 100 kg: share a reference mass, scale to the load.
         let reference = 1_000.0;
-        let model =
-            crate::vehicle::suspension::SuspensionModel::new(self.suspension.cg_height_m, 0.5 * (lo + hi));
+        let model = crate::vehicle::suspension::SuspensionModel::new(
+            self.suspension.cg_height_m,
+            0.5 * (lo + hi),
+        );
         let loads: Vec<f32> = model
             .compute_static_loads(&positions, reference)
             .into_iter()

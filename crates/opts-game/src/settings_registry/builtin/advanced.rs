@@ -99,7 +99,15 @@ pub(super) fn streaming() -> Vec<D> {
             "set-streaming-mode",
             "set-streaming-mode-desc",
         )
-        .keywords(&["map", "tiles", "streaming", "speed", "object", "tile", "regime"])
+        .keywords(&[
+            "map",
+            "tiles",
+            "streaming",
+            "speed",
+            "object",
+            "tile",
+            "regime",
+        ])
         .since("0.3"),
     ]
 }

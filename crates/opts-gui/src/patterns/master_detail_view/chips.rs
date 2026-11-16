@@ -7,7 +7,9 @@ use crate::components::button::ButtonBuilder;
 use crate::icons::icon_text;
 use crate::interaction::state::Disabled;
 use crate::patterns::glyphs;
-use crate::patterns::master_detail::{MasterChipButton, MasterClearButton, MasterDetail, MasterDetailView};
+use crate::patterns::master_detail::{
+    MasterChipButton, MasterClearButton, MasterDetail, MasterDetailView,
+};
 use crate::theme::color::ColorRole;
 use crate::tokens::components::ForegroundRole;
 use crate::ui_id::{slug, UiId};

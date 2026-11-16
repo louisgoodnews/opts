@@ -2,7 +2,11 @@
 
 use super::*;
 
-pub(super) fn texts_bundle(key: &'static str, palette: &InstrumentPalette, ink: InstrumentInk) -> impl Bundle {
+pub(super) fn texts_bundle(
+    key: &'static str,
+    palette: &InstrumentPalette,
+    ink: InstrumentInk,
+) -> impl Bundle {
     (texts(key, TypeScale::Label, ink, palette), L10nKey(key))
 }
 

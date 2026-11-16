@@ -7,8 +7,8 @@ use opts_gui::prelude::*;
 
 use crate::content_facts::WantsContentFacts;
 
-use super::ScanLevel;
 use super::labels::look;
+use super::ScanLevel;
 
 /// The chip (frame).
 #[derive(Component, Debug, Clone, Copy)]

@@ -1,6 +1,5 @@
 //! Combo boxes, the windowed list, text fields, key presses and hover.
 
-
 use bevy::prelude::*;
 use opts_cli::protocol::code;
 use serde_json::json;

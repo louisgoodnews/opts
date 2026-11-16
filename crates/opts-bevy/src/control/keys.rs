@@ -9,7 +9,6 @@ mod tables;
 pub use parse::*;
 use tables::*;
 
-
 /// The canonical protocol name of a physical key (the inverse of [`parse_key`]), if it has one.
 #[must_use]
 pub fn key_name(code: KeyCode) -> Option<String> {

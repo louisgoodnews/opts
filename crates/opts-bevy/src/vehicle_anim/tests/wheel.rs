@@ -35,7 +35,6 @@ fn steering_wheel_turns_about_the_tilted_column_ng272() {
     assert!(nod.dot(GN92_RIM_NORMAL).abs() < 0.1);
 }
 
-
 /// Valiant 7700 `Model_7700A_3p_main.cfg`: `origin_from_mesh`, `origin_rot_x 30.7`,
 /// `origin_rot_z 90`, factor 1575, on `7700_DASH_BASE_STEERING_WHEEL.o3d` (a y/z-swap matrix of
 /// scale 0.048; the rim normal measured from its vertices in vehicle axes).

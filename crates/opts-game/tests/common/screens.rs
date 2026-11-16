@@ -147,4 +147,3 @@ pub fn resize(app: &mut App, w: u32, h: u32) {
         app.update();
     }
 }
-

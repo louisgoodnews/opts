@@ -12,7 +12,7 @@ mod field;
 mod stepper;
 
 pub use arith::{clamp_date, date_value, month_key, step_date, step_time, time_value};
-pub use choice::{ChoiceMark, show_chosen, spawn_choice_frame};
+pub use choice::{show_chosen, spawn_choice_frame, ChoiceMark};
 pub use field::{Field, YEARS};
 pub use stepper::{spawn_stepper, spawn_stepper_row};
 

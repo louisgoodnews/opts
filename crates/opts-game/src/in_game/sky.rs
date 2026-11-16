@@ -59,10 +59,9 @@ pub struct MoonDiscTexture(pub Option<Handle<Image>>);
 mod spawn;
 pub use spawn::*;
 
-
 mod geometry;
-pub use geometry::{place_sky_dome, sun_position};
 pub(crate) use geometry::direction;
+pub use geometry::{place_sky_dome, sun_position};
 mod texture;
 use geometry::place_on_dome;
 use texture::refresh_texture;

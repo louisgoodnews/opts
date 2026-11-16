@@ -4,7 +4,6 @@ use super::*;
 
 use super::tables::*;
 
-
 pub(super) fn named(name: &str) -> Option<(KeyCode, Key)> {
     Some(match name {
         "Escape" => (KeyCode::Escape, Key::Escape),

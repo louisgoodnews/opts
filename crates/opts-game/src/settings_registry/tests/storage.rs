@@ -18,14 +18,12 @@ fn a_fixture_setting_needs_one_descriptor_for_storage_validation_and_reset() {
         r.value(&s, "fixture.wheel_sensitivity"),
         Some(SettingValue::Int(7))
     );
-    assert!(
-        r.set(&mut s, &caps(), "fixture.wheel_sensitivity", "11")
-            .is_err()
-    );
-    assert!(
-        r.set(&mut s, &caps(), "fixture.wheel_sensitivity", "fast")
-            .is_err()
-    );
+    assert!(r
+        .set(&mut s, &caps(), "fixture.wheel_sensitivity", "11")
+        .is_err());
+    assert!(r
+        .set(&mut s, &caps(), "fixture.wheel_sensitivity", "fast")
+        .is_err());
     // persisted through the unchanged table
     let mut conn = Connection::open_in_memory().expect("db");
     s.save_to_connection(&mut conn).expect("save");

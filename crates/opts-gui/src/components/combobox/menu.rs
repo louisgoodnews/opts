@@ -8,8 +8,12 @@ use super::search::{ComboboxList, ComboboxNoMatch, ComboboxSearch};
 use super::systems::menu_wheel_scroll;
 use super::{ComboboxMenu, MENU_Z};
 use crate::components::text_field::TextFieldBuilder;
-use crate::theme::{color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale};
-use crate::tokens::components::{BackgroundRole, BorderRole, ElevationToken, ForegroundRole, RadiusToken, TypeStyleToken};
+use crate::theme::{
+    color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
+};
+use crate::tokens::components::{
+    BackgroundRole, BorderRole, ElevationToken, ForegroundRole, RadiusToken, TypeStyleToken,
+};
 
 fn spawn_search_field(menu_parent: &mut ChildSpawnerCommands, root: Entity) {
     let field = TextFieldBuilder::outlined("")

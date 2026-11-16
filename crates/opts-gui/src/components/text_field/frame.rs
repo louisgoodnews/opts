@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use bevy::text::TextCursorStyle;
 use bevy::ui::InteractionDisabled;
 
-use crate::interaction::{layer::FocusProxy, state::{Disabled, DisabledReason}};
+use crate::interaction::{
+    layer::FocusProxy,
+    state::{Disabled, DisabledReason},
+};
 use crate::theme::{color::ColorRole, theme::MaterialTheme};
 
 use super::{M3TextField, TextFieldInput};

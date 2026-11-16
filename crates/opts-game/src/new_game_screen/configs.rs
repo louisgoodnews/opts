@@ -29,8 +29,8 @@ mod rows;
 mod section;
 
 pub use library::ConfigLibrary;
-pub use section::spawn_configs_section;
 use rows::{config_row, problem_text};
+pub use section::spawn_configs_section;
 
 /// The name field.
 #[derive(Component)]

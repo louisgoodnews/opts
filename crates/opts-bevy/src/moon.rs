@@ -30,7 +30,6 @@ pub use ephemeris::{julian_day, lunar_elongation_deg, SYNODIC_MONTH_DAYS};
 pub use light::{allen_phase_function, moon_height_factor, moon_illuminance, moon_night_factor};
 pub use position::moon_state;
 
-
 /// Peak illuminance of the full moon in game units (lx). The physical ratio full moon to sun is
 /// about 1 : 400 000, which would be invisible; 900 lx is the value the fallback light used for
 /// its night.

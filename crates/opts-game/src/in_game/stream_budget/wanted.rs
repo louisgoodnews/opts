@@ -149,4 +149,3 @@ pub fn evictable(
         .filter(|k| chebyshev(*k, centre) > radius + hysteresis)
         .collect()
 }
-

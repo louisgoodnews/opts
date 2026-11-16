@@ -3,18 +3,9 @@
 use super::*;
 
 mod analysis;
-mod names;
 mod detect;
+mod names;
 
 pub(super) use analysis::*;
-pub(super) use names::*;
 pub(super) use detect::*;
-
-
-
-
-
-
-
-
-
+pub(super) use names::*;

@@ -19,7 +19,7 @@ use crate::shell::keys;
 use crate::shell::nav::Navigate;
 use bevy::prelude::*;
 
-pub use overlay::{HelpOverlay, open_overlay};
+pub use overlay::{open_overlay, HelpOverlay};
 pub use params::{F1Gate, ReportRequest, VehicleProbe};
 
 use page::{despawn_help, spawn_help};

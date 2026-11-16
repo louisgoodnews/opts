@@ -44,7 +44,6 @@ pub use geometry::*;
 pub use points::*;
 pub use slot::*;
 
-
 /// Size of the picture (the HUD shows it as it is).
 pub const IMAGE_SIZE: UVec2 = UVec2::new(480, 270);
 /// How often the picture is rendered.
@@ -69,7 +68,6 @@ pub const FADE_S: f64 = 3.0;
 pub const LEAF_NEAR_M: f32 = 2.5;
 /// A door animation value above this counts as open.
 pub const OPEN_ABOVE: f32 = 0.05;
-
 
 /// What the door camera shows and did.
 #[derive(Resource, Debug, Clone, Default)]

@@ -1,7 +1,7 @@
 //! Mesh geometry, normals, UV coordinates, and material block parsers for DirectX `.x` files.
 
-use super::*;
 use super::material::parse_material_list;
+use super::*;
 
 pub(super) fn parse_mesh(
     reader: &mut TokenReader,

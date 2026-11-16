@@ -18,4 +18,6 @@ pub use controller::{
 };
 pub use input::vehicle_input_system;
 pub use plugin::OptsVehiclePlugin;
-pub use sync::{vehicle_physics_step_system, vehicle_transform_sync_system, wheel_transform_sync_system};
+pub use sync::{
+    vehicle_physics_step_system, vehicle_transform_sync_system, wheel_transform_sync_system,
+};

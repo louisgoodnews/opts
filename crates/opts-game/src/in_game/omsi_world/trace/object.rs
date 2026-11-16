@@ -1,8 +1,8 @@
 //! Recording one placed object: its result, its parents and its trace record.
 
-use super::*;
 use super::parents::object_parents;
 use super::site::{Counters, Site};
+use super::*;
 
 /// What the object's placement came to, from the counters before and after: `None` for nothing
 /// placed (editor-only helpers and markers without a vehicle).
@@ -25,7 +25,6 @@ fn placement_result(
         None
     }
 }
-
 
 /// Records one placed object (scenery, tree, parked vehicle, attachment).
 pub(in crate::in_game::omsi_world) fn object(

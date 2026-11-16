@@ -140,4 +140,3 @@ fn the_map_radius_is_the_farthest_listed_tile_from_the_start() {
     assert_eq!(max_radius(listed, (-3, 2)), 5);
     assert_eq!(max_radius([], (0, 0)), 1);
 }
-

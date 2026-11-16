@@ -1,6 +1,12 @@
 //! Plural rules of the Romance family (French, Portuguese and the rest).
 
-pub(super) fn romance_plural(lang: &str, n: f64, i: u64, whole: bool, exactly_one: bool) -> &'static str {
+pub(super) fn romance_plural(
+    lang: &str,
+    n: f64,
+    i: u64,
+    whole: bool,
+    exactly_one: bool,
+) -> &'static str {
     match lang {
         "fr" => {
             if i <= 1 && whole || n > 0.0 && n < 2.0 && !whole {

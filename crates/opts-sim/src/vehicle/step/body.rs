@@ -3,7 +3,6 @@
 use super::*;
 
 impl VehicleSimulation {
-
     pub(super) fn apply_service_brakes(&mut self, dt: f32, forces: &mut DrivetrainForces) {
         if self.script_drive.is_none() {
             let (caps, limits) = self.brake_axles();
@@ -107,5 +106,4 @@ impl VehicleSimulation {
         }
         (caps, limits)
     }
-
 }

@@ -3,7 +3,6 @@
 use super::*;
 
 impl PedestrianNet {
-
     /// A random point on a lane at a horizontal distance of `min_m..max_m` from `centre`.
     pub fn random_spot(
         &self,

@@ -1,10 +1,10 @@
 //! Unit tests for `super` (`screenshot.rs`).
 
 use super::*;
-use serde_json::{json, Map};
 use bevy::asset::RenderAssetUsages;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use opts_cli::protocol::code;
+use serde_json::{json, Map};
 
 fn frame(w: u32, h: u32) -> Image {
     let mut data = Vec::new();

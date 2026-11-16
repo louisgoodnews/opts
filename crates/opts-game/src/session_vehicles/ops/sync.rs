@@ -5,7 +5,9 @@ use opts_bevy::{ArticulatedChain, VehicleController};
 use opts_gui::l10n::Localization;
 use opts_gui::prelude::ToastBuilder;
 
-use crate::session_vehicles::registry::{DespawnReason, Lifecycle, SessionVehicles, SpawnPoint, VehicleId};
+use crate::session_vehicles::registry::{
+    DespawnReason, Lifecycle, SessionVehicles, SpawnPoint, VehicleId,
+};
 
 use super::despawn::despawn;
 use super::frame::{local_to_abs, PLACE_LABEL_HIDE_DISTANCE_M};

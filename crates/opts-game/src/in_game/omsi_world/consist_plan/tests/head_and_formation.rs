@@ -35,4 +35,3 @@ fn formation_cars_follow_the_head_and_each_other() {
     );
     assert_continuous(&head, &plan);
 }
-

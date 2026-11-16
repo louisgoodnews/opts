@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// The scripts of the active cab: the unit's own engine when a unit is active and has one, else
 /// the head's.
 #[must_use]

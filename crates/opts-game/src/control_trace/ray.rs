@@ -11,7 +11,10 @@ pub(super) fn tile_at(world: &World, x: f32, z: f32) -> Option<(i32, i32)> {
 
 /// The pixel (the middle of the view without `x` and `y`), the view size and the world ray through
 /// it, from the active camera.
-pub(super) fn pick_ray(world: &mut World, params: &Value) -> Result<(Vec2, UVec2, Vec3, Vec3), RpcError> {
+pub(super) fn pick_ray(
+    world: &mut World,
+    params: &Value,
+) -> Result<(Vec2, UVec2, Vec3, Vec3), RpcError> {
     let point = match (opt_f64(params, "x"), opt_f64(params, "y")) {
         (Ok(Some(x)), Ok(Some(y))) => Some((x as f32, y as f32)),
         (Ok(None), Ok(None)) => None,

@@ -94,7 +94,12 @@ fn set_inner(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     }
 }
 
-pub(super) fn raise(world: &mut World, name: &str, on: bool, hold_ms: Option<u64>) -> Result<Value, RpcError> {
+pub(super) fn raise(
+    world: &mut World,
+    name: &str,
+    on: bool,
+    hold_ms: Option<u64>,
+) -> Result<Value, RpcError> {
     trigger_gate(world)?;
     let real = resolve_trigger(world.resource::<ScriptKeyBindings>(), name);
     let held = world

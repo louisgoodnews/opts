@@ -59,7 +59,12 @@ pub(super) fn parse_authors(
     }
 }
 
-pub(super) fn validate_code(code: &str, folder: &str, issues: &mut Vec<Issue>, line: Option<usize>) {
+pub(super) fn validate_code(
+    code: &str,
+    folder: &str,
+    issues: &mut Vec<Issue>,
+    line: Option<usize>,
+) {
     if code.is_empty() {
         return;
     }

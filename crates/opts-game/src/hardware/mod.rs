@@ -15,7 +15,7 @@ use std::sync::mpsc::{channel, Receiver};
 use std::sync::Mutex;
 
 use bevy::prelude::*;
-use opts_hardware::inputs::{ProbeInputs};
+use opts_hardware::inputs::ProbeInputs;
 use opts_hardware::{store, HardwareProfile};
 
 pub use settings::descriptors;

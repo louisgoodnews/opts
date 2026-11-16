@@ -67,14 +67,12 @@ fn resolve_trigger(bindings: &ScriptKeyBindings, name: &str) -> String {
         .map_or_else(|| name.to_string(), |(_, real)| (*real).to_string())
 }
 
-
-mod gate;
 mod controls;
 mod drive_set;
-use gate::{gear_name, modal_open, trigger_gate, vehicle_gate};
+mod gate;
 use controls::controls;
 use drive_set::{raise, set, trigger};
-
+use gate::{gear_name, modal_open, trigger_gate, vehicle_gate};
 
 // ---- vehicle.key / vehicle.keys -------------------------------------------------------------
 

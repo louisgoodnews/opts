@@ -15,8 +15,8 @@ mod help;
 mod tests;
 mod words;
 
-pub use words::{is_incomplete, split_words};
 use help::show_help;
+pub use words::{is_incomplete, split_words};
 
 #[derive(Helper, Highlighter, Hinter, Validator)]
 struct CommandHelper;

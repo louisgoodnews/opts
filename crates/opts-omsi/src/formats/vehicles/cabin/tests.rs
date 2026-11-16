@@ -27,7 +27,9 @@ fn places_doors_machines_and_cash_points_are_read() {
 
 #[test]
 fn the_flag_after_an_entry_belongs_to_that_entry() {
-    let c = PassengerCabin::parse("[entry]\n3\n\n[entry]\n39\n\n{noticketsale}\n\n[entry]\n40\n{noticketsale}\n[exit]\n40\n");
+    let c = PassengerCabin::parse(
+        "[entry]\n3\n\n[entry]\n39\n\n{noticketsale}\n\n[entry]\n40\n{noticketsale}\n[exit]\n40\n",
+    );
     assert!(!c.no_ticket_sale);
     assert_eq!(c.entry_no_sale, vec![false, true, true]);
 }

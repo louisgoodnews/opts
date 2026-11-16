@@ -30,4 +30,3 @@ fn quality(app: &App) -> LightQuality {
 mod gate;
 mod keys;
 mod modes;
-

@@ -3,7 +3,6 @@
 use super::*;
 
 impl RouteHandle {
-
     /// The map's timetable files.
     pub fn set_timetables(&self, t: Option<Arc<Timetables>>) {
         self.with_mut(|s| s.timetables = t);

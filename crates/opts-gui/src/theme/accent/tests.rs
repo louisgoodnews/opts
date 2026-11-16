@@ -1,8 +1,8 @@
 //! Unit tests of `accent`.
 
-use crate::theme::contrast::parse_hex;
 use super::*;
 use crate::theme::contrast::contrast_ratio;
+use crate::theme::contrast::parse_hex;
 
 #[test]
 fn presets_parse_by_key() {

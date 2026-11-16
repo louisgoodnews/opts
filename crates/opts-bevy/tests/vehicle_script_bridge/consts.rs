@@ -71,4 +71,5 @@ pub(super) const SCRIPT: &str = "\
 {end}
 ";
 
-pub(super) const KEYBOARD: &[u8] = b"[vehicles]\n[entry]\nbus_doorfront0\n181\n0\n[entry]\nhorn\n35\n1\n";
+pub(super) const KEYBOARD: &[u8] =
+    b"[vehicles]\n[entry]\nbus_doorfront0\n181\n0\n[entry]\nhorn\n35\n1\n";

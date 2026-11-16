@@ -35,10 +35,9 @@ fn a_bad_pair_is_corrected_and_reported() {
         .expect("auto-corrected");
     let s = t.scheme(ThemeKind::Dark);
     assert!(contrast_ratio(s.get(ColorRole::OnPrimary), s.get(ColorRole::Primary)) >= 4.5);
-    assert!(
-        t.corrected
-            .contains(&(ThemeKind::Dark, ColorRole::OnPrimary))
-    );
+    assert!(t
+        .corrected
+        .contains(&(ThemeKind::Dark, ColorRole::OnPrimary)));
     assert!(audit(s).is_empty());
     // only the dark theme was touched
     assert!(t.corrected.iter().all(|(k, _)| *k == ThemeKind::Dark));

@@ -27,7 +27,6 @@ mod load;
 mod query;
 mod reader;
 mod types;
-pub use types::{ListedTile, OverviewRoads, StopSite, TileRoads};
 use reader::read_tiles;
 use types::*;
-
+pub use types::{ListedTile, OverviewRoads, StopSite, TileRoads};

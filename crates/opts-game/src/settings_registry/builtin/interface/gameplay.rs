@@ -86,7 +86,6 @@ fn density() -> Vec<D> {
     ]
 }
 
-
 /// Which tiles stay loaded.
 fn tiles() -> Vec<D> {
     vec![

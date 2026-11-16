@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Moves watcher events through the debouncer and emits one [`ReloadRequested`] per quiet file.
 pub(super) fn collect_file_events(
     watcher: Option<Res<FileWatcher>>,

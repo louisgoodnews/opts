@@ -2,9 +2,9 @@
 //! keeps every tile resident however far the camera goes, a radius keeps the tiles around the
 //! centre tile, and a changed setting is followed while the drive runs.
 
-mod common;
 #[path = "tile_loading_tests/budget.rs"]
 mod budget;
+mod common;
 #[path = "tile_loading_tests/modes.rs"]
 mod modes;
 #[path = "tile_loading_tests/protocol.rs"]
@@ -128,7 +128,6 @@ fn move_camera_to(app: &mut App, tile: (i32, i32)) {
         *g = at.into();
     }
 }
-
 
 /// `scene.tiles` through the dispatcher, with only that method registered.
 fn scene_tiles(app: &mut App) -> Value {

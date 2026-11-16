@@ -7,7 +7,7 @@ use opts_bevy::reporting::{request_report, ReportModalData, ReportModalState};
 use opts_gui::interaction::activation::Activated;
 
 use crate::home::StartDrive;
-use crate::shell::{nav::Navigate};
+use crate::shell::nav::Navigate;
 
 use super::{LastSession, SummaryAction, SummaryCard};
 

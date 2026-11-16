@@ -61,4 +61,3 @@ fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
         "reflexion0, 1 and 3 at least: {groups:?}"
     );
 }
-

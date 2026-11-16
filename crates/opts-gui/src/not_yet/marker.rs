@@ -4,9 +4,9 @@ use std::borrow::Cow;
 
 use bevy::prelude::*;
 
+use super::NotYetPlace;
 use crate::interaction::state::Disabled;
 use crate::interaction::state::DisabledReason;
-use super::NotYetPlace;
 
 /// What a control offers right now.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,7 +1,6 @@
 //! The control methods of the language packs: `l10n.languages`, `l10n.set`, `l10n.reload` and
 //! `l10n.report`.
 
-
 use bevy::prelude::*;
 use opts_bevy::control::params::{opt_str, str_param};
 use opts_bevy::control::state::{ControlRegistry, Outcome};
@@ -12,8 +11,8 @@ use serde_json::{json, Value};
 use crate::settings_registry::{apply_change, ChangeSource, SettingError};
 
 use super::scan::scan;
-use super::LANGUAGE_KEY;
 use super::status::{info_json, languages_value};
+use super::LANGUAGE_KEY;
 
 fn list(world: &mut World, _params: &Value) -> Outcome {
     Outcome::ok(languages_value(world))

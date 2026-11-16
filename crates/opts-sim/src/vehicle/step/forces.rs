@@ -3,7 +3,6 @@
 use super::*;
 
 impl VehicleSimulation {
-
     pub(super) fn compute_script_forces(
         &mut self,
         d: ScriptDrive,
@@ -129,5 +128,4 @@ impl VehicleSimulation {
         }
         total
     }
-
 }

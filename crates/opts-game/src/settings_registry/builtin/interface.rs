@@ -79,7 +79,6 @@ fn theme() -> Vec<D> {
     ]
 }
 
-
 /// Language, units and the HUD hints.
 fn language_and_units() -> Vec<D> {
     vec![

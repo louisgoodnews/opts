@@ -9,10 +9,10 @@ use crate::drive_history::DriveRecord;
 use crate::home::{HomeDrives, StartDrive};
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup};
 use crate::settings::GameSettings;
-use crate::shell::dialog::{CANCEL, DialogChoice};
+use crate::shell::dialog::{DialogChoice, CANCEL};
 use crate::shell::nav::Navigate;
 
-use super::{DIALOG_TAG, FirstRun, Step, choose_omsi_folder, decision, view};
+use super::{choose_omsi_folder, decision, view, FirstRun, Step, DIALOG_TAG};
 
 /// The messages the first-run dialogs send onwards.
 #[derive(bevy::ecs::system::SystemParam)]

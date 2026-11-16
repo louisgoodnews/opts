@@ -39,16 +39,14 @@ const DWELL_MAX_S: f32 = 60.0;
 #[derive(Component)]
 pub struct ScheduledTrain;
 
-
 mod types;
-pub use types::{TrainAssets, TrainLocals, TrainWorld};
 pub(super) use types::{RailPlan, RailStop};
+pub use types::{TrainAssets, TrainLocals, TrainWorld};
 
 mod route;
 pub(super) use route::*;
 mod spawn;
 use spawn::*;
-
 
 /// Spawns the train of the next run that is on the rails at the session clock and has none.
 pub fn spawn_scheduled_trains(

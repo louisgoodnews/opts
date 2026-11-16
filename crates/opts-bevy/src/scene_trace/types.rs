@@ -1,7 +1,7 @@
 //! Data structures for scene trace records, mesh notes, probes, bounds, and transforms.
 
-pub mod kind;
 mod geometry;
+pub mod kind;
 mod lap;
 mod mesh;
 mod query;

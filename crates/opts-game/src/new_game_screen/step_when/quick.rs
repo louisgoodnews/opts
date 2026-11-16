@@ -3,9 +3,9 @@
 use bevy::prelude::*;
 use opts_gui::prelude::*;
 
-use crate::new_game_screen::choice::{ChoiceStep, spawn_choice};
+use crate::new_game_screen::choice::{spawn_choice, ChoiceStep};
 use crate::new_game_screen::planner::{PlannerStep, QUICK_TIMES};
-use crate::new_game_screen::ui::{PlannerAction, keyed, row};
+use crate::new_game_screen::ui::{keyed, row, PlannerAction};
 
 pub(super) fn quick_chips(commands: &mut Commands) -> Entity {
     let line = commands

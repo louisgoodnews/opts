@@ -3,7 +3,6 @@
 use super::*;
 
 impl ScriptEngine {
-
     /// Executes one instruction; returns a jump target.
     pub(super) fn step(
         &mut self,
@@ -71,7 +70,14 @@ impl ScriptEngine {
     }
 
     /// Variable, constant, system, call and event instructions.
-    pub(super) fn step_data(&mut self, op: Op, depth: usize, st: &mut Stacks, block: usize, pc: usize) {
+    pub(super) fn step_data(
+        &mut self,
+        op: Op,
+        depth: usize,
+        st: &mut Stacks,
+        block: usize,
+        pc: usize,
+    ) {
         match op {
             Op::Load(id) => st.numbers.push(self.vars.float(id)),
             // A store leaves its value on the stack: `1 (S.L.a) (S.L.b)` sets both variables
@@ -125,5 +131,4 @@ impl ScriptEngine {
             _ => {}
         }
     }
-
 }

@@ -3,7 +3,11 @@
 use bevy::prelude::*;
 
 use super::{CheckboxBuilder, CheckboxGlyph, CheckboxIndicator, M3Checkbox};
-use crate::interaction::{activation::Activated, events::CheckboxToggled, state::{CheckState, Disabled}};
+use crate::interaction::{
+    activation::Activated,
+    events::CheckboxToggled,
+    state::{CheckState, Disabled},
+};
 use crate::tokens::components::{BackgroundRole, BorderRole, ForegroundRole};
 
 /// System toggling a checkbox when it is [`Activated`].

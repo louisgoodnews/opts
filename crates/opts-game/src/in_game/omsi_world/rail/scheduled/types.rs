@@ -1,8 +1,8 @@
 //! The data of the scheduler: the stops and plan of a rail run, and the system parameters the
 //! scheduler reads and changes.
 
-use std::collections::{HashMap, HashSet};
 use std::collections::VecDeque;
+use std::collections::{HashMap, HashSet};
 
 use super::*;
 

@@ -27,7 +27,11 @@ pub(super) fn front_door_y(job: &WorldLoadJob, manifest: &BusManifest, dir: &Pat
 }
 
 /// Runs the vehicle's own AI script and records its response to full throttle and full brake.
-pub(super) fn measure_script(job: &WorldLoadJob, manifest: &BusManifest, dir: &Path) -> Option<AiResponse> {
+pub(super) fn measure_script(
+    job: &WorldLoadJob,
+    manifest: &BusManifest,
+    dir: &Path,
+) -> Option<AiResponse> {
     if manifest.scripts.is_empty() {
         return None;
     }

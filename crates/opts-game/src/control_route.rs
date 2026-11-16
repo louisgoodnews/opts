@@ -14,8 +14,8 @@ use opts_bevy::PlayerVehicle;
 use opts_cli::protocol::{code, RpcError};
 
 pub(crate) use route::set_route_impl;
-pub(crate) use timetable_set::set_timetable_impl;
 use route::{get_route, routes, set_route};
+pub(crate) use timetable_set::set_timetable_impl;
 use timetable_set::{set_stop, set_timetable};
 use timetables::timetables;
 

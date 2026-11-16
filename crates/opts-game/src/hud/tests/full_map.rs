@@ -42,4 +42,3 @@ fn roots(app: &mut App) -> usize {
 mod follow;
 mod open;
 mod rpc;
-

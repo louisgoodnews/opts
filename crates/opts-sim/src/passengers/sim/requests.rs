@@ -3,7 +3,6 @@
 use super::*;
 
 impl PassengerSim {
-
     /// Entry doors somebody waits at (`PAX_Entry<n>_Req`).
     #[must_use]
     pub fn entry_requests(&self) -> Vec<bool> {
@@ -55,5 +54,4 @@ impl PassengerSim {
             }
         }
     }
-
 }

@@ -4,7 +4,6 @@ use std::fmt::Write as _;
 
 use super::*;
 
-
 pub(super) fn export(args: &[String]) -> Result<Output, String> {
     let a = Args::parse(args, &["lang", "format", "pack", "out"], &["missing"])?;
     let lang = a.value("lang").ok_or("--lang <code> is required")?;

@@ -95,7 +95,6 @@ mod system;
 pub use inputs::*;
 pub use system::*;
 
-
 /// What the passengers tell the scripts of their vehicle (`humans_count`, `PAX_Entry<n>_Req`,
 /// `PAX_Exit<n>_Req`), kept by the passenger system (`opts_game::passengers`).
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -107,7 +106,6 @@ pub struct PassengerFeed {
     /// Somebody waits at exit door `n` to get off.
     pub exit_req: [bool; opts_sim::script::inputs::DOORS],
 }
-
 
 /// Registers [`vehicle_script_system`] after the physics step.
 #[derive(Default)]

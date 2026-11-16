@@ -34,10 +34,10 @@ use opts_game::in_game::weather::{clouds, fog, precip, surfaces};
 const W: u32 = 960;
 const H: u32 = 540;
 
-#[path = "weather_probe/scene.rs"]
-mod scene;
 #[path = "weather_probe/render.rs"]
 mod render;
+#[path = "weather_probe/scene.rs"]
+mod scene;
 use render::{probe_view, render_job};
 use scene::{build_app, spawn_camera_and_sun, spawn_ground};
 

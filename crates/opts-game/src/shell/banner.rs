@@ -73,7 +73,6 @@ pub struct BannerAction {
     pub action: &'static str,
 }
 
-
 mod spawn;
 pub use spawn::{dismiss_banner, show_banner};
 

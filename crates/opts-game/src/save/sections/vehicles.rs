@@ -5,8 +5,8 @@ use std::path::Path;
 use bevy::prelude::*;
 use serde_json::{json, Value};
 
-use super::super::registry::{CheckEnv, Issue, IssueKind};
 use super::super::fingerprint;
+use super::super::registry::{CheckEnv, Issue, IssueKind};
 use super::resolve_bus_file;
 use crate::in_game::omsi_world::WorldLoadJob;
 use crate::session_vehicles::{ops, EntrySel, SessionVehicles, SAVE_SECTION_VERSION};

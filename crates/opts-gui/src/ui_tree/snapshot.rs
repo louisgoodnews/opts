@@ -10,7 +10,9 @@ use crate::components::{
     switch::M3Switch,
     treeview::{M3TreeNode, M3Treeview},
 };
-use crate::interaction::state::{CheckState, Disabled, DisabledReason, ErrorState, Focused, Pressed, Selected};
+use crate::interaction::state::{
+    CheckState, Disabled, DisabledReason, ErrorState, Focused, Pressed, Selected,
+};
 use crate::ui_tree::UiNodeState;
 
 mod build;

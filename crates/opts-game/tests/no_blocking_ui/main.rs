@@ -17,7 +17,6 @@ use std::path::{Path, PathBuf};
 mod lists;
 use lists::{ALLOWED, FORBIDDEN, UI_PATHS};
 
-
 fn src() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("src")
 }

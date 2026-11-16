@@ -135,4 +135,3 @@ mod apply;
 mod toast;
 pub use apply::apply;
 pub use toast::{toast_inset, TOAST_GAP};
-

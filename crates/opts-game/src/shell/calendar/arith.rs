@@ -1,7 +1,7 @@
 //! The stepper arithmetic: date and time steps, the valid date and the value texts.
 
-use opts_bevy::CalendarDate;
 use opts_bevy::environment::days_in_month;
+use opts_bevy::CalendarDate;
 
 use super::field::{Field, YEARS};
 

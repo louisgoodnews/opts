@@ -132,4 +132,3 @@ pub fn drive_camera(
     }
     state.slots = slots;
 }
-

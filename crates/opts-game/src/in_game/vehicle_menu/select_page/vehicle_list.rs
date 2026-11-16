@@ -3,7 +3,11 @@
 use super::*;
 
 /// Column 1: the vehicle list with its search field.
-pub(super) fn vehicle_column(row: &mut ChildSpawnerCommands, menu: &VehicleMenu, cat: &GameCatalogue) {
+pub(super) fn vehicle_column(
+    row: &mut ChildSpawnerCommands,
+    menu: &VehicleMenu,
+    cat: &GameCatalogue,
+) {
     let c1 = column(row, 30.0);
     row.commands().entity(c1).with_children(|c| {
         let shown: Vec<usize> = cat

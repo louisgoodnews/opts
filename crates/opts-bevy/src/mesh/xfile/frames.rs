@@ -1,6 +1,5 @@
 //! The transforms of the `.x` frame hierarchy: each sub-mesh with its frame's world transform.
 
-
 /// Row-vector matrix product `a * b` (apply `a` first, then `b`).
 fn mul4(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4]) -> [[f32; 4]; 4] {
     let mut out = [[0.0; 4]; 4];

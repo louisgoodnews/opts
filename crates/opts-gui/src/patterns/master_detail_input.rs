@@ -10,9 +10,9 @@ use crate::interaction::activation::ActivationSet;
 use crate::patterns::list_model::first_item;
 use crate::patterns::master_detail::{MasterDetail, MasterDetailView};
 
-pub(super) use pointer::attach_pointer_observers;
 use clicks::{on_activated, on_text_changed};
 use keys::on_keys;
+pub(super) use pointer::attach_pointer_observers;
 
 /// System set of the pattern's input handling (the view systems run after it).
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

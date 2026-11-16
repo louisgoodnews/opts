@@ -13,12 +13,12 @@ mod apply;
 mod grading;
 
 pub use apply::{apply_look_to_cameras, apply_startup_render_options, LookApplied, LookPlugin};
-pub use grading::{daylight, effective_ambient_scale, grading_for, hdr_clear_color};
 #[cfg(test)]
 pub(crate) use grading::somewhat_boring;
+pub use grading::{daylight, effective_ambient_scale, grading_for, hdr_clear_color};
 
 use bevy::prelude::*;
-use bevy::render::view::{Tonemapping};
+use bevy::render::view::Tonemapping;
 use serde::{Deserialize, Serialize};
 
 /// A named colour look.

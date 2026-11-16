@@ -5,10 +5,10 @@ use bevy::prelude::*;
 use opts_gui::l10n::L10nArgs;
 use opts_gui::prelude::*;
 
-use super::{EraHint, TimeSourceLabel, stepper};
-use crate::new_game_screen::BuildCtx;
-use crate::new_game_screen::planner::{Field, TimeSource, era_hint, month_key};
+use super::{stepper, EraHint, TimeSourceLabel};
+use crate::new_game_screen::planner::{era_hint, month_key, Field, TimeSource};
 use crate::new_game_screen::ui::{column, keyed, keyed_args};
+use crate::new_game_screen::BuildCtx;
 use crate::shell::calendar;
 
 pub(super) fn time_block(commands: &mut Commands, ctx: &BuildCtx) -> Entity {

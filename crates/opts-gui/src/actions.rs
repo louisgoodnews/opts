@@ -4,7 +4,6 @@
 //! Keyboard and gamepad feed the same message. The control protocol injects actions with
 //! `ui.action`, so tests drive the UI exactly as users do.
 
-
 mod devices;
 mod keys;
 
@@ -120,7 +119,6 @@ impl UiAction {
         "scroll page-up|page-down|home|end|up|down",
     ];
 }
-
 
 /// Registers [`UiAction`] and the device mappings.
 pub fn build(app: &mut App) {

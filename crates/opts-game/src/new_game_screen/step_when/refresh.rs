@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use opts_gui::l10n::L10nArgs;
 
 use super::{EraHint, TimeSourceLabel, WhenValue};
-use crate::new_game_screen::TextsAndCatalogue;
-use crate::new_game_screen::planner::{Field, PlannerState, era_hint, month_key};
+use crate::new_game_screen::planner::{era_hint, month_key, Field, PlannerState};
 use crate::new_game_screen::types::NewGameSetup;
+use crate::new_game_screen::TextsAndCatalogue;
 
 /// Parts of the step that were just spawned and need their first refresh.
 type NewWhenParts = Or<(Added<WhenValue>, Added<TimeSourceLabel>)>;

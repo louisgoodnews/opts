@@ -14,7 +14,6 @@ pub use query::*;
 mod reveal;
 use reveal::*;
 
-
 pub(super) fn scroll(world: &mut World, params: &Value) -> Outcome {
     match scroll_inner(world, params) {
         Ok(v) => Outcome::ok(v),

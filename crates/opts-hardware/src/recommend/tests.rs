@@ -34,14 +34,8 @@ use GpuClass::{Discrete, Integrated};
 use GpuVendor::{Amd, Intel, Nvidia};
 use StorageClass::{Hdd, Ssd};
 
-mod tile_radius;
 mod tiers;
-
-
-
-
-
-
+mod tile_radius;
 
 #[test]
 fn helpers() {

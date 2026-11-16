@@ -4,8 +4,8 @@
 use bevy::prelude::*;
 use opts_bevy::VehicleController;
 
-use crate::session_vehicles::registry::{Lifecycle, SessionVehicle, SessionVehicles, VehicleId};
 use crate::in_game::omsi_world::WorldStats;
+use crate::session_vehicles::registry::{Lifecycle, SessionVehicle, SessionVehicles, VehicleId};
 
 /// Why an operation was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]

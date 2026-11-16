@@ -12,12 +12,10 @@ mod restart;
 mod status;
 mod teleport;
 
-pub(crate) use restart::restart_waiter;
 use context::{allow_session_reads, capture_metadata};
-use handlers::{
-    menu_do, menu_state, script_vars, ui_navigate, vehicle_get,
-};
+use handlers::{menu_do, menu_state, script_vars, ui_navigate, vehicle_get};
 use render::{render_look, render_stats};
+pub(crate) use restart::restart_waiter;
 use restart::set_vehicle;
 use status::{scene, state, unload};
 use teleport::teleport;

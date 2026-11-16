@@ -68,7 +68,6 @@ pub fn spline_cut_triangles(
     out
 }
 
-
 /// The aligned strips over one tile, in its frame, and the drawn ground they must stay under.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct TerrainCut {
@@ -137,7 +136,6 @@ impl TerrainCut {
         self.strips.candidates(i, j)
     }
 }
-
 
 #[cfg(test)]
 mod tests;

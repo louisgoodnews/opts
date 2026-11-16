@@ -50,7 +50,13 @@ pub(super) fn spawn_texts(c: &mut Commands, row: Entity, d: &SettingDescriptor) 
 }
 
 /// The *Reset* button of a stored setting (disabled with the reason while it is at its default).
-pub(super) fn spawn_reset(c: &mut Commands, right: Entity, ctx: &Ctx, d: &SettingDescriptor, cur: &str) {
+pub(super) fn spawn_reset(
+    c: &mut Commands,
+    right: Entity,
+    ctx: &Ctx,
+    d: &SettingDescriptor,
+    cur: &str,
+) {
     if d.is_stored() && !matches!(d.available, Available::NotYet(_)) && !ctx.light_locked(d.key) {
         let at_default = cur == d.default;
         let b = ButtonBuilder::text("settings-reset")

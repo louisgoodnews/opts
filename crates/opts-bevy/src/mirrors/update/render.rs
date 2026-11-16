@@ -4,7 +4,6 @@ use crate::mirrors::*;
 
 use super::pose::GroupPose;
 
-
 fn apply_single_pose(
     p: &GroupPose,
     info: &MirrorCamera,

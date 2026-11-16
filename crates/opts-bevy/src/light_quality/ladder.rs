@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// The unified fallback ladder of `lighting-system.md` section 9 (automatic mode).
 ///
 /// | level | name | rays | night | lanterns | headlights | cap | depth fade | mirrors | glass | bloom |

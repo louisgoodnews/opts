@@ -7,7 +7,7 @@ use opts_gui::l10n::L10nKey;
 use opts_gui::prelude::*;
 
 use crate::shell::nav::PendingDeepLink;
-use crate::shell::{ShellContent, keys, spawn_screen_root};
+use crate::shell::{keys, spawn_screen_root, ShellContent};
 
 use super::scroll;
 use super::{HelpPane, HelpRoot, HelpState, HelpTab};

@@ -2,11 +2,14 @@
 
 use std::path::{Path, PathBuf};
 
-use opts_core::formats::vehicles::BusManifest;
 use super::*;
+use opts_core::formats::vehicles::BusManifest;
 
 /// Reads one vehicle file: manifest, constant files, profile and model.
-pub(super) fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, PathBuf), String> {
+pub(super) fn load_unit(
+    job: &WorldLoadJob,
+    path: &Path,
+) -> Result<(Unit, BusManifest, PathBuf), String> {
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     let manifest = BusManifest::parse_bytes(&bytes).map_err(|e| e.to_string())?;
     let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();

@@ -41,7 +41,6 @@ fn scenery_and_vehicle_scripts_get_the_weather_values() {
     assert!((engine.get("preciprate") - 173.0 / 255.0).abs() < 0.3);
 }
 
-
 #[test]
 fn ground_fog_follows_the_camera_height_and_other_presets_do_not() {
     use opts_bevy::weather::GroundFogView;
@@ -89,4 +88,3 @@ fn ground_fog_follows_the_camera_height_and_other_presets_do_not() {
     place_camera(&mut app, 70.0, 0.0);
     assert!(!camera_has_fog(&mut app));
 }
-

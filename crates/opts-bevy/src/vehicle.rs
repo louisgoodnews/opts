@@ -140,8 +140,8 @@ impl BusVehicle {
 mod lights;
 mod spawn;
 
-pub use spawn::*;
 use lights::*;
+pub use spawn::*;
 
 #[cfg(test)]
 mod tests;

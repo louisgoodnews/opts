@@ -52,7 +52,13 @@ impl<'a> LineScanner<'a> {
         self.entries
     }
 
-    pub(super) fn handle_line(&mut self, line: &str, lineno: usize, starts_entry: bool, indented: bool) {
+    pub(super) fn handle_line(
+        &mut self,
+        line: &str,
+        lineno: usize,
+        starts_entry: bool,
+        indented: bool,
+    ) {
         if starts_entry {
             if let Some(done) = self.current.take() {
                 self.entries.push(done);

@@ -5,7 +5,7 @@
 
 mod clock;
 
-pub use clock::{DEFAULT_DARK_FROM, DEFAULT_LIGHT_FROM, format_time, parse_time, theme_for};
+pub use clock::{format_time, parse_time, theme_for, DEFAULT_DARK_FROM, DEFAULT_LIGHT_FROM};
 
 /// A concrete palette family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -103,7 +103,11 @@ impl ThemeMode {
 
     /// Maps the legacy boolean `is_dark_theme` setting (used until M-0061) to a mode.
     pub const fn from_legacy_is_dark(is_dark: bool) -> Self {
-        if is_dark { Self::Dark } else { Self::Light }
+        if is_dark {
+            Self::Dark
+        } else {
+            Self::Light
+        }
     }
 
     /// `true` when the mode can change the theme without the user doing anything.

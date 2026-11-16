@@ -19,7 +19,11 @@ fn drive(m: &mut Motion, speed: f32, frames: usize, dt: f32) {
 fn motion_measures_a_steady_drive() {
     let mut m = Motion::default();
     drive(&mut m, 25.0, 600, 1.0 / 60.0);
-    assert!((m.speed_mps() - 25.0).abs() < 0.5, "speed {}", m.speed_mps());
+    assert!(
+        (m.speed_mps() - 25.0).abs() < 0.5,
+        "speed {}",
+        m.speed_mps()
+    );
     assert!((m.heading().0 - 1.0).abs() < 1e-5 && m.heading().1.abs() < 1e-5);
 }
 
@@ -90,7 +94,9 @@ fn heading_pulls_the_tile_ahead_before_one_behind_at_speed() {
     assert_eq!(w[0], (1, 0), "{w:?}");
     // the look-ahead tiles come after the ring and lie east of it
     let ring = 8;
-    assert!(w[ring..].iter().all(|k| k.0 >= 2 && (-1..=1).contains(&k.1)));
+    assert!(w[ring..]
+        .iter()
+        .all(|k| k.0 >= 2 && (-1..=1).contains(&k.1)));
     assert_eq!(w.len(), ring + 6);
 }
 

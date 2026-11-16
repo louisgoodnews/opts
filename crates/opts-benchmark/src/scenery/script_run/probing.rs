@@ -1,7 +1,7 @@
 //! Reading the runtime state of the object: script variables, mesh animations, lights and light maps.
 
-use super::*;
 use super::types::Handles;
+use super::*;
 
 /// Reads the runtime's state of the object at `root`.
 pub(super) fn probe(world: &World, root: Entity, sco: &SceneryObject, handles: &Handles) -> Probe {

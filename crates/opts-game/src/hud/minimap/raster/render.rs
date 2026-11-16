@@ -3,7 +3,7 @@
 use bevy::math::Vec2;
 
 use super::canvas::Canvas;
-use super::lines::{Projection, draw_line};
+use super::lines::{draw_line, Projection};
 use super::shapes::{arrow, draw_ring, fill_triangle};
 use super::{MapColors, MapLine, MapMarker, MapRoute, MapView};
 

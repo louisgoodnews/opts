@@ -10,7 +10,6 @@ const NLC: &str = "[mesh]\nsolo\\rad_vl_felge.o3d\n\n[newanim]\norigin_from_mesh
 /// The 18C's steering blocks: the main one on `origin_rot_y 90`.
 const NLC18: &str = "[mesh]\nsolo\\rad_vl_felge.o3d\n\n[newanim]\norigin_from_mesh\norigin_rot_y\n90\nanim_rot\nAxle_Steering_0_L\n57.29578\n\n[newanim]\norigin_from_mesh\norigin_rot_z\n90\nanim_rot\nAxle_Steering_0_L\n4\n\n++++++\n";
 
-
 /// Steering by 0.2 rad: a point 1 m ahead of the hub must move sideways and keep its height
 /// (a vertical steering axis), where a roll axis would leave it on the axis.
 fn steers_about_vertical(steps: &[AnimStep], hub: Vec3) -> bool {

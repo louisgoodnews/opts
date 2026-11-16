@@ -56,6 +56,6 @@ fn dir(name: &str) -> PathBuf {
     d
 }
 
+mod files;
 mod identity;
 mod load_save;
-mod files;

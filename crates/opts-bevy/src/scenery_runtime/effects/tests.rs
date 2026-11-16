@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 fn light(direction: Vec3) -> SceneryLight {
     SceneryLight {
         var: VarRef::One,

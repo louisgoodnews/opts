@@ -178,7 +178,9 @@ impl HofFile {
 
 mod rows;
 
-use rows::{is_keyword, next_param, next_param_raw, parse_busstop_list_row, parse_terminus_list_row};
+use rows::{
+    is_keyword, next_param, next_param_raw, parse_busstop_list_row, parse_terminus_list_row,
+};
 
 #[cfg(test)]
 mod tests;

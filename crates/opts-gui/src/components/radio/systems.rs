@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use super::{M3Radio, RadioBuilder, RadioInnerDot, RadioOuterRing};
 use crate::interaction::{activation::Activated, events::RadioSelected, state::Disabled};
-use crate::tokens::components::BorderRole;
 use crate::tokens::components::BackgroundRole;
+use crate::tokens::components::BorderRole;
 
 /// System handling radio button selection (on [`Activated`]) and mutual exclusion within groups.
 pub fn radio_select_system(

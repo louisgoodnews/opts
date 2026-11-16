@@ -7,7 +7,7 @@ use crate::settings_registry::descriptor::{
     Category as C, SettingDescriptor as D, SettingKind as K,
 };
 
-use super::{MOUSE_DRIVING_KEY};
+use super::MOUSE_DRIVING_KEY;
 
 pub(super) const RESET_ROWS: [(&str, &str, &str); 7] = [
     (

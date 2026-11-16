@@ -24,4 +24,3 @@ pub(super) fn toggle_pause(
         tracing::info!("simulation paused [P]");
     }
 }
-

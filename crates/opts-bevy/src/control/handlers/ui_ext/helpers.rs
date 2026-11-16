@@ -56,7 +56,11 @@ pub fn open_modals(world: &mut World) -> Vec<Entity> {
 }
 
 /// `Err(1009)` when a modal is open and `entity` is not inside one.
-pub(super) fn check_modal_scope(world: &mut World, entity: Entity, what: &str) -> Result<(), RpcError> {
+pub(super) fn check_modal_scope(
+    world: &mut World,
+    entity: Entity,
+    what: &str,
+) -> Result<(), RpcError> {
     let modals = open_modals(world);
     if modals.is_empty() || modals.iter().any(|m| is_inside(world, entity, *m)) {
         Ok(())

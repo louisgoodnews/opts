@@ -4,7 +4,9 @@ use bevy::ecs::system::SystemParam;
 use bevy::input_focus::InputFocusVisible;
 use bevy::prelude::*;
 
-use super::{ComboboxLabelText, ComboboxMenu, ComboboxMenuItem, ComboboxReveal, ComboboxSearch, M3Combobox};
+use super::{
+    ComboboxLabelText, ComboboxMenu, ComboboxMenuItem, ComboboxReveal, ComboboxSearch, M3Combobox,
+};
 use crate::components::text_field::M3TextField;
 use crate::interaction::{focus::FocusEvent, layer::FocusProxy};
 use crate::l10n::Localization;

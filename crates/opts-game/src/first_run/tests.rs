@@ -9,8 +9,8 @@ use crate::shell::dialog::DialogChoice;
 use std::path::PathBuf;
 
 use crate::settings::GameSettings;
-use crate::shell::ShellPlugin;
 use crate::shell::keys;
+use crate::shell::ShellPlugin;
 use opts_gui::prelude::*;
 
 fn app() -> App {

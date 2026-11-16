@@ -9,9 +9,9 @@ mod time;
 use bevy::prelude::*;
 use opts_gui::prelude::*;
 
-use crate::new_game_screen::BuildCtx;
 use crate::new_game_screen::planner::{Field, TimeSource};
-use crate::new_game_screen::ui::{Act, PlannerAction, column, keyed};
+use crate::new_game_screen::ui::{column, keyed, Act, PlannerAction};
+use crate::new_game_screen::BuildCtx;
 use crate::shell::calendar;
 
 use cards::weather_cards;

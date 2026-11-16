@@ -2,8 +2,6 @@
 
 use super::*;
 
-mod decode;
 mod dds;
+mod decode;
 mod sniff;
-
-

@@ -31,7 +31,12 @@ pub(in crate::settings_registry) fn confirm_param(params: &Value) -> Result<bool
 /// anything (`applied`) and whether it takes effect after a restart (`needs_restart`). With
 /// `confirm` false a setting that has a revert prompt on the page is applied but not saved and
 /// waits for `settings.confirm`, `settings.revert` or the timeout (`pending_confirm`).
-pub(in crate::settings_registry) fn changed(world: &mut World, key: &str, value: Option<&str>, confirm: bool) -> Outcome {
+pub(in crate::settings_registry) fn changed(
+    world: &mut World,
+    key: &str,
+    value: Option<&str>,
+    confirm: bool,
+) -> Outcome {
     let apply = world
         .resource::<SettingsRegistry>()
         .get(key)

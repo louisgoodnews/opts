@@ -22,7 +22,11 @@ pub(super) fn cache_path(store: &ProfileStore, map_id: &str) -> PathBuf {
 }
 
 /// The cached counts when the tile files are as they were when they were counted.
-pub(super) fn read_cache(store: &ProfileStore, map_id: &str, sig: (usize, u64)) -> Option<StaticProfile> {
+pub(super) fn read_cache(
+    store: &ProfileStore,
+    map_id: &str,
+    sig: (usize, u64),
+) -> Option<StaticProfile> {
     let c: CacheFile =
         toml::from_str(&std::fs::read_to_string(cache_path(store, map_id)).ok()?).ok()?;
     ((c.tiles, c.bytes) == sig).then_some(StaticProfile {
@@ -34,7 +38,12 @@ pub(super) fn read_cache(store: &ProfileStore, map_id: &str, sig: (usize, u64)) 
     })
 }
 
-pub(super) fn write_cache(store: &ProfileStore, map_id: &str, sig: (usize, u64), p: &StaticProfile) {
+pub(super) fn write_cache(
+    store: &ProfileStore,
+    map_id: &str,
+    sig: (usize, u64),
+    p: &StaticProfile,
+) {
     let c = CacheFile {
         tiles: sig.0,
         bytes: sig.1,

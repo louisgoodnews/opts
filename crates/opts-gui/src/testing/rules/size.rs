@@ -2,7 +2,7 @@
 
 use super::{MIN_TARGET, MIN_TEXT_PX};
 use crate::ui_id::UiId;
-use crate::ui_tree::{UiRole, snapshot};
+use crate::ui_tree::{snapshot, UiRole};
 use bevy::prelude::*;
 
 fn px(v: Val) -> Option<f32> {

@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// One ground layer: its texture and how often it repeats across the 300 m tile.
 pub struct GroundLayer<'a> {
     /// Decoded layer texture.

@@ -78,4 +78,3 @@ pub fn merge_cell_m() -> f32 {
             .unwrap_or(64.0)
     })
 }
-

@@ -29,7 +29,8 @@ pub(in super::super) fn load_zug_spec(job: &WorldLoadJob, rel: &str) -> Option<(
         }
         let turned = seg.orientation == Orientation::Backward;
         if let Some((pm, pturned)) = &prev {
-            let Some((b, f)) = super::super::super::vehicle::coupling_joint(pm, *pturned, &m, turned)
+            let Some((b, f)) =
+                super::super::super::vehicle::coupling_joint(pm, *pturned, &m, turned)
             else {
                 break;
             };
@@ -48,9 +49,9 @@ pub(in super::super) fn load_zug_spec(job: &WorldLoadJob, rel: &str) -> Option<(
             behind,
             reversed: turned,
             span: m.bogie_half_span.unwrap_or(0.0),
-            body: m
-                .bounding_box
-                .map(|(size, centre)| super::super::super::BodyBox::from_bounding_box(size, centre)),
+            body: m.bounding_box.map(|(size, centre)| {
+                super::super::super::BodyBox::from_bounding_box(size, centre)
+            }),
             defs,
         });
         prev = Some((m, turned));

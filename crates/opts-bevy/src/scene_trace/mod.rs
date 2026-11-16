@@ -186,6 +186,5 @@ pub fn record(probe: &Probe<'_>, build: impl FnOnce() -> TraceRecord) -> Option<
     Some(s.add(&mut rec))
 }
 
-
 #[cfg(test)]
 mod tests;

@@ -12,18 +12,18 @@ mod bc_mips;
 pub mod cfg_flags;
 pub mod chain_cache;
 mod dds_chain;
-mod decode;
 mod dds_image;
+mod decode;
 mod error;
 mod format;
 mod mips;
 mod pixel;
-pub use cfg_flags::{texture_wetness, TextureFlags};
 pub use bc_mips::{
     bc_chain, bc_chain_stats, prepare_block_compressed, BcChainStats, GENERATOR_VERSION,
 };
-pub use decode::*;
+pub use cfg_flags::{texture_wetness, TextureFlags};
 pub use dds_image::{dds_to_bevy_image, dropped_dds_chains};
+pub use decode::*;
 pub use error::TextureError;
 pub use format::{sniff_image_format, ImageFormat};
 pub use mips::{

@@ -1,8 +1,6 @@
 //! The save list and loading a save.
 
-
 use super::*;
-
 
 fn set_name(app: &mut App, text: &str) {
     let entity = opts_gui::ui_tree::find_entity(app.world_mut(), "saves.name").expect("name field");

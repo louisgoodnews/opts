@@ -3,7 +3,6 @@
 use super::*;
 
 impl PassengerSim {
-
     pub(super) fn nearest_exit(&self, from: usize) -> usize {
         (0..self.exit_nodes.len())
             .filter_map(|e| {
@@ -63,5 +62,4 @@ impl PassengerSim {
                 .map(|f| f.0)
         })
     }
-
 }

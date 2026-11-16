@@ -9,7 +9,7 @@ use std::borrow::Cow;
 
 mod system;
 
-pub use system::{TooltipParams, tooltip_system};
+pub use system::{tooltip_system, TooltipParams};
 
 /// Hover time before a tooltip appears.
 pub const TOOLTIP_DELAY_SECS: f32 = 0.6;

@@ -46,5 +46,4 @@ fn camera_look_and_move_follow_the_mode_and_the_gates() {
     assert_eq!(e.code, code::GATED);
 }
 
-
 mod viewpoint;

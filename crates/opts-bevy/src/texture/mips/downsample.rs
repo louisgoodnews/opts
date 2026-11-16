@@ -75,7 +75,14 @@ pub(super) fn downsample_exact(
 }
 
 /// Builds the next level from `src` (`sw` x `sh` RGBA8 sRGB) with exact area weights.
-pub(super) fn downsample(src: &[u8], sw: u32, sh: u32, dw: u32, dh: u32, weighted: bool) -> Vec<u8> {
+pub(super) fn downsample(
+    src: &[u8],
+    sw: u32,
+    sh: u32,
+    dw: u32,
+    dh: u32,
+    weighted: bool,
+) -> Vec<u8> {
     let exact = |s: u32, d: u32| (s == d || s == 2 * d).then_some((s / d) as usize);
     if let (Some(kx), Some(ky)) = (exact(sw, dw), exact(sh, dh)) {
         if !weighted && kx == 2 && ky == 2 {

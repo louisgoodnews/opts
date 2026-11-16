@@ -11,7 +11,6 @@ fn a_single_body_consist_is_the_old_tram() {
     assert_eq!(a.braked_mass_kg, 30_000.0);
 }
 
-
 #[test]
 fn a_heavy_consist_accelerates_with_the_traction_of_its_powered_cars_only() {
     let (train, loco_alone) = freight();

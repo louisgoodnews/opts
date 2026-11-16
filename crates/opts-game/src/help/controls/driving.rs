@@ -2,8 +2,8 @@
 
 use bevy::prelude::KeyCode;
 
+use super::table::{bind, rebindable, RAIL, RAIL_CONTROLS, SIM};
 use super::Group;
-use super::table::{RAIL, RAIL_CONTROLS, SIM, bind, rebindable};
 use crate::shell::keys;
 
 pub(super) const DRIVING_GROUP: Group = (

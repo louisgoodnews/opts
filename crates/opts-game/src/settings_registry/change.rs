@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 use super::{
-    ChangeSource, SettingChanged, SettingError, SettingsCapabilities, SettingsRegistry, api,
+    api, ChangeSource, SettingChanged, SettingError, SettingsCapabilities, SettingsRegistry,
 };
 use crate::settings::GameSettings;
 

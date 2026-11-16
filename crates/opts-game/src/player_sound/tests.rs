@@ -14,7 +14,6 @@ use opts_bevy::audio::AudioStats;
 use opts_core::formats::sound::SoundConfig;
 use opts_sim::script::ScriptEngine;
 
-
 mod cabin;
 mod loops;
 mod rig;

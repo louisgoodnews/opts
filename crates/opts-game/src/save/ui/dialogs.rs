@@ -23,8 +23,8 @@ mod error;
 mod questions;
 
 pub use answer::dialog_choices;
-pub use questions::{ask_overwrite, load, row_action};
 use error::open_error;
+pub use questions::{ask_overwrite, load, row_action};
 
 /// Tag of the overwrite question.
 pub const OVERWRITE_DIALOG: &str = "saves.overwrite";

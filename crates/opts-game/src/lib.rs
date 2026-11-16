@@ -84,7 +84,6 @@ pub use settings::GameSettings;
 pub use settings_screen::SettingsScreenPlugin;
 pub use shutdown::ShutdownPlugin;
 
-
 fn transition_to_main_menu(
     mut next_state: ResMut<NextState<AppState>>,
     args: Option<Res<AppArgs>>,

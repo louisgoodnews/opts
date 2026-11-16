@@ -48,4 +48,3 @@ fn a_session_without_a_vehicle_stays_without_one() {
     let p = plan(&inputs(&cat, None), "Grundorf", None, VehicleChoice::Carry).expect("plan");
     assert!(p.no_vehicle);
 }
-

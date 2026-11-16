@@ -28,7 +28,12 @@ fn check_uv_chaos(
     }
 }
 
-pub(super) fn check_triangles_and_uv(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<String>) {
+pub(super) fn check_triangles_and_uv(
+    o: &O3d,
+    tag: &str,
+    codes: &mut Vec<String>,
+    metrics: &mut Vec<String>,
+) {
     let nt = o.indices.len();
     let (mut degen, mut huge, mut flip, mut agree_n) = (0usize, 0usize, 0usize, 0usize);
     let mut edges: Vec<f32> = Vec::with_capacity(nt);

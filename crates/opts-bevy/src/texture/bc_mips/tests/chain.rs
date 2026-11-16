@@ -60,4 +60,3 @@ fn dxt1_cutout_alpha_survives_the_chain() {
         assert!((0.35..=0.65).contains(&share), "level {level}: {share}");
     }
 }
-

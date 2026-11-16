@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use opts_bevy::control::params::{opt_bool, str_param};
-use opts_bevy::control::state::{Outcome};
+use opts_bevy::control::state::Outcome;
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 

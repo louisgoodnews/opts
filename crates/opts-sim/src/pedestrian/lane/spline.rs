@@ -1,10 +1,10 @@
 //! Footpath and bike lanes of placed splines: the arc sampler and the spline ribbon lanes.
 
+use super::model::{FootLane, Travel};
+use super::{PATH_TYPE_PEDESTRIAN, SAMPLE_STEP_M};
 use glam::Vec3;
 use opts_core::formats::map::MapSplineInstance;
 use opts_core::formats::scenery::{LaneKind, SplineProfile};
-use super::model::{FootLane, Travel};
-use super::{PATH_TYPE_PEDESTRIAN, SAMPLE_STEP_M};
 
 /// Centreline of an arc segment: `(position, heading_rad)` every [`SAMPLE_STEP_M`] metres.
 ///

@@ -1,9 +1,7 @@
 //! The regeneration policy of the sky cube and the exposure that scales its intensity.
 
 use super::input::RegenSnapshot;
-use super::tuning::{
-    NIGHT_EXPOSURE, REGEN_MIN_INTERVAL_S, REGEN_SUN_DELTA_DEG, WEATHER_EPS,
-};
+use super::tuning::{NIGHT_EXPOSURE, REGEN_MIN_INTERVAL_S, REGEN_SUN_DELTA_DEG, WEATHER_EPS};
 
 /// Whether the cube must be rebuilt: `last` is the snapshot and real time (seconds) of the last
 /// build, `None` before the first.

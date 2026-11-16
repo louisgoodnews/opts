@@ -3,7 +3,6 @@
 //! One message per line. The same types are used by the client in this crate and by the server in
 //! `opts-bevy::control`.
 
-
 /// Version reported by the `version` method; additive changes bump the minor part.
 pub const PROTOCOL_VERSION: &str = "1.31.0";
 /// Port the control server uses when it is started without an explicit one.

@@ -6,19 +6,6 @@ use crate::profile::{
     Environment, GpuBackend, GpuClass, GpuVendor, HardwareProfile, OsFamily, StorageClass,
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 /// Memory the machine can give a resident map without swapping: 60 % of the available RAM, MiB.
 #[must_use]
 pub fn safe_resident_mib(p: &HardwareProfile) -> Option<u64> {
@@ -37,13 +24,13 @@ pub fn is_virtualised(p: &HardwareProfile) -> bool {
 mod load_all;
 pub use load_all::{estimate_load_all, LoadAllEstimate, MemoryVerdict, SECONDS_PER_TILE};
 
-mod tier;
-mod settings;
 mod dlss;
+mod settings;
+mod tier;
 
-pub use tier::*;
-pub use settings::*;
 pub use dlss::*;
+pub use settings::*;
+pub use tier::*;
 
 #[cfg(test)]
 mod tests;

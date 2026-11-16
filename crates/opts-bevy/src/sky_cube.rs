@@ -28,7 +28,7 @@ mod tuning;
 
 pub use input::{RegenSnapshot, SkyCubeInput};
 pub use policy::{exposure, should_regenerate};
-pub use sync::{SkyCubeApplied, SkyCubeParams, SkyCubePlugin, SkyCubeState, sync_sky_cube};
+pub use sync::{sync_sky_cube, SkyCubeApplied, SkyCubeParams, SkyCubePlugin, SkyCubeState};
 pub use texels::{cube_data, face_direction, sky_radiance};
 pub use tuning::{
     BASE_INTENSITY, CUBE_SIZE, GROUND_SHARE, NIGHT_EXPOSURE, REGEN_MIN_INTERVAL_S,

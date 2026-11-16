@@ -21,13 +21,13 @@ pub use load::{default_root, discover, load_pack_dir, Pack};
 
 mod direction;
 mod meta;
-mod validate;
 mod parse_meta;
+mod validate;
 
 pub use direction::*;
 pub use meta::*;
-use validate::*;
 pub use parse_meta::*;
+use validate::*;
 
 /// Largest string file read, in bytes.
 pub const MAX_FILE_BYTES: u64 = 2 * 1024 * 1024;
@@ -38,18 +38,7 @@ pub const MAX_FILES: usize = 64;
 /// The licence expected of contributed text.
 pub const EXPECTED_LICENSE: &str = "MIT OR Apache-2.0";
 
-
-
-
-
-
 const FILE: &str = "pack.json";
-
-
-
-
-
-
 
 #[cfg(test)]
 mod tests;

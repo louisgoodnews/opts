@@ -3,8 +3,8 @@
 use opts_cli::protocol::RpcError;
 use serde_json::Value;
 
-use crate::control::params::{opt_bool, opt_str, opt_u64};
 use super::super::screenshot::{StillFormat, DEFAULT_JPEG_QUALITY};
+use crate::control::params::{opt_bool, opt_str, opt_u64};
 
 /// Most frames in one burst.
 pub const MAX_COUNT: u64 = 300;
@@ -36,7 +36,9 @@ pub(super) fn check_limits(count: u64, interval_ms: u64) -> Result<(), RpcError>
 }
 
 /// The format, JPEG quality, metadata flag and folder name of the request.
-pub(super) fn still_options(params: &Value) -> Result<(StillFormat, u8, bool, Option<String>), RpcError> {
+pub(super) fn still_options(
+    params: &Value,
+) -> Result<(StillFormat, u8, bool, Option<String>), RpcError> {
     let format = match opt_str(params, "format")? {
         Some(f) => StillFormat::parse(f)?,
         None => StillFormat::Png,

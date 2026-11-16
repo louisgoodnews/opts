@@ -2,7 +2,11 @@
 
 use super::*;
 
-pub(super) fn handle_st_pixel_write(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
+pub(super) fn handle_st_pixel_write(
+    ctx: &VehicleHostContext,
+    name: &str,
+    st: &mut Stacks,
+) -> Option<bool> {
     match name {
         "stsetcolor" => {
             let b = st.numbers.pop().unwrap_or(0.0) as u8;
@@ -64,7 +68,11 @@ pub(super) fn handle_st_pixel_write(ctx: &VehicleHostContext, name: &str, st: &m
     }
 }
 
-pub(super) fn handle_st_color_read(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
+pub(super) fn handle_st_color_read(
+    ctx: &VehicleHostContext,
+    name: &str,
+    st: &mut Stacks,
+) -> Option<bool> {
     match name {
         "stgetr" => {
             let val = read_channel(ctx, st, |t| t.get_r());

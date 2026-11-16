@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Component tracking raw coordinates in OMSI entity space (Z-up: X right, Y forward, Z up).
 #[derive(Component, Debug, Clone, Copy, PartialEq, Reflect)]
 #[reflect(Component)]

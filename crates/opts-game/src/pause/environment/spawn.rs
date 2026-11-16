@@ -1,9 +1,13 @@
 //! Spawns the Environment page: the overlay, its title, the fields, the weather list and the action row.
 
-use super::*;
 use super::layout::*;
+use super::*;
 
-pub(super) fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Localization) {
+pub(super) fn spawn_page(
+    commands: &mut Commands,
+    weather_list: &WeatherCatalogue,
+    loc: &Localization,
+) {
     let (root, card) = ModalBuilder::new()
         .with_size_percent(60.0, 80.0)
         .with_width_range(420.0, 720.0)

@@ -37,7 +37,6 @@ impl AiGroup {
     }
 }
 
-
 /// Parsed `ailists.cfg` (current `_2` syntax only).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct AiLists {

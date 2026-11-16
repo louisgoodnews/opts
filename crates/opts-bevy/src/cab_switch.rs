@@ -29,7 +29,6 @@ pub use handover::*;
 pub use queries::*;
 pub use trace::*;
 
-
 type PlayerCabQueryItem<'a> = (
     Entity,
     &'a BusVehicle,

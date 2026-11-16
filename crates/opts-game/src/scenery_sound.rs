@@ -73,7 +73,6 @@ pub struct SceneryAudioStats {
     pub unresolved: usize,
 }
 
-
 /// Registers the scenery sound systems.
 #[derive(Default)]
 pub struct SceneryAudioPlugin;

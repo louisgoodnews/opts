@@ -45,5 +45,8 @@ fn overlay_alpha_is_texture_alpha_times_variable() {
     assert_eq!(scaled_alpha(0.8, 0.0), 0.0);
     assert_eq!(scaled_alpha(0.8, 3.0), 0.8, "factor clamped to 1");
     assert_eq!(scaled_alpha(0.8, -1.0), 0.0, "factor clamped to 0");
-    assert!(scaled_alpha(1.0, 0.0) <= ALPHA_VISIBLE_MIN, "zero factor hides the part");
+    assert!(
+        scaled_alpha(1.0, 0.0) <= ALPHA_VISIBLE_MIN,
+        "zero factor hides the part"
+    );
 }

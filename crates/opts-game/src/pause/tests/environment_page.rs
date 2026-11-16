@@ -44,6 +44,6 @@ fn light_row_text(app: &mut App) -> String {
         .collect()
 }
 
+mod apply;
 mod lighting;
 mod preview;
-mod apply;

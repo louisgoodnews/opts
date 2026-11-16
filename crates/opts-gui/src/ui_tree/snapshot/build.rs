@@ -5,7 +5,11 @@ use std::collections::HashSet;
 use bevy::ecs::system::RunSystemOnce;
 use bevy::prelude::*;
 
-use crate::components::{combobox::M3Combobox, text_area::TextArea, text_field::{M3TextField, TextFieldInput}};
+use crate::components::{
+    combobox::M3Combobox,
+    text_area::TextArea,
+    text_field::{M3TextField, TextFieldInput},
+};
 use crate::interaction::{navigation::FocusGraph, state::Focused};
 use crate::ui_id::UiId;
 

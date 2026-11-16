@@ -35,4 +35,3 @@ impl WorldLoadJob {
         Some(template)
     }
 }
-

@@ -5,27 +5,27 @@ mod navigate;
 mod time;
 
 use bevy::prelude::*;
-use opts_gui::interaction::Activated;
 use opts_gui::interaction::events::ComboboxSelected;
+use opts_gui::interaction::Activated;
 use opts_gui::l10n::Localization;
-use opts_gui::patterns::MasterDetailView;
 use opts_gui::patterns::master_detail::{
     MasterDetailChosen, MasterDetailFavourite, MasterDetailSelected,
 };
+use opts_gui::patterns::MasterDetailView;
 
-use super::BuildCtx;
 use super::history::PlannerHistory;
 use super::livery::LiveryState;
-use super::options::{OptionsModal, close_options, open_options, reset_options};
+use super::options::{close_options, open_options, reset_options, OptionsModal};
 use super::planner::{
-    MapEra, PlannerState, PlannerStep, default_map_date, default_start_clock, set_setup_date,
-    today, validate,
+    default_map_date, default_start_clock, set_setup_date, today, validate, MapEra, PlannerState,
+    PlannerStep,
 };
 use super::screen::step_invalid;
-use super::step_what::{NONE_ID, fill_none_detail, fill_what_detail};
-use super::step_where::{StartPointBox, StepList, fill_empty_detail, fill_where_detail};
+use super::step_what::{fill_none_detail, fill_what_detail, NONE_ID};
+use super::step_where::{fill_empty_detail, fill_where_detail, StartPointBox, StepList};
 use super::types::{GameCatalogue, NewGameSetup};
 use super::ui::{Act, PlannerAction};
+use super::BuildCtx;
 use crate::app_state::AppState;
 use crate::shell::nav::{Navigate, NavigateBack};
 

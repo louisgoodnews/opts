@@ -55,4 +55,3 @@ fn the_disk_threshold_stops_a_running_recording() {
     );
     let _ = std::fs::remove_dir_all(&root);
 }
-

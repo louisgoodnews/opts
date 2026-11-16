@@ -14,7 +14,7 @@ pub use extrude::{extrude_spline_profile, extrude_spline_segment};
 pub use loader::{
     SceneryLoaderError, SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,
 };
-pub use pose::{SplinePose, spline_pose, spline_stations};
+pub use pose::{spline_pose, spline_stations, SplinePose};
 pub use spawn::spawn_scenery_object;
 
 #[cfg(test)]

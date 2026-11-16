@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::actions::Direction;
 
-use super::{Candidate, next_linear};
+use super::{next_linear, Candidate};
 
 /// Best candidate in `dir` from `current`: the nearest centre beyond the current one, with
 /// sideways offset weighted double so rows and columns stay straight.

@@ -6,7 +6,9 @@ use ddsfile::{D3DFormat, Dds, DxgiFormat, FourCC, PixelFormatFlags};
 use super::error::TextureError;
 
 /// Helper extracting texture format and pixel data from a parsed [`Dds`] file.
-pub(super) fn parse_dds_format_and_data(dds: &Dds) -> Result<(TextureFormat, Vec<u8>), TextureError> {
+pub(super) fn parse_dds_format_and_data(
+    dds: &Dds,
+) -> Result<(TextureFormat, Vec<u8>), TextureError> {
     let pf = &dds.header.spf;
 
     // 1. Check FourCC for block compression formats

@@ -2,7 +2,7 @@
 //! tab and the report button.
 
 use bevy::prelude::*;
-use opts_bevy::reporting::{ReportModalData, ReportModalState, request_report};
+use opts_bevy::reporting::{request_report, ReportModalData, ReportModalState};
 use opts_gui::interaction::activation::Activated;
 use opts_gui::interaction::state::Selected;
 use opts_gui::l10n::L10nKey;
@@ -10,7 +10,7 @@ use opts_gui::prelude::*;
 
 use crate::shell::keys;
 
-use super::{HelpPane, HelpState, HelpTab, ReportButton, about, controls};
+use super::{about, controls, HelpPane, HelpState, HelpTab, ReportButton};
 
 pub(super) fn tab_clicks(
     mut activated: MessageReader<Activated>,

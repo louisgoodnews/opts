@@ -62,9 +62,9 @@ fn refusals(app: &mut App) -> Vec<NavigationRefused> {
     messages.get_cursor().read(messages).cloned().collect()
 }
 
-#[path = "shell_tests/rail.rs"]
-mod rail;
-#[path = "shell_tests/navigation.rs"]
-mod navigation;
 #[path = "shell_tests/layout.rs"]
 mod layout;
+#[path = "shell_tests/navigation.rs"]
+mod navigation;
+#[path = "shell_tests/rail.rs"]
+mod rail;

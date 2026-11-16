@@ -2,7 +2,6 @@
 
 use opts_sim::script::{Curve, EventKind, ScriptEngine};
 
-
 #[test]
 fn frame_sets_timegap_and_accumulates_time() {
     let (mut e, _) = ScriptEngine::from_sources(&[(

@@ -1,9 +1,7 @@
 //! Time, weather and the installed catalogue on the environment page.
 
-
 use super::*;
 use opts_bevy::CalendarDate;
-
 
 #[test]
 fn time_and_weather_preview_live_and_esc_restores_them() {

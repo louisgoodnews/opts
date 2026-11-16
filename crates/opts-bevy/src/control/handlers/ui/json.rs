@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// JSON form of one node (also the result of `ui.state`).
 pub fn node_json(n: &UiNode, with_children: bool) -> Value {
     let s = &n.state;

@@ -5,8 +5,12 @@ use bevy::prelude::*;
 use super::{CheckboxBuilder, CheckboxGlyph, CheckboxIndicator, M3Checkbox};
 use crate::components::Button;
 use crate::interaction::{focus::Focusable, state::Disabled};
-use crate::theme::{color::ColorRole, shape::RadiusLevel, spacing::SpacingScale, typography::TypeScale};
-use crate::tokens::components::{BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken};
+use crate::theme::{
+    color::ColorRole, shape::RadiusLevel, spacing::SpacingScale, typography::TypeScale,
+};
+use crate::tokens::components::{
+    BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken,
+};
 
 impl CheckboxBuilder {
     /// Spawns the checkbox into the Bevy ECS world using top-level [`Commands`].

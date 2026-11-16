@@ -101,7 +101,9 @@ pub(in crate::in_game::omsi_world::tile) fn spawn_vehicle_model(
     job.cache.texture_replacements.clear();
     if count == 0 {
         tracing::warn!(sco = %sco_path.display(), cfg = %cfg_path.display(), "vehicle model object skipped: no level of detail could be loaded");
-        super::super::super::trace::warn(|| format!("no level of detail of {cfg_rel} could be loaded"));
+        super::super::super::trace::warn(|| {
+            format!("no level of detail of {cfg_rel} could be loaded")
+        });
         commands.entity(root).despawn();
         stats.objects_failed += 1;
         return;

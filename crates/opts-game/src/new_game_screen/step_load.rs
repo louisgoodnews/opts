@@ -124,12 +124,10 @@ pub fn refresh_load_row(
     }
 }
 
-
 mod apply;
 mod rows;
 pub use apply::{apply_load_all_switch, apply_use_radius};
 use rows::content;
-
 
 #[cfg(test)]
 mod tests;

@@ -3,8 +3,8 @@
 use bevy::math::Vec3;
 use bevy::mesh::Mesh;
 use opts_core::formats::map::MapSplineInstance;
-use opts_core::formats::scenery::SplineProfile;
 use opts_core::formats::scenery::sli::{SplineGraphicalProfile, SplineProfilePoint};
+use opts_core::formats::scenery::SplineProfile;
 
 use super::super::extrude::extrude_spline_segment;
 

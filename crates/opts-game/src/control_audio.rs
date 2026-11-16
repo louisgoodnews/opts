@@ -10,10 +10,9 @@ use play::{play, tone};
 use state::state;
 
 use bevy::prelude::*;
-use opts_bevy::audio::{SoundBus};
+use opts_bevy::audio::SoundBus;
 use opts_bevy::control::state::{ControlRegistry, Outcome};
 use serde_json::{json, Value};
-
 
 /// Marks the emitters `audio.tone` and `audio.play` create, so `audio.stop` removes only them.
 #[derive(Component)]

@@ -1,8 +1,6 @@
 //! The lighting-quality row of the environment page.
 
-
 use super::*;
-
 
 #[test]
 fn the_lighting_quality_row_shows_the_mode_and_level_and_toggles_it() {

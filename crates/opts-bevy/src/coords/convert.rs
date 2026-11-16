@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Converts an OMSI position vector (Z-up: X right, Y forward, Z up) into Bevy engine space (Y-up: X right, Y up, -Z forward).
 ///
 /// # Examples

@@ -26,12 +26,10 @@ pub use system::{articulation_render_system, articulation_system};
 
 use bevy::prelude::*;
 
-
 /// A leader position change larger than `max(|v|·dt·2, JUMP_THRESHOLD_M)` in one step is a
 /// position jump, not motion: larger than any per-step displacement the simulation produces at
 /// any speed, below the 0.5 m steps of the spawn placement.
 pub const JUMP_THRESHOLD_M: f32 = 0.3;
-
 
 /// Registers [`articulation_system`] between the physics step and the scripts.
 #[derive(Default)]

@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Identity of a profile: the map and the Chrono entry its date resolves to.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MapKey {

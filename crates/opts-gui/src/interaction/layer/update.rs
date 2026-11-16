@@ -4,12 +4,12 @@ use bevy::input_focus::InputFocusVisible;
 use bevy::prelude::*;
 
 use crate::interaction::state::{
-    DISABLED_CONTENT, Disabled, ErrorState, Focused, Hovered, Pressed, UiState,
+    Disabled, ErrorState, Focused, Hovered, Pressed, UiState, DISABLED_CONTENT,
 };
 use crate::theme::{color::ColorRole, theme::MaterialTheme};
 use crate::tokens::components::BackgroundRole;
 
-use super::{FocusProxy, ForcedState, StateLayerLink, StateLayerRole, on_color};
+use super::{on_color, FocusProxy, ForcedState, StateLayerLink, StateLayerRole};
 
 /// The state of one control as the layer system sees it.
 fn ui_state(

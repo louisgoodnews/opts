@@ -46,4 +46,3 @@ fn days_hours_and_minutes_wrap_and_years_clamp() {
     step_field(&mut s, Field::Year, -5, false);
     assert_eq!(s.year, 1900);
 }
-

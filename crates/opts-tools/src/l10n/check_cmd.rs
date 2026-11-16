@@ -3,7 +3,6 @@
 use super::findings::Findings;
 use super::*;
 
-
 pub(super) fn check_cmd(args: &[String]) -> Result<Output, String> {
     let a = Args::parse(args, &["lang", "min-percent"], &["json", "strict"])?;
     let [target] = a.positional.as_slice() else {

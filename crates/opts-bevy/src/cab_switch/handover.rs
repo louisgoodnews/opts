@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// A hand-over in progress: the old cab was put in neutral, and the new one takes over once the
 /// control cables have carried that to it (the NF6D's second cab deactivates itself when it still
 /// sees the first one active).

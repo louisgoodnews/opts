@@ -17,7 +17,6 @@ mod checks;
 mod common;
 mod fixtures;
 
-
 use checks::{check_faults, check_slider_head_and_lamp, check_toggle};
 use common::config;
 use fixtures::build_root;
