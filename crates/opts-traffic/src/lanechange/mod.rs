@@ -12,9 +12,10 @@
 //!   Its speed is the speed of its old lane — a faster follower in the target lane simply means no
 //!   gap yet, so the changer waits instead of cutting in.
 //! * The change is **announced**: the indicator is on for [`ANNOUNCE_S`] seconds, the situation is
-//!   checked again and only then is the vehicle moved. The car is placed on the new lane at once
-//!   (so followers react to it immediately and gently) and glides sideways over
-//!   [`crate::LANE_CHANGE_DURATION_S`] seconds.
+//!   checked again every [`ANNOUNCE_RECHECK_S`] seconds and given up at once when the gap closes
+//!   (the indicator goes off, `lane_change_aborts` counts it); only a change still safe at the
+//!   due time is executed. The car is placed on the new lane at once (so followers react to it
+//!   immediately and gently) and glides sideways over [`crate::LANE_CHANGE_DURATION_S`] seconds.
 //! * The incentive is the gain in own acceleration, plus a small politeness share of the others'
 //!   change, plus a bonus for moving right (*Rechtsfahrgebot*) and a penalty for moving left;
 //!   `overtaking_prohib` forbids moves to the left. Trucks and buses keep right more strongly,
@@ -42,6 +43,9 @@ mod eval;
 const CHECK_INTERVAL_S: f64 = 1.0;
 /// Seconds the indicator is on before the vehicle moves over.
 pub const ANNOUNCE_S: f64 = 3.0;
+/// Seconds between the gap re-checks while the indicator is on (the gap is evaluated
+/// continuously, not only when the change is due).
+pub const ANNOUNCE_RECHECK_S: f64 = 0.5;
 /// Seconds without a new lane change after one.
 pub const COOLDOWN_S: f64 = 8.0;
 /// Slowest speed (m/s) at which vehicles change lanes.
@@ -109,14 +113,20 @@ impl TrafficWorld {
                 continue;
             }
             if let (Some(due), Some(side)) = (due, side) {
-                if self.time < due {
+                let at_due = self.time >= due;
+                if !at_due && self.time < next_check {
                     continue;
                 }
                 match self.evaluate(i, Some(side), by_lane) {
-                    Some(choice) => {
+                    Some(choice) if at_due => {
                         self.execute(i, choice);
                         return true;
                     }
+                    // Still safe while announcing: keep the indicator and look again soon.
+                    Some(_) => {
+                        self.agents[i].lc_next_check = self.time + ANNOUNCE_RECHECK_S;
+                    }
+                    // Unsafe while announcing or at due: give the change up at once.
                     None => {
                         let a = &mut self.agents[i];
                         a.lc_due = None;
@@ -143,6 +153,7 @@ impl TrafficWorld {
                 let a = &mut self.agents[i];
                 a.lc_due = Some(self.time + ANNOUNCE_S);
                 a.lc_side = Some(choice.side);
+                a.lc_next_check = self.time + ANNOUNCE_RECHECK_S;
             }
         }
         false
