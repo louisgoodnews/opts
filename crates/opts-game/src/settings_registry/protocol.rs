@@ -48,4 +48,4 @@ mod tests;
 // `tests.rs` is what the no-blocking-calls lint of the UI modules treats as test code.
 #[cfg(test)]
 #[path = "protocol/tests.rs"]
-mod coverage;
+mod protocol_suite;

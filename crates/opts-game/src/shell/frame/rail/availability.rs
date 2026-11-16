@@ -42,8 +42,6 @@ fn apply_availability(world: &mut World, entity: Entity, availability: &Availabi
     }
 }
 
-/// Entries whose availability just changed.
-
 /// Shows the red line of a not-yet entry when the rail is wide.
 pub fn sync_rail_not_yet_labels(
     class: Res<LayoutClass>,

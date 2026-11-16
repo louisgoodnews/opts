@@ -99,6 +99,7 @@ pub fn sync_rail_selection(
     }
 }
 
+/// Entries whose availability just changed.
 type NotYetChanged = Or<(Added<NotAvailableYet>, Changed<RailAvailability>)>;
 
 /// A rail click opens its destination (a flat jump).

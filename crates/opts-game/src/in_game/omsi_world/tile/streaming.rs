@@ -69,6 +69,18 @@ pub fn advance_tile_loading(
 #[derive(Component, Debug, Clone, Copy)]
 pub struct TileRoot(pub (i32, i32));
 
+/// The camera and the vehicle the tile streamer follows, and the frame time (grouped to stay
+/// within Bevy's parameter limit).
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct StreamViewpoint<'w, 's> {
+    /// The 3D camera (the observer).
+    camera: Query<'w, 's, &'static GlobalTransform, With<opts_bevy::MainCamera>>,
+    /// The player's vehicle (the track), when there is one.
+    vehicle: Query<'w, 's, &'static GlobalTransform, With<opts_bevy::PlayerVehicle>>,
+    /// The frame time.
+    time: Res<'w, Time>,
+}
+
 /// Keeps the tiles around the camera loaded and unloads distant ones (one tile load per frame).
 ///
 /// The observer is the 3D camera. In radius mode the tiles within the radius (Chebyshev
@@ -80,9 +92,7 @@ pub struct TileRoot(pub (i32, i32));
 pub fn stream_world_tiles(
     job: Option<ResMut<WorldLoadJob>>,
     state: Res<crate::in_game::types::SimulationLoadState>,
-    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    vehicle: Query<&GlobalTransform, With<opts_bevy::PlayerVehicle>>,
-    time: Res<Time>,
+    viewpoint: StreamViewpoint,
     mut hybrid: Local<HybridState>,
     mut stats: ResMut<WorldStats>,
     mut commands: Commands,
@@ -92,14 +102,17 @@ pub fn stream_world_tiles(
     if !state.is_complete {
         return;
     }
-    let Ok(cam) = camera.single() else { return };
+    let Ok(cam) = viewpoint.camera.single() else {
+        return;
+    };
     let p = cam.translation();
     let centre = job.grid.key_at(Vec2::new(p.x, -p.z), job.start_tile);
     // The track is the vehicle (the camera when there is none); the observer stays the camera.
-    let track = vehicle
+    let track = viewpoint
+        .vehicle
         .single()
         .map_or((p.x, -p.z), |v| (v.translation().x, -v.translation().z));
-    let plan = plan_frame(&mut job, &mut hybrid, track, time.delta_secs());
+    let plan = plan_frame(&mut job, &mut hybrid, track, viewpoint.time.delta_secs());
     let _t_evict = opts_logging::stream_trace::span("stream.evict");
     for key in evictions(&job, centre, &plan) {
         if let Some(unload) = job.unload_tile(key, false) {
