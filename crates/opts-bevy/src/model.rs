@@ -33,9 +33,9 @@ use crate::material::o3d_material_to_standard_material;
 pub const MAX_PLAUSIBLE_EXTENT_M: f32 = 3000.0;
 
 mod cache;
+mod moisture;
 mod o3d_loading;
 mod overrides;
-mod moisture;
 mod texture_load;
 mod types;
 

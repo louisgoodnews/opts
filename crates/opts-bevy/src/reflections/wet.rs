@@ -4,9 +4,9 @@
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::*;
 
-use crate::WeatherEffects;
 use crate::ground_material::GroundMaterial;
-use crate::texture::{TextureFlags, texture_wetness};
+use crate::texture::{texture_wetness, TextureFlags};
+use crate::WeatherEffects;
 
 use super::flags::ReflectionSwitches;
 use super::notes::note_of;

@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 pub use crate::environment::NIGHT_SUN_ALT_DEG;
-use crate::environment::{LATITUDE_DEG, sun_position};
+use crate::environment::{sun_position, LATITUDE_DEG};
 
 /// Clock and environment of the scenery runtime.
 ///

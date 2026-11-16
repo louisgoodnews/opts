@@ -15,7 +15,10 @@ fn a_white_specular_colour_keeps_the_legacy_roughness() {
     assert!((white - 1.0).abs() < 1e-4);
     for power in [0.0, 16.0, 50.0, 200.0] {
         let r = audited_roughness(power, white);
-        assert!((r - specular_power_to_roughness(power)).abs() < 1e-6, "power {power}: {r}");
+        assert!(
+            (r - specular_power_to_roughness(power)).abs() < 1e-6,
+            "power {power}: {r}"
+        );
     }
 }
 
