@@ -3,89 +3,15 @@
 //! `docs/src/architecture/ai-vehicle-config.md`. Skipped unless `OMSI_PATH` points at an
 //! installation.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+#[path = "ai_profile_corpus/stats.rs"]
+mod stats;
 
-use opts_omsi::formats::constfile::ConstFile;
+use std::collections::BTreeSet;
+use std::path::PathBuf;
+
 use opts_omsi::formats::map::AiLists;
-use opts_omsi::formats::vehicles::{AiKind, AiProfile, BusManifest, VehicleDomain};
 
-/// Resolves a path with `\` or `/` separators and any letter case below `base`.
-fn find(base: &Path, rel: &str) -> Option<PathBuf> {
-    let mut cur = base.to_path_buf();
-    for part in rel
-        .split(['\\', '/'])
-        .filter(|p| !p.is_empty() && *p != ".")
-    {
-        if part == ".." {
-            cur = cur.parent()?.to_path_buf();
-            continue;
-        }
-        let exact = cur.join(part);
-        if exact.exists() {
-            cur = exact;
-            continue;
-        }
-        let lower = part.to_lowercase();
-        cur = std::fs::read_dir(&cur)
-            .ok()?
-            .flatten()
-            .find(|e| e.file_name().to_string_lossy().to_lowercase() == lower)?
-            .path();
-    }
-    Some(cur)
-}
-
-#[derive(Default)]
-struct ProfileStats {
-    total: usize,
-    missing: usize,
-    broken: usize,
-    fallbacks: BTreeMap<&'static str, usize>,
-    rail: usize,
-    air: usize,
-    notes: usize,
-    chains: usize,
-    kinds: BTreeMap<String, usize>,
-}
-
-impl ProfileStats {
-    fn process_vehicle(&mut self, root: &Path, vehicle: &str) {
-        let Some(path) = find(root, vehicle) else {
-            self.missing += 1;
-            return;
-        };
-        let Ok(manifest) = std::fs::read(&path).map(|b| BusManifest::parse_bytes(&b)) else {
-            self.broken += 1;
-            return;
-        };
-        let Ok(manifest) = manifest else {
-            self.broken += 1;
-            return;
-        };
-        let dir = path.parent().unwrap_or(root).to_path_buf();
-        let consts: Vec<ConstFile> = manifest
-            .constfiles
-            .iter()
-            .filter_map(|c| find(&dir, c))
-            .filter_map(|p| std::fs::read(p).ok())
-            .map(|b| ConstFile::parse(&b))
-            .collect();
-        let p = AiProfile::from_manifest(&manifest, &consts);
-        self.total += 1;
-        for f in &p.fallbacks {
-            *self.fallbacks.entry(f).or_default() += 1;
-        }
-        self.rail += usize::from(p.domain == VehicleDomain::Rail);
-        self.air += usize::from(p.domain == VehicleDomain::Air);
-        self.notes += p.notes.len();
-        self.chains += usize::from(p.couple_back.is_some());
-        *self
-            .kinds
-            .entry(p.kind.map_or("none".into(), |k: AiKind| format!("{k:?}")))
-            .or_default() += 1;
-    }
-}
+use stats::ProfileStats;
 
 #[test]
 fn every_ai_group_vehicle_yields_a_profile() {
