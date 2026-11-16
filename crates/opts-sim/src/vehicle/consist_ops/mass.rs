@@ -13,11 +13,44 @@ impl VehicleSimulation {
             + self.following_passenger_mass_kg()
     }
 
-    /// Mass of all people on board the consist (kg), head and following units; the steering
-    /// authority falls with it (M-0124).
+    /// Static weight on the steered axle of the head (N) as `(unladen, people)`: the curb mass's
+    /// share at its own centre of gravity and the people's share at the middle of the axle span,
+    /// as the body splits them (`sync_payload`). Following units do not load it (the hitch is
+    /// neglected). With no steered axle the first axle counts (M-0124 steer-axle input).
     #[must_use]
-    pub fn passenger_load_kg(&self) -> f32 {
-        self.passenger_mass_kg.max(0.0) + self.following_passenger_mass_kg()
+    pub fn steer_axle_weights_n(&self) -> (f32, f32) {
+        let positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
+        if positions.is_empty() {
+            return (0.0, 0.0);
+        }
+        let steer = self
+            .axles
+            .iter()
+            .position(|a| a.config.is_steered)
+            .unwrap_or(0);
+        let curb = self
+            .suspension
+            .compute_static_loads(&positions, self.chassis.total_mass_kg);
+        let unladen = curb.get(steer).copied().unwrap_or(0.0);
+        let (lo, hi) = positions
+            .iter()
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(lo, hi), &y| {
+                (lo.min(y), hi.max(y))
+            });
+        let middle = crate::vehicle::suspension::SuspensionModel::new(
+            self.suspension.cg_height_m,
+            0.5 * (lo + hi),
+        );
+        // Linear in the mass: share a reference weight, then scale to the people on board.
+        let reference = 1_000.0;
+        let share = middle
+            .compute_static_loads(&positions, reference)
+            .get(steer)
+            .copied()
+            .unwrap_or(0.0)
+            / (reference * 9.81);
+        let people = self.passenger_mass_kg.max(0.0) * 9.81 * share;
+        (unladen, people)
     }
 
     /// Mass of the people on board the following units (kg); entries without a unit do not
