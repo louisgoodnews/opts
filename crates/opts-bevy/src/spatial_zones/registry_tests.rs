@@ -17,10 +17,7 @@ fn zone(id: u32) -> SpatialZone {
 }
 
 /// Runs `f` with commands, flushes them and returns its result.
-fn with_commands<R>(
-    app: &mut App,
-    f: impl FnOnce(&mut Commands, &mut ZoneRegistry) -> R,
-) -> R {
+fn with_commands<R>(app: &mut App, f: impl FnOnce(&mut Commands, &mut ZoneRegistry) -> R) -> R {
     let world = app.world_mut();
     let mut registry = world.remove_resource::<ZoneRegistry>().unwrap_or_default();
     let mut queue = bevy::ecs::world::CommandQueue::default();
@@ -34,7 +31,10 @@ fn with_commands<R>(
 }
 
 fn zone_entities(app: &mut App) -> usize {
-    app.world_mut().query::<&SpatialZone>().iter(app.world()).count()
+    app.world_mut()
+        .query::<&SpatialZone>()
+        .iter(app.world())
+        .count()
 }
 
 #[test]

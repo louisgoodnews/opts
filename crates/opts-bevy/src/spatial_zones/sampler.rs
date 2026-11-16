@@ -48,11 +48,7 @@ pub enum Emitted {
 /// Advances `membership` by one sample at ground point `p` against `zones`. Returns the
 /// transition, if this sample completes one. A subject that moves from one zone straight into
 /// another stays inside without a transition: zones that touch are one covered stretch.
-pub fn step(
-    membership: &mut ZoneMembership,
-    p: Vec2,
-    zones: &[SpatialZone],
-) -> Option<Emitted> {
+pub fn step(membership: &mut ZoneMembership, p: Vec2, zones: &[SpatialZone]) -> Option<Emitted> {
     let hit = zones.iter().find(|z| z.contains(p));
     let advance = membership.last.map_or(0.0, |last| last.distance(p));
     membership.last = Some(p);
