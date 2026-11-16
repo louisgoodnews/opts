@@ -61,7 +61,7 @@ pub struct SceneryObject {
     pub collision_meshes: Vec<String>,
     /// Base mesh of `[crossing_heightdeformation]` (relative to the `model/` folder): its
     /// surface bends the object's meshes, paths and spline helpers vertically
-    /// ([`super::crossing::BaseSurface`]).
+    /// ([`crate::formats::scenery::crossing::BaseSurface`]).
     pub crossing_deformation: Option<String>,
     /// Bounding box.
     pub bounding_box: Option<ScoBoundingBox>,

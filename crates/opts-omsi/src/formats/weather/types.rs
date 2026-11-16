@@ -85,7 +85,7 @@ pub struct Precip {
 /// One weather preset (`.owt`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct WeatherFile {
-    /// `[name]` (often `<Angle Brackets>` in the shipped files; see [`strip_brackets`]).
+    /// `[name]` (often `<Angle Brackets>` in the shipped files; see [`super::strip_brackets`]).
     pub name: String,
     /// `[description]` up to `[end]`, lines joined by `\n`.
     pub description: String,

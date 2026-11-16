@@ -5,7 +5,7 @@ use glam::Vec3;
 use super::{constant, data_term, decision, generator, MODULUS};
 use crate::formats::o3d::O3d;
 
-/// The exporter's scrambling of a plain mesh (the inverse of [`decode`]), for tests and tools.
+/// The exporter's scrambling of a plain mesh (the inverse of [`super::decode`]), for tests and tools.
 pub fn scramble(o: &mut O3d, key: u32) {
     o.encryption_key = Some(key);
     let (mut s, accumulate) = generator(o).expect("keyed");
