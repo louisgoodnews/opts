@@ -23,6 +23,9 @@ mod ephemeris;
 mod light;
 mod position;
 
+#[cfg(test)]
+mod tests;
+
 pub use ephemeris::{julian_day, lunar_elongation_deg, SYNODIC_MONTH_DAYS};
 pub use light::{allen_phase_function, moon_height_factor, moon_illuminance, moon_night_factor};
 pub use position::moon_state;
