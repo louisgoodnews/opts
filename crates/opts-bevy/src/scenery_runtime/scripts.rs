@@ -45,6 +45,10 @@ pub struct HostValues {
     pub night: f32,
     /// `snow_visible` (0 or 1): 1 while the session's weather is snow (`PrecipType` 2).
     pub snow_visible: f32,
+    /// `winterhalbjahr` (0 or 1), from the month (`season::winter_half_year`).
+    pub winter_half: f32,
+    /// `sommerhalbjahr` (0 or 1): the complement of `winter_half`.
+    pub summer_half: f32,
     /// Clock for light programs (seconds, not wrapped).
     pub program_clock_s: f64,
 }
@@ -65,7 +69,9 @@ impl HostValues {
             precip_type: clock.weather.precip_type,
             precip_rate: clock.weather.precip_rate,
             night: f32::from(u8::from(clock.night)),
-            snow_visible: f32::from(u8::from((clock.weather.precip_type - 2.0).abs() < 0.5)),
+            snow_visible: f32::from(u8::from(crate::season::snows(clock.weather.precip_type))),
+            winter_half: f32::from(u8::from(crate::season::winter_half_year(clock.month))),
+            summer_half: f32::from(u8::from(!crate::season::winter_half_year(clock.month))),
             program_clock_s: clock.seconds_of_day,
         }
     }

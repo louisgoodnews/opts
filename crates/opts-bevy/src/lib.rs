@@ -61,6 +61,7 @@ pub mod scene_trace;
 pub mod scenery;
 pub mod scenery_runtime;
 pub mod script_text;
+pub mod season;
 pub mod sky_cube;
 pub mod spatial_zones;
 pub mod sun_rays;

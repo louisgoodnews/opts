@@ -51,3 +51,16 @@ fn snow_visible_is_one_only_while_the_session_has_snow() {
     clock.weather.precip_type = 1.0;
     assert_eq!(read_var(var, None, &HostValues::of(&clock), 0.0), 0.0);
 }
+
+#[test]
+fn the_half_year_variables_follow_the_month() {
+    use super::super::clock::SceneryClock;
+    let winter = VarRef::Host(HostVar::of("winterhalbjahr"));
+    let summer = VarRef::Host(HostVar::of("sommerhalbjahr"));
+    let january = HostValues::of(&SceneryClock::at(2026, 1, 15, 12.0 * 3600.0));
+    assert_eq!(read_var(winter, None, &january, 0.0), 1.0);
+    assert_eq!(read_var(summer, None, &january, 0.0), 0.0);
+    let july = HostValues::of(&SceneryClock::at(2026, 7, 15, 12.0 * 3600.0));
+    assert_eq!(read_var(winter, None, &july, 0.0), 0.0);
+    assert_eq!(read_var(summer, None, &july, 0.0), 1.0);
+}

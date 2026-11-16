@@ -63,7 +63,9 @@ impl ContentLoader<'_> {
             return None;
         }
         let global = self.install.root().join("Texture");
-        let mut search: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
+        // Season variants (`WinterSnow` under snow cover) come before the base folders.
+        let variants = crate::season::variant_folders(dirs, crate::season::snow_cover());
+        let mut search: Vec<&Path> = variants.iter().chain(dirs).map(PathBuf::as_path).collect();
         search.push(&global);
         search.push(self.install.root());
         // Materials often name a texture by an extension that does not exist on disk

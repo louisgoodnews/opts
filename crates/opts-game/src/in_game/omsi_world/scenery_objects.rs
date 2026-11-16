@@ -143,6 +143,7 @@ pub fn sync_scenery_clock(
     next.night = env.night();
     next.temperature_c = env.temperature_c();
     next.weather = env.conditions().vars();
+    opts_bevy::season::set_snow_cover(opts_bevy::season::snows(next.weather.precip_type));
     if *clock != next {
         *clock = next;
     }
