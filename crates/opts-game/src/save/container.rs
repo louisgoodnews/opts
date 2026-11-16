@@ -17,83 +17,11 @@ pub const MAX_SECTION_BYTES: usize = 4 * 1024 * 1024;
 /// Longest save name, in characters.
 pub const MAX_NAME_CHARS: usize = 60;
 
-/// Why a save could not be read, written or found.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SaveError {
-    /// The file system said no.
-    Io(String),
-    /// The file is not valid JSON, or not shaped like a save.
-    Corrupt(String),
-    /// Valid JSON that is not an OPTS save (wrong or missing `magic`).
-    NotASave,
-    /// Written by a newer build.
-    NewerFormat {
-        /// The file's `format_version`.
-        found: u32,
-        /// The newest version this build reads.
-        supported: u32,
-    },
-    /// The file or a section is bigger than the limit.
-    TooLarge(String),
-    /// No save with this id.
-    NotFound(String),
-    /// The name or id is not acceptable.
-    InvalidName(String),
-    /// A save with this name exists already (its id).
-    Exists(String),
-    /// There is no running session to save.
-    NoSession(String),
-    /// A section's capture function failed.
-    Capture {
-        /// Section id.
-        section: String,
-        /// What went wrong.
-        message: String,
-    },
-}
+mod error;
+mod names;
+pub use error::SaveError;
+pub use names::{clean_name, slug, valid_id};
 
-impl std::fmt::Display for SaveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Io(m) => write!(f, "file error: {m}"),
-            Self::Corrupt(m) => write!(f, "the save file is damaged: {m}"),
-            Self::NotASave => write!(f, "the file is not an OPTS save"),
-            Self::NewerFormat { found, supported } => write!(
-                f,
-                "the save was written by a newer version (format {found}, this build reads up to {supported})"
-            ),
-            Self::TooLarge(m) => write!(f, "too large: {m}"),
-            Self::NotFound(id) => write!(f, "no save `{id}`"),
-            Self::InvalidName(m) => write!(f, "invalid name: {m}"),
-            Self::Exists(id) => write!(f, "a save called like this exists already (`{id}`)"),
-            Self::NoSession(m) => write!(f, "{m}"),
-            Self::Capture { section, message } => {
-                write!(f, "section `{section}` could not be captured: {message}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for SaveError {}
-
-impl SaveError {
-    /// A stable word for logs, the control protocol and the UI's message choice.
-    #[must_use]
-    pub fn kind(&self) -> &'static str {
-        match self {
-            Self::Io(_) => "io",
-            Self::Corrupt(_) => "corrupt",
-            Self::NotASave => "not_a_save",
-            Self::NewerFormat { .. } => "newer_format",
-            Self::TooLarge(_) => "too_large",
-            Self::NotFound(_) => "not_found",
-            Self::InvalidName(_) => "invalid_name",
-            Self::Exists(_) => "exists",
-            Self::NoSession(_) => "no_session",
-            Self::Capture { .. } => "capture",
-        }
-    }
-}
 
 /// What the save list shows without reading any section.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -227,54 +155,6 @@ impl SaveFile {
     }
 }
 
-/// Cleans a name the user typed: trimmed, control characters removed, at most
-/// [`MAX_NAME_CHARS`] characters.
-///
-/// # Errors
-/// The name is empty after cleaning.
-pub fn clean_name(raw: &str) -> Result<String, SaveError> {
-    let name: String = raw
-        .trim()
-        .chars()
-        .filter(|c| !c.is_control())
-        .take(MAX_NAME_CHARS)
-        .collect();
-    let name = name.trim().to_owned();
-    if name.is_empty() {
-        Err(SaveError::InvalidName("the name is empty".to_owned()))
-    } else {
-        Ok(name)
-    }
-}
-
-/// A file-name-safe id for `name`: lower-case letters and digits, other runs become one `-`.
-#[must_use]
-pub fn slug(name: &str) -> String {
-    let mut out = String::new();
-    for c in name.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-        } else if !out.ends_with('-') && !out.is_empty() {
-            out.push('-');
-        }
-    }
-    let out = out.trim_end_matches('-').to_owned();
-    if out.is_empty() {
-        "save".to_owned()
-    } else {
-        out.chars().take(48).collect()
-    }
-}
-
-/// Whether `id` can be a file stem of a save (so an id from outside can never leave the folder).
-#[must_use]
-pub fn valid_id(id: &str) -> bool {
-    !id.is_empty()
-        && id.len() <= 64
-        && id
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
-}
 
 #[cfg(test)]
 mod tests;

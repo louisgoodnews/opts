@@ -131,10 +131,6 @@ crates/opts-game/src/map_profiles/store.rs 206  # grandfathered: split productio
 crates/opts-game/src/new_game_screen/setvars_discovery/tests.rs 163  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/passengers/rig.rs 164  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/passengers/system.rs 229  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/save/container.rs 201  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/save/registry.rs 180  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/save/sections_runtime.rs 215  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/save/store.rs 217  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/session_summary/mod.rs 254  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/session_vehicles/mod.rs 183  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/settings.rs 228  # grandfathered: split production file by concern to <= 150 LOC
