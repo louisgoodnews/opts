@@ -46,7 +46,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-003 — FixedUpdate Headless Testing Requires Manual Time Stepping
 - **Severity:** 🟡 Moderate
 - **Dimension:** Correctness
-- **Location:** [`crates/opts-bevy/tests/vehicle_sim_sync.rs:25-30`](../../../crates/opts-bevy/tests/vehicle_sim_sync.rs#L25-L30)
+- **Location:** [`crates/opts-bevy/tests/vehicle_sim_sync/fixed_step.rs:3-8`](../../../crates/opts-bevy/tests/vehicle_sim_sync/fixed_step.rs#L3-L8)
 - **Description:** In headless integration tests running `FixedUpdate` systems, standard `app.update()` calls do not advance virtual time unless `TimeUpdateStrategy::ManualDuration` is configured, creating silent test stalls or non-deterministic test behavior if neglected.
 - **Evidence:** Test harness required explicit workaround insertion:
   ```rust,ignore
