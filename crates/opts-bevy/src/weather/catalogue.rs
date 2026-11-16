@@ -1,6 +1,10 @@
 //! The weather catalogue: built-in presets, aliases and lookup.
 
 use super::*;
+mod lookup;
+mod presets;
+
+pub use presets::builtin_preset;
 
 /// The preset ids of versions before real weather, the default first.
 pub const BUILTIN_IDS: [&str; 5] = [
@@ -44,60 +48,6 @@ pub fn legacy_id(id: &str) -> &'static str {
         } else {
             "Clear Summer Day"
         })
-}
-
-/// The built-in preset value of a built-in id (behaves as the five presets always did: clear,
-/// overcast and wet/snowy/foggy skies at 15 °C, −3 °C with snow).
-#[must_use]
-pub fn builtin_preset(id: &str) -> WeatherFile {
-    let mut w = WeatherFile::default();
-    let overcast = |base_m: f32| {
-        Some(CloudLayer {
-            kind: "Overcast 1".to_owned(),
-            base_m,
-        })
-    };
-    match legacy_id(id) {
-        "Overcast Autumn" => {
-            w.clouds = overcast(300.0);
-            w.temp.dew_point_c = 11.0;
-            w.fog.visibility_m = 12_000.0;
-        }
-        "Rainy Afternoon" => {
-            w.clouds = overcast(200.0);
-            w.precip.kind = PrecipKind::Rain;
-            w.precip.intensity = 130.0;
-            w.ground_wet = [78.0, 255.0, 60.0];
-            w.temp.dew_point_c = 13.0;
-            w.fog.visibility_m = 6000.0;
-            w.wind.direction_deg = 230.0;
-            w.wind.speed = 4.0;
-        }
-        "Winter Snowfall" => {
-            w.clouds = overcast(250.0);
-            w.precip.kind = PrecipKind::Snow;
-            w.precip.intensity = 150.0;
-            w.snow = true;
-            w.snow_on_road = true;
-            w.ground_wet = [1.7, 255.0, 0.0];
-            w.temp.celsius = -3.0;
-            w.temp.dew_point_c = -4.0;
-            w.fog.visibility_m = 3000.0;
-            w.wind.direction_deg = 300.0;
-            w.wind.speed = 1.5;
-        }
-        "Autumn Morning Fog" => {
-            w.clouds = overcast(100.0);
-            w.fog = Fog {
-                visibility_m: 300.0,
-                density: 1.0,
-            };
-            w.temp.dew_point_c = 15.0;
-            w.ground_wet = [30.0, 120.0, 0.0];
-        }
-        _ => {}
-    }
-    w
 }
 
 /// The presets the game can offer: the install's, or the five built-in ones.
@@ -167,7 +117,7 @@ impl WeatherCatalogue {
         }
     }
 
-    fn installed(&self, id: &str) -> Option<&PresetFile> {
+    pub(super) fn installed(&self, id: &str) -> Option<&PresetFile> {
         self.installed.iter().find(|p| p.id == id).or_else(|| {
             self.installed
                 .iter()
@@ -195,93 +145,5 @@ impl WeatherCatalogue {
         let canonical = self.canonical_id(id);
         self.installed(&canonical)
             .map_or_else(|| builtin_preset(&canonical), |p| p.weather.clone())
-    }
-
-    /// The conditions of the preset behind `id`.
-    #[must_use]
-    pub fn resolve(&self, id: &str) -> WeatherConditions {
-        WeatherConditions::from_file(&self.file_of(id), &self.clouds)
-    }
-
-    /// The localised name of an installed preset for a UI locale (`de`, `en`); `None` for the
-    /// built-in presets (the UI has message keys for them).
-    #[must_use]
-    pub fn display_name(&self, id: &str, locale: &str) -> Option<String> {
-        let canonical = self.canonical_id(id);
-        self.installed(&canonical)
-            .map(|p| p.name(omsi_language(locale)))
-    }
-
-    /// The localised description of an installed preset.
-    #[must_use]
-    pub fn description(&self, id: &str, locale: &str) -> Option<String> {
-        let canonical = self.canonical_id(id);
-        self.installed(&canonical)
-            .map(|p| p.description(omsi_language(locale)))
-            .filter(|d| !d.is_empty())
-    }
-
-    /// The listed id a user-typed name stands for: an id, its slug, a localised name or a word of
-    /// one of them (`rain`, `snow`), case-insensitively. Old built-in ids work as well.
-    #[must_use]
-    pub fn find(&self, name: &str) -> Option<String> {
-        let n = name.trim().to_lowercase();
-        if n.is_empty() {
-            return None;
-        }
-        let ids = self.ids();
-        let slug = |s: &str| {
-            s.to_lowercase()
-                .chars()
-                .map(|c| {
-                    if c.is_alphanumeric() || c == '#' {
-                        c
-                    } else {
-                        '-'
-                    }
-                })
-                .collect::<String>()
-                .trim_matches('-')
-                .to_owned()
-        };
-        let texts = |id: &str| -> BTreeSet<String> {
-            let mut set = BTreeSet::from([id.to_lowercase()]);
-            if let Some(p) = self.installed(id) {
-                set.extend(p.texts.values().map(|t| t.name.to_lowercase()));
-                set.insert(p.weather.clean_name().to_lowercase());
-            }
-            set
-        };
-        let exact = ids.iter().find(|id| {
-            texts(id).contains(&n) || slug(id) == slug(&n) || {
-                let names = texts(id);
-                names.iter().any(|t| slug(t) == slug(&n))
-            }
-        });
-        if let Some(id) = exact {
-            return Some(id.clone());
-        }
-        // An old built-in id, spelled out.
-        if let Some(b) = BUILTIN_IDS
-            .iter()
-            .find(|b| b.to_lowercase() == n || slug(b) == slug(&n))
-        {
-            return Some(self.canonical_id(b));
-        }
-        ids.iter()
-            .find(|id| {
-                texts(id).iter().any(|t| {
-                    t.split(|c: char| !c.is_alphanumeric())
-                        .any(|w| w.starts_with(&n))
-                })
-            })
-            .cloned()
-            .or_else(|| {
-                // A word of a built-in id (`rain`, `snow`, `fog`, `clear`).
-                BUILTIN_IDS
-                    .iter()
-                    .find(|b| b.to_lowercase().split(' ').any(|w| w.starts_with(&n)))
-                    .map(|b| self.canonical_id(b))
-            })
     }
 }
