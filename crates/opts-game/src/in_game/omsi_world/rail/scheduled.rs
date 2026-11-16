@@ -39,64 +39,16 @@ const DWELL_MAX_S: f32 = 60.0;
 #[derive(Component)]
 pub struct ScheduledTrain;
 
-/// A stop of a train's run.
-#[derive(Debug, Clone)]
-pub(super) struct RailStop {
-    pub(super) station: u32,
-    pub(super) lane: LaneId,
-    /// Where the head stands when the train is at the stop (m along the lane).
-    pub(super) s: f32,
-    pub(super) dwell_s: f32,
-    /// Earliest departure (clock, s).
-    pub(super) depart_not_before: f64,
-    /// Scheduled arrival (clock, s).
-    pub(super) scheduled: f64,
-    pub(super) arrived_at: Option<f64>,
-}
 
-/// The run a scheduled train drives and the stops still ahead.
-#[derive(Debug, Clone)]
-pub(super) struct RailPlan {
-    pub(super) run: RunRef,
-    pub(super) stops: VecDeque<RailStop>,
-    pub(super) retire_at: Option<f64>,
-    /// Where the doors are (`AI_Scheduled_AtStation`, as for road vehicles).
-    pub(super) doors: Doors,
-    /// Seconds since the units' scripts last ran a frame.
-    pub(super) since: f32,
-}
+mod types;
+pub use types::{TrainAssets, TrainLocals, TrainWorld};
+pub(super) use types::{RailPlan, RailStop};
 
 mod route;
 pub(super) use route::*;
 mod spawn;
 use spawn::*;
 
-/// The resources and the world the scheduler reads and changes.
-#[derive(bevy::ecs::system::SystemParam)]
-pub struct TrainWorld<'w> {
-    time: Res<'w, Time<Real>>,
-    job: Option<ResMut<'w, WorldLoadJob>>,
-    env: Option<Res<'w, opts_bevy::SessionEnvironment>>,
-    net: Res<'w, RailNetwork>,
-    pool: Res<'w, RailAiPool>,
-    sched: ResMut<'w, ScheduledTraffic>,
-}
-
-/// The asset stores a new train's meshes go into.
-#[derive(bevy::ecs::system::SystemParam)]
-pub struct TrainAssets<'w> {
-    meshes: ResMut<'w, Assets<Mesh>>,
-    materials: ResMut<'w, Assets<StandardMaterial>>,
-    images: ResMut<'w, Assets<Image>>,
-}
-
-/// The scheduler's own memory between runs of the system.
-#[derive(bevy::ecs::system::SystemParam)]
-pub struct TrainLocals<'s> {
-    timer: Local<'s, f32>,
-    tries: Local<'s, HashMap<RunRef, u32>>,
-    not_rail: Local<'s, HashSet<String>>,
-}
 
 /// Spawns the train of the next run that is on the rails at the session clock and has none.
 pub fn spawn_scheduled_trains(
