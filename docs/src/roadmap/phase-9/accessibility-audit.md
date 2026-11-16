@@ -5,7 +5,7 @@
 | **Status** | Automatic part done 2026-10-12; human and hardware parts **open** (see section 5) |
 | **Milestone** | [M-0065](M-0065.md) |
 | **Method** | automatic rules over the laid-out UI tree, run in CI on self-authored fixture content; no OMSI assets, no GPU, no screen reader, no people |
-| **Where** | rules: `opts_gui::testing::rules`; screens: `crates/opts-game/tests/a11y_matrix.rs` and `golden_screens.rs`; library: `crates/opts-gui/tests/ci_rules.rs`, `opts_gui::theme::{audit, cvd}`; languages: `crates/opts-game/tests/localisation.rs` |
+| **Where** | rules: `opts_gui::testing::rules`; screens: `crates/opts-game/tests/a11y_matrix.rs` and `golden_screens.rs`; library: `crates/opts-gui/tests/ci_rules.rs`, `opts_gui::theme::{audit, cvd}`; languages: `crates/opts-game/tests/localisation/` |
 
 > **Honesty note.** "Verified" below means *a test in this repository checks it and passes*. The tests run Bevy's real UI layout without a window, so sizes are the ones a player would see, but **nothing was looked at on a real display, with a real screen reader, a real gamepad or a real steering wheel, and no person took part** (the usability protocol is written but not run: [protocol](../../meta/usability-test-protocol.md)). Every claim outside the automatic tests is listed as open.
 

@@ -18,7 +18,7 @@ What the foundation guarantees, each with a test:
 | **Dark is the default**; Light, System, Auto (clock) and a High-contrast theme | `theme::mode`, `theme::runtime`, `settings_theme` |
 | **Every colour pair meets its contrast threshold** in every theme and every accent preset (4.5:1 text, 3:1 control boundaries; 7:1 and 4.5:1 in high contrast) | `theme::audit` (`every_theme_and_preset_passes_every_pair`), `cargo run -p opts-gui --example theme_dump` |
 | **Nothing renders below 12 px** at 100 % UI scale | the 9-style scale and the interim `MinTextSize` clamp |
-| **One theme everywhere**: loading screen, HUD chrome and stub screens use role tokens, instruments use their own token set | `tests/theme_integration.rs` (no literal colours in those files) |
+| **One theme everywhere**: loading screen, HUD chrome and stub screens use role tokens, instruments use their own token set | `tests/theme_integration/literals.rs` (no literal colours in those files) |
 | **UI scale 75-200 %**, density, layout classes, window minimum 1024×640 | `theme::scale`, `theme::spacing`, `opts_cli::MIN_WINDOW_SIZE` |
 | Reduced motion turns every transition into an instant change | `theme::motion` |
 
