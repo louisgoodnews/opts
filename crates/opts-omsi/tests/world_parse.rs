@@ -73,5 +73,9 @@ fn test_utf16le_bom_encoding_in_map_files() {
     assert_eq!(manifest.name, "TestMap");
 }
 
+#[path = "world_parse/attachments.rs"]
+mod attachments;
 #[path = "world_parse/corpus.rs"]
 mod corpus;
+#[path = "world_parse/robustness.rs"]
+mod robustness;
