@@ -19,7 +19,6 @@ opts-l10n = { workspace = true }
 bevy = { workspace = true }
 
 # Error Handling, Logging, and Serialization
-thiserror = { workspace = true }
 tracing = { workspace = true }
 arboard = { workspace = true }
 chrono = { workspace = true }

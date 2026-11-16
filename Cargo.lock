@@ -695,7 +695,7 @@ dependencies = [
  "derive_more",
  "downcast-rs 2.0.2",
  "either",
- "petgraph 0.8.3",
+ "petgraph",
  "ron 0.12.2",
  "serde",
  "smallvec",
@@ -1023,7 +1023,7 @@ dependencies = [
  "bumpalo",
  "concurrent-queue",
  "derive_more",
- "fixedbitset 0.5.7",
+ "fixedbitset",
  "indexmap",
  "log",
  "nonmax",
@@ -1241,7 +1241,7 @@ dependencies = [
  "bevy_tasks",
  "bevy_transform",
  "bevy_world_serialization",
- "fixedbitset 0.5.7",
+ "fixedbitset",
  "gltf",
  "itertools 0.14.0",
  "percent-encoding",
@@ -1559,7 +1559,7 @@ dependencies = [
  "bitflags 2.13.2",
  "bytemuck",
  "derive_more",
- "fixedbitset 0.5.7",
+ "fixedbitset",
  "indexmap",
  "nonmax",
  "offset-allocator",
@@ -1670,7 +1670,7 @@ dependencies = [
  "glam",
  "indexmap",
  "inventory",
- "petgraph 0.8.3",
+ "petgraph",
  "serde",
  "smallvec",
  "smol_str",
@@ -1889,7 +1889,7 @@ dependencies = [
  "bitflags 2.13.2",
  "bytemuck",
  "derive_more",
- "fixedbitset 0.5.7",
+ "fixedbitset",
  "nonmax",
  "smallvec",
  "static_assertions",
@@ -3246,12 +3246,6 @@ name = "find-msvc-tools"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aedcfb3409746eddb02b9e19ebda1c3394f759a152e48ee875a0844d1b955484"
-
-[[package]]
-name = "fixedbitset"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "fixedbitset"
@@ -5429,10 +5423,8 @@ dependencies = [
 name = "opts-game"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bevy",
  "chrono",
- "clap",
  "directories",
  "image",
  "libc",
@@ -5455,7 +5447,6 @@ dependencies = [
  "thiserror 1.0.69",
  "toml 0.8.23",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -5471,7 +5462,6 @@ dependencies = [
  "opts-l10n",
  "ron 0.8.1",
  "serde",
- "thiserror 1.0.69",
  "tracing",
 ]
 
@@ -5505,7 +5495,6 @@ name = "opts-logging"
 version = "0.1.0"
 dependencies = [
  "directories",
- "nu-ansi-term",
  "serde",
  "thiserror 1.0.69",
  "time",
@@ -5545,19 +5534,14 @@ dependencies = [
  "bincode",
  "glam",
  "opts-core",
- "petgraph 0.6.5",
- "rayon",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
- "tracing",
 ]
 
 [[package]]
 name = "opts-tools"
 version = "0.1.0"
 dependencies = [
- "ddsfile",
  "image",
  "opts-core",
  "opts-hardware",
@@ -5572,7 +5556,6 @@ dependencies = [
  "glam",
  "opts-core",
  "thiserror 1.0.69",
- "tracing",
 ]
 
 [[package]]
@@ -5722,21 +5705,11 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "petgraph"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4c5cc86750666a3ed20bdaf5ca2a0344f9c67674cae0515bec2da16fbaa47db"
-dependencies = [
- "fixedbitset 0.4.2",
- "indexmap",
-]
-
-[[package]]
-name = "petgraph"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8701b58ea97060d5e5b155d383a69952a60943f0e6dfe30b04c287beb0b27455"
 dependencies = [
- "fixedbitset 0.5.7",
+ "fixedbitset",
  "hashbrown 0.15.5",
  "indexmap",
  "serde",
@@ -7248,7 +7221,7 @@ checksum = "b8765b90061cba6c22b5831f675da109ae5561588290f9fa2317adab2714d5a6"
 dependencies = [
  "memchr",
  "nom",
- "petgraph 0.8.3",
+ "petgraph",
 ]
 
 [[package]]

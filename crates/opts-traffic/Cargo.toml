@@ -20,4 +20,3 @@ glam = { workspace = true }
 
 # Error handling & logging
 thiserror = { workspace = true }
-tracing = { workspace = true }

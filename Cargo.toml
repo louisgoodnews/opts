@@ -84,7 +84,6 @@ opts-traffic = { path = "crates/opts-traffic" }
 bevy = { version = "0.20", features = ["file_watcher", "system_font_discovery"] }
 
 # --- Parsing & Serialization ---
-nom = "7.1"                 # For parsing OMSI text config files (.sco, .sli, .cfg)
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ron = "0.8"                 # Rusty Object Notation for config files/save games
@@ -95,7 +94,6 @@ toml = "0.8"
 image = "0.25"              # For loading .tga, .bmp, .jpg
 ddsfile = "0.5"             # For loading OMSI's primary .dds textures
 glam = "0.33"               # Math library (Bevy uses this internally)
-petgraph = "0.6"            # For representing the transit network graph
 
 # --- System & Diagnostics ---
 anyhow = "1.0"              # For easy error handling in tools and binaries
@@ -107,7 +105,6 @@ directories = "5.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }  # local-time stamps for reports
 arboard = { version = "3", default-features = false }  # System clipboard for the multiline TextArea
 time = { version = "0.3", features = ["formatting", "macros"] }
-nu-ansi-term = "0.50"
 clap = { version = "4.5", features = ["derive"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 rfd = "0.15"                # Native file dialog (xdg portal on Linux) for choosing the OMSI folder

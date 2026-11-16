@@ -22,7 +22,6 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 toml = { workspace = true }
 time = { workspace = true, features = ["formatting", "macros"] }
-nu-ansi-term = { workspace = true }
 
 [dev-dependencies]
 
