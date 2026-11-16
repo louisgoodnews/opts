@@ -144,7 +144,6 @@ crates/opts-cli/src/protocol.rs 247  # grandfathered: extract 56 test lines to t
 crates/opts-cli/src/repl.rs 186  # grandfathered: extract 24 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-cli/src/run.rs 234  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-cli/tests/protocol_test.rs 231  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/examples/weather_probe.rs 268  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/action_settings.rs 249  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/audio_content.rs 215  # grandfathered: extract 78 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-game/src/bus_config.rs 198  # grandfathered: split production file by concern to <= 150 LOC
@@ -283,34 +282,14 @@ crates/opts-game/src/vehicle_sound/stream.rs 198  # grandfathered: split product
 crates/opts-game/src/vehicle_sound/tests.rs 167  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/viewpoints.rs 222  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/viewpoints/plugin.rs 156  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/tests/a11y_matrix.rs 263  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/common/hud.rs 162  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/common/screens.rs 272  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/config_protocol_tests.rs 301  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/control_protocol/camera.rs 179  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/control_protocol/drive.rs 176  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/control_protocol/main.rs 166  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/control_protocol/save_load.rs 161  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/control_protocol/session.rs 292  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/golden_screens.rs 170  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/hud_matrix.rs 217  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/language_packs.rs 300  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/loading_tests.rs 310  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/loading_tests/outcomes.rs 160  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/localisation.rs 151  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/no_blocking_ui.rs 178  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/route_protocol_tests.rs 202  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/save_tests/main.rs 282  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/setvars_protocol_tests.rs 183  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/shell_tests.rs 245  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/sound_cfg_corpus.rs 210  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/theme_integration.rs 166  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/tile_loading_tests.rs 312  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/ui_rules.rs 241  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/vehicle_start.rs 258  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/wizard_tests/equipment.rs 255  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/wizard_tests/flow.rs 242  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/wizard_tests/plan.rs 194  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/tests/wizard_tests/step_rules.rs 176  # grandfathered: oversized test or example file, split by concern
 crates/opts-gui/src/l10n/wizard_keys/wiz.rs 153  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-hardware/src/bench.rs 237  # grandfathered: extract 58 test lines to tests.rs, then split by concern to <= 150 LOC
