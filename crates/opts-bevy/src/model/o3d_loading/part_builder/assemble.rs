@@ -51,7 +51,8 @@ impl ContentLoader<'_> {
         let material = self.cache.pool.material(self.materials, material);
         if let Some(m) = self.materials.get(&material) {
             crate::glass::note_surface(&material, res.tex_name.as_deref(), m, false);
-            crate::reflections::note_material(&material, res.tex_name.as_deref(), m);
+            let moisture = self.texture_takes_wetness(res.tex_name.as_deref());
+            crate::reflections::note_material(&material, res.tex_name.as_deref(), moisture, m);
         }
         let part = ModelPart {
             mesh: self.cache.pool.mesh(self.meshes, mesh),

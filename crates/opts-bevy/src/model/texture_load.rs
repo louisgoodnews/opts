@@ -107,6 +107,7 @@ impl ContentLoader<'_> {
             ));
             return None;
         };
+        self.note_moisture(name, &path);
         if let Some(cached) = self.cache.textures.get(&path) {
             return cached.clone();
         }

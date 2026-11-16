@@ -23,6 +23,9 @@ pub struct WeatherEffects {
     pub precipitation: PrecipitationQuality,
     /// Wet and snowy ground and roads.
     pub wet_ground: bool,
+    /// Wet objects and vehicles: materials whose texture has `[moisture]` take the wetness (the
+    /// setting *Wet and snowy surfaces*, All; `docs/src/roadmap/phase-12/M-0121.md`).
+    pub wet_objects: bool,
     /// How strong rain is drawn, in percent of what the weather says (100: as the preset; the
     /// settings `gameplay.rain_intensity`): the rate of the drops, the wetness, the puddles.
     pub rain_percent: u16,
@@ -37,6 +40,7 @@ impl Default for WeatherEffects {
             clouds: true,
             precipitation: PrecipitationQuality::default(),
             wet_ground: true,
+            wet_objects: false,
             rain_percent: 100,
             snow_percent: 100,
         }

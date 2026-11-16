@@ -84,6 +84,7 @@ pub fn weather_effects_of(settings: &GameSettings) -> opts_bevy::WeatherEffects 
             .and_then(|q| opts_bevy::weather::PrecipitationQuality::parse(&q))
             .unwrap_or_default(),
         wet_ground: on("graphics.weather_wet_ground"),
+        wet_objects: false,
         rain_percent: percent("graphics.rain_intensity"),
         snow_percent: percent("graphics.snow_intensity"),
     }

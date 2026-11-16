@@ -31,7 +31,7 @@ mod wet;
 
 pub use flags::{switches, ReflectionSwitches};
 pub use notes::{note_material, MaterialNote};
-pub use wet::{wet_standard, Wetness};
+pub use wet::{material_wetness, wet_objects_on, wet_standard, Wetness};
 
 use bevy::pbr::ScreenSpaceReflections;
 use bevy::prelude::*;
@@ -63,17 +63,19 @@ pub struct ReflectionsResearchPlugin;
 impl Plugin for ReflectionsResearchPlugin {
     fn build(&self, app: &mut App) {
         let sw = switches().clone();
-        if !sw.any() && std::env::var_os("OPTS_REFLECT_STATS").is_none() {
-            return;
-        }
         let wet0 = std::env::var("OPTS_WETNESS")
             .ok()
             .and_then(|v| v.parse::<f32>().ok())
             .unwrap_or(0.0);
+        // The wet pass is not a prototype any more: objects take it through the setting.
         app.insert_resource(sw.clone())
             .insert_resource(Wetness(wet0.clamp(0.0, 1.0)))
             .init_resource::<WetState>()
-            .init_resource::<FrameStats>();
+            .add_systems(Update, apply_wet);
+        if !sw.any() && std::env::var_os("OPTS_REFLECT_STATS").is_none() {
+            return;
+        }
+        app.init_resource::<FrameStats>();
         if sw.ssr {
             // SSR only reflects what is rendered by the deferred path.
             app.insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::deferred());
@@ -81,7 +83,7 @@ impl Plugin for ReflectionsResearchPlugin {
         if std::env::var_os("OPTS_REFLECT_GPU").is_some() {
             app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
         }
-        app.add_systems(Update, (apply_camera_features, apply_wet, collect_stats));
+        app.add_systems(Update, (apply_camera_features, collect_stats));
     }
 }
 

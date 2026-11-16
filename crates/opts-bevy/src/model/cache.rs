@@ -52,6 +52,9 @@ pub struct ContentCache {
     /// Repaint: texture file name (lower case) → replacement file, applied to the meshes loaded
     /// next (see `docs/src/formats/text/repaints.md`).
     pub texture_replacements: HashMap<String, PathBuf>,
+    /// `[moisture]` of each texture name (lower case) from its property file (see
+    /// [`super::moisture`]).
+    pub(crate) moisture: HashMap<String, bool>,
     /// Loading statistics.
     pub stats: ContentStats,
 }
