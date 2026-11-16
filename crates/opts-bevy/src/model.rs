@@ -43,7 +43,8 @@ pub use types::{ContentStats, ModelPart};
 pub use overrides::compose_light;
 use overrides::{base_name, compose_alpha, transmap_glass};
 pub use overrides::{
-    find_override, is_static_overlay, transmap_glass_rgba, TextureOverride, TRANSMAP_OPAQUE,
+    find_override, is_weather_overlay, overlay_class, transmap_glass_rgba, OverlayClass,
+    TextureOverride, TRANSMAP_OPAQUE,
     TRANSMAP_SPLIT_SHARE,
 };
 

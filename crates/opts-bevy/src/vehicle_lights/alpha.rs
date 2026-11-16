@@ -2,6 +2,13 @@
 
 use super::*;
 
+/// The alpha of a scaled part: its texture alpha times the owner's variable factor, the factor
+/// clamped to `0..=1`. A factor of 0 gives alpha 0 (the part is hidden, see [`ALPHA_VISIBLE_MIN`]).
+#[must_use]
+pub fn scaled_alpha(base: f32, factor: f32) -> f32 {
+    base * factor.clamp(0.0, 1.0)
+}
+
 /// Scales the alpha of glass and similar parts by the owners' script variables.
 ///
 /// An owner without variables (a parked car: a vehicle model placed as scenery, no scripts, no
@@ -66,7 +73,7 @@ pub fn vehicle_alpha_scale_system(
             let base = binding.base_alpha;
             if let Some(mut m) = materials.get_mut(&material.0) {
                 if !matches!(m.alpha_mode, AlphaMode::Mask(_)) {
-                    m.base_color.set_alpha(base * f);
+                    m.base_color.set_alpha(scaled_alpha(base, f));
                 }
             }
         }

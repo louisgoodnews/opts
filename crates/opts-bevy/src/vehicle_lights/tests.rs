@@ -37,3 +37,13 @@ fn only_the_selected_spotlight_shines() {
         (0.0, 0.0)
     );
 }
+
+#[test]
+fn overlay_alpha_is_texture_alpha_times_variable() {
+    assert_eq!(scaled_alpha(0.8, 0.5), 0.4);
+    assert_eq!(scaled_alpha(0.8, 1.0), 0.8);
+    assert_eq!(scaled_alpha(0.8, 0.0), 0.0);
+    assert_eq!(scaled_alpha(0.8, 3.0), 0.8, "factor clamped to 1");
+    assert_eq!(scaled_alpha(0.8, -1.0), 0.0, "factor clamped to 0");
+    assert!(scaled_alpha(1.0, 0.0) <= ALPHA_VISIBLE_MIN, "zero factor hides the part");
+}

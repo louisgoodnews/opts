@@ -20,10 +20,9 @@ pub struct TextureOverride {
     pub texture: String,
     /// `[matl_alpha]` mode: `1` = cutout (alpha test), `2` = blend; `None` = opaque.
     pub alpha: Option<u32>,
-    /// The script variable that scales the material's alpha (`[alphascale]`). An overlay that uses
-    /// alpha and whose variable OPTS never raises (rain, dirt) is not built at all, see
-    /// [`TextureOverride::is_variable_hidden`]; any other alpha-scaled material is built and
-    /// follows its variable at run time (`ModelPart::alpha_variable`).
+    /// The script variable that scales the material's alpha (`[alphascale]`). An alpha overlay
+    /// (rain, dirt, condensation) is built and follows its variable at run time
+    /// (`ModelPart::alpha_variable`); see [`TextureOverride::runtime_alpha_variable`].
     pub alpha_variable: Option<String>,
     /// `[matl_transmap]` texture: its values become the alpha channel of the material's texture.
     pub trans_map: Option<String>,
@@ -43,46 +42,73 @@ pub struct TextureOverride {
 }
 
 impl TextureOverride {
-    /// Whether the slot is an overlay that stays invisible because OPTS never raises its variable.
-    ///
-    /// `[alphascale]` also appears on opaque base materials (`Envir_Brightness` on the body of a
-    /// Crealis bus, on the night-lit skyline blocks of the Chicago map): alpha-scaling something
-    /// that does not use alpha is no reason to drop the surface, the whole body of such a vehicle
-    /// vanished (P-1014, MI-0029). Only materials with a `[matl_alpha]` mode other than 0 or a
-    /// `[matl_transmap]` texture are overlays.
-    ///
-    /// Of those, only the overlays of weather the simulation does not have ([`is_static_overlay`]:
-    /// rain on the windows, dirt) are dropped at load. The others — glass scaled by
-    /// `Envir_Brightness` (6,651 materials), `szyby`, `para_*` — belong on the vehicle and follow
-    /// their variable (MAN SD83 without window glass, 2026-10-14).
+    /// Whether the material is an alpha overlay: a `[matl_alpha]` mode other than 0 or a
+    /// `[matl_transmap]` texture. `[alphascale]` also appears on opaque base materials
+    /// (`Envir_Brightness` on the body of a Crealis bus, on the night-lit skyline blocks of the
+    /// Chicago map); alpha-scaling something that does not use alpha is no reason to treat it as an
+    /// overlay (P-1014, MI-0029).
     #[must_use]
-    pub fn is_variable_hidden(&self) -> bool {
-        self.alpha_variable
-            .as_deref()
-            .is_some_and(is_static_overlay)
-            && (crate::material::uses_texture_alpha(self.alpha) || self.trans_map.is_some())
+    pub fn is_alpha_overlay(&self) -> bool {
+        crate::material::uses_texture_alpha(self.alpha) || self.trans_map.is_some()
     }
 
-    /// The variable the part follows at run time: set for an alpha-using material scaled by a
-    /// variable that is not a static overlay.
+    /// Whether the part is a weather overlay (rain on the windows, dirt, condensation) whose
+    /// variable is one of the [`overlay_class`] names.
+    #[must_use]
+    pub fn is_weather_overlay_part(&self) -> bool {
+        self.is_alpha_overlay()
+            && self
+                .alpha_variable
+                .as_deref()
+                .is_some_and(is_weather_overlay)
+    }
+
+    /// The variable the part follows at run time: set for every alpha overlay with an
+    /// `[alphascale]` variable. Weather overlays are built too; their alpha is the product of the
+    /// texture alpha and the script variable, and the part is hidden while that product is 0
+    /// (`ModelPart::alpha_variable`, `crate::vehicle_lights::vehicle_alpha_scale_system`).
     #[must_use]
     pub fn runtime_alpha_variable(&self) -> Option<&str> {
         self.alpha_variable
             .as_deref()
-            .filter(|v| !is_static_overlay(v))
-            .filter(|_| crate::material::uses_texture_alpha(self.alpha) || self.trans_map.is_some())
+            .filter(|_| self.is_alpha_overlay())
     }
 }
 
-/// Variables of weather the simulation does not have: their overlays (rain on windows, dirt) are
-/// always 0 and not worth an entity (`Rain_Window_*_Wetness` 22,888 uses, `Dirt_*` 15,733 in the
-/// installed models). When weather or dirt is simulated they stop being static.
+/// The weather classes of overlay variables (M-0120). The stock scripts drive them: `Dirt_*` from
+/// the wash and wiper scripts, `Rain_Window_*` from the precipitation, `Beschlag_*` (condensation)
+/// from the humidity, `Precip_*` (the precipitation mirror).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverlayClass {
+    /// `Dirt_Norm`, `Dirt_Wiped`, ...
+    Dirt,
+    /// `Rain_Window_*_Wetness`.
+    RainWindow,
+    /// `Beschlag_*`.
+    Condensation,
+    /// `Precip_*`.
+    Precipitation,
+}
+
+/// The weather class of an overlay variable, `None` for any other variable.
 #[must_use]
-pub fn is_static_overlay(variable: &str) -> bool {
+pub fn overlay_class(variable: &str) -> Option<OverlayClass> {
     let v = variable.trim().to_ascii_lowercase();
-    ["rain_window_", "dirt_", "precip_"]
-        .iter()
-        .any(|p| v.starts_with(p))
+    [
+        ("rain_window_", OverlayClass::RainWindow),
+        ("dirt_", OverlayClass::Dirt),
+        ("beschlag_", OverlayClass::Condensation),
+        ("precip_", OverlayClass::Precipitation),
+    ]
+    .into_iter()
+    .find(|(prefix, _)| v.starts_with(prefix))
+    .map(|(_, class)| class)
+}
+
+/// Whether the variable belongs to a weather overlay class ([`overlay_class`]).
+#[must_use]
+pub fn is_weather_overlay(variable: &str) -> bool {
+    overlay_class(variable).is_some()
 }
 
 pub(super) fn base_name(path: &str) -> String {

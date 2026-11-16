@@ -29,11 +29,6 @@ impl ContentLoader<'_> {
                 textures: Vec::new(),
             });
         let over = find_override(&model.materials, slot, ctx.overrides);
-        if over.is_some_and(TextureOverride::is_variable_hidden) {
-            self.cache.stats.hidden_parts += 1;
-            sc.hidden += 1;
-            return;
-        }
         let failures_before = self.cache.stats.failures.len();
         let res = self.resolve_slot_textures(&base, over, ctx);
         let sentinel = crate::texture_sentinel::missing_texture_sentinel()
