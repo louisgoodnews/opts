@@ -6,6 +6,7 @@ use super::chassis::ChassisState;
 use super::drivetrain::DrivetrainModel;
 use super::inputs::VehicleInputs;
 use super::spec::VehicleDynamicsSpec;
+use super::surface::VehicleSurface;
 use super::suspension::SuspensionModel;
 use super::{VehicleSimulation, ROAD_FRICTION};
 use glam::Vec2;
@@ -65,6 +66,7 @@ impl VehicleSimulation {
             unit_passenger_mass_kg: Vec::new(),
             road_friction: ROAD_FRICTION,
             fuel: None,
+            surface: VehicleSurface::default(),
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
@@ -115,6 +117,7 @@ impl VehicleSimulation {
             unit_passenger_mass_kg: Vec::new(),
             road_friction: ROAD_FRICTION,
             fuel: None,
+            surface: VehicleSurface::default(),
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,

@@ -4,6 +4,7 @@
 use bevy::prelude::*;
 use opts_bevy::control::params::{f64_param, opt_f64, opt_str};
 use opts_bevy::control::state::{ControlRegistry, Outcome};
+use opts_bevy::reflections::Wetness;
 use opts_bevy::{
     CalendarDate, EnvironmentChange, MapDatePolicy, SessionEnvironment, WeatherCatalogue,
 };
@@ -27,6 +28,11 @@ pub fn weather_preset(catalogue: &WeatherCatalogue, name: &str) -> Option<String
     catalogue.find(name)
 }
 
+/// The `wetness` parameter (M-0121), clamped to `0..=1`; `None` when absent.
+pub fn wetness_param(params: &Value) -> Result<Option<f32>, RpcError> {
+    Ok(opt_f64(params, "wetness")?.map(|w| w.clamp(0.0, 1.0) as f32))
+}
+
 fn state(env: &SessionEnvironment) -> Value {
     json!({
         "clock": env.clock_text(),
@@ -37,6 +43,13 @@ fn state(env: &SessionEnvironment) -> Value {
         "rate": env.rate(),
         "revision": env.revision(),
     })
+}
+
+/// The answer after the change: the environment and the global wetness (`null` without one).
+fn report(world: &World) -> Value {
+    let mut answer = state(world.resource::<SessionEnvironment>());
+    answer["wetness"] = json!(world.get_resource::<Wetness>().map(|w| w.0));
+    answer
 }
 
 fn change_of(params: &Value, catalogue: &WeatherCatalogue) -> Result<EnvironmentChange, RpcError> {
@@ -92,12 +105,25 @@ fn set_time(world: &mut World, params: &Value) -> Outcome {
         Ok(c) => c,
         Err(e) => return Outcome::err(e),
     };
+    let wetness = match wetness_param(params) {
+        Ok(w) => w,
+        Err(e) => return Outcome::err(e),
+    };
+    if let Some(w) = wetness {
+        let Some(mut global) = world.get_resource_mut::<Wetness>() else {
+            return Outcome::err(RpcError::new(
+                code::NOT_READY,
+                "no wetness state (start a drive first)",
+            ));
+        };
+        global.0 = w;
+    }
     world.write_message(change);
     // The change applies in the next frame's environment systems; answer with the result.
     let mut frames = 0;
     Outcome::Wait(Box::new(move |world| {
         frames += 1;
-        (frames >= 2).then(|| Ok(state(world.resource::<SessionEnvironment>())))
+        (frames >= 2).then(|| Ok(report(world)))
     }))
 }
 

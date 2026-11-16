@@ -61,6 +61,7 @@ impl Plugin for GameControlPlugin {
         crate::control_configs::register(&mut registry);
         crate::control_dynamics::register(&mut registry);
         crate::control_fuel::register(&mut registry);
+        crate::control_surface::register(&mut registry);
         crate::control_route::register(&mut registry);
         crate::control_scheduled::register(&mut registry);
         crate::control_traffic::register(&mut registry);

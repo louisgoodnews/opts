@@ -17,6 +17,7 @@ mod traffic;
 mod ui_screen;
 mod vehicle_and_spawn;
 mod vehicle_dynamics;
+mod vehicle_surface;
 mod viewpoint;
 
 const PARTS: &[&[CommandSpec]] = &[
@@ -33,6 +34,7 @@ const PARTS: &[&[CommandSpec]] = &[
     viewpoint::PART,
     session_saves::PART,
     vehicle_dynamics::PART,
+    vehicle_surface::PART,
     traffic::PART,
     config_audio::PART,
 ];

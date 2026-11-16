@@ -116,3 +116,21 @@ fn table_has_unique_names() {
     names.dedup();
     assert_eq!(n, names.len());
 }
+
+#[test]
+fn vehicle_surface_and_the_wetness_of_sim_set_time_parse() {
+    let c = COMMANDS
+        .iter()
+        .find(|c| c.method == "vehicle.surface")
+        .expect("vehicle.surface is in the table");
+    assert!(c.debug);
+    assert_eq!(c.since, "1.34");
+    assert_eq!(
+        params("vehicle.surface", &["--dirt", "0.5", "--wiped"]).unwrap(),
+        json!({"dirt": 0.5, "wiped": true})
+    );
+    assert_eq!(
+        params("sim.set_time", &["3600", "--wetness", "0.4"]).unwrap(),
+        json!({"seconds": 3600.0, "wetness": 0.4})
+    );
+}

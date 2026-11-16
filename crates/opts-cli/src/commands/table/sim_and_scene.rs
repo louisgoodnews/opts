@@ -22,10 +22,10 @@ pub(super) const PART: &[CommandSpec] = &[
         "sim.set_time",
         "sim",
         "Set the session clock (and date, weather, clock rate)",
-        "seconds:f@0 date:s? weather:s? rate:f?",
+        "seconds:f@0 date:s? weather:s? rate:f? wetness:f?",
     )
-    .result("`{clock, seconds_of_day, date, map_date, weather, rate, revision}` after the change")
-    .doc("Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (an installed preset's id such as `Sturm` or `#CAVOK`, its slug, its localised name or a word of it; the old ids `Clear Summer Day`, `Rainy Afternoon`, … work too and stand for the closest installed preset; `sim.get` lists the available ids as `weather_presets`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600). Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`, and the weather as `weather_canonical`, `weather_presets` and `weather_conditions`."),
+    .result("`{clock, seconds_of_day, date, map_date, weather, rate, revision, wetness}` after the change")
+    .doc("Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (an installed preset's id such as `Sturm` or `#CAVOK`, its slug, its localised name or a word of it; the old ids `Clear Summer Day`, `Rainy Afternoon`, … work too and stand for the closest installed preset; `sim.get` lists the available ids as `weather_presets`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600), and `wetness` (since 1.34; 0 to 1, clamped; sets the global wetness that the wet surfaces and the wet-objects setting read, M-0121, and `wetness` in the answer is its value). The weather ramps the wetness toward its own target at most 0.5 per second, so a set wetness drifts back to the weather's during a drive. Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`, and the weather as `weather_canonical`, `weather_presets` and `weather_conditions`."),
     c(
         "scene.load_map",
         "scene",

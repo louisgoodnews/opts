@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.33.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.34.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -293,7 +293,7 @@ Physical window pixels, like `x`/`y` of `input.mouse.click`. In the cockpit and 
 | `sim.resume` | - | 1.0 | Resume the simulation |
 | `sim.step` | `frames` (integer) | 1.0 | Advance N frames while paused |
 | `sim.time_scale` | `factor` (number) | 1.0 | Set the simulation speed |
-| [`sim.set_time`](#simset_time) | `seconds` (number)<br>`date?` (string)<br>`weather?` (string)<br>`rate?` (number) | 1.0 | Set the session clock (and date, weather, clock rate) |
+| [`sim.set_time`](#simset_time) | `seconds` (number)<br>`date?` (string)<br>`weather?` (string)<br>`rate?` (number)<br>`wetness?` (number) | 1.0 | Set the session clock (and date, weather, clock rate) |
 
 ### `sim.pause`
 
@@ -305,9 +305,9 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 
 Set the session clock (and date, weather, clock rate).
 
-**Result:** `{clock, seconds_of_day, date, map_date, weather, rate, revision}` after the change
+**Result:** `{clock, seconds_of_day, date, map_date, weather, rate, revision, wetness}` after the change
 
-Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (an installed preset's id such as `Sturm` or `#CAVOK`, its slug, its localised name or a word of it; the old ids `Clear Summer Day`, `Rainy Afternoon`, … work too and stand for the closest installed preset; `sim.get` lists the available ids as `weather_presets`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600). Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`, and the weather as `weather_canonical`, `weather_presets` and `weather_conditions`.
+Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (an installed preset's id such as `Sturm` or `#CAVOK`, its slug, its localised name or a word of it; the old ids `Clear Summer Day`, `Rainy Afternoon`, … work too and stand for the closest installed preset; `sim.get` lists the available ids as `weather_presets`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600), and `wetness` (since 1.34; 0 to 1, clamped; sets the global wetness that the wet surfaces and the wet-objects setting read, M-0121, and `wetness` in the answer is its value). The weather ramps the wetness toward its own target at most 0.5 per second, so a set wetness drifts back to the weather's during a drive. Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`, and the weather as `weather_canonical`, `weather_presets` and `weather_conditions`.
 
 ## Group `scene`
 
@@ -966,6 +966,7 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`bus.set_stop`](#busset_stop) | `index` (integer) | 1.13 | Set the stop of the route or timetable the vehicle is at (0-based) |
 | [`rail.switch`](#railswitch) | `way?` (string = straight \| left \| right) | 1.28 | The points ahead of the player's rail vehicle and the way it takes; with `way` choose it |
 | [`traffic.scheduled`](#trafficscheduled) | - | 1.27 | The timetable runs on the road, the vehicles that drive them and their punctuality |
+| [`vehicle.surface`](#vehiclesurface) *(debug)* | `dirt?` (number)<br>`wet?` (number)<br>`wiped?` (boolean) | 1.34 | The dirt and wetness of the player's vehicle and the road's snow; with `dirt` or `wet` set them, with `wiped` wash the dirt off |
 | [`traffic.dump`](#trafficdump) | `limit?` (integer) | 1.33 | The AI vehicles on the lanes (unscheduled and scheduled): lane, position, speed, waiting and stuck time, pose |
 | [`traffic.set_density`](#trafficset_density) *(debug)* | `baseline` (integer) | 1.33 | The baseline of the AI traffic around the player, for this session (`0` stops new vehicles) |
 | [`vehicle.click`](#vehicleclick) | `name` (string)<br>`frames?` (integer)<br>`hold_ms?` (integer) | 1.20 | Operate a cockpit hot-spot like a player: press, drag, hold, release |
@@ -1165,6 +1166,14 @@ The timetable runs on the road, the vehicles that drive them and their punctuali
 **Result:** `{available, runs_on_the_road, vehicles, traffic_agents, spawned, arrivals, departures, missed_stops, mean_delay_s, positions: [{x, y, heading_deg}], last_arrivals: [{station, scheduled, actual, delay_s}]}`
 
 Scheduled AI vehicles (`docs/src/architecture/scheduled-traffic.md`): the runs of the map's timetable that are on the road or start within 90 s at the session clock, how many of them have a vehicle now, the stops reached and left, and the delay at arrival (clock minus the scheduled arrival, seconds; negative is early) of the last arrivals. `mean_delay_s` is `null` before the first arrival. Vehicles appear only near the player, at the bus stop objects of the loaded tiles.
+
+### `vehicle.surface`
+
+The dirt and wetness of the player's vehicle and the road's snow; with `dirt` or `wet` set them, with `wiped` wash the dirt off.
+
+**Result:** `{dirt, wet, wiped_at, snow}`; `wiped_at` is the session clock's second of the last wash (`null` before one)
+
+`dirt` and `wet` are shares from 0 to 1 (`-32602` outside it). `dirt` is the script variable `Dirt_Norm`, which the stock scripts leave at 0: the host's level is fed to the player's vehicle every frame, so the dirt overlays show it (M-0120). `wiped: true` applies last and sets the dirt to 0, as a wash does. `wet` is kept for the vehicle's wet paint (M-0121) and is not drawn yet. `snow` is the snow cover of the road the weather gives and is read only. `1001` without a player vehicle.
 
 ### `traffic.dump`
 

@@ -9,6 +9,7 @@ use super::fuel::FuelState;
 use super::ground::UnitBody;
 use super::inputs::VehicleInputs;
 use super::spec::VehicleDynamicsSpec;
+use super::surface::VehicleSurface;
 use super::suspension::{BodySuspension, SuspensionModel};
 use super::trailer::TrailerKinematics;
 use super::ScriptDrive;
@@ -94,6 +95,10 @@ pub struct VehicleSimulation {
     /// drives as before. Saves from before it load with `None`.
     #[serde(default)]
     pub fuel: Option<FuelState>,
+    /// Host surface state: dirt (`Dirt_Norm`), wetness and the last wash (M-0120, M-0121). Saves
+    /// from before it load clean.
+    #[serde(default)]
+    pub surface: VehicleSurface,
 }
 
 fn default_road_friction() -> f32 {

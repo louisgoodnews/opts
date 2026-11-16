@@ -24,6 +24,7 @@ pub mod control_save;
 pub mod control_scheduled;
 pub mod control_session;
 pub mod control_setvars;
+pub mod control_surface;
 pub mod control_textures;
 pub mod control_tiles;
 pub mod control_trace;

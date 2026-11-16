@@ -13,6 +13,7 @@ pub mod fuel;
 pub mod ground;
 pub mod inputs;
 pub mod spec;
+pub mod surface;
 pub mod suspension;
 pub mod trailer;
 pub mod wheels;

@@ -66,6 +66,11 @@ pub fn vehicle_script_system(
             inputs.pax_exit_req = p.exit_req;
         }
         feed(engine, plan, &inputs);
+        if player {
+            // The host's dirt level (`vehicle.surface`) is the value of `Dirt_Norm`; a script that
+            // writes the variable itself overrides it for the frame, as the stock scripts never do.
+            engine.set("Dirt_Norm", controller.sim.surface.dirt);
+        }
         if first {
             engine.run_init();
         }

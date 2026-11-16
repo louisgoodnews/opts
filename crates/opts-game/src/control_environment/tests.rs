@@ -71,3 +71,12 @@ fn parameters_are_checked() {
         assert!(change_of(&bad, &b).is_err(), "{bad}");
     }
 }
+
+#[test]
+fn the_wetness_parameter_is_clamped_to_zero_and_one() {
+    assert_eq!(wetness_param(&json!({})).unwrap(), None);
+    assert_eq!(wetness_param(&json!({"wetness": 0.4})).unwrap(), Some(0.4));
+    assert_eq!(wetness_param(&json!({"wetness": 3.0})).unwrap(), Some(1.0));
+    assert_eq!(wetness_param(&json!({"wetness": -2.0})).unwrap(), Some(0.0));
+    assert!(wetness_param(&json!({"wetness": "wet"})).is_err());
+}
