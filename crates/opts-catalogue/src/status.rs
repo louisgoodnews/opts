@@ -55,7 +55,7 @@ pub struct Summary {
     pub rerouted: usize,
 }
 
-/// The catalogue by kind (see [`Catalogue::kind_counts`]); `other` is everything that is not one
+/// The catalogue by kind (see [`crate::Catalogue::kind_counts`]); `other` is everything that is not one
 /// of the four named kinds (trailers and AI vehicles, fonts, humans, weather, ...).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct KindCounts {
