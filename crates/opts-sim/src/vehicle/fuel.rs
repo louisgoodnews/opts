@@ -59,6 +59,26 @@ impl FuelMode {
             Self::Accelerated => ACCELERATED_FACTOR,
         }
     }
+
+    /// The settings value of this mode (`off`, `realistic` or `accelerated`).
+    #[must_use]
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Realistic => "realistic",
+            Self::Accelerated => "accelerated",
+        }
+    }
+
+    /// Reads a settings value; anything unknown is [`FuelMode::Realistic`].
+    #[must_use]
+    pub fn parse(text: &str) -> Self {
+        match text.trim().to_ascii_lowercase().as_str() {
+            "off" => Self::Off,
+            "accelerated" => Self::Accelerated,
+            _ => Self::Realistic,
+        }
+    }
 }
 
 /// The charge of one vehicle: how much is left in its tank or battery.
@@ -149,20 +169,7 @@ impl FuelState {
     }
 }
 
-impl super::VehicleSimulation {
-    /// Depletes the fuel store for one step and returns the torque factor to apply to this
-    /// step's drive (1 without a fuel model).
-    pub(super) fn fuel_step(&mut self, dt: f32) -> f32 {
-        let throttle = self.inputs.throttle();
-        match self.fuel.as_mut() {
-            Some(fuel) => {
-                fuel.step(throttle, dt);
-                fuel.torque_factor()
-            }
-            None => 1.0,
-        }
-    }
-}
+mod sim;
 
 #[cfg(test)]
 mod tests;
