@@ -141,6 +141,6 @@ pub use discovery::{reconcile_selection, spawn_discovery, CataloguePlugin};
 /// Test support: builds a miniature OMSI installation on disk, runs the real discovery on it
 /// and returns the menu lists. Used by integration tests so they never depend on a local
 /// OMSI installation.
-#[cfg(feature = "test-support")]
+#[cfg(any(test, feature = "test-support"))]
 #[doc(hidden)]
 pub mod testing;

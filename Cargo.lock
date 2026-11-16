@@ -5429,7 +5429,6 @@ dependencies = [
  "opts-catalogue",
  "opts-cli",
  "opts-core",
- "opts-game",
  "opts-gui",
  "opts-hardware",
  "opts-l10n",

@@ -57,9 +57,38 @@ profile = ["bevy/trace", "bevy/debug"]
 stream-trace = ["opts-bevy/stream-trace", "opts-logging/stream-trace"]
 
 [dev-dependencies]
-# Enables the fixtures for this crate's own integration tests.
-opts-game = { path = ".", features = ["test-support"] }
 # Add test-specific dependencies here
+
+# Integration tests that use the fixtures of `test-support` (run with --features test-support).
+[[test]]
+name = "a11y_matrix"
+path = "tests/a11y_matrix.rs"
+required-features = ["test-support"]
+
+[[test]]
+name = "hud_matrix"
+path = "tests/hud_matrix.rs"
+required-features = ["test-support"]
+
+[[test]]
+name = "ui_rules"
+path = "tests/ui_rules.rs"
+required-features = ["test-support"]
+
+[[test]]
+name = "golden_screens"
+path = "tests/golden_screens/main.rs"
+required-features = ["test-support"]
+
+[[test]]
+name = "wizard_tests"
+path = "tests/wizard_tests/main.rs"
+required-features = ["test-support"]
+
+[[test]]
+name = "loading_tests"
+path = "tests/loading_tests.rs"
+required-features = ["test-support"]
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
