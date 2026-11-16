@@ -15,6 +15,11 @@ mod tiles;
 mod traffic;
 mod weights;
 
+use opts_core::formats::map::lists::{day, GroupDensity, UnschedGroup};
+use opts_core::formats::map::{
+    parse_unsched_trafficdens, parse_unsched_vehgroups, AiLists, DensityProfile, MapManifest,
+    MapTile, TileGrid,
+};
 use std::path::PathBuf;
 
 use census::census;

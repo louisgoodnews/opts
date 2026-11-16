@@ -1,10 +1,8 @@
 //! Lane segments of a tile's splines and objects: geometry, kind, rules and elevation per path.
 
 use glam::DVec2;
-use opts_core::formats::map::{MapTile, RuleOwner};
-use opts_core::formats::scenery::ScoPath;
 
-use super::{rules_for, PathSource};
+use super::{rules_for, MapTile, PathSource, RuleOwner, ScoPath};
 use crate::agent::Blinker;
 use crate::geometry::{PathGeometry, SCO_STRAIGHT_RADIUS};
 use crate::graph::{Direction, Elevation, LaneKind, LaneSegment};
