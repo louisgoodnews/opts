@@ -42,6 +42,8 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `graphics.bloom` | Bloom | `off`, `low`, `natural`, `high` | `off` | at once | available | A soft glow around very bright lights. |
 | `graphics.light_governor_target_fps` | Governor target frame rate | whole number 30 to 240 | `60` | at once | available | The frame rate the automatic lighting quality tries to keep. Without vsync it is the deadline; with vsync the deadline is your display's refresh interval, or this rate if that is lower. Frames that miss it by a wide margin make the quality step down; with no missed frames for a while it steps up again. |
 | `graphics.overlays` | Window and body overlays | `off`, `simple`, `full` | `full` | at once | available | Dirt, rain on the windows and condensation on vehicles. Off draws none of them and costs nothing. Simple draws the window overlays only. Full draws both. A raised setting applies to vehicles loaded from then on. |
+| `graphics.exhaust` | Engine exhaust | `off`, `on` | `on` | at once | available | The exhaust plume of the vehicle you drive: puffs from the back of the engine on a cold start and under heavy throttle. Off draws none and costs nothing. On draws the plume, within the cap below. |
+| `graphics.exhaust_particles` | Most exhaust puffs | whole number 4 to 48 | `12` | at once | available | How many exhaust puffs may be alive at the same time, from 4 to 48. The emitter waits when the cap is reached, so a lower value costs less and shows a thinner plume. |
 
 ## Audio
 

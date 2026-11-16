@@ -62,3 +62,10 @@ set-overlays-desc = Dirt, rain on the windows and condensation on vehicles. Off 
 set-opt-overlays-off = Off
 set-opt-overlays-simple = Simple (windows)
 set-opt-overlays-full = Full
+
+set-exhaust = Engine exhaust
+set-exhaust-desc = The exhaust plume of the vehicle you drive: puffs from the back of the engine on a cold start and under heavy throttle. Off draws none and costs nothing. On draws the plume, within the cap below.
+set-opt-exhaust-off = Off
+set-opt-exhaust-on = On
+set-exhaust-particles = Most exhaust puffs
+set-exhaust-particles-desc = How many exhaust puffs may be alive at the same time, from 4 to 48. The emitter waits when the cap is reached, so a lower value costs less and shows a thinner plume.

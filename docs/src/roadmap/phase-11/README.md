@@ -17,7 +17,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page
 7. [M-0111 — AI Traffic Depth](M-0111.md) — 🟡 In progress; audit done, lane-change and traffic-light phases under way; overtaking, barriers and before/after measurement open.
 8. [M-0114 — Hybrid Tile and Object Streaming](M-0114.md) — 🟡 In progress; policy implemented; baselines, comparison runs and overlay pending.
 9. [M-0116 — Real Weather Research](M-0116.md) — 🟡 Research complete, pending review (2026-11-16); research only, a document and a decision.
-10. [M-0117 — Weather Effects on Driving and Exhaust Visibility](M-0117.md) — 🚧 In progress; sim-side grip and exhaust rule done; game wiring, HUD and rendering open.
+10. [M-0117 — Weather Effects on Driving and Exhaust Visibility](M-0117.md) — 🚧 In progress; grip, AI, HUD hint and exhaust puffs with the setting done; vehicle-data outlet and on-screen checks open.
 11. [M-0112 — Scheduled AI Traffic](M-0112.md) — ✅ Done 2026-10-23; buses, trains and trams by timetable (limits in the milestone).
 12. [M-0113 — Track Switch Interaction](M-0113.md) — ✅ Done 2026-10-30; points for AI and player on rails.
 

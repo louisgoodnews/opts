@@ -10,6 +10,7 @@ use opts_bevy::{EnvironmentSet, WeatherCatalogue, WeatherEffects};
 use crate::app_state::AppState;
 
 pub mod clouds;
+pub mod exhaust;
 pub mod fog;
 pub mod grip;
 pub mod precip;
@@ -72,7 +73,9 @@ impl Plugin for WeatherPlugin {
             .init_resource::<clouds::CloudState>()
             .init_resource::<precip::PrecipState>()
             .init_resource::<puddles::PuddleState>()
+            .init_resource::<exhaust::ExhaustState>()
             .add_systems(Update, refresh_weather_catalogue.before(EnvironmentSet))
+            .add_systems(Update, exhaust::update_exhaust.after(EnvironmentSet))
             .add_systems(
                 Update,
                 fog::measure_fog_view

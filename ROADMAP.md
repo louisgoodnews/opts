@@ -430,7 +430,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [~] Streaming strategy that adapts to the player's speed: tiles at speed, objects when slow.
 - [ ] **🌦️ Real Weather Research** — [M-0116](docs/src/roadmap/phase-11/M-0116.md) — 🟡 research complete, pending review (2026-11-16)
   - [ ] Providers, licensing, offline policy, mapping to `.owt` presets, location source, go/no-go (research only).
-- [~] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](docs/src/roadmap/phase-11/M-0117.md) — 🚧 in progress 2026-11-16 (sim-side grip and exhaust rule done; game wiring, AI loop call, HUD hint, exhaust effect and verification open)
+- [~] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](docs/src/roadmap/phase-11/M-0117.md) — 🚧 in progress 2026-11-16 (grip, AI, HUD hint and exhaust puffs with the setting and cap done; outlet from the vehicle data and on-screen checks open)
   - [~] Wet and snow grip, fog visibility hint, exhaust particles.
 - [x] **🚏 Scheduled AI Traffic** — [M-0112](docs/src/roadmap/phase-11/M-0112.md) — ✅ done 2026-10-23
   - [x] Buses, trams and trains that spawn at the route start, follow the timetable and despawn at the end (needs M-0099/M-0098).

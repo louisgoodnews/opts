@@ -12,6 +12,7 @@ pub fn descriptors() -> Vec<D> {
         mirrors_glass_bloom(),
         super::governor::descriptors(),
         super::overlays::descriptors(),
+        super::exhaust::descriptors(),
     ]
     .concat()
 }

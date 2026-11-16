@@ -16,11 +16,13 @@ use super::{ChangeSource, SettingChanged, SettingsApi};
 use crate::settings::GameSettings;
 
 mod custom;
+mod exhaust;
 mod governor;
 mod list;
 mod overlays;
 mod systems;
 pub use custom::*;
+pub use exhaust::{exhaust_cap_of, exhaust_on_of, EXHAUST_CAP_KEY, EXHAUST_KEY};
 pub use list::descriptors;
 pub use systems::*;
 
