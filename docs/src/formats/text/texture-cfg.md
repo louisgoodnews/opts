@@ -72,6 +72,10 @@ Distribution of the values actually used (9,588 `[surface]` lines): `6` 2,900; `
 
 A texture without a property file defaults to ❓ (probably asphalt / dry).
 
+### OPTS handling (M-0121, partial)
+
+`opts_bevy::texture::TextureFlags::parse` reads the keyword lines (`[moisture]`, `[puddles]`, `[surface]` with the value on the next non-empty line), ignores indented lines (the pasted tutorial), and is case-insensitive. `texture_wetness` gives a texture the global wetness only with `[moisture]`. Parsing is covered by synthetic fixtures only; no OMSI file is committed. Not yet wired into model materials (see [weather.md](../../architecture/weather.md) §6).
+
 ---
 
 ## 🧪 Examples

@@ -184,6 +184,12 @@ colour × `(1 − 0.3·w)` and roughness × `(1 − 0.55·w)`, from their origin
 sight. Snow cover tints the ground toward `(0.92, 0.94, 0.97)` by 0.85 and, with `[snowOnRoad]`,
 the roads by 0.7. Objects, roofs and vehicles are not snow-covered (deviation).
 
+### Wetness ramp and object wetness (M-0121, partial)
+
+* **Ramp.** `drive_wetness` no longer flips `Wetness` at once. `surfaces::next_wetness` moves it towards the target with the grip's rate limit (`opts_sim::surface_grip::approach`, 0.5 per second), so a shower takes about 2 s to arrive and a dry spell about 2 s to leave. Ground, puddles and road materials follow the same value.
+* **Per-texture flags.** `opts_bevy::texture::TextureFlags::parse` reads `[moisture]`, `[puddles]` and `[surface]` from a texture `.cfg` (unindented keyword lines only). `texture_wetness` is the one rule: a texture takes the global wetness only with `[moisture]`, and is dry otherwise. This is not yet applied to model materials: the loader does not read the texture `.cfg`, and the object wet pass (`reflections::apply_wet`) still runs only under the `OPTS_REFLECT=wet` research switch. ❓ What `[puddles]` means on non-ground objects is unknown; the flag is parsed, not used.
+* **Not done:** the *Wet and snowy surfaces* setting (Off / Ground only / All), the `snow_visible` session variable and `WinterSnow` variant lookup, and wet paint or tyres on vehicles. See [M-0121](../roadmap/phase-12/M-0121.md).
+
 ## Headless check
 
 `cargo run -p opts-game --example weather_probe -- <dir> [preset…]` renders a small scene (layered ground, boxes) off-screen under each preset (with `OMSI_PATH`: the install's presets and cloud textures) and writes PNGs: fog, cloud disc, rain streaks, snow flakes, wet ground and puddles, snow cover. It does not include the sky dome (the fogged sky texture is in `sky.rs`).
