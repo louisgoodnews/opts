@@ -57,7 +57,9 @@ fn dry_clear_weather_is_the_default() {
 fn steady_gap(vis_m: f64) -> f64 {
     let mut w = world(&[straight(0.0, 4000.0)]);
     w.set_weather(1.0, vis_m);
-    let lead = w.spawn(LaneId(0), 120.0, 13.0, IdmParams::default()).unwrap();
+    let lead = w
+        .spawn(LaneId(0), 120.0, 13.0, IdmParams::default())
+        .unwrap();
     let follow = w.spawn(LaneId(0), 0.0, 13.0, IdmParams::default()).unwrap();
     for _ in 0..1200 {
         w.step(0.1);

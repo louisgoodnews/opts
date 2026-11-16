@@ -47,7 +47,13 @@ pub fn weather_alerts(
         last.0 = grip;
     }
     if visibility != last.1 {
-        toggle(VISIBILITY_ID, keys::ALERT_LOW_VISIBILITY, visibility, &mut raise, &mut clear);
+        toggle(
+            VISIBILITY_ID,
+            keys::ALERT_LOW_VISIBILITY,
+            visibility,
+            &mut raise,
+            &mut clear,
+        );
         last.1 = visibility;
     }
 }
@@ -69,10 +75,7 @@ mod tests {
     }
 
     fn visible(app: &App) -> Option<&'static str> {
-        app.world()
-            .resource::<AlertQueue>()
-            .visible()
-            .map(|a| a.id)
+        app.world().resource::<AlertQueue>().visible().map(|a| a.id)
     }
 
     #[test]

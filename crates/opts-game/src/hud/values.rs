@@ -128,7 +128,9 @@ pub fn sample_values(
     let mut next = HudValues {
         camera: camera.mode,
         sub_camera: camera.sub_camera_index,
-        visibility_m: env.as_ref().map_or(f32::INFINITY, |e| e.conditions().fog_visibility_m),
+        visibility_m: env
+            .as_ref()
+            .map_or(f32::INFINITY, |e| e.conditions().fog_visibility_m),
         ..HudValues::default()
     };
     if let Ok((c, rail, chain, bus, controls)) = vehicle.single() {

@@ -44,7 +44,10 @@ impl AiWeather<'_> {
         let wet = self.wetness.as_ref().map_or(0.0, |w| w.0);
         let snow_road = wanted_state(env, effects).snow_road;
         let grip = grip_target(wet, snow_road) / ROAD_FRICTION;
-        world.set_weather(f64::from(grip), f64::from(env.conditions().fog_visibility_m));
+        world.set_weather(
+            f64::from(grip),
+            f64::from(env.conditions().fog_visibility_m),
+        );
     }
 }
 

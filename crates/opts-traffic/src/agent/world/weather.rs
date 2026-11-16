@@ -7,10 +7,7 @@ impl TrafficWorld {
     /// Sets the grip factor of the road (`1.0`: dry asphalt) and the visibility (m, infinite in
     /// clear air) for all drivers. Takes effect from the next step.
     pub fn set_weather(&mut self, grip: f64, visibility_m: f64) {
-        self.weather = WeatherState {
-            grip,
-            visibility_m,
-        };
+        self.weather = WeatherState { grip, visibility_m };
     }
 
     /// The weather the drivers see.
