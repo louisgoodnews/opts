@@ -9,6 +9,7 @@ pub mod brakes;
 pub mod chassis;
 pub mod consist;
 pub mod drivetrain;
+pub mod fuel;
 pub mod ground;
 pub mod inputs;
 pub mod spec;

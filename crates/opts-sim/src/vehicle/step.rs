@@ -68,8 +68,14 @@ impl VehicleSimulation {
         let mut forces =
             self.drivetrain
                 .step(&self.inputs, speed, first_wheel_radius, moving_mass_kg);
+        let torque_cut = self.fuel_step(dt);
+        forces.tractive_force_n *= torque_cut;
         let was_spinning = std::mem::replace(&mut self.wheels_spinning, false);
         let wheel_forces = self.script_drive.is_some_and(|d| {
+            let d = ScriptDrive {
+                wheel_torque_nm: d.wheel_torque_nm * torque_cut,
+                ..d
+            };
             self.compute_script_forces(d, speed, first_wheel_radius, dt, was_spinning, &mut forces)
         });
 

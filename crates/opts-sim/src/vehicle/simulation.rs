@@ -5,6 +5,7 @@ use super::brakes::BrakeSystem;
 use super::chassis::ChassisState;
 use super::consist::UnitLoad;
 use super::drivetrain::DrivetrainModel;
+use super::fuel::FuelState;
 use super::ground::UnitBody;
 use super::inputs::VehicleInputs;
 use super::spec::VehicleDynamicsSpec;
@@ -89,6 +90,10 @@ pub struct VehicleSimulation {
     /// tyre forces of traction and braking. Saves from before it load with the dry value.
     #[serde(default = "default_road_friction")]
     pub road_friction: f32,
+    /// Fuel or battery charge (M-0123); `None` for a vehicle without the model, which then
+    /// drives as before. Saves from before it load with `None`.
+    #[serde(default)]
+    pub fuel: Option<FuelState>,
 }
 
 fn default_road_friction() -> f32 {
