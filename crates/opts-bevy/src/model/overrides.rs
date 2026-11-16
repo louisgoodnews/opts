@@ -2,6 +2,15 @@
 
 use super::*;
 
+mod alpha;
+mod light;
+mod transmap;
+
+pub use light::compose_light;
+pub(super) use alpha::compose_alpha;
+pub use transmap::{transmap_glass_rgba, TRANSMAP_OPAQUE, TRANSMAP_SPLIT_SHARE};
+pub(super) use transmap::transmap_glass;
+
 /// Texture override for one `.o3d` material slot (from `[matl]` in `.sco` or `model.cfg`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct TextureOverride {
@@ -111,167 +120,4 @@ pub fn find_override<'a>(
                 .iter()
                 .find(|o| o.slot == slot && !native.contains(&base_name(&o.texture)))
         })
-}
-
-/// Returns `base` with its alpha channel replaced by the values of `trans` (nearest-neighbour
-/// resampled). Bases and maps may be RGBA8 or block-compressed (BC1-3); an R8 map is read directly.
-/// Only level 0 of either input is read; the result gets a fresh mip chain like any loaded texture.
-/// Alpha from which a texel of a transmap-composed texture counts as opaque: the body pass is
-/// `AlphaMode::Mask(TRANSMAP_OPAQUE)`, the glass pass draws the rest blended.
-pub const TRANSMAP_OPAQUE: f32 = 0.95;
-
-/// Share of opaque texels from which a composed texture is split into body and glass passes.
-/// Below it (shadow quads, smoke, plain windows) the material stays one blended pass.
-pub const TRANSMAP_SPLIT_SHARE: f32 = 0.5;
-
-/// The glass texels of an RGBA8 buffer whose alpha came from a transmap: `None` when fewer than
-/// [`TRANSMAP_SPLIT_SHARE`] of the texels are opaque (≥ [`TRANSMAP_OPAQUE`]), else the buffer with
-/// the alpha of every opaque texel set to 0 (the body pass draws those).
-#[must_use]
-pub fn transmap_glass_rgba(rgba: &[u8]) -> Option<Vec<u8>> {
-    // `a / 255 >= 0.95` exactly as the mask test compares it.
-    let opaque = |a: u8| f32::from(a) / 255.0 >= TRANSMAP_OPAQUE;
-    let texels = rgba.len() / 4;
-    if texels == 0 {
-        return None;
-    }
-    let solid = rgba.chunks_exact(4).filter(|p| opaque(p[3])).count();
-    if (solid as f32) < TRANSMAP_SPLIT_SHARE * texels as f32 {
-        return None;
-    }
-    let mut glass = rgba.to_vec();
-    for p in glass.chunks_exact_mut(4) {
-        if opaque(p[3]) {
-            p[3] = 0;
-        }
-    }
-    Some(glass)
-}
-
-/// [`transmap_glass_rgba`] on a composed image (RGBA8, as [`compose_alpha`] returns it).
-///
-/// The composed image already carries its mip chain; the glass is built from its base level
-/// and gets its own chain, so data and descriptor agree when the image is uploaded.
-pub(super) fn transmap_glass(composed: &Image) -> Option<Image> {
-    let data = composed.data.as_deref()?;
-    let (w, h) = (composed.width() as usize, composed.height() as usize);
-    let glass = transmap_glass_rgba(data.get(..w * h * 4)?)?;
-    let mut out = composed.clone();
-    out.texture_descriptor.mip_level_count = 1;
-    out.data = Some(glass);
-    crate::texture_filter::prepare_object_texture(&mut out);
-    Some(out)
-}
-
-/// The emissive picture of a light-mapped material: its texture multiplied by the light map, in
-/// linear light. OMSI's light maps are masks of the light's colour over the lit areas (the MAN
-/// GN92 panel's is one warm patch over all gauges, the MB C2's display a white rectangle): used
-/// as the emitted colour itself they paint those areas over; multiplied they light the dials and
-/// the display's picture. The light map is sampled at the texture's resolution.
-pub fn compose_light(base: &Image, light: &Image) -> Option<Image> {
-    let base = crate::texture::decode_to_rgba8(base)?;
-    let light = crate::texture::decode_to_rgba8(light)?;
-    let (bw, bh) = (base.width() as usize, base.height() as usize);
-    let (lw, lh) = (light.width() as usize, light.height() as usize);
-    let base_data = base.data.as_deref()?;
-    let light_data = light.data.as_deref()?;
-    if bw == 0
-        || bh == 0
-        || lw == 0
-        || lh == 0
-        || base_data.len() < bw * bh * 4
-        || light_data.len() < lw * lh * 4
-    {
-        return None;
-    }
-    let to_linear: Vec<f32> = (0..256)
-        .map(|v| {
-            let c = v as f32 / 255.0;
-            if c <= 0.04045 {
-                c / 12.92
-            } else {
-                ((c + 0.055) / 1.055).powf(2.4)
-            }
-        })
-        .collect();
-    let to_srgb = |l: f32| -> u8 {
-        let c = if l <= 0.003_130_8 {
-            l * 12.92
-        } else {
-            1.055 * l.powf(1.0 / 2.4) - 0.055
-        };
-        (c * 255.0 + 0.5).clamp(0.0, 255.0) as u8
-    };
-    let mut out = base.clone();
-    out.texture_descriptor.mip_level_count = 1;
-    let data = out.data.as_mut()?;
-    data.truncate(bw * bh * 4);
-    for y in 0..bh {
-        let ly = y * lh / bh;
-        for x in 0..bw {
-            let lx = x * lw / bw;
-            let o = (y * bw + x) * 4;
-            let l = (ly * lw + lx) * 4;
-            for c in 0..3 {
-                let lin =
-                    to_linear[usize::from(data[o + c])] * to_linear[usize::from(light_data[l + c])];
-                data[o + c] = to_srgb(lin);
-            }
-            data[o + 3] = 255;
-        }
-    }
-    crate::texture_filter::prepare_object_texture(&mut out);
-    Some(out)
-}
-
-pub(super) fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
-    // DDS textures stay block-compressed on the GPU; the texel values are needed here.
-    let base = crate::texture::decode_to_rgba8(base)?;
-    let trans_decoded = crate::texture::decode_to_rgba8(trans);
-    let trans = trans_decoded.as_ref().unwrap_or(trans);
-    let base = &base;
-    use bevy::render::render_resource::TextureFormat as F;
-    let (bw, bh) = (base.width() as usize, base.height() as usize);
-    let (tw, th) = (trans.width() as usize, trans.height() as usize);
-    let base_data = base.data.as_deref()?;
-    let trans_data = trans.data.as_deref()?;
-    if !matches!(
-        base.texture_descriptor.format,
-        F::Rgba8UnormSrgb | F::Rgba8Unorm
-    ) || base_data.len() < bw * bh * 4
-        || tw == 0
-        || th == 0
-    {
-        return None;
-    }
-    let sample: Box<dyn Fn(usize) -> u8> = match trans.texture_descriptor.format {
-        F::R8Unorm if trans_data.len() >= tw * th => Box::new(|i| trans_data[i]),
-        F::Rgba8UnormSrgb | F::Rgba8Unorm if trans_data.len() >= tw * th * 4 => {
-            // Use the alpha channel if the map has one, else its luminance.
-            let has_alpha = trans_data[..tw * th * 4]
-                .chunks_exact(4)
-                .any(|p| p[3] != 255);
-            Box::new(move |i| {
-                let p = &trans_data[i * 4..i * 4 + 4];
-                if has_alpha {
-                    p[3]
-                } else {
-                    p[0]
-                }
-            })
-        }
-        _ => return None,
-    };
-    let mut out = base.clone();
-    out.texture_descriptor.mip_level_count = 1;
-    let out_data = out.data.as_mut()?;
-    out_data.truncate(bw * bh * 4);
-    for y in 0..bh {
-        for x in 0..bw {
-            let (tx, ty) = (x * tw / bw, y * th / bh);
-            out_data[(y * bw + x) * 4 + 3] = sample(ty * tw + tx);
-        }
-    }
-    crate::texture_filter::prepare_object_texture(&mut out);
-    Some(out)
 }

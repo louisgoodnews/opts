@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`tree_wind.rs`).
 
 use super::*;
+use super::wind::{CALM_DIRECTION, CALM_M, MAX_M};
 
 #[test]
 fn the_wind_follows_the_weather_and_the_setting() {

@@ -19,9 +19,6 @@ mod types;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Mutex;
-use std::time::Instant;
-
-use serde::{Deserialize, Serialize};
 
 pub use filter::{Filters, Radius};
 pub use store::{Status, TileSummary};
