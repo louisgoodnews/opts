@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`scenery_sound.rs`).
 
 use super::*;
+use opts_bevy::scenery_runtime::{HostValues, SceneryClock};
 use opts_core::formats::sound::SoundConfig;
 
 fn host(time: f32, day_of_year: f32, sun: f32) -> HostValues {
