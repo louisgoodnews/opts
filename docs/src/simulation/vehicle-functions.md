@@ -46,6 +46,7 @@ This catalogue lists what buses *do* through their scripts — the behavioural c
 - **Callbacks:** none
 - **Host requirements:** constant files with curves, environment temperature, trigger `veh_tank` (engine-raised: refuelling, `engine_GN.osc:129`)
 - **Notes:** Torque is a blend of two curves by throttle plus turbo boost (`engine_GN.osc:353`); everything downstream (gearbox, exhaust, sound pitch) reads `engine_n`.
+- **OPTS notes (M-0123):** OPTS keeps its own fuel model per vehicle ([fuel and battery](fuel-battery.md)): the host drains it with the throttle and cuts the drive torque at empty. It does not yet read `engine_tank_content` or `tank_percent`, which the script still writes and drains; the stock scripts' own cut at empty is still unverified (❓).
 
 ### Automatic gearbox with torque converter, kickdown and shift logic
 

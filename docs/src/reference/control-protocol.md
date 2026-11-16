@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.31.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.32.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -951,6 +951,7 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`vehicle.reset`](#vehiclereset) *(debug)* | - | 1.1 | Put the player vehicle back where the session placed it, standing still |
 | [`vehicle.passengers`](#vehiclepassengers) *(debug)* | `spawn?` (integer)<br>`arrive?` (boolean)<br>`entry?` (integer)<br>`mass_count?` (integer) | 1.25 | Read the passengers of the player's vehicle, or send some to its doors |
 | [`vehicle.dynamics`](#vehicledynamics) | - | 1.10 | What the player's vehicle states about its dynamics (mass, centre of gravity, inertia, rolling resistance, axles) with the source of each value, and the live axle loads |
+| [`vehicle.fuel`](#vehiclefuel) *(debug)* | `level?` (number)<br>`refuel?` (boolean) | 1.32 | The fuel or battery charge of the player's vehicle; with `level` set it, with `refuel` fill it |
 | [`profiles.list`](#profileslist) | - | 1.14 | The map profiles of the planned drive's map: the profile that applies, the saved ones, the presets, the load profile and the advice |
 | [`profiles.advice`](#profilesadvice) | - | 1.14 | The load profile of the planned drive's map and the recommendations that follow from it |
 | [`profiles.apply`](#profilesapply) | `profile` (string)<br>`make_default?` (boolean) | 1.14 | Use a profile for the next drive of the planned map (Apply Selected) |
@@ -1042,6 +1043,14 @@ What the player's vehicle states about its dynamics (mass, centre of gravity, in
 **Result:** `{spec: {mass_kg, cg_height_m, yaw_inertia_kg_m2, pitch_inertia_kg_m2, roll_inertia_kg_m2, rolling_coefficient}, axles: [{index, longitudinal_m, track_width_m, wheel_diameter_m, spring_n_per_m, damping_n_s_per_m, max_force_n, driven, steered, static_load_n, load_n: [left, right], deflection_m, deflection_speed_m_s, compression_m: [left, right], brake_force_n, brake_limited}], state: {speed_m_s, head_mass_kg, consist_mass_kg, units, wheelbase_m}, body: {heave_m, pitch_rad, roll_rad}, brakes: {pressure, apply_tau_s, force_n}}`; every `spec` entry is `{value, source}` with `source` one of `file`, `estimate`, `default`; since 1.11 the answer also has `pitch_inertia_kg_m2`, `roll_inertia_kg_m2`, `compression_m`, `brake_force_n`, `brake_limited`, `body` and `brakes`
 
 `1001` without a player vehicle. `file` values are read from the vehicle's `.bus` (`[mass]`, `[schwerpunkt]`, `[momentofintertia]` or lines 2 to 4 of `[mass]`, `[rollwiderstand]`); `estimate` is the yaw inertia of a box with the bounding box's width and length; `default` is the generic transit bus, used because the file states nothing usable. The rolling coefficient is the file's rolling resistance (a force) over the stated weight. Axle values are those the physics uses (the `.bus` axle block, with bus defaults for what is missing); `static_load_n` follows from the axle positions, the mass and the centre of gravity.
+
+### `vehicle.fuel`
+
+The fuel or battery charge of the player's vehicle; with `level` set it, with `refuel` fill it.
+
+**Result:** `{model, kind, capacity, content, level, mode, low, torque_factor}` (`{model: false}` without a fuel model)
+
+`level` is the share of the capacity (0 to 1, `-32602` outside it); `refuel: true` fills the store first. `mode` is the setting *Fuel and battery* (`off`, `realistic`, `accelerated`), `low` the low-level warning, `torque_factor` the share of the drive torque kept (0 for an empty diesel tank). `capacity` and `kind` are the model's assumptions (`docs/src/simulation/fuel-battery.md`), not OMSI values. `1001` without a player vehicle.
 
 ### `profiles.list`
 

@@ -368,6 +368,7 @@
 
 - [Vehicle Physics & Kinematics](simulation/vehicle_physics.md)
 - [Vehicle Dynamics (world physics and the vehicle's definition)](simulation/vehicle-dynamics.md)
+- [Fuel and Battery](simulation/fuel-battery.md)
 - [Pedestrians](simulation/pedestrians.md)
 - [Passengers](simulation/passengers.md)
 - [Lane Kinds and Composite Splines](simulation/lane-kinds.md)

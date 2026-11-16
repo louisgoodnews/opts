@@ -126,3 +126,37 @@ fn a_vehicle_without_the_model_is_unchanged_by_the_fuel_step() {
     assert_eq!(sim.fuel_step(1.0 / 64.0), 1.0);
     assert!(sim.fuel.is_none());
 }
+
+#[test]
+fn the_mode_keys_round_trip_and_unknown_text_is_realistic() {
+    for mode in [FuelMode::Off, FuelMode::Realistic, FuelMode::Accelerated] {
+        assert_eq!(FuelMode::parse(mode.key()), mode);
+    }
+    assert_eq!(FuelMode::parse(" OFF "), FuelMode::Off);
+    assert_eq!(FuelMode::parse("bogus"), FuelMode::Realistic);
+}
+
+#[test]
+fn ensure_fuel_keeps_an_existing_content_and_sets_the_mode() {
+    let mut sim = crate::vehicle::VehicleSimulation::new_standard_bus(11_500.0, 5.85);
+    sim.ensure_fuel(FuelKind::Diesel, 250.0, FuelMode::Accelerated);
+    assert_eq!(sim.fuel_level(), Some(1.0));
+    sim.fuel.as_mut().unwrap().set_level(0.5);
+    sim.ensure_fuel(FuelKind::Electric, 10.0, FuelMode::Off);
+    let f = sim.fuel.as_ref().unwrap();
+    assert_eq!(f.kind, FuelKind::Diesel, "an existing model is not rebuilt");
+    assert_eq!(f.mode, FuelMode::Off);
+    assert!((f.level() - 0.5).abs() < 1e-6);
+}
+
+#[test]
+fn refuel_restores_the_torque_of_an_empty_tank_and_reports_a_missing_model() {
+    let mut sim = crate::vehicle::VehicleSimulation::new_standard_bus(11_500.0, 5.85);
+    assert!(!sim.refuel());
+    assert_eq!(sim.fuel_level(), None);
+    sim.ensure_fuel(FuelKind::Diesel, 250.0, FuelMode::Realistic);
+    sim.fuel.as_mut().unwrap().set_level(0.0);
+    assert_eq!(sim.fuel_step(0.0), 0.0);
+    assert!(sim.refuel());
+    assert_eq!(sim.fuel_step(0.0), 1.0);
+}
