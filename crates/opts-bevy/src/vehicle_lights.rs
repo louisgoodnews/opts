@@ -20,7 +20,7 @@ mod bindings;
 mod lamps;
 mod light_map;
 
-pub use alpha::vehicle_alpha_scale_system;
+pub use alpha::{scaled_alpha, vehicle_alpha_scale_system};
 pub use bindings::{AlphaScaleBinding, LightMapBinding, ALPHA_VISIBLE_MIN};
 pub use lamps::vehicle_light_system;
 pub use light_map::vehicle_light_map_system;

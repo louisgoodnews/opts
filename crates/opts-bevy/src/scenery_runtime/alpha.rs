@@ -3,7 +3,7 @@
 //! The scenery runtime knows one live variable of this kind: `Envir_Brightness`, from the session
 //! clock ([`SceneryClock::envir_brightness`]). A part scaled by any other variable stays hidden
 //! (the variable is a script output the object's own scripts would have to raise; rain and dirt
-//! overlays are not built at all, see [`crate::model::is_static_overlay`]).
+//! overlays are built but hidden, see [`crate::model::is_weather_overlay`]).
 
 use bevy::prelude::*;
 

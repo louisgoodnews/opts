@@ -34,7 +34,7 @@ fn sd83_window_glass_follows_envir_brightness_and_weather_overlays_stay_out() {
     let mut glass = 0;
     let mut weather = 0;
     let mut followed = 0;
-    let mut dropped = 0;
+    let mut weather_built = 0;
     for lod in &model.lods {
         for mesh in &lod.meshes {
             for m in &mesh.materials {
@@ -42,8 +42,8 @@ fn sd83_window_glass_follows_envir_brightness_and_weather_overlays_stay_out() {
                 if o.runtime_alpha_variable().is_some() {
                     followed += 1;
                 }
-                if o.is_variable_hidden() {
-                    dropped += 1;
+                if o.is_weather_overlay_part() {
+                    weather_built += 1;
                 }
                 let is_exterior_window = mesh
                     .path
@@ -51,21 +51,21 @@ fn sd83_window_glass_follows_envir_brightness_and_weather_overlays_stay_out() {
                     .ends_with("sd83_fenster_ext.o3d");
                 if is_exterior_window && m.texture.eq_ignore_ascii_case("Fenster.tga") {
                     assert_eq!(o.runtime_alpha_variable(), Some("Envir_Brightness"));
-                    assert!(!o.is_variable_hidden());
                     glass += 1;
                 }
                 if is_exterior_window
                     && (m.texture.eq_ignore_ascii_case("regen.tga")
                         || m.texture.eq_ignore_ascii_case("SD_dreck.tga"))
                 {
-                    assert!(o.is_variable_hidden(), "{}", m.texture);
+                    assert!(o.is_weather_overlay_part(), "{}", m.texture);
+                    assert!(o.runtime_alpha_variable().is_some());
                     weather += 1;
                 }
             }
         }
     }
-    eprintln!("SD83: {followed} slots follow a variable, {dropped} weather overlays dropped");
+    eprintln!("SD83: {followed} slots follow a variable, {weather_built} weather overlays built");
     assert!(glass >= 1, "a glass slot on the exterior window mesh");
     assert!(weather >= 4, "rain and dirt overlays: {weather}");
-    assert!(followed > 0 && dropped > 0);
+    assert!(followed > 0 && weather_built > 0);
 }

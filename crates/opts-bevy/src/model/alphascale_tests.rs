@@ -1,6 +1,7 @@
 //! Alpha-scale tests of the model loader.
 
 use super::TextureOverride;
+use crate::model::{overlay_class, OverlayClass};
 
 fn over(alpha: Option<u32>, trans: Option<&str>, scaled: bool) -> TextureOverride {
     over_with(alpha, trans, scaled, "Dirt_Norm")
@@ -21,16 +22,16 @@ fn over_with(alpha: Option<u32>, trans: Option<&str>, scaled: bool, name: &str) 
 }
 
 /// MAN SD83: the window glass `Fenster.tga` is `[matl_alpha] 2` scaled by `Envir_Brightness`;
-/// it follows the variable at run time instead of being dropped. Weather overlays stay out.
+/// it follows the variable at run time instead of being dropped. Weather overlays are built and
+/// follow their script variables too (M-0120): their alpha is texture alpha times the variable.
 #[test]
-fn glass_scaled_by_a_live_variable_is_built_and_follows_it() {
+fn glass_and_weather_overlays_are_built_and_follow_their_variable() {
     let glass = over_with(Some(2), None, true, "Envir_Brightness");
-    assert!(!glass.is_variable_hidden());
     assert_eq!(glass.runtime_alpha_variable(), Some("Envir_Brightness"));
-    for weather in ["Rain_Window_Norm_Wetness", "Dirt_Wiped", "Precip_Mirror"] {
+    for weather in ["Rain_Window_Norm_Wetness", "Dirt_Wiped", "Beschlag_Norm", "Precip_Mirror"] {
         let o = over_with(Some(2), None, true, weather);
-        assert!(o.is_variable_hidden(), "{weather}");
-        assert_eq!(o.runtime_alpha_variable(), None);
+        assert!(o.is_weather_overlay_part(), "{weather}");
+        assert_eq!(o.runtime_alpha_variable(), Some(weather));
     }
     // Script-set variables (`szyby`, `para_front`) follow the scripts.
     assert_eq!(
@@ -44,33 +45,32 @@ fn glass_scaled_by_a_live_variable_is_built_and_follows_it() {
     );
 }
 
-/// MI-0029: `[alphascale] Envir_Brightness` on an opaque base material (380 materials of the
-/// corpus: Crealis bodies, the Chicago skyline) must not hide the surface; overlays that use
-/// alpha (rain, dirt, condensation: 43,968 materials) stay hidden by their variable.
+/// The weather classes: each prefix of the overlay variables maps to one class, others to none.
 #[test]
-fn only_alpha_overlays_are_hidden_by_their_variable() {
-    assert!(
-        !over(None, None, true).is_variable_hidden(),
-        "opaque body stays"
+fn overlay_classes_by_variable_prefix() {
+
+    assert_eq!(overlay_class("Dirt_Norm"), Some(OverlayClass::Dirt));
+    assert_eq!(overlay_class(" dirt_wiped "), Some(OverlayClass::Dirt));
+    assert_eq!(
+        overlay_class("Rain_Window_Norm_Wetness"),
+        Some(OverlayClass::RainWindow)
     );
-    assert!(
-        !over(Some(0), None, true).is_variable_hidden(),
-        "mode 0 is opaque"
-    );
-    assert!(
-        over(Some(2), None, true).is_variable_hidden(),
-        "blended overlay"
-    );
-    assert!(
-        over(Some(1), None, true).is_variable_hidden(),
-        "cutout overlay"
-    );
-    assert!(
-        over(None, Some("mask.bmp"), true).is_variable_hidden(),
-        "transmap overlay"
-    );
-    assert!(
-        !over(Some(2), None, false).is_variable_hidden(),
-        "no variable: visible"
-    );
+    assert_eq!(overlay_class("Beschlag_Front"), Some(OverlayClass::Condensation));
+    assert_eq!(overlay_class("Precip_Mirror"), Some(OverlayClass::Precipitation));
+    assert_eq!(overlay_class("Envir_Brightness"), None);
+    assert_eq!(overlay_class("szyby"), None);
+}
+
+/// MI-0029: `[alphascale] Envir_Brightness` on an opaque base material (380 materials of the
+/// corpus: Crealis bodies, the Chicago skyline) is not an overlay; alpha overlays (rain, dirt,
+/// condensation: 43,968 materials) are.
+#[test]
+fn only_alpha_materials_are_overlays() {
+    assert!(!over(None, None, true).is_alpha_overlay(), "opaque body");
+    assert!(!over(Some(0), None, true).is_alpha_overlay(), "mode 0 is opaque");
+    assert!(over(Some(2), None, true).is_alpha_overlay(), "blended overlay");
+    assert!(over(Some(1), None, true).is_alpha_overlay(), "cutout overlay");
+    assert!(over(None, Some("mask.bmp"), true).is_alpha_overlay(), "transmap overlay");
+    assert!(!over(Some(2), None, false).is_weather_overlay_part(), "no variable");
+    assert!(over(Some(2), None, true).is_weather_overlay_part(), "Dirt_Norm overlay");
 }
