@@ -55,6 +55,9 @@ pub struct ContentCache {
     /// `[moisture]` of each texture name (lower case) from its property file (see
     /// [`super::moisture`]).
     pub(crate) moisture: HashMap<String, bool>,
+    /// Set while a vehicle's parts load: their tyre textures take the tyre share of the wetness
+    /// (see [`crate::reflections::is_tyre_texture`]). Scenery leaves it off.
+    pub vehicle_part: bool,
     /// Loading statistics.
     pub stats: ContentStats,
 }

@@ -10,6 +10,7 @@ use crate::WeatherEffects;
 
 use super::flags::ReflectionSwitches;
 use super::notes::note_of;
+use super::vehicle_wet::part_wetness;
 
 /// How wet the world is, 0 (dry) to 1 (soaked). The single driver of the wet-surface parameters;
 /// a weather system would write it.
@@ -88,7 +89,7 @@ pub(super) fn apply_wet(
         if !matches!(note.alpha, AlphaMode::Opaque) {
             continue;
         }
-        let wv = material_wetness(note.moisture, w);
+        let wv = part_wetness(note.tyre, note.moisture, w);
         let (c, r) = if wv > 0.0 {
             wet_standard(note.base_color, note.roughness, wv)
         } else {
