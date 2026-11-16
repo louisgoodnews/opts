@@ -8,7 +8,7 @@
 //!
 //! Structure: a *frame* entity ([`M3TextField`], border, background, state layer, focus ring)
 //! holding the *input* ([`TextFieldInput`], the focusable `TextInput`), the *placeholder* and the
-//! *clear button*. Focus lives on the input; the frame shows it through [`FocusProxy`].
+//! *clear button*. Focus lives on the input; the frame shows it through [`crate::interaction::layer::FocusProxy`].
 
 use bevy::prelude::*;
 

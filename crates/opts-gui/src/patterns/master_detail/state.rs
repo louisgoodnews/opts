@@ -21,7 +21,7 @@ pub struct MasterDetailConfig {
 pub struct MasterDetailParts {
     /// Root node: put it where the pattern belongs.
     pub root: Entity,
-    /// Container of the detail panel: fill it on [`MasterDetailSelected`].
+    /// Container of the detail panel: fill it on [`super::messages::MasterDetailSelected`].
     pub detail: Entity,
     /// The list (single focus stop).
     pub list: Entity,

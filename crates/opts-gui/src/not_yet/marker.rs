@@ -64,7 +64,7 @@ impl NotAvailableYet {
     }
 
     /// Keeps the tooltip and the disabled look but leaves the label to the screen
-    /// ([`spawn_label`]); for small inline controls.
+    /// ([`super::spawn_label`]); for small inline controls.
     pub const fn without_label(mut self) -> Self {
         self.label_inside = false;
         self

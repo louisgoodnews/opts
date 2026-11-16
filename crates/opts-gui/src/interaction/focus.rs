@@ -1,7 +1,7 @@
 //! Focus: one source of truth, layout-ordered traversal, regions, default focus and restore.
 //!
 //! Bevy's [`InputFocus`] resource is the focus truth (its `TextInput` and pointer click-to-focus
-//! use it); the [`Focused`] marker mirrors it so queries stay simple, and either side may write:
+//! use it); the [`super::state::Focused`] marker mirrors it so queries stay simple, and either side may write:
 //! [`sync_input_focus`] reconciles them every frame. Move focus with [`FocusEvent`].
 
 use bevy::input_focus::{tab_navigation::TabIndex, InputFocus};

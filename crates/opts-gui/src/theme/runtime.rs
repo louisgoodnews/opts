@@ -2,7 +2,7 @@
 //!
 //! * `Dark` and `Light` are fixed; `System` follows the window's theme (`Window::window_theme`,
 //!   `WindowThemeChanged`) and falls back to dark when the desktop reports nothing; `AutoClock`
-//!   follows [`theme_for`] on the device's local time, re-evaluated **once per minute**.
+//!   follows [`crate::theme::mode::theme_for`] on the device's local time, re-evaluated **once per minute**.
 //! * **High contrast** is a separate switch that overrides the mode and is never turned on
 //!   automatically.
 //! * An explicit change of the preferences applies at once. An **automatic** change (clock tick,

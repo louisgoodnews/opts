@@ -1,7 +1,7 @@
 //! Token marker components binding entities to Material Design 3 theme tokens.
 //!
 //! Entities tagged with these components have their styling (colors, borders,
-//! radii, and typography) updated reactively when [`MaterialTheme`] changes.
+//! radii, and typography) updated reactively when [`crate::theme::theme::MaterialTheme`] changes.
 
 use bevy::prelude::*;
 

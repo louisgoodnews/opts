@@ -6,7 +6,7 @@
 //! - a *state layer*: an absolute, pick-through node first among the children, tinted with the
 //!   control's content colour at 8 % (hover) or 10 % (focus, pressed);
 //! - a *scrim*: an absolute node above the content, tinted with the surface colour, visible only
-//!   while the control is [`Disabled`] (leaves 38 % of the content; the container fades with it,
+//!   while the control is [`super::state::Disabled`] (leaves 38 % of the content; the container fades with it,
 //!   a documented simplification of M3's 12 % container);
 //! - an [`Outline`] on the control itself as focus ring (2 px, `Secondary` role, drawn outside the
 //!   layout) while it has keyboard or gamepad focus.
@@ -45,11 +45,11 @@ pub struct StateLayerNode;
 pub struct ScrimNode;
 
 /// Overrides the colour role of the state layer (default: the content colour matching the
-/// control's [`BackgroundRole`], else `OnSurface`).
+/// control's [`crate::tokens::components::BackgroundRole`], else `OnSurface`).
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StateLayerRole(pub ColorRole);
 
-/// Remembers the border role a control had before an [`ErrorState`] replaced it (internal).
+/// Remembers the border role a control had before an [`super::state::ErrorState`] replaced it (internal).
 #[derive(Component, Debug, Clone, Copy)]
 pub struct SavedBorderRole(pub Option<ColorRole>);
 
