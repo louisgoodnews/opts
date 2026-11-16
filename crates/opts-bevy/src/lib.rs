@@ -50,6 +50,7 @@ pub mod model;
 pub mod moon;
 pub mod moon_material;
 pub mod mouse_driving;
+pub mod overlays;
 pub mod plugin;
 pub mod position_tag;
 pub mod rail_controls;

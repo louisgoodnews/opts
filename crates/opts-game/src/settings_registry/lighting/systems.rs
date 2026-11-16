@@ -87,6 +87,7 @@ impl Plugin for LightQualityGamePlugin {
         if !app.is_plugin_added::<opts_bevy::light_quality::LightQualityPlugin>() {
             app.add_plugins(opts_bevy::light_quality::LightQualityPlugin);
         }
+        app.add_systems(Update, super::overlays::sync_overlay_level);
         app.init_resource::<CopyLevelPending>().add_systems(
             Update,
             ((

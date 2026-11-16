@@ -6,11 +6,18 @@ use super::*;
 /// The descriptors; registered by [`builtin::all`](crate::settings_registry::builtin::all).
 #[must_use]
 pub fn descriptors() -> Vec<D> {
-    [quality(), light_cones(), mirrors_glass_bloom(), governor()].concat()
+    [
+        quality(),
+        light_cones(),
+        mirrors_glass_bloom(),
+        super::governor::descriptors(),
+        super::overlays::descriptors(),
+    ]
+    .concat()
 }
 
 /// A whole-number setting with its range and step.
-fn int(min: i64, max: i64, step: i64) -> K {
+pub(super) fn int(min: i64, max: i64, step: i64) -> K {
     K::Int { min, max, step }
 }
 
@@ -136,24 +143,4 @@ fn mirrors_glass_bloom() -> Vec<D> {
             &["glow", "hdr", "lights"],
         ),
     ]
-}
-
-/// The frame-rate target of the governor.
-fn governor() -> Vec<D> {
-    vec![d(
-        TARGET_FPS_KEY,
-        int(30, 240, 10),
-        "60",
-        111,
-        "set-light-governor-fps",
-        "set-light-governor-fps-desc",
-        &[
-            "governor",
-            "target",
-            "frame rate",
-            "fps",
-            "automatic",
-            "vsync",
-        ],
-    )]
 }

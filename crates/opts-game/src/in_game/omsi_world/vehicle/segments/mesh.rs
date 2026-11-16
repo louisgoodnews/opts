@@ -25,9 +25,11 @@ impl<'a> SegmentState<'a> {
         }
         let parts_parent = own_pivot.unwrap_or(frame);
         self.register_joint(job, commands, mesh_index);
-        let Some(loaded) = self.load_parts(job, commands, assets, mesh_def) else {
+        let Some(mut loaded) = self.load_parts(job, commands, assets, mesh_def) else {
             return;
         };
+        // Weather overlays the "Window and body overlays" setting drops are never built.
+        loaded.parts.retain(opts_bevy::overlays::part_is_built);
         self.grow_bounds(assets.meshes, &loaded.parts);
         let spawned = attach_model_parts(commands, parts_parent, &loaded.parts, &mesh_def.path);
         // Script variables move and show the mesh (`[newanim]`, `[visible]`) and switch its light
@@ -96,11 +98,14 @@ impl<'a> SegmentState<'a> {
         }
         if let Some(var) = &part.alpha_variable {
             // Starts hidden: the variable decides on the first frame (glass scaled by a
-            // script variable that is 0 stays out; dirt and rain overlays are not built).
+            // script variable that is 0 stays out; dirt and rain overlays are only built where the overlay setting keeps them).
             entity.insert((
                 opts_bevy::AlphaScaleBinding::new(owner, var.clone()),
                 Visibility::Hidden,
             ));
+        }
+        if let Some(kind) = opts_bevy::overlays::part_kind(part) {
+            entity.insert(kind);
         }
         if let Some(trigger) = hot_spot {
             entity.insert(opts_bevy::MouseTrigger {
