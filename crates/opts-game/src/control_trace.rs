@@ -44,6 +44,7 @@ fn summary_row(r: &st::TraceRecord) -> Value {
 
 mod query;
 use query::{pick, rows, run_query};
+mod ray;
 
 mod params;
 use params::*;
