@@ -565,3 +565,28 @@ Steps 5 and 6 of the plan; design from the [reflections research](reflections-re
 * **Interior ambient.** In an interior view (cockpit, passenger) the main camera gets its own `AmbientLight` and the sky cube is scaled by `INTERIOR_AMBIENT_SCALE` (0.45): a cabin is lit through its windows and by its own lamps, not by the whole sky, and at full sky ambient the NF6D's dashboard and saloon looked flat and washed out (`light_rooms::interior_ambient_system`, `sky_cube`).
 * **Light-map luminance.** The cameras run at a fixed physical exposure at which 1 cd/m² is black, so a `[matl_lightmap]` at factor 1 was invisible (the NF6D's `Scheinwerfer_A` lens and its tail and indicator lenses did not glow although the variable was 1). A light map now emits `factor × LIGHT_MAP_NITS` (100) (`vehicle_lights.rs`).
 * **Light maps light the texture (2026-10-25).** A light map is a mask of the light's colour; the emitted picture is now the material's texture × light map (`opts_bevy::model::compose_light`, cached per pair) at gain 1 (`LIGHT_MAP_GAIN`; emission is drawn without exposure, `emissive_exposure_weight` 0, so 100 overdrove every lit texture to white: the MB C2's instrument display was a white panel). Checked: the C2's display shows its page, the MAN SD77's panel at night shows lit dials; the SD77's headlight lenses have no light map (dark before and after). ❓ Not checked: lamp lenses that glowed only through the old gain of 100 (the NF6D's `Scheinwerfer_A`; its headlights could not be switched on from the control protocol).
+
+## 13. Spatial zones and the consumer contract (M-0115)
+
+Status (2026-11-16): the zone model and the hysteresis tracker exist in `opts_bevy::spatial_zones`
+(`model.rs`, `tracker.rs`); the detector that feeds them, the zone build at tile load and the debug
+overlay do not. This section is the contract that consumers (reverb, light-room ambience, weather
+shelter) code against. It is written before the detector so that the consumers do not depend on
+its internals.
+
+* **Zones.** A `SpatialZone` component (`id: ZoneId`, `kind: ZoneKind`, ground-plane box
+  `min`/`max`) lives in the shared world. Only `ZoneKind::Tunnel` exists; the box is the stretch of
+  road under cover. Zones are built at tile load and dropped at tile unload.
+* **Transitions.** `ZoneEntered { zone, kind }` and `ZoneLeft { zone, kind }` are Bevy messages,
+  one per crossing, per subject (the player vehicle or the camera). A consumer reads them with a
+  `MessageReader`; it must not infer membership from the box alone, because the box does not know
+  about hysteresis.
+* **Membership rule.** A subject enters after 15 m of road under cover and leaves after the leave
+  distance of the tracker (provisional: 5 m uncovered). Shorter covered runs (bridge canopies) and
+  shorter gaps inside a tunnel do not produce transitions.
+* **Rate.** The detector samples at most 10 Hz ([`SampleGate::RATE_HZ`]); a consumer that needs
+  per-frame state must hold the last transition, not poll the detector.
+* **Event shape.** The message shape is local to `opts_bevy` until M-0118 publishes the event
+  taxonomy; the adapter then maps these messages onto the consolidated event type.
+* **Not part of the contract.** Reverb DSP and light changes are consumers and belong to their own
+  milestones; the zone does not change sun or rain by itself.
