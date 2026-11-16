@@ -43,6 +43,8 @@ pub struct HostValues {
     pub precip_rate: f32,
     /// `NightlightA` (0 or 1).
     pub night: f32,
+    /// `snow_visible` (0 or 1): 1 while the session's weather is snow (`PrecipType` 2).
+    pub snow_visible: f32,
     /// Clock for light programs (seconds, not wrapped).
     pub program_clock_s: f64,
 }
@@ -63,6 +65,7 @@ impl HostValues {
             precip_type: clock.weather.precip_type,
             precip_rate: clock.weather.precip_rate,
             night: f32::from(u8::from(clock.night)),
+            snow_visible: f32::from(u8::from((clock.weather.precip_type - 2.0).abs() < 0.5)),
             program_clock_s: clock.seconds_of_day,
         }
     }

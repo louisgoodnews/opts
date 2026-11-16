@@ -127,6 +127,7 @@ pub fn read_var(r: VarRef, engine: Option<&ScriptEngine>, host: &HostValues, pha
         VarRef::Host(HostVar::Night) => host.night,
         VarRef::Host(HostVar::Phase) => phase,
         VarRef::Host(HostVar::Time) => host.time_s,
+        VarRef::Host(HostVar::Snow) => host.snow_visible,
         VarRef::Host(HostVar::Zero) => 0.0,
         VarRef::One => 1.0,
     }

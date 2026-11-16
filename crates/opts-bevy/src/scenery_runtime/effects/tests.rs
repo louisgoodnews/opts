@@ -39,3 +39,15 @@ fn visibility_needs_equality_with_the_flag() {
     assert!(rule.visible_for(&[0.0]));
     assert!(!rule.visible_for(&[1.0]));
 }
+
+#[test]
+fn snow_visible_is_one_only_while_the_session_has_snow() {
+    use super::super::clock::SceneryClock;
+    let var = VarRef::Host(HostVar::of("snow_visible"));
+    let mut clock = SceneryClock::at(2026, 1, 15, 12.0 * 3600.0);
+    assert_eq!(read_var(var, None, &HostValues::of(&clock), 0.0), 0.0);
+    clock.weather.precip_type = 2.0;
+    assert_eq!(read_var(var, None, &HostValues::of(&clock), 0.0), 1.0);
+    clock.weather.precip_type = 1.0;
+    assert_eq!(read_var(var, None, &HostValues::of(&clock), 0.0), 0.0);
+}
