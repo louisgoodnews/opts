@@ -68,13 +68,6 @@ crates/opts-game/src/ui_typography.rs 171  # grandfathered: split production fil
 crates/opts-game/src/vehicle_keys/tests.rs 166  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/vehicle_sound/tests.rs 167  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/viewpoints/plugin.rs 156  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/tests/common/hud.rs 162  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/control_protocol/drive.rs 176  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/control_protocol/main.rs 166  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/control_protocol/save_load.rs 161  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/golden_screens.rs 170  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/localisation.rs 151  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/tests/theme_integration.rs 166  # grandfathered: oversized test or example file, split by concern
 crates/opts-gui/src/l10n/wizard_keys/wiz.rs 153  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-hardware/src/parse.rs 182  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-hardware/src/platform/linux.rs 172  # grandfathered: extract 31 inline test lines to tests.rs (then <= 150 LOC)
