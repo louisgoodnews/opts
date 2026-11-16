@@ -45,4 +45,6 @@ pub(super) const REVIEWED: &[&str] = &[
     "opts-bevy/src/vehicle_triggers/mouse.rs",
     // Split out of `action_keys.rs`: the key layout tables only ask `just_pressed(action)`; the systems that ask are gated where registered.
     "opts-bevy/src/action_keys/layout.rs",
+    // Split out of `mouse_driving/tests.rs`: its tests press the mouse buttons on purpose, same as their parent.
+    "opts-bevy/src/mouse_driving/tests/wheel.rs",
 ];
