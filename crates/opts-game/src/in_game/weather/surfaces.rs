@@ -10,6 +10,7 @@ use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::reflections::Wetness;
 use opts_bevy::weather::{road_surface, surface_state_for, SurfaceState};
 use opts_bevy::{SessionEnvironment, WeatherEffects};
+use opts_sim::surface_grip::approach;
 
 use crate::in_game::omsi_world::WorldLoadJob;
 
@@ -36,16 +37,27 @@ pub fn wanted_state(env: &SessionEnvironment, effects: &WeatherEffects) -> Surfa
     }
 }
 
-/// Writes the weather's wetness into the [`Wetness`] resource, the single driver of wet surfaces
-/// (the reflections prototype's parameter, `docs/src/architecture/reflections-research.md`).
+/// The wetness that follows `target` from `current` over `dt` seconds. It uses the grip's rate
+/// limit ([`opts_sim::surface_grip::approach`], at most 0.5 per second), so a shower starts and
+/// stops without a one-frame pop; both ends are clamped to 0..=1.
+#[must_use]
+pub fn next_wetness(current: f32, target: f32, dt: f32) -> f32 {
+    approach(current, target.clamp(0.0, 1.0), dt).clamp(0.0, 1.0)
+}
+
+/// Writes the weather's wetness, ramped by [`next_wetness`], into the [`Wetness`] resource, the
+/// single driver of wet surfaces (the reflections prototype's parameter,
+/// `docs/src/architecture/reflections-research.md`).
 pub fn drive_wetness(
+    time: Res<Time>,
     env: Res<SessionEnvironment>,
     effects: Res<WeatherEffects>,
     mut wetness: ResMut<Wetness>,
 ) {
-    let wet = wanted_state(&env, &effects).wet;
-    if (wetness.0 - wet).abs() > 1e-4 {
-        wetness.0 = wet;
+    let target = wanted_state(&env, &effects).wet;
+    let next = next_wetness(wetness.0, target, time.delta_secs());
+    if (wetness.0 - next).abs() > 1e-4 {
+        wetness.0 = next;
     }
 }
 
@@ -128,6 +140,23 @@ mod tests {
             ..default()
         });
         env
+    }
+
+    #[test]
+    fn wetness_ramps_without_a_pop() {
+        // One 60 Hz frame moves at most 0.5 / 60; a full shower takes 2 s to arrive.
+        let step = next_wetness(0.0, 1.0, 1.0 / 60.0);
+        assert!(step > 0.0 && step <= 0.5 / 60.0 + 1e-6, "{step}");
+        let mut w = 0.0;
+        for _ in 0..120 {
+            let next = next_wetness(w, 1.0, 1.0 / 60.0);
+            assert!((next - w).abs() <= 0.5 / 60.0 + 1e-6);
+            w = next;
+        }
+        assert!((w - 1.0).abs() < 1e-4, "{w}");
+        // Drying is ramped the same way, and out-of-range targets are clamped.
+        assert!((next_wetness(1.0, 0.0, 1.0) - 0.5).abs() < 1e-6);
+        assert_eq!(next_wetness(0.9, 7.0, 10.0), 1.0);
     }
 
     #[test]

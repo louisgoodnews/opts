@@ -67,11 +67,15 @@ fn the_weather_drives_the_wetness_resource_and_the_setting_dries_it() {
     use opts_bevy::reflections::Wetness;
     let mut app = app();
     assert_eq!(app.world().resource::<Wetness>().0, 0.0);
+    // The wetness ramps (0.5 per second at most), so a few frames after the change it is
+    // partway to the target and rising; it never jumps to it.
     set_weather(&mut app, "Rainy Afternoon");
-    assert!(app.world().resource::<Wetness>().0 > 0.9);
+    let wet = app.world().resource::<Wetness>().0;
+    assert!(wet > 0.0 && wet < 0.9, "{wet}");
     app.world_mut().resource_mut::<WeatherEffects>().wet_ground = false;
     app.update();
-    assert_eq!(app.world().resource::<Wetness>().0, 0.0);
+    let dried = app.world().resource::<Wetness>().0;
+    assert!(dried < wet && dried > 0.0, "{dried} after {wet}");
 }
 
 #[test]
