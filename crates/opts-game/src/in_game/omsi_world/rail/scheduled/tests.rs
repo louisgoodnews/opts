@@ -1,3 +1,4 @@
+//! Unit tests for scheduled rail routes: stop order, branches, upstream starts and distances.
 use super::*;
 use opts_sim::pedestrian::{FootLane, Travel};
 

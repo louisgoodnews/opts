@@ -1,3 +1,4 @@
+//! Integration tests for config protocol sessions: which vehicle is saved and spawning configurations.
 use super::*;
 
 fn params(catalogue_id: &str, repaint: &str, setvars: Vec<(String, i32)>) -> SpawnParams {

@@ -1,3 +1,4 @@
+//! Unit tests for rail controls: lever behaviour, throttle and brake, and direction switches.
 use super::*;
 
 #[test]

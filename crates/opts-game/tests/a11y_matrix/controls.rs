@@ -1,3 +1,4 @@
+//! Accessibility matrix tests: theme switching, gamepad reach, accessible names and screen content.
 use super::*;
 
 #[test]

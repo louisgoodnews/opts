@@ -1,3 +1,4 @@
+//! Unit tests for vehicle animation: spin, steering, wheel and dashboard motion.
 use super::*;
 
 pub(super) fn spin(var: &str) -> AnimStep {

@@ -1,3 +1,4 @@
+//! Shared test helpers that build the headless screen app and prepare screens at given sizes.
 use super::input::escape;
 use super::*;
 

@@ -1,3 +1,4 @@
+//! Unit tests for weather fog: density, horizon colour and clear-air behaviour.
 use super::*;
 use opts_bevy::WeatherCatalogue;
 

@@ -1,3 +1,4 @@
+//! Unit tests for map record counting: encodings, budgets, sampling and distinct AI pool vehicles.
 use super::*;
 
 fn utf16(text: &str) -> Vec<u8> {

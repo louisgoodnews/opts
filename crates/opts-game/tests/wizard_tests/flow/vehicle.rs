@@ -1,3 +1,4 @@
+//! Integration tests for the wizard vehicle step: driving without a vehicle and the last drive applied.
 use super::*;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Helpers for the HUD layout matrix test: collecting shown element rectangles and layout findings.
 use super::*;
 
 /// The rectangles of the HUD elements and toasts that are shown, by id.

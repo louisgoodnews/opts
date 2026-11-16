@@ -1,3 +1,4 @@
+//! Unit tests for image metrics: saturation, high-frequency energy, difference and crop parsing.
 use super::*;
 use image::Rgb;
 

@@ -1,3 +1,4 @@
+//! Unit tests for new game trip selection: offered runs, late-night runs, tour day limits and skipping.
 use opts_core::formats::timetable::{parse_busstops, parse_line, parse_trip, Timetables};
 
 use super::*;

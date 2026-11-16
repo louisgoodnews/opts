@@ -1,3 +1,4 @@
+//! UI rule tests for the shell: target sizes, disabled-control reasons, keyboard operation and text size.
 use super::*;
 
 fn menu_app() -> App {

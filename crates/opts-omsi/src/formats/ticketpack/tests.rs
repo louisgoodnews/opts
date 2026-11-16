@@ -1,3 +1,4 @@
+//! Unit tests for ticketpack parsing: behaviour, tickets, eligibility, installed packs and the fallback.
 use super::*;
 
 const OTP: &str = "\tDefiniert ein System\n\n\t[ticketpack]\t\tprose that is not a parameter\n\n[voicepath]\nTicketPacks\\HB_76_Bremen\\\n\n***************\nTicketpack für Bremen\n***************\n\n[ticketpack]\n0.2\n0.1\n1.7\n0.3\n\n\n[ticket_2]\nKurzstrecke\nShort trip\n0\n15\n200\n1.10\nKurzstrecke@\n0\n1\n---------------------\n[ticket_2]\nTageskarte\nDay ticket\n0\n0\n200\n6.50\nTages@karte\n1\n0.4\n---------------------\n[ticket]\nKind\nChild\n4\n6\n14\n0.90\nKind@\n";

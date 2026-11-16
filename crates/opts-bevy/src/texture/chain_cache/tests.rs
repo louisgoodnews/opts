@@ -1,3 +1,4 @@
+//! Unit tests for the texture mip chain cache: hits, misses, corruption, pruning and concurrent writers.
 use super::*;
 
 fn dir(tag: &str) -> PathBuf {

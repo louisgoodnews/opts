@@ -1,3 +1,4 @@
+//! Unit tests for scheduled traffic: retirement at the last stop, route distances and arrival delays.
 use super::path::place_along;
 use super::*;
 

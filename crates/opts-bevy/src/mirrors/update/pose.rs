@@ -1,3 +1,4 @@
+//! Mirror update poses: the per-frame pose of each mirror group and the in-view check.
 use bevy::prelude::*;
 
 use crate::mirrors::schedule::{mirror_in_view, MIRROR_MIN_ANGLE};

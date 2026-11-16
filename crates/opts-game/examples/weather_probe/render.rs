@@ -1,3 +1,4 @@
+//! Probe render loop: camera heights and pitch from the environment, and the render job per view.
 use super::scene::step;
 use super::*;
 

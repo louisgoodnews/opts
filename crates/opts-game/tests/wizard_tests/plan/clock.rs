@@ -1,3 +1,4 @@
+//! Integration tests for the wizard clock: start time from a saved clock or from the current time.
 use super::*;
 
 /// Writes `maps/<map>/laststn.osn` with a `[time]` block into the pinned fixture root.

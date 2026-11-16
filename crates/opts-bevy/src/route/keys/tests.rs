@@ -1,3 +1,4 @@
+//! Unit tests for route keys: keypad selection, printer boot waiting and refused vehicles.
 use super::*;
 
 fn selection() -> RouteSelection {

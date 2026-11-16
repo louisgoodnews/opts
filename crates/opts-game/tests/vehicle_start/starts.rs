@@ -1,3 +1,4 @@
+//! Integration tests for starting the bus and other models through their ignition and key steps.
 use super::*;
 
 #[test]

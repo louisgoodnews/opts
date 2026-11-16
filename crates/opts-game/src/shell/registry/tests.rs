@@ -1,3 +1,4 @@
+//! Unit tests for the shell screen registry: the built-in rail order and replacement by id.
 use super::*;
 
 #[test]

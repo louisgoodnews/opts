@@ -1,3 +1,4 @@
+//! Unit tests for the overlay info panel: the short page facts and the no-vehicle message.
 use super::*;
 
 fn facts() -> PanelFacts<'static> {

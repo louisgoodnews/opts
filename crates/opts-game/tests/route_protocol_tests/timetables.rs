@@ -1,3 +1,4 @@
+//! Integration tests for timetables: listing by line, tour and run, and following a run.
 use super::*;
 
 #[test]

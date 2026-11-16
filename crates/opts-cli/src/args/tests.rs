@@ -1,3 +1,4 @@
+//! Unit tests for command-line argument parsing: defaults, custom flags, control flags and window minimums.
 use super::*;
 
 #[test]

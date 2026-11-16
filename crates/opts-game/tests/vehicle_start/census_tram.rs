@@ -1,3 +1,4 @@
+//! Ignored census of the tram start that prints its report.
 use super::*;
 
 #[test]

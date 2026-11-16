@@ -1,3 +1,4 @@
+//! Probe scene setup: solid test images, the app builder, camera, sun, ground and the per-frame step.
 use super::*;
 
 pub(super) fn solid(r: u8, g: u8, b: u8) -> CpuImage {

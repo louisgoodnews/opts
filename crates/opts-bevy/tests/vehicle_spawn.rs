@@ -1,3 +1,4 @@
+//! Integration test: spawning a bus vehicle model builds the expected entity hierarchy.
 use bevy::prelude::*;
 use opts_bevy::{spawn_vehicle_model, BusVehicle, OptsCoordsPlugin};
 use opts_core::formats::vehicles::{

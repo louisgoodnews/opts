@@ -1,3 +1,4 @@
+//! Corpus test: the AI sound configurations of the installation yield playable voices.
 use super::*;
 
 /// The AI sound configurations of the installation (`[sound_ai]`, or a `[sound]` that names a

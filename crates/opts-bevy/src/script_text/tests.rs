@@ -1,3 +1,4 @@
+//! Unit tests for script text rendering: glyph drawing, colour alpha, pen advance and clipping.
 use std::collections::HashMap;
 
 use super::*;

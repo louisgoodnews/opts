@@ -1,3 +1,4 @@
+//! UI rule tests for overlays and secondary screens: help, pause, first-run dialogs and summary.
 use super::*;
 
 // ---- The other shell screens and overlays -------------------------------------------------

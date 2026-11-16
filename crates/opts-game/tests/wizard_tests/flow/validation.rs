@@ -1,3 +1,4 @@
+//! Integration tests for wizard validation: disabled Next with a reason, and an empty catalogue filling in.
 use super::*;
 
 #[test]

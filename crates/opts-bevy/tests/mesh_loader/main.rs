@@ -1,3 +1,4 @@
+//! Integration test binary for the mesh loader: O3D colours and conversion, the plugin and X meshes.
 use bevy::app::App;
 use bevy::asset::AssetPlugin;
 use bevy::math::{Vec2, Vec3};

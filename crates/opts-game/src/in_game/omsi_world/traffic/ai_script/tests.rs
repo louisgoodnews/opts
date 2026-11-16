@@ -1,3 +1,4 @@
+//! Unit test for the traffic AI script: doors open on arrival and close after the passengers.
 use super::*;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Integration tests for vehicles in session saves: train formations and script variables.
 use super::*;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Integration tests for shell navigation: back stack, refused destinations, deep links and dialogs.
 use super::*;
 
 #[test]

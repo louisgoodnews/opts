@@ -1,3 +1,4 @@
+//! Integration tests for language pack reloading, unsupported scripts and plural rules.
 use super::*;
 
 #[test]

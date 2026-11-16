@@ -1,3 +1,4 @@
+//! Integration tests for session switch, despawn and respawn of vehicles through the control protocol.
 use super::*;
 
 #[test]

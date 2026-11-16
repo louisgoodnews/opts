@@ -1,3 +1,4 @@
+//! Unit tests for the traffic chain: trailer pose, visibility and hitch joint behaviour.
 use super::*;
 use std::time::Duration;
 

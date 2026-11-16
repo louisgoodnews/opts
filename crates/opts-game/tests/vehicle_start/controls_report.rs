@@ -1,3 +1,4 @@
+//! Census of vehicle controls: mouse events of model configurations and the controls report.
 use super::*;
 
 /// The `[mouseevent]` names of a model configuration (a line `[mouseevent]` and the name after it).

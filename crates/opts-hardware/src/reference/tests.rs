@@ -1,3 +1,4 @@
+//! Unit tests for the hardware reference page: the field table and that the generated page is current.
 use super::*;
 
 /// Path of the generated page, relative to this crate.

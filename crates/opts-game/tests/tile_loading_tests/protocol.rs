@@ -1,3 +1,4 @@
+//! Integration tests for the scene tiles protocol: mode, radius, resident tiles and build progress.
 use super::*;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Integration tests for tile loading modes: load all, radius, automatic and changed settings.
 use super::*;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Accessibility matrix tests: UI scale, base text size and the language choice on first run.
 use super::*;
 
 #[test]

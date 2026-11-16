@@ -1,3 +1,4 @@
+//! Integration tests for the shell rail: generation from the registry, content hosting and rail jumps.
 use super::*;
 
 #[test]

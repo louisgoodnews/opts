@@ -1,3 +1,4 @@
+//! Integration tests for missing maps and tiles: failure handling and the reported error.
 use super::*;
 
 #[test]

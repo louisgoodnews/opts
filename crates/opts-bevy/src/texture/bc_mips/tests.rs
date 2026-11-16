@@ -1,3 +1,4 @@
+//! Unit tests for BC mip generation: checkerboard images, the fallback and the mip levels.
 use super::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension};
 

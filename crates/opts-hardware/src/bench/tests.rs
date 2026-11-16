@@ -1,3 +1,4 @@
+//! Unit tests for the hardware benchmark: quick runs, progress, storage step cleanup and cancel.
 use super::*;
 
 fn quick() -> BenchOptions {

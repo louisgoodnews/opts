@@ -1,3 +1,4 @@
+//! Integration tests for the change-map control: carrying the vehicle and restarting on another map.
 use super::*;
 
 fn catalogue_with_two_maps() -> opts_game::new_game_screen::types::GameCatalogue {

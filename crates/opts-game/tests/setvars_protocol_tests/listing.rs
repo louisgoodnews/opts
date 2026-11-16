@@ -1,3 +1,4 @@
+//! Integration tests for listing the setvars options of a vehicle and changing them.
 use super::*;
 
 #[test]

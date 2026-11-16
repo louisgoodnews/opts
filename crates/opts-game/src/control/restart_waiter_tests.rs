@@ -1,3 +1,4 @@
+//! Unit tests for the restart waiter: waiting for a load, failed loads and problem reports.
 use super::*;
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};

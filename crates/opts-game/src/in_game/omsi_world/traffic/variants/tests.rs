@@ -1,3 +1,4 @@
+//! Unit test for traffic variants: a bicycle keeps its length.
 use super::unit_size;
 
 #[test]

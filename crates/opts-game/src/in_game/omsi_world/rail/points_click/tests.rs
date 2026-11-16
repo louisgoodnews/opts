@@ -1,3 +1,4 @@
+//! Unit tests for rail point clicks: throwing points, occupied points and unknown points.
 use super::*;
 use opts_sim::pedestrian::{FootLane, Gate, Travel};
 

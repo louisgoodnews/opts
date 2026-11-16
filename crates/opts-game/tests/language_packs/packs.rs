@@ -1,3 +1,4 @@
+//! Integration tests for language packs: adding languages, overriding messages and tolerating broken files.
 use super::*;
 
 #[test]

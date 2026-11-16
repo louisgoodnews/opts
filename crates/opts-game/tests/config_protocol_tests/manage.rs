@@ -1,3 +1,4 @@
+//! Integration tests for the config protocol: update, duplicate and delete, and damaged or newer files.
 use super::*;
 
 #[test]

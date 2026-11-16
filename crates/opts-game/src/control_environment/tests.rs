@@ -1,3 +1,4 @@
+//! Unit tests for the control environment: weather names resolve to presets and parameters are checked.
 use super::*;
 
 fn installed() -> WeatherCatalogue {

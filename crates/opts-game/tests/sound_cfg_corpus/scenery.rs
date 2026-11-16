@@ -1,3 +1,4 @@
+//! Corpus test: every scenery sound configuration parses cleanly.
 use super::*;
 
 #[test]

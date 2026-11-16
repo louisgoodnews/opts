@@ -1,3 +1,4 @@
+//! Integration test: every section of a session save round-trips unchanged.
 use super::*;
 
 #[test]

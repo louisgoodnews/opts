@@ -1,3 +1,4 @@
+//! Unit tests for the JSON-RPC protocol: request and response shapes, error codes and batch handling.
 use super::*;
 use serde_json::{json, Value};
 

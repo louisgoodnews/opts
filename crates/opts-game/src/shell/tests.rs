@@ -1,3 +1,4 @@
+//! Unit tests for the shell: screen root placement with and without a shell, and key coverage.
 use super::*;
 
 #[test]

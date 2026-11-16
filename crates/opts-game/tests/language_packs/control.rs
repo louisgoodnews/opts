@@ -1,3 +1,4 @@
+//! Integration tests for the language pack control methods: list, set, reload and report.
 use super::*;
 
 fn call(

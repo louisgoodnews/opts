@@ -1,3 +1,4 @@
+//! Integration tests for the control protocol camera: viewpoint get, set, save and reset.
 use super::*;
 
 #[test]

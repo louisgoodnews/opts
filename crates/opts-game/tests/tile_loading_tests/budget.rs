@@ -1,3 +1,4 @@
+//! Integration tests for the resumable, per-frame tile build under a small budget.
 use super::*;
 
 // --- M-0089: the tile build is resumable and bounded per frame ---------------------------------

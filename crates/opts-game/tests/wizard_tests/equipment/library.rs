@@ -1,3 +1,4 @@
+//! Integration tests for the wizard configuration library: save, load, delete and missing vehicles.
 use super::*;
 
 fn config_library_path(tag: &str) -> std::path::PathBuf {

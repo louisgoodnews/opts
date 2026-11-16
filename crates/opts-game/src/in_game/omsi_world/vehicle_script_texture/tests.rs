@@ -1,3 +1,4 @@
+//! Unit test for the vehicle script texture: canvas proportions and per-pixel colouring.
 use super::*;
 
 #[test]

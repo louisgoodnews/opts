@@ -1,3 +1,4 @@
+//! Unit tests for WAV decoding: PCM, 8-bit and float samples, and malformed chunk handling.
 use super::*;
 
 fn file(tag: u16, channels: u16, rate: u32, bits: u16, data: &[u8]) -> Vec<u8> {

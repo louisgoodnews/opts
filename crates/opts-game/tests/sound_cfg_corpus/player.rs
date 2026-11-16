@@ -1,3 +1,4 @@
+//! Corpus test: player sound configurations split by how they play.
 use super::*;
 
 /// The player sound configurations (`[sound]` of every vehicle): how the definitions split by

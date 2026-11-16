@@ -1,3 +1,4 @@
+//! Unit tests for weather puddles: targets, opacity and rain wetness.
 use super::*;
 
 use std::f32::consts::TAU;

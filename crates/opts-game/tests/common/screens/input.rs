@@ -1,3 +1,4 @@
+//! Shared test helper that sends Escape key presses to a screen app.
 use super::*;
 
 pub(super) fn escape(app: &mut App) {

@@ -1,3 +1,4 @@
+//! Integration tests for the loading screen: stages, manifest, automatic continue and cancel.
 use super::*;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Integration tests for route selection: readiness, listing routes and keyed selection on the keypad.
 use super::*;
 
 #[test]

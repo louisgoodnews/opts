@@ -1,3 +1,4 @@
+//! Unit tests for run schedules: before, at, between and after stops, and line day files.
 use super::*;
 use opts_core::formats::timetable::ScheduledStop;
 

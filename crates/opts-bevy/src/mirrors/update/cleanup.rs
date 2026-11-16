@@ -1,3 +1,4 @@
+//! Mirror update cleanup: removes dead mirror cameras and returns the cameras that stay live.
 use bevy::prelude::*;
 
 use crate::mirrors::*;

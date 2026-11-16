@@ -1,3 +1,4 @@
+//! Unit tests for Steam library discovery: library and manifest parsing, registry output and install folders.
 use super::roots::registry_value;
 use super::*;
 use std::path::{Path, PathBuf};

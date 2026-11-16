@@ -1,3 +1,4 @@
+//! Unit test for the ring log layer: it captures events and filters them.
 use tracing_subscriber::layer::SubscriberExt;
 
 use super::*;

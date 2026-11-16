@@ -1,3 +1,4 @@
+//! Unit tests for action settings: default key uniqueness, rebinding, conflict reporting and resets.
 use super::conflicts::scope_of;
 use super::descriptors::RESET_ROWS;
 use super::*;

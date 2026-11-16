@@ -1,3 +1,4 @@
+//! Ambient mirror pool: restoring pane materials and syncing the pool capacity to the budget.
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 

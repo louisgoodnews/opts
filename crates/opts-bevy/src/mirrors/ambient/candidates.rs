@@ -1,3 +1,4 @@
+//! Candidate panes for the ambient mirror pool: the candidate record and its per-frame collection.
 use bevy::prelude::*;
 
 use crate::mirrors::*;

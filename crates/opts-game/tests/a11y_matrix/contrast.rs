@@ -1,3 +1,4 @@
+//! Accessibility matrix tests: contrast, size rules and text fit for every screen.
 use super::*;
 
 #[test]

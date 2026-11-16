@@ -1,3 +1,4 @@
+//! Unit test for the plate surface: height and map lookup at a point on a triangle.
 use super::*;
 
 #[test]

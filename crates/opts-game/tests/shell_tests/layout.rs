@@ -1,3 +1,4 @@
+//! Integration tests for shell layout: rail icons and labels per layout class, and Escape in settings.
 use super::*;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Integration tests for saving and loading vehicle configurations through the config protocol.
 use super::*;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Unit tests for the control look commands: getting, setting and rejecting render look values.
 use super::*;
 use crate::look::{ActiveLook, Look};
 use opts_bevy::control::state::Outcome;

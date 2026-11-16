@@ -1,3 +1,4 @@
+//! Integration tests for setvars batches: all-or-nothing application and refusal reporting.
 use super::*;
 
 #[test]

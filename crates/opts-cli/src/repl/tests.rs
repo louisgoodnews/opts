@@ -1,3 +1,4 @@
+//! Unit tests for the REPL: shell-like word splitting and detection of incomplete JSON input.
 use super::{is_incomplete, split_words};
 
 #[test]

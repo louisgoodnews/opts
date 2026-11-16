@@ -1,3 +1,4 @@
+//! Unit tests for O3D index buffers: valid 16- and 32-bit indices, out-of-bounds and truncated faces.
 use super::*;
 
 #[test]

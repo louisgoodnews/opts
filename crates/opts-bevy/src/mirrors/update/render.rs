@@ -1,3 +1,4 @@
+//! Mirror update rendering: applies group poses to mirror cameras and runs their renders.
 use bevy::prelude::*;
 
 use crate::mirrors::*;
