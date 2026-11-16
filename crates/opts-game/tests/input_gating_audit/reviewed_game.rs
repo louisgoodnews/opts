@@ -67,6 +67,8 @@ pub(super) const REVIEWED: &[&str] = &[
     "opts-game/src/session_vehicles/mod.rs",
     // Test module: presses the key to test the system above.
     "opts-game/src/session_vehicles/tests.rs",
+    // Split out of `session_vehicles/tests.rs` (the test helpers press the key); test module only.
+    "opts-game/src/session_vehicles/tests/switching.rs",
     // F5 / F9 (quick save and load); gated with `not_modal_active` where they are registered.
     "opts-game/src/save/quick.rs",
     // Split out of `vehicle_menu/entries.rs`: the search keys, same rule (the open menu holds `MenuModalActive`).
