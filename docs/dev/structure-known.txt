@@ -2,7 +2,6 @@
 # Format: <path> <lines of code>  # <reason>. A known file may only shrink;
 # a new file over 150 lines of code fails `structure_audit.py check`.
 # Regenerate (keeping the reasons) with `python3 scripts/structure_audit.py seed`.
-crates/opts-bevy/src/model/o3d_loading/part_builder/texture_and_material.rs 165  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-bevy/src/texture/bc_mips/tests.rs 156  # grandfathered: oversized test or example file, split by concern
 crates/opts-bevy/src/vehicle_glow/headlight_pool.rs 158  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-catalogue/src/lib.rs 174  # grandfathered: split production file by concern to <= 150 LOC

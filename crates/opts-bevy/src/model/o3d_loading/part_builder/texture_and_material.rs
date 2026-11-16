@@ -2,6 +2,9 @@
 
 use super::*;
 
+mod glass;
+mod lighting;
+
 pub(super) struct ResolvedTextures {
     pub tex_name: Option<String>,
     pub tex: Option<Handle<Image>>,
@@ -91,83 +94,5 @@ impl ContentLoader<'_> {
             }
         }
         (glass_tex, blended_by_map)
-    }
-
-    pub(super) fn resolve_body_glass_split(
-        &mut self,
-        tex: &Option<Handle<Image>>,
-        over: Option<&TextureOverride>,
-        blended_by_map: bool,
-    ) -> Option<Handle<Image>> {
-        if !blended_by_map
-            && over.is_some_and(|o| {
-                o.alpha == Some(2) && o.trans_map.is_none() && o.free_texture.is_none()
-            })
-        {
-            let _t = opts_logging::stream_trace::span("o3d.body_glass_split");
-            tex.clone().and_then(|source| {
-                if let Some(done) = self.cache.glass_split.get(&source.id()) {
-                    done.clone()
-                } else {
-                    let made = self
-                        .images
-                        .get(&source)
-                        .and_then(crate::texture::decode_to_rgba8)
-                        .and_then(|decoded| super::overrides::transmap_glass(&decoded))
-                        .map(|g| self.images.add(g));
-                    self.cache.glass_split.insert(source.id(), made.clone());
-                    made
-                }
-            })
-        } else {
-            None
-        }
-    }
-
-    pub(super) fn apply_lightmap_nightmap(
-        &mut self,
-        material: &mut StandardMaterial,
-        over: Option<&TextureOverride>,
-        ctx: &SlotBuildCtx<'_>,
-    ) -> (Option<String>, Option<Handle<Image>>) {
-        let mut light_variable = None;
-        let mut light_image = None;
-        if let Some(lm) = over
-            .and_then(|o| o.light_map.as_ref())
-            .filter(|lm| !lm.variable.trim().is_empty())
-        {
-            if let Some(h) = self.texture(&lm.texture, ctx.tex_dirs) {
-                let lit = material.base_color_texture.clone().and_then(|base_h| {
-                    let key = (base_h.id(), h.id());
-                    if let Some(done) = self.cache.lit.get(&key) {
-                        return Some(done.clone());
-                    }
-                    let img = {
-                        let _t = opts_logging::stream_trace::span("o3d.compose_light");
-                        match (self.images.get(&base_h), self.images.get(&h)) {
-                            (Some(b), Some(l)) => super::overrides::compose_light(b, l),
-                            _ => None,
-                        }
-                    }?;
-                    let done = self.images.add(img);
-                    self.cache.lit.insert(key, done.clone());
-                    Some(done)
-                });
-                light_image = Some(h.clone());
-                material.emissive_texture = Some(lit.unwrap_or(h));
-                material.emissive = bevy::color::LinearRgba::BLACK;
-                light_variable = Some(lm.variable.trim().to_owned());
-            }
-        }
-        if light_variable.is_none() {
-            if let Some(night) = over.and_then(|o| o.night_map.as_ref()) {
-                if let Some(h) = self.texture(night, ctx.tex_dirs) {
-                    material.emissive_texture = Some(h);
-                    material.emissive = bevy::color::LinearRgba::BLACK;
-                    light_variable = Some(crate::scenery_runtime::NIGHT_VARIABLE.to_owned());
-                }
-            }
-        }
-        (light_variable, light_image)
     }
 }
