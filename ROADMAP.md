@@ -23,7 +23,7 @@
 | 🖼️ **Phase 8** — Visual Quality & Realism | texture filtering, mipmaps, foliage coverage, reality-calibrated colour, Vivid default look | 🟡 first stage reviewed 2026-10-25 (sampler and mip chains accepted, looks too weak); DXT chains with a derived cache done 2026-10-25 | [`phase-8/`](docs/src/roadmap/phase-8/README.md) |
 | 🧭 **Phase 9** — User Interface & Experience | evidence-based UI: looks, feel, flow, expandability; app shell, settings system, HUD, accessibility | 🟡 design approved 2026-10-12; shell, wizard, settings, HUD, automatic accessibility part and M-0070/71/75/76/86/88/130 done; open: usability test, gamepad/wheel rebinding, HUD sign-off, language-pack trial | [`phase-9/`](docs/src/roadmap/phase-9/README.md) |
 | 🧩 **Phase 10** — Sessions, World Completeness & Vehicle Dynamics | water, session vehicles and save/restore, mesh fidelity, per-vehicle mass/suspension/brakes on a world physics | 🟡 in progress — M-0068, M-0069, M-0073, M-0077, M-0078, M-0106 done; M-0066 tasks done (awaiting the project lead's acceptance); M-0067, M-0090 have open items; M-0079 and M-0138 deferred, M-0104 obsolete | [`phase-10/`](docs/src/roadmap/phase-10/README.md) |
-| 🔭 **Phase 11** — Advanced Systems, Realism & Continuous Improvement | in-game map, QoL and accessibility settings, AI traffic depth, scheduled transport, weather effects, event-system research | 🟡 approved 2026-10-20, in progress — M-0108, M-0109, M-0112 done; M-0113 done; M-0110, M-0111 in progress; M-0119 awaiting review of its dry run; M-0114–M-0118 not started | [`phase-11/`](docs/src/roadmap/phase-11/README.md) |
+| 🔭 **Phase 11** — Advanced Systems, Realism & Continuous Improvement | in-game map, QoL and accessibility settings, AI traffic depth, scheduled transport, weather effects, event-system research | 🟡 approved 2026-10-20, in progress — M-0108, M-0109, M-0112 done; M-0113 done; M-0110, M-0111, M-0114, M-0115, M-0117 in progress; M-0119 awaiting review of its dry run; M-0116, M-0118 not started | [`phase-11/`](docs/src/roadmap/phase-11/README.md) |
 | 🎨 **Phase 12** — Visual Fidelity & Advanced Physics | dirt and light maps, wetness and snow, graphics overhaul, fuel and battery, passenger load | 🟡 approved 2026-10-20 — M-0124 done (mass, axle loads, ride height, override, save field, audit, per-unit load); M-0120–M-0123 not started | [`phase-12/`](docs/src/roadmap/phase-12/README.md) |
 | 🏗️ **Phase 13** — Crate Architecture: Legacy vs. Native Separation | `opts-omsi` (legacy parsers, leaf adapter), `opts-model` (native TOML), shared base crate; no engine crate depends on `opts-omsi` | ✅ delivered 2026-10-19 (no direct Cargo dependency on opts-omsi); consumer migration not started — engine crates still reach OMSI types through the opts-core facade (omsi_uses.py: bevy 130, sim 31, traffic 14, catalogue 5, unchanged since 2026-10-19) | [`phase-13/`](docs/src/roadmap/phase-13/README.md) |
 | 🛠️ **Phase 14** — Vehicle Overrides & Visual Editor | `VehicleProfile` TOML patch layer (sound, script, constant, mesh swaps with validation) and an in-game visual mesh editor | 📝 proposed 2026-10-19, design first | [`phase-14/`](docs/src/roadmap/phase-14/README.md) |
@@ -420,18 +420,18 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **🗺️ Full-Size In-Game Map and Map Switching** — [M-0108](docs/src/roadmap/phase-11/M-0108.md) — ✅ done 2026-10-19
   - [x] Full-size map on F6 (pan, zoom, the whole map, position and heading); builds on the mini map (M-0071).
   - [x] Map switching from the Alt menu (builds on sessions M-0068/M-0069).
-- [ ] **🚇 Tunnel Detection and Spatial Zones** — [M-0115](docs/src/roadmap/phase-11/M-0115.md) — 📝 proposed 2026-10-18
-  - [ ] Tunnel detection and a `SpatialZone` abstraction as the precursor for reverb and light-room ambience.
+- [~] **🚇 Tunnel Detection and Spatial Zones** — [M-0115](docs/src/roadmap/phase-11/M-0115.md) — 🚧 in progress 2026-11-16, partial (zone model, tracker and consumer contract done; research, detector and overlay open)
+  - [~] Tunnel detection and a `SpatialZone` abstraction as the precursor for reverb and light-room ambience.
 - [x] **🎛️ Setvar Runtime Editor and CTI Value Types** — [M-0110](docs/src/roadmap/phase-11/M-0110.md) — ✅ done 2026-10-30
   - [x] Alt-menu setvar editor (2026-10-20); ints, choices and numbers beyond binary exist since M-0078 and are carried by configurations; the per-option "needs respawn" marker and group headings are done 2026-10-30 (only documented restarts are marked; Q-SV02 stays open for the rest).
-- [ ] **🚦 AI Traffic Depth** — [M-0111](docs/src/roadmap/phase-11/M-0111.md) — 🟡 in progress since 2026-10-24 (audit, density-group routing, yellow by rowdiness, counters, parked obstacles)
-  - [ ] Audit, then obstacle braking, conservative lane change and traffic lights with `[rowdy_factor]` on top of M-0095/M-0049.
-- [ ] **🧭 Hybrid Tile and Object Streaming** — [M-0114](docs/src/roadmap/phase-11/M-0114.md) — 📝 proposed 2026-10-18
-  - [ ] Streaming strategy that adapts to the player's speed: tiles at speed, objects when slow.
+- [~] **🚦 AI Traffic Depth** — [M-0111](docs/src/roadmap/phase-11/M-0111.md) — 🟡 in progress since 2026-10-24 (audit, density-group routing, yellow by rowdiness, counters, parked obstacles)
+  - [~] Audit, then obstacle braking, conservative lane change and traffic lights with `[rowdy_factor]` on top of M-0095/M-0049.
+- [~] **🧭 Hybrid Tile and Object Streaming** — [M-0114](docs/src/roadmap/phase-11/M-0114.md) — 🟡 in progress 2026-11-16 (policy implemented; baselines, comparison runs and overlay pending)
+  - [~] Streaming strategy that adapts to the player's speed: tiles at speed, objects when slow.
 - [ ] **🌦️ Real Weather Research** — [M-0116](docs/src/roadmap/phase-11/M-0116.md) — 📝 proposed 2026-10-18
   - [ ] Providers, licensing, offline policy, mapping to `.owt` presets, location source, go/no-go (research only).
-- [ ] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](docs/src/roadmap/phase-11/M-0117.md) — 📝 proposed 2026-10-18
-  - [ ] Wet and snow grip, fog visibility hint, exhaust particles.
+- [~] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](docs/src/roadmap/phase-11/M-0117.md) — 🚧 in progress 2026-11-16 (sim-side grip and exhaust rule done; game wiring, AI loop call, HUD hint, exhaust effect and verification open)
+  - [~] Wet and snow grip, fog visibility hint, exhaust particles.
 - [x] **🚏 Scheduled AI Traffic** — [M-0112](docs/src/roadmap/phase-11/M-0112.md) — ✅ done 2026-10-23
   - [x] Buses, trams and trains that spawn at the route start, follow the timetable and despawn at the end (needs M-0099/M-0098).
 - [x] **🛤️ Track Switch Interaction** — [M-0113](docs/src/roadmap/phase-11/M-0113.md) — ✅ done 2026-10-30 (`agent/m0113-click`): census, points state, HUD hint, `rail.switch`, tongue animation, scenario verification and the player's tongue click
