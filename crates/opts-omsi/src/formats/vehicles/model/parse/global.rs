@@ -1,6 +1,11 @@
 //! Global directives of a model file (the lines outside any mesh block).
 
-use super::*;
+use super::{parse_number, require_params};
+use crate::formats::text::OmsiBlock;
+use crate::formats::vehicles::model::ast::{
+    CtcScheme, CtcTexture, ModelConfig, ScriptTexture, TextTexture,
+};
+use crate::formats::vehicles::model::error::ModelParseError;
 
 pub(super) fn handle_global_directive(
     config: &mut ModelConfig,
