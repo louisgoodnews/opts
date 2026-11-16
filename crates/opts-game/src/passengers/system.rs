@@ -15,32 +15,13 @@ use super::{
     draw, facing, feed, AT_STOP_M, LEFT_M, MOVING_KMH, OUTSIDE_SPEED_M_S, SETTING, STOPPED_KMH,
 };
 
-/// Whether door `n` of kind `kind` (`entry`/`exit`) is open in the engine of `store`.
-fn door_open(engines: &Query<&VehicleScripts>, (store, n): (Entity, usize), kind: &str) -> bool {
-    engines
-        .get(store)
-        .ok()
-        .and_then(|s| s.engine.lock().ok())
-        .is_some_and(|e| e.get(&format!("pax_{kind}{n}_open")) > 0.5)
-}
+mod board;
+mod doors;
+mod walk;
+use board::{board_unseen, send_everybody_home};
+use doors::read_doors;
+use walk::walk_to_doors;
 
-/// The doors the vehicle's scripts report: each unit's in the engine of its own scripts.
-fn read_doors(
-    engines: &Query<&VehicleScripts>,
-    entries: &[(Entity, usize)],
-    exits: &[(Entity, usize)],
-) -> Doors {
-    Doors {
-        entries: entries
-            .iter()
-            .map(|&d| door_open(engines, d, "entry"))
-            .collect(),
-        exits: exits
-            .iter()
-            .map(|&d| door_open(engines, d, "exit"))
-            .collect(),
-    }
-}
 
 /// The queries and resources the passengers' systems share.
 #[derive(bevy::ecs::system::SystemParam)]
@@ -60,107 +41,8 @@ mod stop;
 
 use stop::{arrive_at_stop, leave_stop, spawn_forced_group};
 
-/// Switched off: everybody goes at once.
-fn send_everybody_home(e: &mut PassengerEnv, rig: &mut PassengerRig) {
-    for (_, s) in rig.actors.drain() {
-        e.commands.entity(s.entity).despawn();
-    }
-    for w in rig.approaching.drain(..).chain(rig.leaving.drain(..)) {
-        e.commands.entity(w.entity).despawn();
-    }
-    rig.sim.clear();
-    rig.stop = None;
-}
 
-/// People walking up to the doors; they board when the door is open.
-fn walk_to_doors(
-    e: &mut PassengerEnv,
-    rig: &mut PassengerRig,
-    (frames, to_world, vehicle): (&[Affine3A], Affine3A, Entity),
-    doors: &Doors,
-    dt: f32,
-) {
-    let mut still = Vec::new();
-    for mut w in std::mem::take(&mut rig.approaching) {
-        w.target = rig.door_world(w.entry, frames);
-        let d = w.position.distance(w.target);
-        let step = OUTSIDE_SPEED_M_S * dt;
-        if d > 0.25 {
-            let dir = (w.target - w.position) / d;
-            w.position += dir * step.min(d);
-            if let Ok(mut t) = e.transforms.get_mut(w.entity) {
-                t.translation = w.position;
-                t.rotation = facing(dir);
-            }
-            if let Ok(h) = e.humans.get(w.entity) {
-                w.phase = advance_phase(h, w.phase, OUTSIDE_SPEED_M_S, dt);
-                apply_gait(h, w.leg_m, w.phase, &mut e.transforms);
-            }
-            still.push(w);
-        } else if doors.entries.get(w.entry).copied().unwrap_or(false)
-            && rig.sim.passengers().len() < rig.sim.capacity()
-        {
-            if let Some(id) = rig.sim.board(w.age, w.stops, w.entry) {
-                // Beyond the figure budget a person boards unseen.
-                if rig.actors.len() >= ACTOR_BUDGET {
-                    e.commands.entity(w.entity).despawn();
-                    continue;
-                }
-                let unit = rig
-                    .sim
-                    .passengers()
-                    .iter()
-                    .find(|p| p.id == id)
-                    .map_or(0, |p| p.unit);
-                let frame = frames.get(unit).copied().unwrap_or(to_world);
-                let local = frame.inverse().transform_point3(w.position);
-                let parent = rig.units.get(unit).map_or(vehicle, |u| u.root);
-                e.commands.entity(w.entity).insert(ChildOf(parent));
-                if let Ok(mut t) = e.transforms.get_mut(w.entity) {
-                    t.translation = local;
-                }
-                rig.actors.insert(
-                    id,
-                    Shown {
-                        unit,
-                        entity: w.entity,
-                        leg_m: w.leg_m,
-                        phase: w.phase,
-                        local,
-                        seated: None,
-                    },
-                );
-            } else {
-                e.commands.entity(w.entity).despawn();
-            }
-        } else {
-            // Waiting for the door: stand still.
-            if let Ok(h) = e.humans.get(w.entity) {
-                apply_rest_pose(h, HumanPose::Standing, &mut e.transforms);
-            }
-            still.push(w);
-        }
-    }
-    rig.approaching = still;
-}
 
-/// The rest of the crowd boards through the open doors, one person per door in turn, while there
-/// is room.
-fn board_unseen(rig: &mut PassengerRig, doors: &Doors, dt: f32) {
-    rig.unseen_timer += dt;
-    if rig.unseen_timer >= UNSEEN_BOARD_S && !rig.unseen.is_empty() {
-        rig.unseen_timer = 0.0;
-        for entry in 0..doors.entries.len() {
-            if !doors.entries[entry] || rig.sim.passengers().len() >= rig.sim.capacity() {
-                continue;
-            }
-            if let Some(i) = rig.unseen.iter().position(|u| u.entry == entry) {
-                let u = rig.unseen.remove(i);
-                rig.sim.board(u.age, u.stops, u.entry);
-            }
-        }
-    }
-}
 
 /// What a vehicle's passengers are driven from.
 type RigRow = (

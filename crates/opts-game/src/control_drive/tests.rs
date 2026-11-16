@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`control_drive.rs`).
 
 use super::*;
+use super::drive_set::number_value;
 use opts_bevy::vehicle_triggers::ScriptKeyBinding;
 
 #[test]

@@ -50,42 +50,12 @@ pub struct PlaceLabel(pub Option<String>);
 #[derive(Resource, Debug, Clone, Copy, Default)]
 pub struct PendingDespawn(pub Option<VehicleId>);
 
-/// An operation on the `World` that waits for the next frame to start.
-type WorldOp = Box<dyn FnOnce(&mut World) + Send + Sync>;
+mod deferred;
+mod despawn_dialog;
+pub use deferred::{defer, DeferredOps};
+pub use despawn_dialog::{ask_despawn, despawn_choices};
+use deferred::frame_start;
 
-/// Vehicle operations that remove entities, held until the next frame starts ([`defer`]).
-#[derive(Resource, Default)]
-pub struct DeferredOps(Vec<WorldOp>);
-
-/// Runs `op` at the start of the next frame (schedule `First`), when no system has commands
-/// waiting. A despawn queued as an ordinary command is applied in the middle of the frame's
-/// command buffers: a command of another system that was queued for the vehicle in the same
-/// frame (the passengers' `PassengerFeed`, for one) is applied after it and hits a despawned
-/// entity, which panics (Bevy's default error handler).
-pub fn defer(commands: &mut Commands, op: impl FnOnce(&mut World) + Send + Sync + 'static) {
-    commands.queue(move |world: &mut World| {
-        world
-            .get_resource_or_init::<DeferredOps>()
-            .0
-            .push(Box::new(op));
-    });
-}
-
-/// Runs the deferred operations, then keeps the registry honest (both remove entities, so both
-/// run where no command of another system is waiting).
-fn frame_start(world: &mut World) {
-    let ops = std::mem::take(&mut world.get_resource_or_init::<DeferredOps>().0);
-    for op in ops {
-        op(world);
-    }
-    world.flush();
-    if world
-        .get_resource::<State<AppState>>()
-        .is_some_and(|s| *s.get() == AppState::InGame)
-    {
-        maintain(world);
-    }
-}
 
 /// Computes the label from the registry.
 #[must_use]
@@ -95,58 +65,6 @@ pub fn place_label(reg: &SessionVehicles) -> Option<String> {
         .then(|| rec.spawn_entry_name.clone())
 }
 
-/// Asks the user whether to despawn a session vehicle (the shell's confirmation dialog). The
-/// answer is handled by [`despawn_choices`].
-pub fn ask_despawn(world: &mut World, id: VehicleId) {
-    let Some(rec) = world.resource::<SessionVehicles>().get(id).cloned() else {
-        return;
-    };
-    world.resource_mut::<PendingDespawn>().0 = Some(id);
-    let spec = DialogSpec {
-        tag: DESPAWN_DIALOG,
-        title_key: keys::DESPAWN_TITLE,
-        body_key: keys::DESPAWN_BODY,
-        body_args: L10nArgs(vec![("name".into(), Arg::from(rec.name.as_str()))]),
-        buttons: vec![
-            DialogButtonSpec {
-                choice: CANCEL,
-                label_key: keys::CANCEL,
-                style: DialogButtonStyle::Quiet,
-            },
-            DialogButtonSpec {
-                choice: DESPAWN,
-                label_key: keys::DESPAWN_CONFIRM,
-                style: DialogButtonStyle::Destructive,
-            },
-        ],
-        keep_open: Vec::new(),
-        error: None,
-    };
-    let mut commands = world.commands();
-    spawn_confirm_dialog(&mut commands, spec);
-    world.flush();
-}
-
-/// The answer of the despawn confirmation.
-pub fn despawn_choices(
-    mut commands: Commands,
-    mut choices: MessageReader<DialogChoice>,
-    mut pending: ResMut<PendingDespawn>,
-) {
-    for choice in choices.read().filter(|c| c.tag == DESPAWN_DIALOG) {
-        let id = pending.0.take();
-        if choice.choice != DESPAWN {
-            continue;
-        }
-        if let Some(id) = id {
-            defer(&mut commands, move |world: &mut World| {
-                if let Err(e) = ops::despawn(world, id, DespawnReason::User) {
-                    tracing::warn!("despawn refused: {e}");
-                }
-            });
-        }
-    }
-}
 
 /// F8 switches to the next session vehicle, Shift+F8 to the previous one.
 ///
