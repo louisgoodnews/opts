@@ -10,7 +10,7 @@ run at Ahlheim Hauptbahnhof with 400 vehicles. Paths below are relative to `crat
 | 1 | A standing vehicle ahead is a leader although it is on another lane id | absent for agents, partial for foreign obstacles | `leader()` (`T/agent/gaps.rs:26-49`) looks along the planned lanes by lane id only. Foreign footprints (the player, parked cars) become phantoms on every lane whose centre line is within `width/2 + 0.95 m` (`T/obstacles.rs:80-135`). A dwelling bus that sticks into a neighbour lane is not seen laterally. |
 | 2 | Parked vehicles are obstacles | partial → closed here for bay vehicles | `G/traffic/graph.rs` `register_parked_object` → `TrafficState.parked` → `set_obstacles_with_parked` (400 m around the camera). Only vehicles that replace a `carpark_p` marker are registered (`G/tile.rs`); other scenery vehicles are not. |
 | 3 | Overtaking a stopped vehicle only when allowed | partial | No stopped-vehicle rule; the normal lane-change check applies. `no_overtaking` blocks only the left (`T/lanechange.rs:229`). Neighbours are same-direction lanes only, so no passing through the oncoming lane happens and no oncoming gap exists. |
-| 4 | Lane change: indicator ≥ 2 s, gap check, abort, none in junctions | mostly present | Indicator 3 s (`ANNOUNCE_S`), gap checked at announce and at due (not continuously), abort with a 3 s cooldown, no change in junction lanes or conflict zones. No explicit "resume speed" state (IDM does it). |
+| 4 | Lane change: indicator ≥ 2 s, gap check, abort, none in junctions | present (gap watched from 2026-11-16) | Indicator 3 s (`ANNOUNCE_S`), gap re-checked every 0.5 s while announced (`ANNOUNCE_RECHECK_S`, before: at announce and at due only), abort with a 3 s cooldown, no change in junction lanes or conflict zones. No explicit "resume speed" state (IDM does it). |
 | 5 | Yellow by comfortable braking, `[rowdy_factor]` raises passing, red running rare | yellow partial → closed here, red running absent | `T/agent/gaps.rs` stopped whenever 3 m/s² sufficed, for every driver; rowdiness only scaled speed. Now `IdmParams::rowdy` and `yellow_decel` (careful drivers 3.0 m/s², the rowdiest 0.9). Red is always obeyed. `[traffic_light_stop]`/`[traffic_light_jump]` have no effect. |
 | 6 | Lane rules at spawn, routing and lane change | present at spawn and lane change; **holes in routing (closed here)** | `pick_next` filtered successors by class only, not by density group (`T/agent/routing.rs`), and a strategic target lane was not checked for closure. A lane closed to a group (`trafficdensity 0`, how bus lanes are marked) was entered by plain routing. Fixed with three tiers: open to class and group, then open to class, then any (never stranded). Test `a_fork_is_taken_on_the_lane_that_is_not_closed_to_the_cars_group` (fails without the rule). |
 | 7 | Level-crossing barriers as obstacles | absent, no data hook | `SignalProgram` is clock driven; nothing reads an object's animation variable. Needs a data check of the crossing objects first. |
@@ -44,3 +44,13 @@ Lateral leader search for standing agents, passing rules, continuous gap evaluat
 `lane_change_aborts` (a due lane change found no gap). First reading, Ahlheim Hbf, `--traffic 150`
 (only 2 agents were on the lanes around the player): 2 hard brakes and 0 aborts in 240 s. The sample
 is too small to compare changes; a run with a populated area is needed for before/after numbers.
+
+## Assumptions for phase D (traffic lights), 2026-11-16
+
+* Q-AI05 (how AI drivers treat yellow) and Q-AIC-002 (meaning of `[rowdy_factor]`) stay open. The
+  implemented reading: a driver stops on yellow when a comfortable braking (3.0 m/s², 0.9 for the
+  rowdiest) would not stop it; the rowdiness only shifts that threshold.
+* `[traffic_light_stop]` and `[traffic_light_jump]` are not read; the stop line is the path end.
+* No red running. A red-running probability needs a product decision (row 5) and a conflict model
+  for cross traffic that the conflict zones do not provide.
+
