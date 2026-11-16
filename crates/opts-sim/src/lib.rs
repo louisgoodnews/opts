@@ -15,6 +15,7 @@ pub mod passengers;
 pub mod pedestrian;
 pub mod rail;
 pub mod script;
+pub mod surface_grip;
 pub mod vehicle;
 
 // Convenient top-level re-exports

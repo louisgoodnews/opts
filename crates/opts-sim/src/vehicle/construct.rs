@@ -7,7 +7,7 @@ use super::drivetrain::DrivetrainModel;
 use super::inputs::VehicleInputs;
 use super::spec::VehicleDynamicsSpec;
 use super::suspension::SuspensionModel;
-use super::VehicleSimulation;
+use super::{VehicleSimulation, ROAD_FRICTION};
 use glam::Vec2;
 use opts_core::formats::vehicles::bus::BusManifest;
 
@@ -63,6 +63,7 @@ impl VehicleSimulation {
             teleports: 0,
             passenger_mass_kg: 0.0,
             unit_passenger_mass_kg: Vec::new(),
+            road_friction: ROAD_FRICTION,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
@@ -111,6 +112,7 @@ impl VehicleSimulation {
             teleports: 0,
             passenger_mass_kg: 0.0,
             unit_passenger_mass_kg: Vec::new(),
+            road_friction: ROAD_FRICTION,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,

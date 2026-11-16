@@ -13,6 +13,7 @@ impl VehicleSimulation {
         was_spinning: bool,
         forces: &mut DrivetrainForces,
     ) -> bool {
+        let mu = self.road_friction;
         if speed.abs() > STANDSTILL_M_S {
             if !was_spinning {
                 for axle in &mut self.axles {
@@ -27,7 +28,7 @@ impl VehicleSimulation {
             true
         } else {
             let (driven_n, braked_n) = self.friction_loads_n();
-            let (drive_limit, brake_limit) = (ROAD_FRICTION * driven_n, ROAD_FRICTION * braked_n);
+            let (drive_limit, brake_limit) = (mu * driven_n, mu * braked_n);
             let driven_radius = self
                 .axles
                 .iter()
@@ -51,6 +52,7 @@ impl VehicleSimulation {
     /// wheels (all of them when no axle is marked driven) in equal parts, the brake force to the
     /// head's axles in proportion to their rated force.
     pub(super) fn step_wheels(&mut self, d: ScriptDrive, speed: f32, dt: f32) -> f32 {
+        let mu = self.road_friction;
         let unit_driven = self
             .trailer_loads
             .iter()
@@ -96,7 +98,7 @@ impl VehicleSimulation {
                 let r = w.rolling_radius_m.max(0.1);
                 let brake_nm = head_brake_n * share * 0.5 * r;
                 let load = w.vertical_load_n;
-                let st = wheels::step_wheel(w, drive, brake_nm, load, speed, ROAD_FRICTION, dt);
+                let st = wheels::step_wheel(w, drive, brake_nm, load, speed, mu, dt);
                 total += st.force_n;
             }
         }
@@ -110,7 +112,7 @@ impl VehicleSimulation {
         for unit in &self.trailer_loads {
             for (axle, load) in unit.axles.iter().zip(unit.axle_loads_n()) {
                 if axle.is_driven {
-                    let limit = ROAD_FRICTION * load;
+                    let limit = mu * load;
                     total += (2.0 * torque_each / r_unit).clamp(-limit, limit);
                 }
             }
@@ -123,7 +125,7 @@ impl VehicleSimulation {
                 .iter()
                 .flat_map(|u| u.axle_loads_n())
                 .sum();
-            total -= speed.signum() * trailer_brake_n.min(ROAD_FRICTION * loads);
+            total -= speed.signum() * trailer_brake_n.min(mu * loads);
         }
         total
     }

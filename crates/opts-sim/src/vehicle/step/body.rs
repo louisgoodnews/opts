@@ -90,18 +90,19 @@ impl VehicleSimulation {
     /// head's axles first, then each following unit's): the inputs of the [`BrakeSystem`].
     pub(super) fn brake_axles(&self) -> (Vec<f32>, Vec<f32>) {
         let (mut caps, mut limits) = (Vec::new(), Vec::new());
+        let mu = self.road_friction;
         for (i, a) in self.axles.iter().enumerate() {
             caps.push(BRAKE_FACTOR * a.config.max_force_n);
             let load = self.body.as_ref().map_or(
                 a.left_wheel.vertical_load_n + a.right_wheel.vertical_load_n,
                 |b| b.axle_load_n(i),
             );
-            limits.push(ROAD_FRICTION * load);
+            limits.push(mu * load);
         }
         for unit in &self.trailer_loads {
             for (axle, load) in unit.axles.iter().zip(unit.axle_loads_n()) {
                 caps.push(BRAKE_FACTOR * axle.rated_n);
-                limits.push(ROAD_FRICTION * load);
+                limits.push(mu * load);
             }
         }
         (caps, limits)
