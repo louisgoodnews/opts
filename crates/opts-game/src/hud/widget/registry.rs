@@ -21,6 +21,8 @@ pub const WIDGETS: &[HudWidget] = &[
     ALERTS,
     CAMERA_LABEL,
     MINIMAP,
+    FUEL,
+    FUEL_LOW,
 ];
 
 /// The widget with `id`.

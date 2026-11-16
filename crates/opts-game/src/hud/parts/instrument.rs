@@ -43,6 +43,20 @@ pub(in crate::hud) fn build_instrument(
             Some(keys::CAPTION_LEVER),
             palette,
         ),
+        Binding::Fuel => readout(
+            parent,
+            w,
+            (TypeScale::NumericMedium, InstrumentInk::Text),
+            Some(keys::CAPTION_FUEL),
+            palette,
+        ),
+        Binding::FuelLow => readout(
+            parent,
+            w,
+            (TypeScale::BodyMedium, InstrumentInk::Ok),
+            Some(keys::CAPTION_RESERVE),
+            palette,
+        ),
         Binding::ParkingBrake => readout(
             parent,
             w,

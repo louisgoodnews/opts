@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🚧 In progress (2026-11-16): the model, the setting, the save section and the control command are in; the HUD gauge, the VM variable, a key or menu refuel action and the audit of the stock scripts are open |
+| **Status** | 🚧 In progress (2026-11-16): the model, the setting, the save section, the control command and the HUD readout (on-screen check open) are in; the bar gauge, the VM variable, a key or menu refuel action and the audit of the stock scripts are open |
 | **Code** | `opts_sim::vehicle::fuel` (`FuelState`, `FuelMode`, the step and the torque cut in `fuel/sim.rs`), `opts-game` `vehicle_fuel_settings.rs`, `control_fuel.rs`, `save/sections/fuel.rs` |
 | **Milestone** | [M-0123](../roadmap/phase-12/M-0123.md) |
 | **Settings** | `vehicle.fuel_mode` (see the [settings reference](../reference/settings.md)) |
@@ -48,7 +48,7 @@ The `fuel` section (version 1, `Vehicles` stage, after the vehicles exist) holds
 
 ## 5. Not yet done
 
-- **HUD gauge** with a low-level indicator, hidden when the setting is *Off* and readable without colour alone.
+- **HUD readout, on-screen check open.** Built (`hud/fuel_hud.rs`, `update/fuel.rs`): the widget `fuel` shows the level in percent and `fuel-low` shows `LOW` or `OK` (a word, not only a colour) at or below 10 %, in the bottom-left instrument row of the bus, articulated bus and trolleybus profiles. Both are hidden when the setting is *Off* (no readout). A bar gauge is not drawn; a person still has to look at it on screen.
 - **VM variable.** `tank_percent` has no consumer. The stock scripts write it themselves from `engine_tank_content` (`engine_GN.osc:275`), so a host write would fight the script; the authority per vehicle family needs the audit first.
 - **Refuel action** on a key or in a menu when stopped. Only the control command exists.
 - **Stations.** Refuelling at `[petrolstation]` objects is a stretch decision for a follow-up milestone.

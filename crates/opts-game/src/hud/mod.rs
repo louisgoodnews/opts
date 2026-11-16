@@ -14,6 +14,7 @@ pub mod control_label;
 pub mod details;
 pub mod door_camera;
 pub mod fade;
+pub mod fuel_hud;
 pub mod fullmap;
 pub mod keys;
 pub mod layout;
