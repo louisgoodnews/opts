@@ -21,7 +21,12 @@ use super::tile::{place_attached_objects, TileRoot};
 use super::tile_ground::{ensure_surfaces, load_terrain, TerrainInput, NEIGHBOURHOOD_LEN};
 use super::{WorldLoadJob, WorldStats};
 
+mod begin;
 mod steps;
+mod terrain;
+pub(super) use begin::begin;
+use terrain::{terrain_read_step, terrain_surfaces_step};
+
 use steps::{
     attachments_step, finish, objects_step, registries_step, splines_step, surfaces_step,
     terrain_step,
@@ -86,105 +91,6 @@ impl TileBuild {
             Phase::Attached => 0.9,
             Phase::Finish => 0.95,
         }
-    }
-}
-
-/// Starts the next queued tile: reads it, spawns its root and registers it as resident. `None`
-/// when the queue holds nothing buildable (a tile that is resident already is skipped, one that
-/// cannot be read counts as missing).
-pub(super) fn begin(
-    job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
-) -> Option<TileBuild> {
-    let _t_total = opts_logging::stream_trace::span("tile.build");
-    loop {
-        let key = job.queue.pop_front()?;
-        if job.resident.contains_key(&key) {
-            continue;
-        }
-        let t_parse = opts_logging::stream_trace::span("tile.read_parse");
-        let Some(tile) = job.read_tile(key) else {
-            stats.tiles_missing += 1;
-            continue;
-        };
-        job.tile_splines
-            .insert(key, std::sync::Arc::new(tile.splines.clone()));
-        // A tile rebuilt in place (Chrono switch) may still hold the collision of its previous
-        // build.
-        super::collision::unregister_tile(commands, key);
-        for w in &tile.warnings {
-            tracing::warn!(tile = ?key, "tile record left out: {w}");
-        }
-        drop(t_parse);
-        opts_bevy::scene_trace::begin_tile(key);
-        let origin = job.tile_offset(key);
-        let tile_path = job.tile_path(key).unwrap_or_default();
-        job.loading_deps.clear();
-        job.loading_deps
-            .insert(opts_bevy::hot_reload::cache::normalize(&tile_path));
-        for overlay in job.chrono_overlays(key).to_vec() {
-            job.loading_deps
-                .insert(opts_bevy::hot_reload::cache::normalize(&overlay));
-        }
-        tracing::info!(
-            tile = ?key,
-            path = %tile_path.display(),
-            objects = tile.objects.len(),
-            splines = tile.splines.len(),
-            "tile parsed"
-        );
-        let root = commands
-            .spawn((
-                Transform::default(),
-                InGameEntity,
-                TileRoot(key),
-                Name::new(format!("Tile_{}_{}", key.0, key.1)),
-            ))
-            .id();
-        job.resident.insert(key, root);
-        return Some(TileBuild {
-            key,
-            tile,
-            origin,
-            root,
-            children: Vec::new(),
-            terrain: None,
-            terrain_input: None,
-            next_neighbour: 0,
-            attached: Vec::new(),
-            splines_failed_before: 0,
-            phase: Phase::TerrainRead,
-            next_object: 0,
-        });
-    }
-}
-
-/// Reads the tile's terrain grid and builds its ground inputs.
-fn terrain_read_step(
-    b: &mut TileBuild,
-    job: &mut WorldLoadJob,
-    (meshes, materials, images): (
-        &mut Assets<Mesh>,
-        &mut Assets<StandardMaterial>,
-        &mut Assets<Image>,
-    ),
-    ground_materials: Option<&mut Assets<GroundMaterial>>,
-) {
-    let _t = opts_logging::stream_trace::span("tile.terrain");
-    b.terrain_input = load_terrain(job, meshes, materials, images, ground_materials, b.key);
-    b.phase = Phase::TerrainSurfaces;
-}
-
-/// Makes the surface data of one neighbouring tile available (one per call).
-fn terrain_surfaces_step(b: &mut TileBuild, job: &mut WorldLoadJob) {
-    let _t = opts_logging::stream_trace::span("tile.terrain");
-    // A tile without a grid needs no surfaces.
-    if b.terrain_input.is_none() || b.next_neighbour >= NEIGHBOURHOOD_LEN {
-        b.phase = Phase::Terrain;
-    } else {
-        ensure_surfaces(job, b.key, b.next_neighbour);
-        b.next_neighbour += 1;
     }
 }
 
