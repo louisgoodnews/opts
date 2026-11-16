@@ -1,17 +1,24 @@
 //! The player's collision pass: pushes the player's road vehicles out of static boxes, AI
-//! vehicles and ground steps (see the parent module).
+//! vehicles and ground steps (see the parent module). The contact search is in [`contact`], the
+//! helpers of the pass in [`support`].
 
 use std::collections::HashMap;
 
 use bevy::prelude::*;
 use opts_bevy::ArticulatedSegment;
-use opts_sim::collision::{respond, Obb};
+use opts_sim::collision::Obb;
 
 use super::super::ground_height::GroundIndex;
 use super::super::traffic::TrafficVehicle;
 use super::{
     obb_of, player_boxes, BodyBox, CollisionIndex, GroundPlayer, PlayerCollide, VehicleCollider,
 };
+
+mod contact;
+mod support;
+
+use contact::{ground_step, worst_contact, Worst};
+use support::{follower_poses, log_push, scrape_velocity};
 
 /// Highest obstacle a vehicle drives over: kerbs and road plates (m).
 const STEP_M: f32 = 0.3;
@@ -24,67 +31,6 @@ const MAX_TRAFFIC_PUSH_M: f32 = 0.05;
 const FRICTION: f32 = 0.08;
 /// Bounce off an obstacle.
 const RESTITUTION: f32 = 0.05;
-
-/// The following parts' simulated poses with their boxes: (box, position, heading).
-fn follower_poses(
-    chain: Option<&opts_bevy::ArticulatedChain>,
-    part_boxes: &[BodyBox],
-    segments: &Query<&ArticulatedSegment>,
-) -> Vec<(BodyBox, Vec2, f32)> {
-    chain
-        .map(|c| {
-            c.segments
-                .iter()
-                .zip(part_boxes)
-                .filter_map(|(e, b)| {
-                    let (p, h) = segments.get(*e).ok()?.simulated_pose()?;
-                    Some((*b, p, h))
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-/// `OPTS_DBG_COLLISION` and the first pushes by AI vehicles: what pushed the player's vehicle.
-fn log_push(
-    logged: &mut u32,
-    controller: &opts_bevy::VehicleController,
-    worst_is_traffic: bool,
-    worst_other: Option<Obb>,
-    depth: f32,
-) {
-    if !worst_is_traffic && *logged < 400 && std::env::var_os("OPTS_DBG_COLLISION").is_some() {
-        *logged += 1;
-        tracing::info!(
-            at = ?controller.sim.chassis.position,
-            z = controller.sim.chassis.elevation_z,
-            other = ?worst_other,
-            depth,
-            "the player's vehicle is pushed by a static box or a ground step"
-        );
-    }
-    if worst_is_traffic && *logged < 40 {
-        *logged += 1;
-        tracing::info!(
-            at = ?controller.sim.chassis.position,
-            speed = controller.sim.chassis.forward_speed_m_s(),
-            other = ?worst_other,
-            depth,
-            "the player's vehicle overlaps an AI vehicle and is pushed"
-        );
-    }
-}
-
-/// Velocity: nothing into the obstacle, a little scraped off along it.
-fn scrape_velocity(ch: &mut opts_sim::vehicle::chassis::ChassisState, normals: &[Vec2]) {
-    let mut v = ch.world_velocity();
-    for n in normals {
-        v = respond(v, *n, RESTITUTION, FRICTION);
-    }
-    let (s, c) = ch.heading_rad.sin_cos();
-    ch.local_velocity = Vec2::new(v.x * c - v.y * s, v.x * s + v.y * c);
-    ch.yaw_rate_rad_s *= 0.7;
-}
 
 /// Pushes the player's vehicle out of everything it overlaps (fixed step, after the physics).
 pub fn player_collisions(
@@ -167,79 +113,4 @@ pub fn player_collisions(
         }
         scrape_velocity(&mut controller.sim.chassis, &normals);
     }
-}
-
-/// The deepest overlap of the player's boxes with the static boxes and the AI vehicles. Static
-/// boxes the vehicle was placed inside (a spawn point in a bus stop's collision box) do not push
-/// it: it is on its way out when it drives off; `touching` collects the boxes it still touches.
-#[derive(Default)]
-struct Worst {
-    contact: Option<(Vec2, f32)>,
-    traffic: bool,
-    other: Option<Obb>,
-}
-
-fn worst_contact(
-    mine: &[Obb],
-    (index, dynamic): (&CollisionIndex, &[Obb]),
-    (first_seen, free, touching): (bool, &mut Vec<Obb>, &mut Vec<Obb>),
-) -> Worst {
-    let mut worst = Worst::default();
-    for me in mine {
-        let statics = index.grid.query(me.centre, me.radius()).map(|o| (o, false));
-        for (other, is_traffic) in statics.chain(dynamic.iter().map(|o| (o, true))) {
-            if !me.overlaps_height(other, STEP_M) {
-                continue;
-            }
-            if let Some(c) = me.contact(other) {
-                if !is_traffic {
-                    if first_seen && !free.contains(other) {
-                        free.push(*other);
-                    }
-                    if free.contains(other) {
-                        if !touching.contains(other) {
-                            touching.push(*other);
-                        }
-                        continue;
-                    }
-                }
-                if worst.contact.is_none_or(|w| c.depth > w.1) {
-                    worst.contact = Some((c.normal, c.depth));
-                    worst.traffic = is_traffic;
-                    worst.other = Some(*other);
-                }
-            }
-        }
-    }
-    worst
-}
-
-/// Direction away from a step in the ground around a footprint, if there is one: points on the
-/// outline are compared with the ground 0.4 m closer to the centre. A ground higher than
-/// `clearance` above the vehicle (the deck of a bridge over the road) is no step.
-fn ground_step(ground: &GroundIndex, body: &Obb, z: f32, clearance: f32) -> Option<Vec2> {
-    let [fwd, right] = body.axes();
-    let mut away = Vec2::ZERO;
-    for (a, b) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
-        for k in [-0.8_f32, 0.0, 0.8] {
-            let (lx, ly) = if a != 0.0 {
-                (a * body.half.x, k * body.half.y)
-            } else {
-                (k * body.half.x, b * body.half.y)
-            };
-            let edge = body.centre + right * lx + fwd * ly;
-            let inward = (body.centre - edge).normalize_or_zero();
-            let (Some(outer), Some(inner)) = (
-                ground.height_at(edge.x + (-inward.x) * 0.1, edge.y + (-inward.y) * 0.1, z),
-                ground.height_at(edge.x + inward.x * 0.3, edge.y + inward.y * 0.3, z),
-            ) else {
-                continue;
-            };
-            // A surface higher than the vehicle is a deck it passes under, not a step.
-            if outer - inner > STEP_M && outer > z + STEP_M && outer < z + clearance {
-                away += inward;
-            }
-        }
-    }
-    (away.length_squared() > 0.0).then(|| away.normalize())
 }
