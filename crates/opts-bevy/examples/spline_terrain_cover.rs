@@ -10,9 +10,15 @@ use std::collections::{BTreeMap, HashMap};
 
 use opts_bevy::install::OmsiInstall;
 use opts_bevy::scenery::{extrude_spline_segment, spline_pose};
-use opts_bevy::terrain::{carve_terrain, spline_ground_triangles, TileTerrain};
 use opts_core::formats::map::{MapManifest, MapTerrain, MapTile, TileGrid};
 use opts_core::formats::scenery::sli::SplineProfile;
+
+#[path = "spline_terrain_cover/carve.rs"]
+mod carve;
+#[path = "spline_terrain_cover/report.rs"]
+mod report;
+use carve::carve_all;
+use report::print_report;
 
 type Tiles = HashMap<(i32, i32), (MapTile, Option<MapTerrain>)>;
 
@@ -51,67 +57,6 @@ fn measure_grid(dir: &std::path::Path, tiles: &Tiles) -> TileGrid {
         .map(|(k, (t, _))| (*k, t.splines.clone()))
         .collect();
     TileGrid::measure(&sample, world_coordinates).0
-}
-
-/// The terrain each tile is drawn with: carved under the surfaces of its own and its eight
-/// neighbours' splines, as the game does.
-fn carve_all(
-    tiles: &Tiles,
-    grid: &TileGrid,
-    profile: &mut impl FnMut(&str) -> Option<SplineProfile>,
-) -> HashMap<(i32, i32), TileTerrain> {
-    let mut carved: HashMap<(i32, i32), TileTerrain> = HashMap::new();
-    let (mut lowered, mut guarded) = (0, 0);
-    for (key, (_, terrain)) in tiles {
-        let Some(t) = terrain else { continue };
-        let mut surfaces = Vec::new();
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                let other = (key.0 + dx, key.1 + dy);
-                let Some((n, _)) = tiles.get(&other) else {
-                    continue;
-                };
-                let o = grid.neighbour_offset(*key, other);
-                for s in &n.splines {
-                    if let Some(p) = profile(&s.sli_file) {
-                        surfaces.extend(spline_ground_triangles(&p, s, (o.x, o.y)));
-                    }
-                }
-            }
-        }
-        let (c, stats) = carve_terrain(
-            &TileTerrain::new(t.clone(), grid.cell(key.1) as f32),
-            &surfaces,
-        );
-        lowered += stats.lowered;
-        guarded += stats.guarded;
-        carved.insert(*key, c);
-    }
-    println!("grid {grid:?}; vertices lowered {lowered}, left by the guard {guarded}");
-    carved
-}
-
-type Tally<'a> = BTreeMap<(&'a str, &'a str), (u64, u64)>;
-
-fn print_report(
-    n_tiles: usize,
-    drawn: usize,
-    counts: (&Tally, &BTreeMap<&str, usize>),
-    worst: &mut [(u64, String, (i32, i32), u64)],
-) {
-    let (tally, bad_splines) = counts;
-    println!("tiles {n_tiles}, drawn splines {drawn}");
-    for ((fp, own), (n, c)) in tally {
-        println!(
-            "{fp:13} {own:15} sampled {n:8} m  covered {c:7} m ({:.2} %)",
-            100.0 * *c as f64 / (*n).max(1) as f64
-        );
-    }
-    println!("splines with >= 2 m covered: {bad_splines:?}");
-    worst.sort_by_key(|w| std::cmp::Reverse(w.0));
-    for (c, sli, key, id) in worst.iter().take(15) {
-        println!("  {c:5} m  tile {key:?} id {id}  {sli}");
-    }
 }
 
 /// Centre surface height: the profile point nearest the centreline.
