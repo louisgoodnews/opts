@@ -40,6 +40,7 @@ pub mod rng;
 pub mod signals;
 pub mod source;
 pub mod traits;
+pub mod weather;
 
 pub use agent::{
     Agent, AgentId, Blinker, DriverCommand, StopPoint, TrafficEvent, TrafficStats, TrafficWorld,
