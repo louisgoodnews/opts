@@ -128,8 +128,8 @@ fn mirrors_glass_bloom() -> Vec<D> {
         ),
         d(
             CUSTOM_KEYS[9],
-            K::Bool,
-            "false",
+            K::Enum(BLOOM_LEVELS),
+            "off",
             110,
             "set-bloom",
             "set-bloom-desc",

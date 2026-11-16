@@ -22,7 +22,7 @@ fn automatic_shows_the_governors_values_disabled_and_custom_unlocks_them() {
         app.world().get::<Disabled>(up).is_some(),
         "automatic: the custom controls are disabled"
     );
-    let bloom = by_id(&mut app, "settings/graphics/graphics.bloom/switch").expect("bloom");
+    let bloom = by_id(&mut app, "settings/graphics/graphics.bloom/option-natural").expect("bloom");
     assert!(app.world().get::<Disabled>(bloom).is_some());
     assert!(
         by_id(&mut app, "settings/graphics/graphics.bloom/reset").is_none(),

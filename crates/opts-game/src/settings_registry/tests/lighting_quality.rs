@@ -2,7 +2,7 @@
 
 use super::*;
 use opts_bevy::light_quality::{
-    ladder_preset, GovernorState, LightMode, LightQuality, LightQualityInput, Shafts,
+    ladder_preset, BloomLevel, GovernorState, LightMode, LightQuality, LightQualityInput, Shafts,
 };
 
 fn app() -> App {

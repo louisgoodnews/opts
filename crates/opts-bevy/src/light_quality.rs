@@ -59,8 +59,8 @@ pub struct LightQuality {
     pub mirror_every: u8,
     /// Sky-cubemap reflections on glass.
     pub glass_reflections: bool,
-    /// Bloom.
-    pub bloom: bool,
+    /// Bloom strength on the main camera.
+    pub bloom: BloomLevel,
 }
 
 impl Default for LightQuality {

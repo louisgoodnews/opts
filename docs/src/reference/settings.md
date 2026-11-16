@@ -39,7 +39,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `graphics.mirror_count` | Mirrors | whole number 0 to 2 | `2` | at once | available | How many mirror pictures are rendered per update, 0 to 2. Every mirror in view shows a live picture; when more mirrors are in view they take turns. Each picture renders the scene again. 0 shows the vehicle's fixed mirror picture. |
 | `graphics.mirror_rate` | Mirror update rate | `1`, `2`, `4` | `2` | at once | available | How often the mirror pictures are updated: every frame, every 2nd or every 4th frame. Less often is cheaper. |
 | `graphics.glass_reflections` | Sky in glass | on / off | `true` | at once | available | Windows and other glass reflect the sky. |
-| `graphics.bloom` | Bloom | on / off | `false` | at once | available | A soft glow around very bright lights. |
+| `graphics.bloom` | Bloom | `off`, `low`, `natural`, `high` | `off` | at once | available | A soft glow around very bright lights. |
 | `graphics.light_governor_target_fps` | Governor target frame rate | whole number 30 to 240 | `60` | at once | available | The frame rate the automatic lighting quality tries to keep. Without vsync it is the deadline; with vsync the deadline is your display's refresh interval, or this rate if that is lower. Frames that miss it by a wide margin make the quality step down; with no missed frames for a while it steps up again. |
 
 ## Audio

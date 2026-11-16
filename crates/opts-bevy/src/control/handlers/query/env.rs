@@ -44,7 +44,7 @@ pub(super) fn light_quality_json(q: &crate::light_quality::LightQuality) -> Valu
             "mirror_count": q.mirror_count,
             "mirror_every": q.mirror_every,
             "glass_reflections": q.glass_reflections,
-            "bloom": q.bloom,
+            "bloom": q.bloom.name(),
         },
     })
 }

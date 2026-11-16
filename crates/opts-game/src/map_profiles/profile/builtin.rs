@@ -28,7 +28,7 @@ pub fn presets() -> Vec<MapProfile> {
                 ("graphics.mirror_count", "1"),
                 ("graphics.mirror_rate", "4"),
                 ("graphics.glass_reflections", "false"),
-                ("graphics.bloom", "false"),
+                ("graphics.bloom", "off"),
                 ("graphics.weather_precipitation", "low"),
                 ("graphics.weather_wet_ground", "false"),
                 ("texture_filtering", "4"),

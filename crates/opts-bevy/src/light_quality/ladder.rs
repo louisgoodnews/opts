@@ -44,7 +44,7 @@ pub fn ladder_preset(level: u8) -> LightQuality {
         mirror_count: if level <= 3 { 2 } else { 1 },
         mirror_every: if level <= 3 { 2 } else { 4 },
         glass_reflections: true,
-        bloom: false,
+        bloom: BloomLevel::Off,
     }
 }
 
