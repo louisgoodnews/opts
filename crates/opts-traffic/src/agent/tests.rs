@@ -25,6 +25,8 @@ mod lane_change;
 
 mod geometry;
 
+mod weather;
+
 #[test]
 fn same_seed_same_run() {
     let run = || {

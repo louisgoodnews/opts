@@ -30,10 +30,11 @@ impl TrafficWorld {
     /// instead of in it.
     pub(crate) fn speed_cap(&self, i: usize) -> (f64, f64) {
         let a = &self.agents[i];
-        let b = a.params.comfort_decel.max(0.1);
+        let drv = self.driver(&a.params);
+        let b = drv.comfort_decel.max(0.1);
         let v = a.speed;
         let reach = v * v / (2.0 * b) + SPEED_LOOK_EXTRA_M;
-        let own = self.lane_cap(&a.params, a.lane);
+        let own = self.lane_cap(&drv, a.lane);
         let mut cap = own;
         let mut brake = if v > own {
             -(v - own) / SPEED_TAU_S
@@ -48,7 +49,7 @@ impl TrafficWorld {
             if d > reach {
                 break;
             }
-            let v_lim = self.lane_cap(&a.params, p);
+            let v_lim = self.lane_cap(&drv, p);
             cap = cap.min((v_lim * v_lim + 2.0 * b * d).sqrt());
             if v > v_lim {
                 let need = (v * v - v_lim * v_lim) / (2.0 * (d - SPEED_MARGIN_M).max(0.5));

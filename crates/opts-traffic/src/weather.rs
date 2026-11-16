@@ -19,14 +19,15 @@ pub const MAX_FOG_HEADWAY_FACTOR: f64 = 3.0;
 pub const LOW_VISIBILITY_M: f64 = 100.0;
 
 /// The driver's parameters on a road with grip factor `grip` (`1.0`: dry asphalt). Speed,
-/// accelerations, decelerations and the curve limit scale with the grip (the top speed with its
-/// square root, since the speed the driver holds falls less than the braking), and the time
-/// headway grows with `1 / √grip`.
+/// accelerations, decelerations and the curve limit scale with the grip (the top speed and the
+/// lane-limit factor with its square root, since the speed the driver holds falls less than the
+/// braking), and the time headway grows with `1 / √grip`.
 #[must_use]
 pub fn grip_adjusted(params: &IdmParams, grip: f64) -> IdmParams {
     let g = grip.clamp(MIN_GRIP, 1.0);
     IdmParams {
         desired_speed: params.desired_speed * g.sqrt(),
+        speed_factor: params.speed_factor * g.sqrt(),
         max_accel: params.max_accel * g,
         comfort_decel: params.comfort_decel * g,
         max_decel: params.max_decel * g,
@@ -59,6 +60,25 @@ pub fn weather_adjusted(params: &IdmParams, grip: f64, visibility_m: f64) -> Idm
 #[must_use]
 pub fn is_low_visibility(visibility_m: f64) -> bool {
     visibility_m < LOW_VISIBILITY_M
+}
+
+/// The weather every driver of a world sees: the grip factor of the road (`1.0`: dry asphalt)
+/// and the fog visibility (m, `f64::INFINITY` in clear air).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WeatherState {
+    /// Grip factor of the road (`1.0`: dry asphalt).
+    pub grip: f64,
+    /// Visibility in metres (`f64::INFINITY` in clear air).
+    pub visibility_m: f64,
+}
+
+impl Default for WeatherState {
+    fn default() -> Self {
+        Self {
+            grip: 1.0,
+            visibility_m: f64::INFINITY,
+        }
+    }
 }
 
 #[cfg(test)]

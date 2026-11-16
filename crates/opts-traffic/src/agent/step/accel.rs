@@ -33,8 +33,9 @@ impl TrafficWorld {
                 }
             }
             let (cap, brake) = self.speed_cap(i);
-            let acc = a.params.acceleration(a.speed, cap, ahead).min(brake);
-            accels.push(acc.max(-a.params.max_decel));
+            let p = self.driver(&a.params);
+            let acc = p.acceleration(a.speed, cap, ahead).min(brake);
+            accels.push(acc.max(-p.max_decel));
         }
         (accels, blocked)
     }
