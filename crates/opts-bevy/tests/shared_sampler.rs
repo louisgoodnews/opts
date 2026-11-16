@@ -2,7 +2,10 @@
 //! fall back to Bevy's nearest-filter defaults).
 
 const LOADER_SOURCES: [(&str, &str); 3] = [
-    ("model.rs", include_str!("../src/model.rs")),
+    (
+        "model/texture_load.rs",
+        include_str!("../src/model/texture_load.rs"),
+    ),
     (
         "hot_reload/cache.rs",
         include_str!("../src/hot_reload/cache.rs"),

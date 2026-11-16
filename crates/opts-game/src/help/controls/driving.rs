@@ -2,7 +2,7 @@
 
 use bevy::prelude::KeyCode;
 
-use super::table::{bind, rebindable, RAIL, RAIL_CONTROLS, SIM};
+use super::table::{bind, rebindable, RAIL_CONTROLS, RAIL_TRACK, SIM};
 use super::Group;
 use crate::shell::keys;
 
@@ -66,7 +66,7 @@ pub(super) const RAIL_GROUP: Group = (
             "G",
             &[KeyCode::KeyG],
             keys::HELP_KEY_RAIL_SWITCH,
-            RAIL,
+            RAIL_TRACK,
         ),
         rebindable(
             &[
@@ -77,7 +77,7 @@ pub(super) const RAIL_GROUP: Group = (
             "← ↑ →",
             &[KeyCode::ArrowLeft, KeyCode::ArrowUp, KeyCode::ArrowRight],
             keys::HELP_KEY_TRAM,
-            RAIL,
+            RAIL_TRACK,
         ),
     ],
 );

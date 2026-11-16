@@ -40,18 +40,18 @@ pub(super) const fn rebindable(
     }
 }
 
-pub(super) const SIM: &str = "crates/opts-bevy/src/vehicle_sim.rs";
-pub(super) const RAIL: &str = "crates/opts-game/src/in_game/omsi_world/rail.rs";
+pub(super) const SIM: &str = "crates/opts-bevy/src/vehicle_sim/input.rs";
+pub(super) const RAIL_TRACK: &str = "crates/opts-game/src/in_game/omsi_world/rail/player_track.rs";
 pub(super) const RAIL_CONTROLS: &str = "crates/opts-bevy/src/rail_controls.rs";
 pub(super) const CAMERA: &str = "crates/opts-bevy/src/camera/input.rs";
 pub(super) const VIRTUAL_MIRRORS: &str = "crates/opts-bevy/src/mirrors/virtual_view.rs";
 pub(super) const EGO: &str = "crates/opts-bevy/src/camera/mode/ego.rs";
-pub(super) const PAUSE: &str = "crates/opts-gui/src/actions.rs";
-pub(super) const SIM_PAUSE: &str = "crates/opts-game/src/in_game/mod.rs";
+pub(super) const PAUSE: &str = "crates/opts-game/src/pause/input.rs";
+pub(super) const SIM_PAUSE: &str = "crates/opts-game/src/in_game/pause_toggle.rs";
 pub(super) const HELP: &str = "crates/opts-game/src/help/mod.rs";
 pub(super) const THEME: &str = "crates/opts-game/src/shell/footer.rs";
-pub(super) const DEV: &str = "crates/opts-game/src/in_game/omsi_world/overlay.rs";
-pub(super) const MINIMAP: &str = "crates/opts-game/src/hud/minimap/mod.rs";
+pub(super) const DEV: &str = "crates/opts-game/src/in_game/omsi_world/overlay/panel.rs";
+pub(super) const MINIMAP: &str = "crates/opts-game/src/hud/minimap/input.rs";
 pub(super) const FULLMAP: &str = "crates/opts-game/src/hud/fullmap/open.rs";
 pub(super) const DOOR_CAMERA: &str = "crates/opts-bevy/src/door_camera.rs";
 pub(super) const SESSION: &str = "crates/opts-game/src/session_vehicles/mod.rs";
