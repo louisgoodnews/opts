@@ -20,7 +20,9 @@ fn add_world_systems(app: &mut App) {
     // M-0115: zone entities follow the resident tiles; runs without a world too, to drop them.
     app.add_systems(
         Update,
-        omsi_world::sync_tile_zones.after(omsi_world::stream_world_tiles),
+        omsi_world::sync_tile_zones
+            .after(omsi_world::stream_world_tiles)
+            .run_if(resource_exists::<opts_bevy::spatial_zones::ZoneRegistry>),
     );
 }
 

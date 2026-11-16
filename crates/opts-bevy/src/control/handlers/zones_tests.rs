@@ -46,9 +46,10 @@ fn handler_reports_the_subject_when_it_has_a_sample() {
     let zones = [tunnel(7)];
     world.spawn(zones[0]);
     let mut m = ZoneMembership::new(2.0, 2.0);
-    let p = Vec2::new(50.0, 4.0);
-    step(&mut m, p, &zones);
-    step(&mut m, p, &zones);
+    // A subject enters a zone only after it has moved the enter distance, so walk in.
+    for x in [46.0, 49.0, 52.0, 55.0] {
+        step(&mut m, Vec2::new(x, 4.0), &zones);
+    }
     world.spawn((ZoneSubject, m));
     let v = answer(&mut world, &json!({})).expect("answer");
     assert_eq!(v["subject"]["inside"], true);
