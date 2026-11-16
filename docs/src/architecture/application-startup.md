@@ -23,7 +23,7 @@ The execution flow from binary launch to active game loop execution proceeds thr
 sequenceDiagram
     autonumber
     actor User as User / Shell
-    participant Main as src/main.rs
+    participant Main as opts_game::run (src/entry.rs)
     participant CLI as opts_cli::CliArgs
     participant Log as opts_logging
     participant App as opts_game::build_app()
