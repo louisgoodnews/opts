@@ -94,7 +94,7 @@ fn insert_startup_resources(app: &mut App, args: &CliArgs) {
 /// Constructs and configures a complete Bevy [`App`] ready for execution.
 ///
 /// This function separates application construction from running, allowing both
-/// interactive execution in `main.rs` and headless testing in integration test harnesses.
+/// interactive execution in `entry.rs` (`run`) and headless testing in integration test harnesses.
 pub fn build_app(args: CliArgs) -> App {
     let mut app = App::new();
 

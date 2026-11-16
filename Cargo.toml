@@ -13,10 +13,7 @@ name = "opts"
 path = "src/main.rs"
 
 [dependencies]
-opts-cli = { path = "crates/opts-cli", default-features = false }
 opts-game = { path = "crates/opts-game" }
-opts-logging = { path = "crates/opts-logging" }
-tracing = { workspace = true }
 
 [workspace]
 resolver = "2"
