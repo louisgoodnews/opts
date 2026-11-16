@@ -70,4 +70,3 @@ crates/opts-hardware/src/platform/linux.rs 172  # grandfathered: extract 31 inli
 crates/opts-hardware/tests/redaction.rs 165  # grandfathered: oversized test or example file, split by concern
 crates/opts-l10n/src/check.rs 157  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-l10n/src/fluent/plural.rs 155  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-sim/examples/vehicle_scripts.rs 158  # grandfathered: oversized test or example file, split by concern
