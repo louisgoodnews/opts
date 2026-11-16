@@ -146,17 +146,9 @@ crates/opts-game/src/formation/store/tests.rs 157  # grandfathered: oversized te
 crates/opts-game/src/hardware/mod.rs 174  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/help/vehicle_controls.rs 164  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/home/mod.rs 277  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/hud/build/cluster.rs 196  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/hud/fullmap/tests.rs 190  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/hud/layout.rs 180  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/hud/minimap/mod.rs 193  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/hud/mod.rs 201  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/hud/profile.rs 153  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/hud/protocol.rs 211  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/hud/protocol/maps_and_doors.rs 159  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/hud/tests/alerts.rs 172  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/hud/tests/details.rs 178  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/hud/viewpoint/systems.rs 187  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/hud/virtual_mirrors.rs 169  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/formation_menu/state.rs 174  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/in_game/hot_reload.rs 165  # grandfathered: split production file by concern to <= 150 LOC
@@ -208,13 +200,7 @@ crates/opts-game/src/map_profiles/profile.rs 239  # grandfathered: split product
 crates/opts-game/src/map_profiles/service.rs 210  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/map_profiles/static_profile.rs 216  # grandfathered: extract 44 test lines to tests.rs, then split by concern to <= 150 LOC
 crates/opts-game/src/map_profiles/store.rs 206  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/new_game_screen/history.rs 195  # grandfathered: extract 95 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-game/src/new_game_screen/planner/tests.rs 202  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/new_game_screen/screen/chrome.rs 187  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/new_game_screen/setvars_discovery/tests.rs 163  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/new_game_screen/step_load.rs 202  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/new_game_screen/systems/list_events.rs 202  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/new_game_screen/thumbnails/slots.rs 177  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/passengers/rig.rs 164  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/passengers/system.rs 229  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/pause/environment.rs 244  # grandfathered: split production file by concern to <= 150 LOC
@@ -229,23 +215,11 @@ crates/opts-game/src/session_vehicles/mod.rs 183  # grandfathered: split product
 crates/opts-game/src/session_vehicles/tests.rs 279  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/settings.rs 228  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/settings/persistence.rs 204  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/settings_registry/builtin/interface.rs 189  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/settings_registry/builtin/interface/gameplay.rs 193  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/settings_registry/descriptor.rs 204  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/settings_registry/lighting.rs 210  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/settings_registry/protocol_batch.rs 171  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/settings_screen/scan_status/tests.rs 189  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/settings_screen/tests.rs 207  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/settings_screen/tests/changes.rs 187  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/settings_screen/tests/content.rs 166  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/settings_screen/tests/controls.rs 177  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/settings_theme.rs 234  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/shell/banner.rs 194  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/shell/dialog.rs 181  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/shell/frame/rail.rs 163  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/shell/keys.rs 208  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/shell/mod.rs 168  # grandfathered: extract 53 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-game/src/shell/notify.rs 173  # grandfathered: extract 88 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-game/src/shell/registry.rs 164  # grandfathered: extract 32 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-game/src/start_options.rs 188  # grandfathered: extract 44 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-game/src/ui_typography.rs 171  # grandfathered: split production file by concern to <= 150 LOC
