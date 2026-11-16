@@ -2,6 +2,9 @@
 
 use super::*;
 
+mod forces;
+mod mass;
+
 impl VehicleSimulation {
     /// Pose `(origin, heading)` of the unit ahead of consist unit `k`: the chassis for `k = 0`.
     fn leader_pose_of(&self, k: usize) -> (DVec2, f64) {
@@ -71,141 +74,11 @@ impl VehicleSimulation {
         self.head_body = None;
     }
 
-    /// Mass of the whole consist the longitudinal dynamics act on (kg): the chassis' own mass
-    /// plus the following units' (design D2, `Σ mᵢ`) plus the people on board.
-    #[must_use]
-    pub fn consist_mass_kg(&self) -> f32 {
-        self.chassis.total_mass_kg
-            + self.trailer_loads.iter().map(|u| u.mass_kg).sum::<f32>()
-            + self.passenger_mass_kg
-            + self.following_passenger_mass_kg()
-    }
-
-    /// Mass of the people on board the following units (kg); entries without a unit do not
-    /// count.
-    #[must_use]
-    pub fn following_passenger_mass_kg(&self) -> f32 {
-        self.unit_passenger_mass_kg
-            .iter()
-            .take(self.trailer_loads.len())
-            .map(|m| m.max(0.0))
-            .sum()
-    }
-
-    /// Sets the mass of the people on board each unit of the consist (kg; entry 0 is the head,
-    /// entry `k` the following unit `k - 1`). Units beyond the list carry nobody, entries beyond
-    /// the units are dropped (M-0124).
-    pub fn set_unit_passenger_masses(&mut self, masses_kg: &[f32]) {
-        self.passenger_mass_kg = masses_kg.first().copied().unwrap_or(0.0);
-        let followers = self.trailer_loads.len();
-        let rest = masses_kg.get(1..).unwrap_or(&[]);
-        self.unit_passenger_mass_kg = (0..followers)
-            .map(|k| rest.get(k).copied().unwrap_or(0.0))
-            .collect();
-    }
-
-    /// Gives the body the weight of the people on board, shared over the head's axles as a load
-    /// in the middle of the axle span would be (M-0124). A no-op while it is unchanged.
-    pub(super) fn sync_payload(&mut self) {
-        let Some(body) = self.body.as_mut() else {
-            return;
-        };
-        let weight = self.passenger_mass_kg.max(0.0) * 9.81;
-        if (body.payload_n() - weight).abs() < 1.0 {
-            return;
-        }
-        let positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
-        let (Some(lo), Some(hi)) = (
-            positions.iter().copied().reduce(f32::min),
-            positions.iter().copied().reduce(f32::max),
-        ) else {
-            return;
-        };
-        // `compute_static_loads` takes at least 100 kg: share a reference mass, scale to the load.
-        let reference = 1_000.0;
-        let model =
-            super::suspension::SuspensionModel::new(self.suspension.cg_height_m, 0.5 * (lo + hi));
-        let loads: Vec<f32> = model
-            .compute_static_loads(&positions, reference)
-            .into_iter()
-            .map(|l| l * (weight / (reference * 9.81)))
-            .collect();
-        body.set_payload(&loads);
-    }
-
-    /// Mass of the head unit alone (kg): the chassis' own mass.
-    #[must_use]
-    pub fn head_mass_kg(&self) -> f32 {
-        self.chassis.total_mass_kg
-    }
-
-    /// Mass standing on driven axles over all units (kg), `friction_loads_n().0 / g`.
-    #[must_use]
-    pub fn driven_mass_kg(&self) -> f32 {
-        self.friction_loads_n().0 / GRAVITY
-    }
-
     /// Declares the loads of the following units *without* poses (headless dynamics, tests):
     /// replaces `trailer_loads`. A consist with poses gets its loads through
     /// [`VehicleSimulation::attach_trailer`], which keeps `consist` and `trailer_loads` in step.
     pub fn set_trailers(&mut self, units: Vec<UnitLoad>) {
         self.trailer_loads = units;
-    }
-
-    /// Summed static normal force `(driven axles, braked axles)` over all units (N): what the
-    /// tyres can transmit is `ROAD_FRICTION` times these. The chassis' axles carry its own mass
-    /// (distributed by the suspension model), each following unit its own; every axle brakes.
-    #[must_use]
-    pub fn friction_loads_n(&self) -> (f32, f32) {
-        let positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
-        let head = self
-            .suspension
-            .compute_static_loads(&positions, self.chassis.total_mass_kg);
-        // A head without any axle marked driven counts as driven on all of them (the file does
-        // not say; do not take away all traction).
-        let head_has_driven = self.axles.iter().any(|a| a.config.is_driven);
-        let mut axles: Vec<(UnitAxle, f32)> = self
-            .axles
-            .iter()
-            .zip(head)
-            .map(|(a, n)| {
-                (
-                    UnitAxle {
-                        longitudinal_m: a.config.longitudinal_m,
-                        is_driven: a.config.is_driven || !head_has_driven,
-                        rated_n: a.config.max_force_n,
-                    },
-                    n,
-                )
-            })
-            .collect();
-        for unit in &self.trailer_loads {
-            axles.extend(unit.axles.iter().copied().zip(unit.axle_loads_n()));
-        }
-        driven_and_braked_load_n(&axles)
-    }
-
-    /// Force the joint of consist unit `k` carries (N, report only; nothing is fed back): the
-    /// mass behind it accelerated with the chassis plus its rolling resistance,
-    /// `F = Σ_{j≥k} mⱼ (a + sign(v)·Crr·g)`. `None` for a missing unit.
-    #[must_use]
-    pub fn hitch_force_n(&self, k: usize) -> Option<f32> {
-        let rest = self
-            .trailer_loads
-            .get(k..)
-            .filter(|rest| !rest.is_empty())?;
-        let people: f32 = self
-            .unit_passenger_mass_kg
-            .iter()
-            .skip(k)
-            .take(rest.len())
-            .map(|m| m.max(0.0))
-            .sum();
-        let behind: f32 = rest.iter().map(|u| u.mass_kg).sum::<f32>() + people;
-        let v = self.chassis.forward_speed_m_s();
-        let direction = if v.abs() > 0.01 { v.signum() } else { 0.0 };
-        let a = self.chassis.local_acceleration.y;
-        Some(behind * (a + direction * drivetrain::ROLLING_RESISTANCE_COEFF * GRAVITY))
     }
 
     /// Yaw angle of consist unit `k` against the unit ahead in radians (positive = turned
