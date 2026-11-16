@@ -28,6 +28,7 @@ pub mod control_tiles;
 pub mod control_trace;
 pub mod control_ui;
 pub mod drive_history;
+pub mod entry;
 pub mod first_run;
 pub mod formation;
 pub mod hardware;
@@ -76,6 +77,7 @@ pub use plugin::OptsGamePlugin;
 use bevy::prelude::*;
 
 pub use app::{build_app, AppArgs};
+pub use entry::run;
 pub use app_state::AppState;
 pub use in_game::{InGamePlugin, MenuCamera};
 pub use new_game_screen::{NewGameMenuPlugin, NewGameSetup};
