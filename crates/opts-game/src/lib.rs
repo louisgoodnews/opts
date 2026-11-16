@@ -13,6 +13,7 @@ pub mod control_audio;
 pub mod control_configs;
 pub mod control_drive;
 pub mod control_dynamics;
+pub mod control_fuel;
 pub mod control_environment;
 pub mod control_hotspots;
 pub mod control_loading;

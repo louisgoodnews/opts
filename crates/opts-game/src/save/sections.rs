@@ -7,6 +7,7 @@
 //! | `time` | start date and clock, play time, the environment's date, time, map date, weather and rate | map date and start before; the clock when everything is back |
 //! | `weather` | the session's weather preset | before |
 //! | `session_vehicles` | the registry with every vehicle's live state | vehicles rebuilt by the spawner |
+//! | `fuel` | the fuel or battery charge of each session vehicle (M-0123) | when all vehicles exist |
 //! | `active_vehicle` | which vehicle the driver is in | when all vehicles exist |
 //! | `camera` | mode, sub-camera, free camera pose, orbit and look offsets | when all vehicles exist |
 //! | `counters` | driven distance, session duration and top speed | when all vehicles exist |
@@ -23,9 +24,11 @@ use super::registry::{SaveAppExt, SaveSection, Stage};
 use super::sections_runtime as runtime;
 use crate::session_vehicles::{SAVE_SECTION, SAVE_SECTION_VERSION};
 
+mod fuel;
 mod session;
 mod vehicles;
 
+use fuel::{fuel_apply, fuel_capture};
 use session::{session_capture, session_check, session_prepare, weather_capture, weather_prepare};
 use vehicles::{
     active_apply, active_capture, vehicles_apply, vehicles_capture, vehicles_check,
@@ -124,6 +127,16 @@ pub fn register(app: &mut App) {
         migrate: Some(vehicles_migrate),
         check: Some(vehicles_check),
         about: "the session's vehicles with pose, velocity, inputs, gear and script variables",
+        ..base
+    })
+    .register_save_section(SaveSection {
+        id: "fuel",
+        version: 1,
+        stage: Stage::Vehicles,
+        order: 10,
+        capture: fuel_capture,
+        apply: Some(fuel_apply),
+        about: "fuel or battery charge of each session vehicle",
         ..base
     })
     .register_save_section(SaveSection {
