@@ -49,6 +49,35 @@ impl ZoneRegistry {
         entities.len()
     }
 
+    /// Brings the registry in line with the resident tiles: drops the tiles that are no longer
+    /// resident and builds the resident ones it does not hold yet, with the zones `zones_of`
+    /// gives for them. Returns `(built, dropped)` tile counts.
+    pub fn reconcile(
+        &mut self,
+        commands: &mut Commands,
+        resident: &[TileKey],
+        zones_of: impl Fn(TileKey) -> Vec<SpatialZone>,
+    ) -> (usize, usize) {
+        let stale: Vec<TileKey> = self
+            .tiles
+            .keys()
+            .filter(|key| !resident.contains(key))
+            .copied()
+            .collect();
+        for key in &stale {
+            self.drop_tile(commands, *key);
+        }
+        let fresh: Vec<TileKey> = resident
+            .iter()
+            .filter(|key| !self.tiles.contains_key(key))
+            .copied()
+            .collect();
+        for key in &fresh {
+            self.build_tile(commands, *key, &zones_of(*key));
+        }
+        (fresh.len(), stale.len())
+    }
+
     /// Whether `tile` has zones built.
     #[must_use]
     pub fn contains(&self, tile: TileKey) -> bool {

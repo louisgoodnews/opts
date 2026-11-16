@@ -89,7 +89,9 @@ pub use rail::{
 pub use reload::{ReloadPlan, TileUnload};
 pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehicleRequest};
 pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
-pub use tile::{advance_tile_loading, load_next_tile, stream_world_tiles, TileRoot};
+pub use tile::{
+    advance_tile_loading, load_next_tile, stream_world_tiles, sync_tile_zones, TileRoot,
+};
 pub use traffic::{
     active_runs, configure_traffic, load_traffic_variants, move_traffic, plan_scheduled, run_phase,
     spawn_traffic, step_ai_scripts, update_ai_variables, update_traffic_graph, RunPhase, RunRef,

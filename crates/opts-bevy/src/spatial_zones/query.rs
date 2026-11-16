@@ -1,5 +1,5 @@
 //! The JSON payload of the `zones.query` control method: the zones of the loaded tiles and the
-//! membership of the subject. The handler that serves it is not registered yet (M-0115 open item).
+//! membership of the subject. The handler that serves it is `control::handlers::zones`.
 
 use bevy::math::Vec2;
 use serde_json::{json, Value};

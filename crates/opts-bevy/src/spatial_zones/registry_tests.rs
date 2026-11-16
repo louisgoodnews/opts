@@ -83,3 +83,34 @@ fn load_unload_cycles_leave_the_entity_count_stable() {
     assert_eq!(with_registry, 0);
     assert_eq!(app.world_mut().iter_entities().count(), baseline);
 }
+
+#[test]
+fn reconcile_builds_resident_tiles_and_drops_unloaded_ones() {
+    let mut app = App::new();
+    with_commands(&mut app, |_, r| r.tile_count());
+    let baseline = app.world_mut().iter_entities().count();
+    let zones_of = |_: TileKey| vec![zone(1), zone(2)];
+    let a: TileKey = (0, 0);
+    let b: TileKey = (1, 0);
+    let built = with_commands(&mut app, |c, r| r.reconcile(c, &[a, b], zones_of));
+    assert_eq!(built, (2, 0));
+    assert_eq!(zone_entities(&mut app), 4);
+    let dropped = with_commands(&mut app, |c, r| r.reconcile(c, &[a], zones_of));
+    assert_eq!(dropped, (0, 1));
+    assert_eq!(zone_entities(&mut app), 2);
+    let tiles = with_commands(&mut app, |_, r| (r.tile_count(), r.contains(b)));
+    assert_eq!(tiles, (1, false));
+    with_commands(&mut app, |c, r| r.reconcile(c, &[], zones_of));
+    assert_eq!(zone_entities(&mut app), 0);
+    assert_eq!(app.world_mut().iter_entities().count(), baseline);
+}
+
+#[test]
+fn reconcile_with_unchanged_residents_is_a_no_op() {
+    let mut app = App::new();
+    let zones_of = |_: TileKey| vec![zone(1)];
+    with_commands(&mut app, |c, r| r.reconcile(c, &[(5, 5)], zones_of));
+    let again = with_commands(&mut app, |c, r| r.reconcile(c, &[(5, 5)], zones_of));
+    assert_eq!(again, (0, 0));
+    assert_eq!(zone_entities(&mut app), 1);
+}

@@ -13,6 +13,7 @@ mod scene_and_trace;
 mod session_saves;
 mod settings_and_l10n;
 mod sim_and_scene;
+mod spatial_zones;
 mod traffic;
 mod ui_screen;
 mod vehicle_and_spawn;
@@ -35,6 +36,7 @@ const PARTS: &[&[CommandSpec]] = &[
     session_saves::PART,
     vehicle_dynamics::PART,
     vehicle_surface::PART,
+    spatial_zones::PART,
     traffic::PART,
     config_audio::PART,
 ];

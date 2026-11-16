@@ -41,6 +41,8 @@ const REFILL: usize = 4;
 
 mod streaming;
 pub use streaming::{advance_tile_loading, load_next_tile, stream_world_tiles, TileRoot};
+mod zones;
+pub use zones::sync_tile_zones;
 
 /// Where an object is put.
 #[derive(Debug, Clone, Copy)]

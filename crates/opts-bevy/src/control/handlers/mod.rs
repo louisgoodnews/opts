@@ -10,6 +10,7 @@ pub mod scene;
 pub mod sim;
 pub mod ui;
 pub mod ui_ext;
+pub mod zones;
 
 use super::state::ControlRegistry;
 
@@ -25,5 +26,6 @@ pub fn register_all(registry: &mut ControlRegistry) {
     ui::register(registry);
     ui_ext::register(registry);
     batch::register(registry);
+    zones::register(registry);
     crate::capture::register(registry);
 }

@@ -134,6 +134,7 @@ impl Plugin for OptsAssetPlugin {
             .add_plugins(crate::light_cones::LightConePlugin)
             .add_plugins(crate::light_rooms::LightRoomsPlugin)
             .add_plugins(crate::camera::OptsCameraPlugin)
-            .add_plugins(crate::audio::OptsAudioPlugin);
+            .add_plugins(crate::audio::OptsAudioPlugin)
+            .add_plugins(crate::spatial_zones::SpatialZonesPlugin);
     }
 }

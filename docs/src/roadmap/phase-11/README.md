@@ -12,7 +12,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page
 2. [M-0119 — Dev Agent Roadmap Review Process](M-0119.md) — 📝 Proposed; delivers prompt P-1010, a CONTRIBUTING note and the workflow reference.
 3. [M-0109 — Quality-of-Life Suite](M-0109.md) — ✅ Done 2026-10-29; one checklist: door camera, smooth driver view (after the jitter fix), UI scale presets, UI font settings.
 4. [M-0108 — Full-Size In-Game Map and In-Game Map Switching](M-0108.md) — ✅ Done 2026-10-19; F6 map (the whole map), Alt menu *Change map*.
-5. [M-0115 — Tunnel Detection and Spatial Zones](M-0115.md) — 🚧 In progress, partial; zone model, tracker and consumer contract done; research, detector and overlay open.
+5. [M-0115 — Tunnel Detection and Spatial Zones](M-0115.md) — 🚧 In progress, partial; zone model, tracker, per-tile registry, sampler and `zones.query` done; census, detector and overlay open.
 6. [M-0110 — Setvar Runtime Editor and CTI Value Types](M-0110.md) — ✅ Done 2026-10-30: Alt menu *Setvars* page with group headings and respawn marker; extends M-0078 and M-0077.
 7. [M-0111 — AI Traffic Depth](M-0111.md) — 🟡 In progress; audit done, lane-change and traffic-light phases under way; overtaking, barriers and before/after measurement open.
 8. [M-0114 — Hybrid Tile and Object Streaming](M-0114.md) — 🟡 In progress; policy implemented; baselines, comparison runs and overlay pending.

@@ -3,6 +3,27 @@
 use super::*;
 
 /// The systems that run every frame of a drive.
+/// Systems that follow the streamed world: the Chrono map-date switch and the zone entities.
+fn add_world_systems(app: &mut App) {
+    // Chrono: the live switch on a new map date, and its progress for the pause page.
+    app.add_systems(
+        Update,
+        (
+            omsi_world::apply_map_date_changes
+                .after(opts_bevy::EnvironmentSet)
+                .before(omsi_world::stream_world_tiles),
+            omsi_world::track_chrono_rebuild.after(omsi_world::stream_world_tiles),
+        )
+            .run_if(in_state(AppState::InGame)),
+    );
+
+    // M-0115: zone entities follow the resident tiles; runs without a world too, to drop them.
+    app.add_systems(
+        Update,
+        omsi_world::sync_tile_zones.after(omsi_world::stream_world_tiles),
+    );
+}
+
 pub(super) fn add_frame_systems(app: &mut App) {
     // HUD instrument colours: day/night palette by the sky's time of day
     app.add_systems(
@@ -16,17 +37,7 @@ pub(super) fn add_frame_systems(app: &mut App) {
             .run_if(in_state(AppState::InGame)),
     );
 
-    // Chrono: the live switch on a new map date, and its progress for the pause page.
-    app.add_systems(
-        Update,
-        (
-            omsi_world::apply_map_date_changes
-                .after(opts_bevy::EnvironmentSet)
-                .before(omsi_world::stream_world_tiles),
-            omsi_world::track_chrono_rebuild.after(omsi_world::stream_world_tiles),
-        )
-            .run_if(in_state(AppState::InGame)),
-    );
+    add_world_systems(app);
 
     #[cfg(feature = "stream-trace")]
     app.add_systems(Last, stream_trace_frame);
