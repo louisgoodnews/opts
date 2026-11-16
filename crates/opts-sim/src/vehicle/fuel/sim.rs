@@ -7,7 +7,9 @@ impl crate::vehicle::VehicleSimulation {
     /// Gives the vehicle a fuel model of `kind` and `capacity` when it has none, and sets its
     /// consumption `mode`. A model that exists keeps its content (saves restore it).
     pub fn ensure_fuel(&mut self, kind: FuelKind, capacity: f32, mode: FuelMode) {
-        self.fuel.get_or_insert_with(|| FuelState::full(kind, capacity)).mode = mode;
+        self.fuel
+            .get_or_insert_with(|| FuelState::full(kind, capacity))
+            .mode = mode;
     }
 
     /// The refuel action: fills the store. Returns `false` for a vehicle without a model.
