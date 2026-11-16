@@ -162,5 +162,7 @@ pub fn uses_texture_alpha(mode: Option<u32>) -> bool {
     matches!(mode, Some(m) if m != 0)
 }
 
+pub mod pbr_audit;
+
 #[cfg(test)]
 mod tests;
