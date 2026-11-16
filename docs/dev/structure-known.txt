@@ -394,7 +394,6 @@ crates/opts-omsi/src/formats/chrono/entry/tests.rs 182  # grandfathered: oversiz
 crates/opts-omsi/src/formats/chrono/overlay/tests.rs 161  # grandfathered: oversized test or example file, split by concern
 crates/opts-omsi/src/formats/humans/mod.rs 169  # grandfathered: extract 46 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-omsi/src/formats/map/lists.rs 169  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-omsi/src/formats/map/tile.rs 196  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/map/tile/tests.rs 174  # grandfathered: oversized test or example file, split by concern
 crates/opts-omsi/src/formats/o3d/audit.rs 180  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/o3d/chunks.rs 176  # grandfathered: extract 51 inline test lines to tests.rs (then <= 150 LOC)
@@ -403,18 +402,15 @@ crates/opts-omsi/src/formats/o3d/material.rs 186  # grandfathered: extract 88 in
 crates/opts-omsi/src/formats/o3d/mod.rs 188  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/o3d/vertex.rs 176  # grandfathered: extract 90 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-omsi/src/formats/scenery/light.rs 193  # grandfathered: extract 91 inline test lines to tests.rs (then <= 150 LOC)
-crates/opts-omsi/src/formats/scenery/sco/object.rs 202  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/scenery/sco/parse.rs 158  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/scenery/sco/traffic.rs 192  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/ticketpack/mod.rs 153  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/timetable/tests.rs 170  # grandfathered: oversized test or example file, split by concern
-crates/opts-omsi/src/formats/trains/tests/validation.rs 196  # grandfathered: oversized test or example file, split by concern
 crates/opts-omsi/src/formats/trains/validate.rs 184  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/vehicles/ai_profile.rs 165  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/vehicles/bus.rs 189  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/vehicles/cabin.rs 183  # grandfathered: extract 58 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-omsi/src/formats/vehicles/model/anim.rs 186  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-omsi/src/formats/vehicles/paths.rs 200  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/weather/folder.rs 187  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-omsi/src/formats/x/binary.rs 166  # grandfathered: extract 42 inline test lines to tests.rs (then <= 150 LOC)
 crates/opts-omsi/src/formats/x/lexer.rs 170  # grandfathered: extract 40 inline test lines to tests.rs (then <= 150 LOC)
