@@ -5,7 +5,7 @@ use super::*;
 /// The map's colours from an instrument palette.
 #[must_use]
 pub fn colors_of(palette: &InstrumentPalette) -> MapColors {
-    let u8s = |c: Color| Srgba::from(c).to_u8_array();
+    let u8s = |c: Color| c.to_srgba().to_u8_array();
     let mut ground = u8s(palette.panel);
     ground[3] = 255;
     MapColors {

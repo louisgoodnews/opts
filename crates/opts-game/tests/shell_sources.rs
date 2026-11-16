@@ -92,6 +92,9 @@ fn no_literal_colours_in_the_shell_modules() {
     ];
     let mut bad = Vec::new();
     for (name, text) in sources() {
+        if name.contains("/tests/") {
+            continue; // test fixtures build input colours; nothing is rendered from them
+        }
         for (n, line) in code(&text).lines().enumerate() {
             if needles.iter().any(|p| line.contains(p)) {
                 bad.push(format!("{name}:{}: {}", n + 1, line.trim()));

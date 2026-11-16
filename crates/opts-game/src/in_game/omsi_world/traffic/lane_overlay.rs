@@ -101,15 +101,18 @@ pub fn update_layer_status(
 
 /// Registers the lane overlay systems (called from the in-game plugin).
 pub(crate) fn add_lane_overlay(app: &mut App) {
-    app.init_resource::<LaneOverlay>().add_systems(
-        Update,
-        (
-            toggle_lane_overlay,
-            lanes::draw_lanes,
-            update_layer_status,
-            agent_id_overlay::update_agent_ids,
+    app.init_resource::<LaneOverlay>()
+        .add_systems(
+            Update,
+            (toggle_lane_overlay, update_layer_status)
+                .run_if(in_state(AppState::InGame))
+                .run_if(opts_bevy::reporting::not_modal_active),
         )
-            .run_if(in_state(AppState::InGame))
-            .run_if(opts_bevy::reporting::not_modal_active),
-    );
+        .add_systems(
+            Update,
+            (lanes::draw_lanes, agent_id_overlay::update_agent_ids)
+                .run_if(in_state(AppState::InGame))
+                .run_if(opts_bevy::reporting::not_modal_active)
+                .run_if(resource_exists::<bevy::gizmos::config::GizmoConfigStore>),
+        );
 }

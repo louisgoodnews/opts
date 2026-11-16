@@ -71,7 +71,10 @@ impl Plugin for ReflectionsResearchPlugin {
         app.insert_resource(sw.clone())
             .insert_resource(Wetness(wet0.clamp(0.0, 1.0)))
             .init_resource::<WetState>()
-            .add_systems(Update, apply_wet);
+            .add_systems(
+                Update,
+                apply_wet.run_if(resource_exists::<Assets<crate::ground_material::GroundMaterial>>),
+            );
         if !sw.any() && std::env::var_os("OPTS_REFLECT_STATS").is_none() {
             return;
         }
