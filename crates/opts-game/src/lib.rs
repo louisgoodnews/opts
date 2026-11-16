@@ -77,8 +77,8 @@ pub use plugin::OptsGamePlugin;
 use bevy::prelude::*;
 
 pub use app::{build_app, AppArgs};
-pub use entry::run;
 pub use app_state::AppState;
+pub use entry::run;
 pub use in_game::{InGamePlugin, MenuCamera};
 pub use new_game_screen::{NewGameMenuPlugin, NewGameSetup};
 pub use opts_cli::CliArgs;
