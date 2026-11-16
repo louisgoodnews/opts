@@ -35,6 +35,12 @@ use super::pack::PackMeta;
 mod export;
 pub use export::{export_ftl, export_json, import_to_ftl, ExportOptions};
 
+mod structured;
+mod entries;
+
+use structured::*;
+pub use entries::*;
+
 /// The value of `format` in JSON files.
 pub const FORMAT: &str = "opts-l10n/1";
 
@@ -69,188 +75,12 @@ pub fn line_of_json_key(text: &str, key: &str, from: usize) -> Option<usize> {
     None
 }
 
-fn push_diag(table: &mut Table, line: usize, key: Option<&str>, message: impl Into<String>) {
-    table.diagnostics.push(fluent::Diagnostic {
-        line,
-        key: key.map(str::to_string),
-        message: message.into(),
-    });
-}
 
-fn plural_pattern(
-    var: &str,
-    forms: &serde_json::Map<String, serde_json::Value>,
-) -> Result<Pattern, String> {
-    let mut variants = Vec::new();
-    let mut filled = 0;
-    let mut empty = Vec::new();
-    for (k, v) in forms {
-        let t = v
-            .as_str()
-            .ok_or_else(|| format!("form `{k}` must be text"))?
-            .trim();
-        if t.is_empty() {
-            empty.push(k.clone());
-            continue;
-        }
-        filled += 1;
-        let p = fluent::parse_value(t).map_err(|(m, _)| format!("form `{k}`: {m}"))?;
-        variants.push((k.clone(), p));
-    }
-    if filled == 0 {
-        return Err(String::new());
-    }
-    if !empty.is_empty() {
-        return Err(format!(
-            "form(s) {} are empty while others are filled; fill all forms or none (a form the language does not use may repeat another)",
-            empty.iter().map(|e| format!("`{e}`")).collect::<Vec<_>>().join(", ")
-        ));
-    }
-    let default = variants
-        .iter()
-        .position(|(k, _)| k == "other")
-        .ok_or("forms need an `other` entry (the form used when no other matches)")?;
-    Ok(vec![Part::Select {
-        var: var.to_string(),
-        variants,
-        default,
-    }])
-}
 
-fn extract_structured<'a>(
-    top: &'a serde_json::Map<String, serde_json::Value>,
-    text: &str,
-    out: &mut Imported,
-) -> Option<(&'a serde_json::Map<String, serde_json::Value>, usize)> {
-    let structured = top.contains_key("messages") || top.contains_key("format");
-    if !structured {
-        return Some((top, 0));
-    }
-    out.language = top
-        .get("language")
-        .and_then(|v| v.as_str())
-        .map(str::to_string);
-    out.base_version = top
-        .get("base_version")
-        .and_then(|v| v.as_str())
-        .map(str::to_string);
-    out.pack = top.get("pack").cloned();
-    if let Some(f) = top.get("format").and_then(|v| v.as_str()) {
-        if f != FORMAT {
-            push_diag(
-                &mut out.table,
-                line_of_json_key(text, "format", 0).unwrap_or(1),
-                None,
-                format!("unknown format `{f}`; this version reads `{FORMAT}`"),
-            );
-        }
-    }
-    let Some(m) = top.get("messages").and_then(|m| m.as_object()) else {
-        push_diag(
-            &mut out.table,
-            1,
-            None,
-            "`messages` must be an object of key to entry",
-        );
-        return None;
-    };
-    Some((m, text.find("\"messages\"").unwrap_or(0)))
-}
 
-fn parse_object_entry(
-    o: &serde_json::Map<String, serde_json::Value>,
-    key: &str,
-    out: &mut Imported,
-) -> Result<Option<Pattern>, String> {
-    if let Some(f) = o.get("file").and_then(|v| v.as_str()) {
-        out.file_of.insert(key.to_string(), f.to_string());
-    }
-    if let Some(forms) = o.get("forms").and_then(|f| f.as_object()) {
-        match o.get("variable").and_then(|v| v.as_str()) {
-            Some(var) => match plural_pattern(var.trim_start_matches('$'), forms) {
-                Ok(p) => Ok(Some(p)),
-                Err(m) if m.is_empty() => Ok(None),
-                Err(m) => Err(m),
-            },
-            None => Err("`forms` needs a `variable` (the name of the number, without `$`)".into()),
-        }
-    } else {
-        match o.get("text") {
-            Some(serde_json::Value::String(t)) => text_pattern(t),
-            None => Ok(None),
-            Some(_) => Err("`text` must be text".into()),
-        }
-    }
-}
 
-fn parse_entry_value(
-    entry: &serde_json::Value,
-    key: &str,
-    out: &mut Imported,
-) -> Result<Option<Pattern>, String> {
-    match entry {
-        serde_json::Value::String(t) => text_pattern(t),
-        serde_json::Value::Object(o) => parse_object_entry(o, key, out),
-        _ => Err("an entry must be text or an object with `text` or `forms`".into()),
-    }
-}
 
-/// Reads an interchange file. Problems are recorded in the table's diagnostics, never returned
-/// as failures; entries that cannot be read are left out.
-#[must_use]
-pub fn parse_json(text: &str) -> Imported {
-    let mut out = Imported::default();
-    let value: serde_json::Value = match serde_json::from_str(text) {
-        Ok(v) => v,
-        Err(e) => {
-            push_diag(
-                &mut out.table,
-                e.line().max(1),
-                None,
-                format!("not valid JSON ({e}); fix the syntax (commas between entries, double quotes around text, `\\n` for line breaks)"),
-            );
-            return out;
-        }
-    };
-    let Some(top) = value.as_object() else {
-        push_diag(
-            &mut out.table,
-            1,
-            None,
-            "the top level must be an object `{ ... }`",
-        );
-        return out;
-    };
-    let Some((messages, base)) = extract_structured(top, text, &mut out) else {
-        return out;
-    };
-    for (key, entry) in messages {
-        let line = line_of_json_key(text, key, base).unwrap_or(1);
-        match parse_entry_value(entry, key, &mut out) {
-            Ok(Some(p)) => {
-                out.table.messages.insert(key.to_string(), p);
-                out.table.order.push(key.to_string());
-                out.table.lines.insert(key.to_string(), line);
-            }
-            Ok(None) => {}
-            Err(m) => push_diag(&mut out.table, line, Some(key), m),
-        }
-    }
-    out.table.errors = out
-        .table
-        .diagnostics
-        .iter()
-        .map(ToString::to_string)
-        .collect();
-    out
-}
 
-fn text_pattern(t: &str) -> Result<Option<Pattern>, String> {
-    if t.trim().is_empty() {
-        return Ok(None);
-    }
-    fluent::parse_value(t).map(Some).map_err(|(m, _)| m)
-}
 
 #[cfg(test)]
 mod tests;
