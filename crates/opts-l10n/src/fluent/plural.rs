@@ -22,126 +22,13 @@ pub fn plural_categories(lang: &str) -> &'static [&'static str] {
     }
 }
 
-fn romance_plural(lang: &str, n: f64, i: u64, whole: bool, exactly_one: bool) -> &'static str {
-    match lang {
-        "fr" => {
-            if i <= 1 && whole || n > 0.0 && n < 2.0 && !whole {
-                "one"
-            } else if whole && i != 0 && i.is_multiple_of(1_000_000) {
-                "many"
-            } else {
-                "other"
-            }
-        }
-        "pt" => {
-            if (0.0..2.0).contains(&n) && (whole || n > 0.0) {
-                "one"
-            } else if whole && i != 0 && i.is_multiple_of(1_000_000) {
-                "many"
-            } else {
-                "other"
-            }
-        }
-        _ => {
-            if exactly_one {
-                "one"
-            } else if whole && i != 0 && i.is_multiple_of(1_000_000) {
-                "many"
-            } else {
-                "other"
-            }
-        }
-    }
-}
+mod other;
+mod romance;
+mod slavic;
 
-fn slavic_plural(lang: &str, i: u64, m10: u64, m100: u64) -> &'static str {
-    match lang {
-        "ru" | "uk" | "be" => {
-            if m10 == 1 && m100 != 11 {
-                "one"
-            } else if (2..=4).contains(&m10) && !(12..=14).contains(&m100) {
-                "few"
-            } else {
-                "many"
-            }
-        }
-        "hr" | "sr" | "bs" | "sh" => {
-            if m10 == 1 && m100 != 11 {
-                "one"
-            } else if (2..=4).contains(&m10) && !(12..=14).contains(&m100) {
-                "few"
-            } else {
-                "other"
-            }
-        }
-        "pl" => {
-            if i == 1 {
-                "one"
-            } else if (2..=4).contains(&m10) && !(12..=14).contains(&m100) {
-                "few"
-            } else {
-                "many"
-            }
-        }
-        "cs" | "sk" => match i {
-            1 => "one",
-            2..=4 => "few",
-            _ => "other",
-        },
-        _ => match m100 {
-            1 => "one",
-            2 => "two",
-            3 | 4 => "few",
-            _ => "other",
-        },
-    }
-}
-
-fn other_family_plural(lang: &str, i: u64, m10: u64, m100: u64) -> &'static str {
-    match lang {
-        "lt" => {
-            if m10 == 1 && !(11..=19).contains(&m100) {
-                "one"
-            } else if (2..=9).contains(&m10) && !(11..=19).contains(&m100) {
-                "few"
-            } else {
-                "other"
-            }
-        }
-        "ar" => match i {
-            0 => "zero",
-            1 => "one",
-            2 => "two",
-            _ if (3..=10).contains(&m100) => "few",
-            _ if (11..=99).contains(&m100) => "many",
-            _ => "other",
-        },
-        "he" => match i {
-            1 => "one",
-            2 => "two",
-            _ => "other",
-        },
-        "ro" | "mo" => {
-            if i == 1 {
-                "one"
-            } else if i == 0 || (1..=19).contains(&m100) {
-                "few"
-            } else {
-                "other"
-            }
-        }
-        "lv" => {
-            if i == 0 || (11..=19).contains(&m100) {
-                "zero"
-            } else if m10 == 1 && m100 != 11 {
-                "one"
-            } else {
-                "other"
-            }
-        }
-        _ => "other",
-    }
-}
+use other::other_family_plural;
+use romance::romance_plural;
+use slavic::slavic_plural;
 
 /// The plural category of `n` in `lang` (CLDR cardinal rules for whole numbers of the languages
 /// in [`plural_categories`]; other languages: `one` for exactly 1, else `other`).
