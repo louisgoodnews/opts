@@ -143,6 +143,18 @@ Some definitions carry a **fifth line** after a blank line (for example `4.5` in
 
 > A `[3d]` of `0 0 0 10` is used for ground-contact sounds (wet road) that should not appear to come from a point.
 
+**Fall-off with distance.** What the four values do to the loudness is only partly known. The evidence:
+
+| Fact | Evidence | Status |
+| :--- | :--- | :--- |
+| Line 4 is the distance where attenuation starts. | The field description above; the samples on this page use 0.7, 3 and 10. | Stated by the page; not measured |
+| Lines 1 to 3 are the position; the sound is heard from there. | The `.bus` coordinate convention. | Position only; no fall-off evidence |
+| The distance at which the sound is silent is not in any file of the corpus. | The page has no maximum field; the fifth value (T-SND-003, Q-SND-002) is the only extra number and its meaning is open. | Unknown |
+| The shape of the curve (linear, inverse-distance, logarithmic or a hard edge) is not documented in the corpus. | No OMSI document was consulted; the installed files hold no curve. | Unknown |
+| OPTS plays an inverse-distance law from the range to a maximum of six times the range (at least 40 m beyond it), faded over the last 15 %. | `crates/opts-game/src/scenery_sound.rs` and `player_sound.rs` (`Distance::new`). | Implementation choice, not a finding |
+
+Open: see [Q-AU01](../../../architecture/audio-system.md#11-open). The question to settle it is an OMSI experiment: a looping `[sound]` of known range, heard from several distances on a flat map with no other sources, its loudness read off the mixer or a recording, and the same with the fifth value changed.
+
 ### `[volcurve]` — Volume Curve
 
 | Line | Type | Description |
@@ -179,6 +191,16 @@ Interpolation is piecewise-linear. Outside the first/last point, the end value i
 | `StreetCond` | Road state (0 dry, 1 wet, 2 …). |
 | `PrecipRate` | Rain intensity. |
 | `Wheel_RotationSpeed_n_L` / `_R` | Wheel speed per axle (`n` = axle index). |
+
+**Where a volume curve's value comes from** (2026-11-14, read from the OPTS engine; ❓ the OMSI side is not observed):
+
+| Reader | Names it evaluates |
+| :--- | :--- |
+| Player's vehicle (`player_sound.rs`) and the scheduled bus whose scripts run (M-0112) | Every name the vehicle's own script engine knows: the vehicle's script variables by name, case-insensitive (`engine_n`, `throttle`, `door_N`, `doorSpeed_N`, brake variables), and the simulator's variables that the scripts read. A `varnamelist` declares them; see [varnamelist](varnamelist.md). |
+| AI traffic (`vehicle_sound.rs`) | Only the variables the traffic model states (`velocity`, `throttle`, `brake`, `engine_n`, the wheel speeds, `streetcond`, …). A curve over any other script variable makes its definition unplayable there; see [audio-system](../../../architecture/audio-system.md) §9. |
+| Scenery objects (`scenery_sound.rs`) | The session clock and the weather only: `Time`, `Day`, `Month`, `Year`, `DayOfYear`, `SunAlt`, `Temperature`, `PrecipRate`, `PrecipType`. The scenery object's own script variables are **not read yet** (M-0139, open). |
+
+A name that no reader knows reads `0`. The script engine returns `0` for a variable the scripts never touched, which matches the error-handling rule above. The value `-1` is not a variable but the age of the voice in seconds (Q-SND-005).
 
 ### `[pnt]` — Curve Point
 
@@ -278,6 +300,7 @@ ev_haltebremse_sw_an
 | Q-SND-003 | Semantics of `[conditionSingle]` params 2–3. | Open. |
 | Q-SND-004 | Numeric meaning of `[viewpoint]` values. | Read from the file names (2026-10-20, 1,190 + 96 + 13,033 + 404 + 2 + 11,163 + 38 definitions with values 0 to 6): **2 and 6 are interior sounds, 5 and 1 exterior sounds**; 0, 3, 4 and none play everywhere. The first reading had 2 and 5 swapped (from the rain and compressor guess) and played the exterior engine loops inside the cab. 3 and 4 are unknown ❓. |
 | Q-SND-005 | The volume curve variable `-1` (630 curves: the starter loops `OM_906hLA_E2_on_*` with points 0.1→0, 0.3→1; the retarder loops with 0→0, 1→1). | Read as the time the sound has been playing (seconds), a fade-in; OPTS does this for the player's vehicle ❓. |
+| Q-SND-006 | Which script variables a volume curve may read in OMSI, and whether a curve over a variable the vehicle never declares reads 0 or disables the sound. | Open. OPTS reads 0 (see the table above). |
 
 ---
 
