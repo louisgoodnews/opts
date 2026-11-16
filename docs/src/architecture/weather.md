@@ -220,3 +220,22 @@ of it, plus the old built-in ids. `sim.get` in a drive adds `weather_presets` (t
 * **Intensity settings.** `graphics.rain_intensity` and `graphics.snow_intensity` (0–200 %, default 100) scale what the weather says: the rate of the drops or flakes drawn (`WeatherEffects::scaled`), and the surfaces (`surface_state_for`): rain scales the wetness and the puddle coverage, snow the cover of ground and roads. 0 keeps that kind of precipitation away, 200 is a downpour. They apply at once.
 * **Puddles on splines.** The terrain has its puddles in the ground shader; roads, pavements and parking bays are plain materials, which only got darker and smoother. `in_game/weather/puddles.rs` lays flat, irregular water patches on them around the camera: up to 80 at full coverage and wetness, placed where the ground index has a road, level across the patch (±2 cm), 4–55 m from the camera, removed beyond 75 m. The water has roughness 0.03, reflectance 0.9 (the sky cube is reflected at grazing angles) and a pale sky-grey glow that follows the cloud brightness, so it is grey under cloud and bluer in clear weather.
 * **Scenery objects** get the wet look of their materials from `reflections::Wetness` (darker, smoother) as before; puddles lie on the ground they stand on, not on the objects.
+
+## 10. Grip, visibility and AI (M-0117, spec)
+
+Implemented in `opts-sim::surface_grip` (friction model, no engine dependency), `opts-sim` `VehicleSimulation::road_friction` (the tyre friction limit; the dry value is `ROAD_FRICTION` = 0.85) and `opts-traffic::weather` (AI driver parameters). The host has to write the coefficient into the vehicle each step; that wiring and the HUD are not done yet (see the milestone).
+
+**Coefficients** (tyre-road friction, μ; each ±0.1 ❓, from handbook ranges for tyres on asphalt, wet asphalt, packed snow and ice; to be checked against a source before a release):
+
+| Surface | μ | Stopping distance from 50 km/h against dry |
+| :--- | :--- | :--- |
+| Dry asphalt (`ROAD_FRICTION`) | 0.85 | 1.0 |
+| Wet asphalt (`MU_WET`) | 0.55 | about 1.55 |
+| Packed snow (`MU_SNOW`) | 0.25 | about 3.4 |
+| Ice (`MU_ICE`) | 0.10 | about 8.5 |
+
+**Mapping:** `wet = lerp(dry, wet, wetness)`, `snowy = lerp(wet, snow, snow_cover)`, `μ = lerp(snowy, ice, ice)`, each input clamped to 0..=1. Wetness is the `Wetness` resource, snow cover from `[groundwet]`. The grip follows the target at most 0.5 per second (`approach`), so a change from dry to snow takes 1.2 s.
+
+**AI** (`opts-traffic::weather`): with grip factor `g = μ / 0.85` (clamped to ≥ 0.05): desired speed × √g, `max_accel`, `comfort_decel`, `max_decel` and `lat_accel` × g, time headway ÷ √g. Fog: headway × `clamp(300 m / visibility, 1, 3)`. Below 100 m visibility the HUD hint is due (`is_low_visibility`).
+
+**Deviations from the milestone text:** the grip factor for AI is a scaling rule, not a fitted model; the braking test uses the sim's brake limit, not measured data.

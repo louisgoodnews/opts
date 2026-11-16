@@ -84,6 +84,15 @@ pub struct VehicleSimulation {
     /// consist (M-0124). Saves from before it have none and load as empty units.
     #[serde(default)]
     pub unit_passenger_mass_kg: Vec<f32>,
+    /// Friction coefficient between the tyres and the road now (M-0117): the dry road by
+    /// default, set by the host from [`crate::surface_grip`] as the weather changes. It limits the
+    /// tyre forces of traction and braking. Saves from before it load with the dry value.
+    #[serde(default = "default_road_friction")]
+    pub road_friction: f32,
+}
+
+fn default_road_friction() -> f32 {
+    super::ROAD_FRICTION
 }
 
 impl Default for VehicleSimulation {

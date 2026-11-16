@@ -7,6 +7,7 @@ mod stepping;
 mod ground;
 mod loads;
 mod roll;
+mod grip;
 
 /// A bus with one unit behind it: hitch 1.5 m behind the chassis origin, front coupling
 /// 1 m ahead of the unit's origin, rear axle 6 m behind that.
