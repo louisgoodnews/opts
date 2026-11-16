@@ -13,6 +13,13 @@ impl VehicleSimulation {
             + self.following_passenger_mass_kg()
     }
 
+    /// Mass of all people on board the consist (kg), head and following units; the steering
+    /// authority falls with it (M-0124).
+    #[must_use]
+    pub fn passenger_load_kg(&self) -> f32 {
+        self.passenger_mass_kg.max(0.0) + self.following_passenger_mass_kg()
+    }
+
     /// Mass of the people on board the following units (kg); entries without a unit do not
     /// count.
     #[must_use]
