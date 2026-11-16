@@ -3,6 +3,12 @@
 //! centre tile, and a changed setting is followed while the drive runs.
 
 mod common;
+#[path = "tile_loading_tests/budget.rs"]
+mod budget;
+#[path = "tile_loading_tests/modes.rs"]
+mod modes;
+#[path = "tile_loading_tests/protocol.rs"]
+mod protocol;
 
 use bevy::prelude::*;
 use opts_bevy::control::channel::dispatch;
@@ -123,66 +129,6 @@ fn move_camera_to(app: &mut App, tile: (i32, i32)) {
     }
 }
 
-#[test]
-fn load_all_has_every_tile_resident_when_the_drive_starts_and_keeps_them() {
-    let (mut app, root) = drive("tl-all", &[("gameplay.load_all_tiles", "true")]);
-    assert_eq!(mode(&app), TileMode::All);
-    assert_eq!(resident(&app), TILES.to_vec(), "all five after loading");
-    move_camera_to(&mut app, (4, 0));
-    run(&mut app, 30);
-    assert_eq!(resident(&app), TILES.to_vec(), "none is unloaded far away");
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-#[test]
-fn a_radius_keeps_only_the_tiles_around_the_centre_tile() {
-    let (mut app, root) = drive("tl-radius", &[("gameplay.tile_radius", "1")]);
-    assert_eq!(mode(&app), TileMode::Radius(1));
-    assert_eq!(resident(&app), vec![(0, 0), (1, 0)], "3 x 3 around (0, 0)");
-    // Far along the row: the tiles near the start leave (beyond radius + 1), those within the
-    // radius of the new centre tile come in.
-    move_camera_to(&mut app, (4, 0));
-    run(&mut app, 30);
-    assert_eq!(resident(&app), vec![(3, 0), (4, 0)]);
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-#[test]
-fn a_larger_radius_loads_more_tiles_while_loading() {
-    let (app, root) = drive("tl-larger", &[("gameplay.tile_radius", "3")]);
-    assert_eq!(mode(&app), TileMode::Radius(3));
-    assert_eq!(resident(&app), vec![(0, 0), (1, 0), (2, 0), (3, 0)]);
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-#[test]
-fn automatic_without_a_hardware_profile_is_the_old_3x3() {
-    let (app, root) = drive("tl-auto", &[]);
-    assert_eq!(mode(&app), TileMode::Radius(1));
-    assert_eq!(resident(&app), vec![(0, 0), (1, 0)]);
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-#[test]
-fn a_changed_setting_is_followed_during_the_drive() {
-    let (mut app, root) = drive("tl-change", &[("gameplay.tile_radius", "1")]);
-    assert_eq!(resident(&app), vec![(0, 0), (1, 0)]);
-    // Switching *load all* on loads the rest, one tile per frame.
-    app.world_mut()
-        .resource_mut::<GameSettings>()
-        .set_raw("gameplay.load_all_tiles", "true");
-    run(&mut app, 30);
-    assert_eq!(mode(&app), TileMode::All);
-    assert_eq!(resident(&app), TILES.to_vec());
-    // And off again: the camera is at the start, so the tiles beyond radius + 1 leave.
-    app.world_mut()
-        .resource_mut::<GameSettings>()
-        .set_raw("gameplay.load_all_tiles", "false");
-    run(&mut app, 30);
-    assert_eq!(mode(&app), TileMode::Radius(1));
-    assert_eq!(resident(&app), vec![(0, 0), (1, 0), (2, 0)]);
-    let _ = std::fs::remove_dir_all(&root);
-}
 
 /// `scene.tiles` through the dispatcher, with only that method registered.
 fn scene_tiles(app: &mut App) -> Value {
@@ -197,159 +143,10 @@ fn scene_tiles(app: &mut App) -> Value {
     }
 }
 
-#[test]
-fn scene_tiles_reports_the_mode_the_radius_and_the_resident_tiles() {
-    let (mut app, root) = drive("tl-proto", &[("gameplay.tile_radius", "2")]);
-    let r = scene_tiles(&mut app);
-    assert_eq!(r["mode"], "radius");
-    assert_eq!(r["radius"], 2);
-    assert_eq!(r["automatic"], false);
-    assert_eq!(r["setting_radius"], 2);
-    assert_eq!(r["load_all"], false);
-    assert_eq!(r["map_radius"], 4);
-    assert_eq!(r["listed"], 5);
-    assert_eq!(r["listed_missing"], 0);
-    assert_eq!(r["start_tile"], json!([0, 0]));
-    assert_eq!(r["resident_count"], 3);
-    assert_eq!(r["resident"], json!([[0, 0], [1, 0], [2, 0]]));
-    assert_eq!(r["queued"], 0);
-
-    app.world_mut()
-        .resource_mut::<GameSettings>()
-        .set_raw("gameplay.load_all_tiles", "true");
-    run(&mut app, 30);
-    let r = scene_tiles(&mut app);
-    assert_eq!(r["mode"], "all");
-    assert_eq!(r["radius"], Value::Null);
-    assert_eq!(r["load_all"], true);
-    assert_eq!(r["resident_count"], 5);
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-#[test]
-fn scene_tiles_says_not_ready_outside_a_drive() {
-    let mut app = App::new();
-    let mut registry = ControlRegistry::default();
-    opts_game::control_tiles::register(&mut registry);
-    app.insert_resource(registry);
-    match dispatch(app.world_mut(), "scene.tiles", &json!({})) {
-        Outcome::Done(Err(e)) => assert_eq!(e.code, opts_cli::protocol::code::NOT_READY),
-        _ => panic!("expected NOT_READY"),
-    }
-}
-
-// --- M-0089: the tile build is resumable and bounded per frame ---------------------------------
-
 fn set_budget(app: &mut App, budget: std::time::Duration) {
     app.world_mut().resource_mut::<WorldLoadJob>().stream_budget = budget;
 }
 
 fn building(app: &App) -> Option<(i32, i32)> {
     app.world().resource::<WorldLoadJob>().building_tile()
-}
-
-fn tile_roots(app: &mut App, key: (i32, i32)) -> usize {
-    app.world_mut()
-        .query::<&opts_game::in_game::omsi_world::TileRoot>()
-        .iter(app.world())
-        .filter(|r| r.0 == key)
-        .count()
-}
-
-#[test]
-fn a_tile_is_built_over_several_frames_under_a_small_budget_and_ends_complete() {
-    let (mut app, root) = drive("tl-budget", &[("gameplay.tile_radius", "1")]);
-    assert_eq!(resident(&app), vec![(0, 0), (1, 0)]);
-    // A budget that lets one step run per frame (the first step of a frame is always allowed).
-    set_budget(&mut app, std::time::Duration::from_nanos(1));
-    move_camera_to(&mut app, (4, 0));
-    let mut frames_building = 0;
-    let mut seen_resident_while_building = false;
-    for _ in 0..80 {
-        app.update();
-        if let Some(key) = building(&app) {
-            frames_building += 1;
-            seen_resident_while_building |= resident(&app).contains(&key);
-        }
-    }
-    assert!(
-        frames_building >= 6,
-        "a tile took only {frames_building} frames"
-    );
-    assert!(
-        seen_resident_while_building,
-        "a tile in progress is resident with its root"
-    );
-    assert_eq!(building(&app), None, "everything is built");
-    assert_eq!(resident(&app), vec![(3, 0), (4, 0)]);
-    assert_eq!(tile_roots(&mut app, (3, 0)), 1);
-    assert_eq!(tile_roots(&mut app, (4, 0)), 1);
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-#[test]
-fn a_small_budget_builds_the_same_tiles_as_one_tile_per_frame() {
-    let go = |tag: &str, budget: std::time::Duration| {
-        let (mut app, root) = drive(tag, &[("gameplay.tile_radius", "2")]);
-        set_budget(&mut app, budget);
-        move_camera_to(&mut app, (3, 0));
-        run(&mut app, 200);
-        let tiles = resident(&app);
-        let _ = std::fs::remove_dir_all(&root);
-        tiles
-    };
-    let old = go("tl-same-old", std::time::Duration::ZERO);
-    let new = go("tl-same-new", std::time::Duration::from_nanos(1));
-    assert_eq!(old, new);
-    // Radius 2 around tile 3 wants 1 to 4 (5 does not exist); tile 0 is 3 away, inside the
-    // hysteresis of 1, so it stays.
-    assert_eq!(new, vec![(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)]);
-}
-
-#[test]
-fn a_tile_that_is_unloaded_while_it_builds_leaves_nothing_behind() {
-    let (mut app, root) = drive("tl-cancel", &[("gameplay.tile_radius", "1")]);
-    set_budget(&mut app, std::time::Duration::from_nanos(1));
-    move_camera_to(&mut app, (4, 0));
-    // Run until a tile is in progress, then take the camera back before it is finished.
-    let mut key = None;
-    for _ in 0..30 {
-        app.update();
-        key = building(&app);
-        if key.is_some() {
-            break;
-        }
-    }
-    let key = key.expect("a tile is being built");
-    assert_eq!(tile_roots(&mut app, key), 1);
-    move_camera_to(&mut app, (0, 0));
-    run(&mut app, 80);
-    assert_eq!(building(&app), None);
-    assert_eq!(
-        tile_roots(&mut app, key),
-        0,
-        "the half-built tile was despawned"
-    );
-    assert_eq!(resident(&app), vec![(0, 0), (1, 0)]);
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-#[test]
-fn scene_tiles_reports_the_tile_in_progress_and_the_budget() {
-    let (mut app, root) = drive("tl-report", &[("gameplay.tile_radius", "1")]);
-    let r = scene_tiles(&mut app);
-    assert_eq!(r["building"], Value::Null);
-    assert_eq!(r["stream_budget_ms"], 8);
-    set_budget(&mut app, std::time::Duration::from_nanos(1));
-    move_camera_to(&mut app, (4, 0));
-    for _ in 0..30 {
-        app.update();
-        if building(&app).is_some() {
-            break;
-        }
-    }
-    let r = scene_tiles(&mut app);
-    assert!(r["building"].is_array(), "{r}");
-    assert_eq!(r["stream_budget_ms"], 0, "below a millisecond");
-    let _ = std::fs::remove_dir_all(&root);
 }
