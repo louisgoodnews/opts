@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`parse.rs`).
 
 use super::*;
+use crate::profile::{Arch, CpuVendor, Environment, GpuBackend, GpuClass, GpuVendor};
 
 #[test]
 fn vendors() {
