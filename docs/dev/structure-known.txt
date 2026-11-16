@@ -6,9 +6,5 @@ crates/opts-game/src/control_environment.rs 157  # grandfathered: extract 70 inl
 crates/opts-game/src/control_profiles.rs 162  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/control_trace/query.rs 151  # grandfathered: split production file by concern to <= 150 LOC
 crates/opts-game/src/help/vehicle_controls.rs 164  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/new_game_screen/setvars_discovery/tests.rs 163  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/passengers/rig.rs 164  # grandfathered: split production file by concern to <= 150 LOC
-crates/opts-game/src/settings_screen/tests/content.rs 166  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/vehicle_keys/tests.rs 166  # grandfathered: oversized test or example file, split by concern
-crates/opts-game/src/vehicle_sound/tests.rs 167  # grandfathered: oversized test or example file, split by concern
 crates/opts-game/src/viewpoints/plugin.rs 156  # grandfathered: split production file by concern to <= 150 LOC
