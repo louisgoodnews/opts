@@ -1,5 +1,9 @@
 //! Footpath lanes sampled from spline profiles and scenery-object paths.
 
+use opts_core::formats::map::MapSplineInstance;
+use opts_core::formats::scenery::sco::ScoPath;
+use opts_core::formats::scenery::{LaneKind, SplineProfile};
+
 mod model;
 mod object;
 mod spline;

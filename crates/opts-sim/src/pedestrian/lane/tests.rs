@@ -2,10 +2,7 @@
 
 use super::*;
 use glam::Vec3;
-use opts_core::formats::map::MapSplineInstance;
-use opts_core::formats::scenery::sco::ScoPath;
-use opts_core::formats::scenery::SplineProfile;
-use opts_core::formats::scenery::{LaneKind, SplinePath};
+use opts_core::formats::scenery::SplinePath;
 
 mod object;
 mod spline;

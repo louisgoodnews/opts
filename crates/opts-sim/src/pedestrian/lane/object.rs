@@ -2,9 +2,9 @@
 
 use super::model::{FootLane, Gate, Travel};
 use super::spline::arc;
+use super::ScoPath;
 use super::PATH_TYPE_PEDESTRIAN;
 use glam::Vec3;
-use opts_core::formats::scenery::sco::ScoPath;
 
 /// Radii of `.sco` `[path]` records at or beyond this magnitude are the straight marker
 /// (`-999.99`); splines arc for every radius, like their mesh.
