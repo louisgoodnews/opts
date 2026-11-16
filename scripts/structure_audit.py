@@ -66,6 +66,7 @@ FN_LIMIT = 80
 FN_TARGET = 40
 REPORT_FILE_FLOOR = 350  # the report table lists only the largest files; the ratchet lists all
 FN_FLOOR = 60
+MODULE_DOC_WINDOW = 10  # a .rs file must hold a //! module doc line in its first 10 lines
 SKIP_DIRS = {"golden", "fixtures", "target", ".git"}
 PUB_ITEM = re.compile(r"^\s*pub\s+(?:async\s+|const\s+|unsafe\s+|extern\s+\"C\"\s+)*(fn|struct|enum|trait|type|const|static|mod)\b")
 FN_NAME = re.compile(r"(?<![A-Za-z0-9_])fn\s+([A-Za-z_][A-Za-z0-9_]*)")
@@ -383,6 +384,11 @@ def collect() -> list[FileInfo]:
     return [i for i in (measure(p) for p in rust_files()) if i]
 
 
+def lacks_module_doc(path: Path) -> bool:
+    head = path.read_text(encoding="utf-8", errors="replace").splitlines()[:MODULE_DOC_WINDOW]
+    return not any(line.lstrip().startswith("//!") for line in head)
+
+
 def crate_table(files: list[FileInfo]) -> list[dict]:
     rows = []
     by_crate: dict[str, list[FileInfo]] = defaultdict(list)
@@ -553,6 +559,13 @@ def cmd_check(files: list[FileInfo]) -> int:
     inline_count = sum(1 for f in files if has_inline_test_violation(f))
     fns_80 = sum(1 for k in fn_now if not k.endswith("::@allow"))
     allows = sum(v for k, v in fn_now.items() if k.endswith("::@allow"))
+    for p in rust_files() + sorted((ROOT / "src").rglob("*.rs")):
+        if lacks_module_doc(p):
+            print(
+                f"FAIL {p.relative_to(ROOT).as_posix()}: no //! module doc in its first {MODULE_DOC_WINDOW} "
+                f"lines (add a one-line //! that says what the module contains)"
+            )
+            bad += 1
     print(
         f"structure: {n_over_limit} files over {FILE_LIMIT} LOC, {inline_count} prod files > {INLINE_TEST_LIMIT} LOC "
         f"with inline tests, {fns_80} functions > {FN_LIMIT} LOC, {allows} signature allows, {bad} regression(s)"

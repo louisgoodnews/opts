@@ -53,8 +53,8 @@ class Fixture(unittest.TestCase):
             + "// M-0150: bundle into SystemParam\n#[allow(clippy::too_many_arguments)]\nfn sys() {}\n\n"
             + "#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() { Some(1).unwrap(); }\n}\n"
         )
-        # a single-file module directory, and a file with no module doc
-        (src / "single/mod.rs").write_text("pub fn only() {}\n")
+        # a single-file module directory, with its module doc
+        (src / "single/mod.rs").write_text("//! Only.\npub fn only() {}\n")
 
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)
@@ -98,7 +98,7 @@ class Fixture(unittest.TestCase):
         }
         self.assertEqual(row["`#[allow]` without a justification comment"], "1")
         self.assertEqual(row["`unwrap()` / `expect(` in library paths"], "1")
-        self.assertEqual(row["module file without a `//!` document (3.8)"], "1")
+        self.assertEqual(row["module file without a `//!` document (3.8)"], "0")
 
     def test_the_ratchet_fails_on_growth_and_new_files_and_passes_on_shrinkage(self):
         known = self.root / "docs/dev/structure-known.txt"
@@ -183,7 +183,7 @@ class Fixture(unittest.TestCase):
         # tests/ and examples/ files are not exempt: over 150 LOC fails unless grandfathered.
         (self.root / "crates/demo/tests").mkdir(parents=True)
         (self.root / "crates/demo/examples").mkdir(parents=True)
-        over = "".join(f"const T{i}: u32 = {i};\n" for i in range(151))
+        over = "//! Big.\n" + "".join(f"const T{i}: u32 = {i};\n" for i in range(151))
         (self.root / "crates/demo/tests/big_it.rs").write_text(over)
         (self.root / "crates/demo/examples/big_ex.rs").write_text(over)
         code, out = run(self.root, "check")
@@ -206,6 +206,18 @@ class Fixture(unittest.TestCase):
         run(self.root, "report", "--date", "2000-01-01", "--out", str(out_md))
         self.assertIn("## 8. Test and example files over 150 lines of code", out_md.read_text())
         self.assertIn("`crates/demo/examples/big_ex.rs`", out_md.read_text())
+
+    def test_every_rust_file_needs_a_module_doc_in_its_first_ten_lines(self):
+        single = self.root / "crates/demo/src/single/mod.rs"
+        marker = "crates/demo/src/single/mod.rs: no //! module doc in its first 10 lines"
+        single.write_text("pub fn only() {}\n")
+        code, out = run(self.root, "check")
+        self.assertEqual(code, 1)
+        self.assertIn(marker, out)
+        single.write_text("\n" * 10 + "//! Too late.\npub fn only() {}\n")
+        self.assertIn(marker, run(self.root, "check")[1])
+        single.write_text("\n" * 9 + "//! Doc on line ten.\npub fn only() {}\n")
+        self.assertNotIn(marker, run(self.root, "check")[1])
 
     def test_show_prints_the_counts_of_the_named_files(self):
         code, out = run(self.root, "show", "crates/demo/src/small.rs")
