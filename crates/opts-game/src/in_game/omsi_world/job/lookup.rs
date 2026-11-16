@@ -17,7 +17,9 @@ pub(in super::super::super) fn front_of(
         .filter(|f| f.is_finite() && (0.5..30.0).contains(f))
 }
 
+mod assets;
 mod files;
+mod placed;
 mod places;
 mod spawn;
 mod tiles;

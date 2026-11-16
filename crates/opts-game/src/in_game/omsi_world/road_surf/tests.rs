@@ -1,5 +1,7 @@
 //! Unit tests for `super` (`road_surf.rs`).
 
+use std::sync::Arc;
+
 use super::*;
 
 fn checker() -> Arc<SurfMap> {

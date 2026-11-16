@@ -5,17 +5,20 @@ use std::collections::HashMap;
 use bevy::math::DVec2;
 use bevy::prelude::*;
 use opts_bevy::bus_stops::BusStopMarker;
-use opts_traffic::{LaneId, LaneKind, StopPoint};
+use opts_traffic::{LaneId, LaneKind};
 
 use super::super::run_schedule::{active_runs, run_phase, RunPhase, RunRef};
 use super::super::{TrafficPool, TrafficSettings, TrafficState};
 use super::path::{graph_leg_speed, leg, place_along, walk_back};
 use super::{ScheduledRequest, ScheduledTraffic, MAX_SCHEDULED};
-use crate::in_game::omsi_world::traffic_variant::SlotState;
 use crate::in_game::omsi_world::WorldLoadJob;
 
 mod candidate;
+mod pick;
+mod route;
 mod spot;
+use pick::pick_slot_for;
+use route::plan_route;
 use spot::{appears_there, run_start, spawn_spot, PlanCtx, StopObject};
 
 /// Seconds before its start that a run gets its vehicle.
@@ -39,104 +42,6 @@ const UPSTREAM_MIN_M: f64 = 40.0;
 /// Dwell limits (s) taken from `Busstops.cfg`.
 const DWELL_MIN_S: f64 = 15.0;
 const DWELL_MAX_S: f64 = 45.0;
-
-/// The route and the stops through everything that is on the loaded map, from where the vehicle
-/// appears: the lanes, the stop points and the planned arrivals.
-fn plan_route(
-    ctx: &PlanCtx,
-    schedule: &opts_core::formats::timetable::ActiveSchedule,
-    (first_stop, offset): (usize, Option<f64>),
-    (spawn_lane, spawn_s, route_from): (LaneId, f64, Vec<LaneId>),
-) -> (Vec<LaneId>, Vec<StopPoint>, Vec<(u32, f64)>) {
-    let (graph, tt) = (ctx.graph, ctx.tt);
-    let mut route = route_from;
-    let mut points = Vec::new();
-    let mut arrivals = Vec::new();
-    let mut prev: Option<(LaneId, f64)> = offset.is_some().then_some((spawn_lane, spawn_s));
-    for (k, st) in schedule
-        .stops
-        .iter()
-        .enumerate()
-        .skip(first_stop + usize::from(offset.is_some()))
-    {
-        let Some(p) = ctx.place(st.station_id) else {
-            break;
-        };
-        if let Some(from) = prev {
-            let Some((lanes, _)) = leg(graph, from, p) else {
-                break;
-            };
-            route.extend(lanes.into_iter().skip(1));
-        }
-        let dwell = tt
-            .stop(st.station_id)
-            .map_or(DWELL_MIN_S, |s| f64::from(s.dwell_s))
-            .clamp(DWELL_MIN_S, DWELL_MAX_S);
-        points.push(StopPoint::new(
-            st.station_id,
-            p.0,
-            p.1,
-            dwell,
-            f64::from(st.departure_s),
-        ));
-        arrivals.push((st.station_id, f64::from(st.arrival_s)));
-        prev = Some(p);
-        let _ = k;
-    }
-    (route, points, arrivals)
-}
-
-/// The vehicle slot of the tour's depot group: one that is ready, chosen by the run. Asks for one
-/// to be parsed when none is ready, and gives the run up when none can be.
-fn pick_slot_for(
-    (sched, pool): (&mut ScheduledTraffic, &mut TrafficPool),
-    tt: &opts_core::formats::timetable::Timetables,
-    (run, schedule): (&RunRef, &opts_core::formats::timetable::ActiveSchedule),
-) -> Option<usize> {
-    let tour = tt.tour(&schedule.line_file, run.tour)?;
-    let Some(choices) = pool
-        .depots
-        .get(&tour.vehicle_group.to_ascii_lowercase())
-        .cloned()
-    else {
-        sched.runs.entry(run.clone()).or_default().tries = 3;
-        return None;
-    };
-    let ready: Vec<(usize, u32)> = choices
-        .iter()
-        .copied()
-        .filter(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Ready(_)))
-        .collect();
-    if ready.is_empty() {
-        // Ask for one to be parsed; the run is tried again next pass.
-        if let Some((slot, _)) = choices
-            .iter()
-            .find(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Idle))
-        {
-            pool.slots[*slot].state = SlotState::Pending;
-        } else if choices
-            .iter()
-            .all(|(slot, _)| matches!(pool.slots[*slot].state, SlotState::Failed))
-        {
-            sched.runs.entry(run.clone()).or_default().tries = 3;
-        }
-        return None;
-    }
-    let total: u32 = ready.iter().map(|(_, n)| n).sum();
-    let mut pick = (run.run as u32 + run.tour as u32 * 7) % total.max(1);
-    let slot = ready
-        .iter()
-        .find(|(_, n)| {
-            if pick < *n {
-                true
-            } else {
-                pick -= n;
-                false
-            }
-        })
-        .map_or(ready[0].0, |(s, _)| *s);
-    Some(slot)
-}
 
 /// The clock, settings and scene queries the planner reads.
 #[derive(bevy::ecs::system::SystemParam)]

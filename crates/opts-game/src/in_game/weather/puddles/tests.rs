@@ -1,5 +1,7 @@
 use super::*;
 
+use std::f32::consts::TAU;
+
 fn state(puddles: f32) -> SurfaceState {
     SurfaceState {
         puddles,
