@@ -6,6 +6,12 @@ use std::path::{Path, PathBuf};
 
 use crate::error::{LogError, LogResult};
 
+mod policy;
+mod sinks;
+
+pub use policy::{AnsiMode, ConsoleVerbosity, LogFormat, RetentionPolicy, RotationPolicy};
+pub use sinks::{ConsoleConfig, FilesConfig};
+
 /// Global logging configuration schema.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LogConfig {
@@ -121,152 +127,5 @@ impl LogConfig {
         }
 
         Ok(())
-    }
-}
-
-/// Options controlling terminal console output.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ConsoleConfig {
-    /// Whether console logging is enabled.
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-
-    /// ANSI color escapes behavior.
-    #[serde(default)]
-    pub ansi: AnsiMode,
-
-    /// Output verbosity level.
-    #[serde(default)]
-    pub verbosity: ConsoleVerbosity,
-}
-
-fn default_true() -> bool {
-    true
-}
-
-impl Default for ConsoleConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            ansi: AnsiMode::Auto,
-            verbosity: ConsoleVerbosity::Standard,
-        }
-    }
-}
-
-/// Options controlling disk file outputs.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FilesConfig {
-    /// Whether file logging is enabled.
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-
-    /// Destination directory for log files.
-    #[serde(default = "default_log_dir")]
-    pub directory: PathBuf,
-
-    /// Rolling file rotation policy.
-    #[serde(default)]
-    pub rotation: RotationPolicy,
-
-    /// Historical log file retention policy.
-    #[serde(default)]
-    pub retention: RetentionPolicy,
-
-    /// Whether to generate per-subsystem log files (`opts-core.log`, etc.).
-    #[serde(default = "default_true")]
-    pub per_subsystem: bool,
-
-    /// Whether file logs should be emitted in JSON format.
-    #[serde(default)]
-    pub json: bool,
-}
-
-fn default_log_dir() -> PathBuf {
-    if let Some(proj_dirs) = directories::ProjectDirs::from("org", "opts", "opts") {
-        proj_dirs.data_local_dir().join("logs")
-    } else {
-        PathBuf::from(".opts-logs")
-    }
-}
-
-impl Default for FilesConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            directory: default_log_dir(),
-            rotation: RotationPolicy::Daily,
-            retention: RetentionPolicy::Days(7),
-            per_subsystem: true,
-            json: false,
-        }
-    }
-}
-
-/// Record formatting style.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum LogFormat {
-    /// Human-readable text format with formatted timestamps and fields.
-    #[default]
-    Text,
-    /// Structured NDJSON (Newline Delimited JSON) for machine parsing.
-    Json,
-}
-
-/// ANSI color behavior for console output.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum AnsiMode {
-    /// Auto-detect based on whether stdout is an interactive terminal.
-    #[default]
-    Auto,
-    /// Force ANSI colors enabled.
-    Always,
-    /// Disable all ANSI color sequences.
-    Never,
-}
-
-/// Console formatting verbosity.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum ConsoleVerbosity {
-    /// Minimal: single line per record without target and span info.
-    Compact,
-    /// Default: includes timestamps, level badges, target, message, and spans.
-    #[default]
-    Standard,
-    /// Verbose: includes full module paths, source file, line numbers, and fields.
-    Verbose,
-}
-
-/// File rotation policy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum RotationPolicy {
-    /// Roll files once per day.
-    #[default]
-    Daily,
-    /// Roll files once per hour.
-    Hourly,
-    /// Never roll; write continuously to single files.
-    Never,
-}
-
-/// Retention pruning policy for old log files.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum RetentionPolicy {
-    /// Keep logs newer than N days.
-    Days(u32),
-    /// Keep at most N most-recent log files per prefix.
-    Count(u32),
-    /// Never delete old logs.
-    Forever,
-}
-
-impl Default for RetentionPolicy {
-    fn default() -> Self {
-        Self::Days(7)
     }
 }
