@@ -63,6 +63,7 @@ impl Plugin for GameControlPlugin {
         crate::control_fuel::register(&mut registry);
         crate::control_route::register(&mut registry);
         crate::control_scheduled::register(&mut registry);
+        crate::control_traffic::register(&mut registry);
         crate::control_rail::register(&mut registry);
         crate::control_profiles::register(&mut registry);
         crate::control_trace::add_overlay(app);

@@ -27,6 +27,7 @@ pub mod control_setvars;
 pub mod control_textures;
 pub mod control_tiles;
 pub mod control_trace;
+pub mod control_traffic;
 pub mod control_ui;
 pub mod drive_history;
 pub mod entry;

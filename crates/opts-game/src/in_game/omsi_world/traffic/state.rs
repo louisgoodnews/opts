@@ -75,6 +75,12 @@ impl TrafficState {
         self.world.set_obstacles(obstacles);
     }
 
+    /// The agents on the lanes (scheduled ones included), in id order.
+    #[must_use]
+    pub(crate) fn agents(&self) -> &[opts_traffic::Agent] {
+        self.world.agents()
+    }
+
     /// The lane graph of the resident tiles.
     #[must_use]
     pub(crate) fn lane_graph(&self) -> &LaneGraph {

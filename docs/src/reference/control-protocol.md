@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.32.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.33.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -966,6 +966,8 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`bus.set_stop`](#busset_stop) | `index` (integer) | 1.13 | Set the stop of the route or timetable the vehicle is at (0-based) |
 | [`rail.switch`](#railswitch) | `way?` (string = straight \| left \| right) | 1.28 | The points ahead of the player's rail vehicle and the way it takes; with `way` choose it |
 | [`traffic.scheduled`](#trafficscheduled) | - | 1.27 | The timetable runs on the road, the vehicles that drive them and their punctuality |
+| [`traffic.dump`](#trafficdump) | `limit?` (integer) | 1.33 | The AI vehicles on the lanes (unscheduled and scheduled): lane, position, speed, waiting and stuck time, pose |
+| [`traffic.set_density`](#trafficset_density) *(debug)* | `baseline` (integer) | 1.33 | The baseline of the AI traffic around the player, for this session (`0` stops new vehicles) |
 | [`vehicle.click`](#vehicleclick) | `name` (string)<br>`frames?` (integer)<br>`hold_ms?` (integer) | 1.20 | Operate a cockpit hot-spot like a player: press, drag, hold, release |
 
 ### `drive.controls`
@@ -1163,6 +1165,22 @@ The timetable runs on the road, the vehicles that drive them and their punctuali
 **Result:** `{available, runs_on_the_road, vehicles, traffic_agents, spawned, arrivals, departures, missed_stops, mean_delay_s, positions: [{x, y, heading_deg}], last_arrivals: [{station, scheduled, actual, delay_s}]}`
 
 Scheduled AI vehicles (`docs/src/architecture/scheduled-traffic.md`): the runs of the map's timetable that are on the road or start within 90 s at the session clock, how many of them have a vehicle now, the stops reached and left, and the delay at arrival (clock minus the scheduled arrival, seconds; negative is early) of the last arrivals. `mean_delay_s` is `null` before the first arrival. Vehicles appear only near the player, at the bus stop objects of the loaded tiles.
+
+### `traffic.dump`
+
+The AI vehicles on the lanes (unscheduled and scheduled): lane, position, speed, waiting and stuck time, pose.
+
+**Result:** `{available, baseline, lanes, agents, shown: [{id, lane, s, speed_ms, accel, waiting_s, stuck_s, changing_lane, lateral, x, y, heading_deg}]}`
+
+The first `limit` vehicles (default 50, at most 500) of the traffic world by id order, `agents` counts all of them. `lanes` is the size of the lane graph of the resident tiles, `baseline` the traffic setting (`gameplay.traffic`, or the value `traffic.set_density` gave). `s` is the front bumper's position along its lane (m), `waiting_s` the time spent at a conflict zone, `stuck_s` the time standing without a red light ahead. `x`, `y` and `heading_deg` are `null` when the vehicle's lane is gone. `available` is false outside a drive (no traffic world). M-0049.
+
+### `traffic.set_density`
+
+The baseline of the AI traffic around the player, for this session (`0` stops new vehicles).
+
+**Result:** `{baseline, previous}`
+
+Sets the number the spawner aims at within the despawn disc (the setting `gameplay.traffic`, default 150, at most 1000); the map's density factors still shape it. The value lasts until the next map load, which takes the setting again, and is not saved. Vehicles already on the road leave by the usual distance rule. `1001` without a traffic world (start a drive first). M-0049.
 
 ### `vehicle.click`
 
