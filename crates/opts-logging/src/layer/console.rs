@@ -1,13 +1,15 @@
 //! Terminal console formatting layer with ANSI coloring and verbosity levels.
 
 use std::io::IsTerminal;
-use tracing::field::{Field, Visit};
 use tracing::{Event, Level, Metadata};
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields};
 use tracing_subscriber::registry::LookupSpan;
 
 use crate::config::{AnsiMode, ConsoleConfig, ConsoleVerbosity};
+
+mod visitor;
+use visitor::ConsoleVisitor;
 
 /// Custom event formatter implementing [`FormatEvent`] for terminal console output.
 #[derive(Debug, Clone)]
@@ -160,32 +162,5 @@ impl ConsoleFormatter {
             write!(writer, "}}")?;
         }
         Ok(())
-    }
-}
-
-/// Visitor that separates the log event message from additional key-value fields.
-#[derive(Default)]
-struct ConsoleVisitor {
-    message: Option<String>,
-    fields: Vec<(String, String)>,
-}
-
-impl Visit for ConsoleVisitor {
-    fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
-        if field.name() == "message" {
-            self.message = Some(format!("{value:?}").trim_matches('"').to_string());
-        } else {
-            self.fields
-                .push((field.name().to_string(), format!("{value:?}")));
-        }
-    }
-
-    fn record_str(&mut self, field: &Field, value: &str) {
-        if field.name() == "message" {
-            self.message = Some(value.to_string());
-        } else {
-            self.fields
-                .push((field.name().to_string(), value.to_string()));
-        }
     }
 }

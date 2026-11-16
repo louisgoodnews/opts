@@ -1,5 +1,7 @@
 //! The `stats` command: completeness of every language against English.
 
+use std::fmt::Write as _;
+
 use super::*;
 
 struct Row {
