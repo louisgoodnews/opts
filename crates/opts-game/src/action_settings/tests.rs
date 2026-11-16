@@ -1,4 +1,9 @@
 use super::*;
+use super::conflicts::scope_of;
+use crate::settings::GameSettings;
+use crate::settings_registry::descriptor::SettingKind as K;
+use opts_bevy::action_keys::ActionKeys;
+use super::descriptors::RESET_ROWS;
 use crate::settings_registry::{SettingsCapabilities, SettingsRegistry};
 
 fn parts() -> (SettingsRegistry, SettingsCapabilities, GameSettings) {
