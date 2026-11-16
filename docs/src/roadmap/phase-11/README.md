@@ -8,7 +8,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page
 
 ## Milestones (recommended execution order)
 
-1. [M-0118 — OMSI Event System Research and Consolidation Strategy](M-0118.md) — 📝 Proposed; documents only (taxonomy, dispatch, consolidation design); feeds M-0102, M-0098 and M-0115.
+1. [M-0118 — OMSI Event System Research and Consolidation Strategy](M-0118.md) — 🚧 In progress 2026-11-16; research and design drafted (documents only: taxonomy, dispatch, consolidation design); census, base-engine classification, review and two acceptance items open; feeds M-0102, M-0098 and M-0115.
 2. [M-0119 — Dev Agent Roadmap Review Process](M-0119.md) — 📝 Proposed; delivers prompt P-1010, a CONTRIBUTING note and the workflow reference.
 3. [M-0109 — Quality-of-Life Suite](M-0109.md) — ✅ Done 2026-10-29; one checklist: door camera, smooth driver view (after the jitter fix), UI scale presets, UI font settings.
 4. [M-0108 — Full-Size In-Game Map and In-Game Map Switching](M-0108.md) — ✅ Done 2026-10-19; F6 map (the whole map), Alt menu *Change map*.
@@ -16,7 +16,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page
 6. [M-0110 — Setvar Runtime Editor and CTI Value Types](M-0110.md) — ✅ Done 2026-10-30: Alt menu *Setvars* page with group headings and respawn marker; extends M-0078 and M-0077.
 7. [M-0111 — AI Traffic Depth](M-0111.md) — 🟡 In progress; audit done, lane-change and traffic-light phases under way; overtaking, barriers and before/after measurement open.
 8. [M-0114 — Hybrid Tile and Object Streaming](M-0114.md) — 🟡 In progress; policy implemented; baselines, comparison runs and overlay pending.
-9. [M-0116 — Real Weather Research](M-0116.md) — 📝 Proposed; research only, a document and a decision.
+9. [M-0116 — Real Weather Research](M-0116.md) — 🟡 Research complete, pending review (2026-11-16); research only, a document and a decision.
 10. [M-0117 — Weather Effects on Driving and Exhaust Visibility](M-0117.md) — 🚧 In progress; sim-side grip and exhaust rule done; game wiring, HUD and rendering open.
 11. [M-0112 — Scheduled AI Traffic](M-0112.md) — ✅ Done 2026-10-23; buses, trains and trams by timetable (limits in the milestone).
 12. [M-0113 — Track Switch Interaction](M-0113.md) — ✅ Done 2026-10-30; points for AI and player on rails.
