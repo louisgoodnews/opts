@@ -56,3 +56,9 @@ set-light-governor-disabled = Automatic mode only. Switch the lighting quality m
 env-light-quality = Lighting quality
 env-light-automatic = Automatic (level { $level }: { $name })
 env-light-custom = Custom
+
+set-overlays = Window and body overlays
+set-overlays-desc = Dirt, rain on the windows and condensation on vehicles. Off draws none of them and costs nothing. Simple draws the window overlays only. Full draws both. A raised setting applies to vehicles loaded from then on.
+set-opt-overlays-off = Off
+set-opt-overlays-simple = Simple (windows)
+set-opt-overlays-full = Full

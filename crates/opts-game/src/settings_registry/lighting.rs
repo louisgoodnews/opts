@@ -16,7 +16,9 @@ use super::{ChangeSource, SettingChanged, SettingsApi};
 use crate::settings::GameSettings;
 
 mod custom;
+mod governor;
 mod list;
+mod overlays;
 mod systems;
 pub use custom::*;
 pub use list::descriptors;

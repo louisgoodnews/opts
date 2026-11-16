@@ -56,3 +56,9 @@ set-light-governor-disabled = Nur im Automatikmodus. Stelle den Modus der Lichtq
 env-light-quality = Lichtqualität
 env-light-automatic = Automatisch (Stufe { $level }: { $name })
 env-light-custom = Benutzerdefiniert
+
+set-overlays = Fenster- und Karosserie-Overlays
+set-overlays-desc = Schmutz, Regen auf den Scheiben und Beschlag an Fahrzeugen. Aus zeichnet keines davon und kostet nichts. Einfach zeichnet nur die Fenster-Overlays. Voll zeichnet beides. Eine höhere Stufe gilt für Fahrzeuge, die danach geladen werden.
+set-opt-overlays-off = Aus
+set-opt-overlays-simple = Einfach (Fenster)
+set-opt-overlays-full = Voll
