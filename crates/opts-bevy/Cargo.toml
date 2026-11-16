@@ -2,10 +2,14 @@
 name = "opts-bevy"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Bevy plugin and asset loaders for OPTS."
 repository.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 # Internal

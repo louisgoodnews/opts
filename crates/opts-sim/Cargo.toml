@@ -2,10 +2,14 @@
 name = "opts-sim"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Simulation logic for OPTS (vehicles, passengers, routing)."
 repository.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 # Internal
@@ -13,18 +17,14 @@ opts-core = { workspace = true }
 
 # Math & Data
 glam = { workspace = true, features = ["serde"] }
-petgraph = { workspace = true }
 
 # Serialization (for save games)
 serde = { workspace = true }
 bincode = { workspace = true }
 
 # Parallelism (use carefully to maintain determinism)
-rayon = { workspace = true }
 
 # Error Handling & Logging
-thiserror = { workspace = true }
-tracing = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

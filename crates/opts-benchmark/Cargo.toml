@@ -2,11 +2,15 @@
 name = "opts-benchmark"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Benchmarks and corpus verification for OPTS (scenery object load verification, M-0054)."
 repository.workspace = true
 publish = false
+
+[lints]
+workspace = true
 
 [[bin]]
 name = "opts-benchmark"

@@ -2,10 +2,14 @@
 name = "opts-hardware"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Privacy-respecting hardware capability probe and default recommendations for OPTS (no network, no identifiers)."
 repository.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 serde = { workspace = true }

@@ -2,10 +2,14 @@
 name = "opts-core"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Temporary facade over opts-omsi and opts-l10n (the former opts-core); see ADR-0014."
 repository.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 opts-l10n = { workspace = true }

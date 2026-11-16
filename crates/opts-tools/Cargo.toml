@@ -2,10 +2,14 @@
 name = "opts-tools"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "CLI tools for inspecting and converting OMSI assets."
 repository.workspace = true
+
+[lints]
+workspace = true
 
 [[bin]]
 name = "opts-tools"
@@ -25,4 +29,3 @@ serde_json = { workspace = true }
 
 # Image handling (if converting textures)
 image = { workspace = true }
-ddsfile = { workspace = true }

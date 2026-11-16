@@ -2,10 +2,14 @@
 name = "opts-cli"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Command-line arguments, the control-protocol types and the `opts-cli` remote-control client for OPTS."
 repository.workspace = true
+
+[lints]
+workspace = true
 
 [features]
 default = ["client"]

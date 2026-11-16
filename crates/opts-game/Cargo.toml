@@ -2,10 +2,14 @@
 name = "opts-game"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "The main executable for the Open Public Transport Simulator."
 repository.workspace = true
+
+[lints]
+workspace = true
 
 [[bin]]
 name = "opts-game"
@@ -39,13 +43,10 @@ rusqlite = { workspace = true }
 chrono = { workspace = true }
 
 # Logging & Error Handling
-anyhow = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 
 # CLI arguments for the game
 opts-cli = { workspace = true }
-clap = { workspace = true }
 
 [features]
 # Fixtures for integration tests (miniature OMSI installation); not part of the shipped game.
