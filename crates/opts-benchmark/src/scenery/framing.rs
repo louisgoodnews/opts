@@ -88,45 +88,10 @@ impl View {
     }
 }
 
-/// Axis-aligned bounds in the map frame.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Bounds {
-    /// Minimum corner.
-    pub min: Vec3,
-    /// Maximum corner.
-    pub max: Vec3,
-}
-
-impl Bounds {
-    /// Bounds of a point set; `None` when it is empty.
-    #[must_use]
-    pub fn of(points: impl IntoIterator<Item = Vec3>) -> Option<Self> {
-        let mut it = points.into_iter().filter(|p| p.is_finite());
-        let first = it.next()?;
-        Some(it.fold(
-            Self {
-                min: first,
-                max: first,
-            },
-            |b, p| Self {
-                min: b.min.min(p),
-                max: b.max.max(p),
-            },
-        ))
-    }
-
-    /// Centre.
-    #[must_use]
-    pub fn centre(&self) -> Vec3 {
-        (self.min + self.max) * 0.5
-    }
-
-    /// Radius of the enclosing sphere around [`Self::centre`] (at least 0.25 m).
-    #[must_use]
-    pub fn radius(&self) -> f32 {
-        ((self.max - self.min).length() * 0.5).max(0.25)
-    }
-}
+mod bounds;
+pub use bounds::Bounds;
+mod text;
+pub use text::text_views;
 
 /// V1 oblique perspective: 35° to the right of the object's front, 25° above, 40° vertical
 /// field of view, the bounding sphere filling 80 % of the image height.
@@ -182,100 +147,5 @@ pub fn top_view(bounds: &Bounds) -> View {
     }
 }
 
-/// Two orthographic close-ups of the text-textured triangles, looking at their front and at
-/// their back along the area-weighted normal (the winding decides what is "front", and the
-/// harness does not know the loader's convention, so it looks from both sides). Things between
-/// the eye and the text beyond 1.5 radii are clipped away, so an occluding part cannot hide
-/// the text. `None` without triangles.
-#[must_use]
-pub fn text_views(tris: &[[Vec3; 3]]) -> Option<[View; 2]> {
-    let bounds = Bounds::of(tris.iter().flatten().copied())?;
-    // Back-to-back duplicates would cancel: align every normal with the largest triangle's.
-    let normals: Vec<Vec3> = tris
-        .iter()
-        .map(|t| (t[1] - t[0]).cross(t[2] - t[0]))
-        .collect();
-    let reference = normals
-        .iter()
-        .copied()
-        .max_by(|a, b| a.length().total_cmp(&b.length()))
-        .unwrap_or(Vec3::Z);
-    let mut n = Vec3::ZERO;
-    for v in normals {
-        n += if v.dot(reference) < 0.0 { -v } else { v };
-    }
-    let n = if n.length() > 1e-6 {
-        n.normalize()
-    } else {
-        Vec3::Z
-    };
-    let c = bounds.centre();
-    let r = bounds.radius();
-    let dist = r * 1.5 + 0.5;
-    let up_map = if n.z.abs() > 0.9 { Vec3::Y } else { Vec3::Z };
-    let make = |dir: Vec3| View {
-        eye: map_to_bevy(c + dir * dist),
-        target: map_to_bevy(c),
-        up: map_to_bevy(up_map),
-        projection: Projection::Orthographic {
-            extent: r * 2.2,
-            near: 0.0,
-            far: dist + r * 1.5 + 0.5,
-        },
-    };
-    Some([make(n), make(-n)])
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn unit_box() -> Bounds {
-        Bounds {
-            min: Vec3::new(-1.0, -1.0, 0.0),
-            max: Vec3::new(1.0, 1.0, 2.0),
-        }
-    }
-
-    #[test]
-    fn top_view_puts_north_up_and_east_right() {
-        let v = top_view(&unit_box());
-        let centre = v.project(map_to_bevy(Vec3::new(0.0, 0.0, 1.0))).unwrap();
-        let east = v.project(map_to_bevy(Vec3::new(1.0, 0.0, 1.0))).unwrap();
-        let north = v.project(map_to_bevy(Vec3::new(0.0, 1.0, 1.0))).unwrap();
-        assert!((centre - Vec2::splat(256.0)).length() < 1e-3);
-        assert!(east.x > centre.x && (east.y - centre.y).abs() < 1e-3);
-        assert!(north.y < centre.y && (north.x - centre.x).abs() < 1e-3);
-    }
-
-    #[test]
-    fn text_views_look_at_both_sides_of_a_wall() {
-        let wall = [[
-            Vec3::new(0.0, 0.0, 0.0),
-            Vec3::new(4.0, 0.0, 0.0),
-            Vec3::new(4.0, 0.0, 2.0),
-        ]];
-        let [a, b] = text_views(&wall).unwrap();
-        assert!((a.eye - b.eye).length() > 1.0);
-        let c = map_to_bevy(Vec3::new(2.0, 0.0, 1.0));
-        assert!(a.project(c).unwrap().distance(Vec2::splat(256.0)) < 40.0);
-        assert!(text_views(&[]).is_none());
-        // A back-to-back duplicate must not cancel the normal.
-        let mut both = wall.to_vec();
-        both.push([wall[0][0], wall[0][2], wall[0][1]]);
-        let [c, _] = text_views(&both).unwrap();
-        assert!((c.eye - a.eye).length() < 1e-3 || (c.eye - b.eye).length() < 1e-3);
-    }
-
-    #[test]
-    fn oblique_view_keeps_the_sphere_inside_the_image() {
-        let b = unit_box();
-        let v = oblique_view(&b, 37.0);
-        let c = v.project(map_to_bevy(b.centre())).unwrap();
-        assert!((c - Vec2::splat(256.0)).length() < 1e-2);
-        for corner in [b.min, b.max, Vec3::new(b.min.x, b.max.y, b.max.z)] {
-            let p = v.project(map_to_bevy(corner)).unwrap();
-            assert!(p.x > 0.0 && p.x < 512.0 && p.y > 0.0 && p.y < 512.0);
-        }
-    }
-}
+mod tests;
