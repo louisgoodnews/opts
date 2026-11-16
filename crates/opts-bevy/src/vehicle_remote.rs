@@ -16,6 +16,13 @@ use opts_sim::vehicle::inputs::{GearPosition, VehicleInputs};
 
 use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::{PlayerVehicle, VehicleController};
+mod gates;
+#[cfg(test)]
+mod tests;
+mod triggers;
+
+pub use gates::{flush_remote_when_gated, odometer_system, vehicle_input_closed};
+pub use triggers::{raise_trigger, release_trigger_system};
 
 /// An analog value held on one axis.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -120,164 +127,5 @@ impl RemoteControls {
     pub fn restart_odometer(&mut self) {
         self.odometer_m = 0.0;
         self.last_position = None;
-    }
-}
-
-/// Raises script trigger `name` on the player's vehicle; returns whether a script handled it, or
-/// `None` when there is no vehicle with scripts.
-pub fn raise_trigger(world: &mut World, name: &str) -> Option<bool> {
-    let mut q = world.query_filtered::<&VehicleScripts, With<PlayerVehicle>>();
-    let scripts = q.iter(world).next()?;
-    let mut engine = scripts.engine.lock().ok()?;
-    let handled = engine.trigger(name);
-    tracing::debug!(trigger = name, handled, "vehicle script trigger (remote)");
-    Some(handled)
-}
-
-/// Raises the scheduled `_off` triggers whose time has come.
-pub fn release_trigger_system(
-    time: Res<Time>,
-    mut remote: ResMut<RemoteControls>,
-    vehicles: Query<&VehicleScripts, With<PlayerVehicle>>,
-) {
-    if remote.release_triggers.is_empty() {
-        return;
-    }
-    let dt = time.delta_secs();
-    let mut due = Vec::new();
-    remote.release_triggers.retain_mut(|(name, left)| {
-        *left -= dt;
-        if *left <= 0.0 {
-            due.push(std::mem::take(name));
-            false
-        } else {
-            true
-        }
-    });
-    for name in due {
-        for scripts in &vehicles {
-            if let Ok(mut engine) = scripts.engine.lock() {
-                let handled = engine.trigger(&name);
-                tracing::debug!(trigger = %name, handled, "vehicle script trigger (remote release)");
-            }
-        }
-    }
-}
-
-/// The negation of the run conditions of the vehicle input system (no vehicle input now).
-#[must_use]
-pub fn vehicle_input_closed(
-    camera: Option<Res<crate::camera::CameraState>>,
-    modal: Option<Res<crate::reporting::state::ModalActive>>,
-    menu: Option<Res<crate::reporting::state::MenuModalActive>>,
-    viewpoint: Option<Res<crate::camera::ViewpointState>>,
-) -> bool {
-    let accepts = camera.is_none_or(|s| s.mode != crate::camera::CameraMode::FreeRoam)
-        && !viewpoint.is_some_and(|v| v.editing);
-    let open = modal.is_some_and(|m| m.0) || menu.is_some_and(|m| m.0);
-    !accepts || open
-}
-
-/// Drops held controls while the input gates are closed, so nothing fires when they reopen.
-pub fn flush_remote_when_gated(mut remote: ResMut<RemoteControls>) {
-    if remote.is_active() {
-        remote.release_all();
-    }
-}
-
-/// Counts the distance driven; a jump of more than 50 m in one frame is a placement, not driving.
-pub fn odometer_system(
-    mut remote: ResMut<RemoteControls>,
-    added: Query<(), Added<PlayerVehicle>>,
-    vehicles: Query<&VehicleController, With<PlayerVehicle>>,
-) {
-    let Ok(c) = vehicles.single() else {
-        return;
-    };
-    let ch = &c.sim.chassis;
-    if !added.is_empty() || remote.start_pose.is_none() {
-        remote.start_pose = Some((ch.position, ch.heading_rad, ch.elevation_z));
-        remote.restart_odometer();
-        if let Some((metres, _)) = remote.pending_odometer.take() {
-            remote.odometer_m = metres;
-        }
-    }
-    if let Some((_, frames)) = &mut remote.pending_odometer {
-        *frames = frames.saturating_sub(1);
-        if *frames == 0 {
-            remote.pending_odometer = None;
-        }
-    }
-    if let Some(last) = remote.last_position {
-        let d = ch.position.distance(last);
-        if d < 50.0 {
-            remote.odometer_m += f64::from(d);
-        }
-    }
-    remote.last_position = Some(ch.position);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn held_values_override_and_expire_in_simulation_time() {
-        let mut remote = RemoteControls {
-            throttle: Some(Hold {
-                value: 0.6,
-                remaining: Some(0.25),
-            }),
-            steer: Some(Hold {
-                value: -1.0,
-                remaining: None,
-            }),
-            ..Default::default()
-        };
-        let mut inputs = VehicleInputs::new();
-        remote.apply(&mut inputs, 0.1);
-        assert!((inputs.throttle() - 0.6).abs() < 1e-6);
-        assert!((inputs.steering() + 1.0).abs() < 1e-6);
-        remote.apply(&mut inputs, 0.1);
-        assert!(remote.throttle.is_some());
-        remote.apply(&mut inputs, 0.1);
-        assert!(
-            remote.throttle.is_none(),
-            "0.3 s have run out the 0.25 s hold"
-        );
-        assert!(remote.steer.is_some(), "an open-ended hold stays");
-    }
-
-    #[test]
-    fn gear_and_parking_brake_are_one_shot() {
-        let mut remote = RemoteControls {
-            gear: Some(GearPosition::Drive),
-            parking: Some(ParkingRequest::Set(false)),
-            ..Default::default()
-        };
-        let mut inputs = VehicleInputs::new();
-        assert!(inputs.is_parking_brake_engaged());
-        remote.apply(&mut inputs, 0.016);
-        assert_eq!(inputs.gear(), GearPosition::Drive);
-        assert!(!inputs.is_parking_brake_engaged());
-        assert!(!remote.is_active());
-        remote.parking = Some(ParkingRequest::Toggle);
-        remote.apply(&mut inputs, 0.016);
-        assert!(inputs.is_parking_brake_engaged());
-    }
-
-    #[test]
-    fn release_all_clears_everything() {
-        let mut remote = RemoteControls {
-            brake: Some(Hold {
-                value: 1.0,
-                remaining: None,
-            }),
-            gear: Some(GearPosition::Reverse),
-            ..Default::default()
-        };
-        assert!(remote.is_active());
-        remote.release_all();
-        assert!(!remote.is_active());
     }
 }

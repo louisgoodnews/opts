@@ -2,8 +2,8 @@
 
 use super::*;
 
-fn config() -> KeyboardConfig {
-    KeyboardConfig::parse(
+fn config() -> opts_core::formats::engine_config::KeyboardConfig {
+    opts_core::formats::engine_config::KeyboardConfig::parse(
         b"[vehicles]\n[entry]\nhorn\n35\n1\n[entry]\nbus_doorfront0\n181\n0\n[entry]\nautomatic_D\n32\n0\n[entry]\nIBIS_1\n79\n4\n[entry]\nkw_s_2\n3\n4\n",
     )
 }
