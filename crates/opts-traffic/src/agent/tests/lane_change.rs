@@ -2,6 +2,7 @@
 
 use super::*;
 
+mod announce;
 mod overtake;
 mod rules;
 mod strategic;
