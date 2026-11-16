@@ -1,22 +1,22 @@
 //! The main-thread side: drains the command channel once per frame and runs the handlers.
 
+mod deferred;
+mod inputs;
+
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use bevy::ecs::world::World;
-use bevy::input::keyboard::KeyboardInput;
-use bevy::input::mouse::MouseButtonInput;
-use bevy::input::ButtonState;
 use bevy::time::{Real, Time};
 use opts_cli::commands;
 use opts_cli::protocol::{code, Response, RpcError};
 use serde_json::Value;
 
-use super::handlers::input::primary_window_or_placeholder;
-use super::state::{
-    ControlInbox, ControlRegistry, ControlState, Deferred, DeferredCall, Outcome, Pending,
-};
+use super::state::{ControlRegistry, ControlState, Deferred, DeferredCall, Outcome};
+
+use deferred::poll_deferred;
+use inputs::{release_due_inputs, take_pending};
 
 /// Commands executed per frame; the rest wait in the queue.
 const COMMANDS_PER_FRAME: usize = 64;
@@ -60,79 +60,6 @@ fn answer(
         Err(e) => Response::err(pending_id, e),
     };
     let _ = reply.send(response);
-}
-
-fn release_due_inputs(world: &mut World) {
-    let now = world.resource::<Time<Real>>().elapsed_secs_f64();
-    let due: Vec<_> = {
-        let mut state = world.resource_mut::<ControlState>();
-        let (due, keep) = std::mem::take(&mut state.releases)
-            .into_iter()
-            .partition(|r| r.at <= now);
-        state.releases = keep;
-        due
-    };
-    let window = primary_window_or_placeholder(world);
-    for release in due {
-        if let Some((key_code, logical_key)) = release.key {
-            world.write_message(KeyboardInput {
-                key_code,
-                logical_key,
-                state: ButtonState::Released,
-                text: None,
-                repeat: false,
-                window,
-            });
-        }
-        if let Some(button) = release.mouse {
-            world.write_message(MouseButtonInput {
-                button,
-                state: ButtonState::Released,
-                window,
-            });
-        }
-    }
-}
-
-fn take_pending(world: &World) -> Vec<Pending> {
-    let inbox = world.resource::<ControlInbox>();
-    let Ok(rx) = inbox.0.lock() else {
-        return Vec::new();
-    };
-    std::iter::from_fn(|| rx.try_recv().ok())
-        .take(COMMANDS_PER_FRAME)
-        .collect()
-}
-
-fn poll_deferred(world: &mut World) {
-    let calls: Vec<DeferredCall> = {
-        let deferred = world.resource::<Deferred>();
-        let Ok(mut guard) = deferred.0.lock() else {
-            return;
-        };
-        std::mem::take(&mut *guard)
-    };
-    let mut still = Vec::new();
-    for mut call in calls {
-        match (call.waiter)(world) {
-            Some(result) => answer(call.id, &call.reply, result),
-            None if Instant::now() > call.deadline => {
-                answer(
-                    call.id,
-                    &call.reply,
-                    Err(RpcError::new(
-                        code::TIMEOUT,
-                        "the command did not finish in time",
-                    )),
-                );
-            }
-            None => still.push(call),
-        }
-    }
-    if let Ok(mut guard) = world.resource::<Deferred>().0.lock() {
-        still.append(&mut guard);
-        *guard = still;
-    }
 }
 
 /// The per-frame system: bookkeeping, input releases, new commands, deferred commands.

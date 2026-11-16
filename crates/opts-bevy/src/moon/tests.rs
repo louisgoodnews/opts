@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`moon.rs`).
 
 use super::*;
+use crate::environment::CalendarDate;
 
 /// Julian day of a UTC date and time.
 fn jd_of(y: i32, mo: u32, d: u32, h: u32, mi: u32) -> f64 {

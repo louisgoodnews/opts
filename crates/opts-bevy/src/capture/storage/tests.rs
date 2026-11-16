@@ -1,6 +1,8 @@
 //! Unit tests for `super` (`storage.rs`).
 
 use super::*;
+use crate::capture::CaptureError;
+use std::path::{Path, PathBuf};
 
 fn temp(name: &str) -> PathBuf {
     let p = std::env::temp_dir().join(format!("opts_capstore_{name}_{}", std::process::id()));
