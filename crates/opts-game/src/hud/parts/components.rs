@@ -77,6 +77,14 @@ pub struct HudText {
     pub part: Part,
 }
 
+/// The track of the fuel bar gauge; its colour follows the instrument palette.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct HudBarTrack;
+
+/// The fill of the fuel bar gauge: its width is the level, its colour the state.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct HudBarFill;
+
 /// The pill of the alert slot.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct AlertPill;

@@ -90,6 +90,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.vehicle.ticket_take` | Collect money | input binding | `Shift+T` | at once | available | Geld einsammeln |
 | `controls.mouse_driving` | Drive with the mouse | on / off | `true` | at once | available | The mouse wheel press switches mouse driving: the cursor's height is throttle (upper half) and brake (lower half), its width is the steering. A right click frees the mouse until the next right click. Applies at once. |
 | `controls.drive.parking_brake` | Parking brake | input binding | `Period` | at once | available | Applies or releases the parking brake. |
+| `controls.drive.refuel` | Refuel | input binding | `F12` | at once | available | Fills the fuel tank or battery of the vehicle. |
 | `controls.drive.rail_forward` | Rail: forward | input binding | `W` | at once | available | Rail vehicles: drive forward (the cab's direction switch; a tram's reverse-drive switch off). |
 | `controls.drive.rail_reverse` | Rail: reverse | input binding | `S` | at once | available | Rail vehicles: drive backwards (a standing tram only). |
 | `controls.drive.rail_lever_up` | Rail: power lever up | input binding | `Q` | at once | available | Rail vehicles: moves the power lever towards traction while held; it stays where it is left. |

@@ -22,6 +22,7 @@ pub const WIDGETS: &[HudWidget] = &[
     CAMERA_LABEL,
     MINIMAP,
     FUEL,
+    FUEL_BAR,
     FUEL_LOW,
 ];
 

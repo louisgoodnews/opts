@@ -29,6 +29,10 @@ pub fn vehicle_input_system(
 
     for (mut controller, config_opt, rail) in &mut query {
         let config = config_opt.unwrap_or(&default_config);
+        // The refuel action (M-0123) fills the vehicle's fuel model; a rail vehicle has one too.
+        if crate::action_keys::resolve(&action_keys).just_pressed(&keyboard, "refuel") {
+            controller.sim.refuel();
+        }
         let inputs = controller.inputs_mut();
         // A rail vehicle has a power lever and a direction selector, no pedals, no parking brake
         // and no steering (`crate::rail_controls`).

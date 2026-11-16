@@ -47,6 +47,8 @@ keys! {
     HELP_KEY_STEER = "help-key-steer",
     /// Message `help-key-parking`.
     HELP_KEY_PARKING = "help-key-parking",
+    /// Message `help-key-refuel`.
+    HELP_KEY_REFUEL = "help-key-refuel",
     /// Message `help-key-gears`.
     HELP_KEY_GEARS = "help-key-gears",
     /// Message `help-key-tram`.

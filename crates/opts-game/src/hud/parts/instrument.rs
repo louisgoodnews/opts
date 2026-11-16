@@ -50,6 +50,7 @@ pub(in crate::hud) fn build_instrument(
             Some(keys::CAPTION_FUEL),
             palette,
         ),
+        Binding::FuelBar => fuel_bar(parent, w, palette),
         Binding::FuelLow => readout(
             parent,
             w,

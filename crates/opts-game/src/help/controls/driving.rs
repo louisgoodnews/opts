@@ -28,6 +28,13 @@ pub(super) const DRIVING_GROUP: Group = (
             keys::HELP_KEY_PARKING,
             SIM,
         ),
+        rebindable(
+            &["refuel"],
+            "F12",
+            &[KeyCode::F12],
+            keys::HELP_KEY_REFUEL,
+            SIM,
+        ),
         bind(
             "D / N / R",
             &[KeyCode::KeyD, KeyCode::KeyN, KeyCode::KeyR],

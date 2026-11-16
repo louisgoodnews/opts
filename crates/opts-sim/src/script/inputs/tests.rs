@@ -56,3 +56,19 @@ fn output_rows_match_families() {
     assert!(output_row("PAX_Exit3_Req").is_none());
     assert!(output_row("engine_n").is_none());
 }
+
+#[test]
+fn the_tank_percent_reaches_the_scripts() {
+    let src = "{frame}\n(L.L.Tank_Percent) (S.L.tank)\n{end}";
+    let (mut e, _) = ScriptEngine::from_sources(&[("t.osc", src)]);
+    let plan = FeedPlan::new(&mut e);
+    assert_eq!(plan.status("tank_percent"), Some(true));
+    let h = HostInputs {
+        tank_percent: 42.5,
+        ..HostInputs::default()
+    };
+    feed(&mut e, &plan, &h);
+    e.run_frame(0.016, false);
+    assert_eq!(e.get("tank"), 42.5);
+    assert_eq!(HostInputs::default().tank_percent, 100.0);
+}

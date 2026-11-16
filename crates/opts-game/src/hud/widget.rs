@@ -5,7 +5,6 @@
 //! the HUD know the bindings, never the individual widgets; a new widget is a descriptor here
 //! (or, for a binding that exists, only a profile entry).
 
-use opts_bevy::CameraMode;
 use serde::{Deserialize, Serialize};
 
 /// A fixed region of the screen a widget lives in.
@@ -143,6 +142,8 @@ pub enum Binding {
     Fuel,
     /// The low-level flag of the fuel model (`LOW` or `OK`).
     FuelLow,
+    /// The fuel level as a bar gauge (the same model; hidden in consumption mode `Off`).
+    FuelBar,
 }
 
 impl Binding {
@@ -157,61 +158,13 @@ impl Binding {
             | Self::RailDirection
             | Self::RailLever
             | Self::Fuel
-            | Self::FuelLow => Some(Row::Instruments),
+            | Self::FuelLow
+            | Self::FuelBar => Some(Row::Instruments),
             Self::ControlsHint => Some(Row::Hints),
             Self::Alerts => Some(Row::Alerts),
             Self::SessionInfo | Self::SessionClock | Self::CameraLabel | Self::MiniMap => None,
         }
     }
-}
-
-/// How a bound value is written.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Format {
-    /// A number with `precision` decimals, tabular, in the unit chosen in the settings.
-    Number {
-        /// Digits after the decimal point.
-        precision: u8,
-    },
-    /// A short word or text.
-    Text,
-    /// A lamp: a word in the state colour (`ok`, `alarm`).
-    Lamp,
-    /// A drawing (the mini map).
-    Graphic,
-}
-
-/// The switch that turns a widget on and off in *Settings → Interface*.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct WidgetSwitch {
-    /// Settings key (`hud.speed`).
-    pub key: &'static str,
-    /// Message key of the label.
-    pub label_key: &'static str,
-    /// Message key of the description.
-    pub description_key: &'static str,
-    /// Value when the user never chose.
-    pub default_on: bool,
-}
-
-/// When a widget is visible besides its switch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Condition {
-    /// Vehicle kinds it applies to; empty means all.
-    pub kinds: &'static [VehicleKind],
-    /// Only when the simulation provides an engine speed.
-    pub needs_rpm: bool,
-    /// Camera modes in which it is hidden (hidden, not removed: nothing moves).
-    pub hidden_in: &'static [CameraMode],
-}
-
-impl Condition {
-    /// No condition.
-    pub const ALWAYS: Self = Self {
-        kinds: &[],
-        needs_rpm: false,
-        hidden_in: &[],
-    };
 }
 
 /// One widget of the registry.
@@ -237,5 +190,7 @@ pub struct HudWidget {
     pub when: Condition,
 }
 
+mod descriptor;
 mod registry;
+pub use descriptor::{Condition, Format, WidgetSwitch};
 pub use registry::{switch_on, widget, WIDGETS};

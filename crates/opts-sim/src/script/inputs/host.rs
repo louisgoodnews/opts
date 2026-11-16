@@ -16,6 +16,7 @@ impl HostInputs {
             ("a_trans_z", _) => self.a_trans[2],
             ("kmcounter_km", _) => (self.odometer_m / 1000.0).floor() as f32,
             ("kmcounter_m", _) => self.odometer_m.rem_euclid(1000.0) as f32,
+            ("tank_percent", _) => self.tank_percent,
             ("throttle", _) => self.throttle,
             ("brake", _) => self.brake,
             ("clutch", _) => self.clutch,

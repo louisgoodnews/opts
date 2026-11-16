@@ -30,6 +30,7 @@ pub(super) fn add_session_systems(app: &mut App) {
                 ),
                 (
                     update::update_texts,
+                    update::update_fuel_bars,
                     update::update_widget_display,
                     update::update_alert_slot,
                     fade::drive_fades,

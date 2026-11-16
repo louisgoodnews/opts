@@ -2,6 +2,8 @@
 
 set-bk-parking_brake = Parking brake
 set-bk-parking_brake-desc = Applies or releases the parking brake.
+set-bk-refuel = Refuel
+set-bk-refuel-desc = Fills the fuel tank or battery of the vehicle.
 set-bk-minimap_toggle = Mini map on or off
 set-bk-minimap_toggle-desc = Shows or hides the mini map.
 set-bk-minimap_rotate = Mini map: north up or heading up
