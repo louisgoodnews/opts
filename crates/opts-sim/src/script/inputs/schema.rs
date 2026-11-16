@@ -19,7 +19,7 @@ pub enum Source {
     Timetable,
     /// Collision events.
     Collision,
-    /// The mouse while a hot-spot is held (fed by the trigger system, not by [`feed`]).
+    /// The mouse while a hot-spot is held (fed by the trigger system, not by [`crate::script::inputs::feed`]).
     Mouse,
     /// Rail coupling state.
     Rail,

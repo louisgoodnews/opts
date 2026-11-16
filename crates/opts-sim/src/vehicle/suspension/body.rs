@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// The body on its wheels: heave, pitch and roll under a spring and a damper per wheel, driven by
 /// the longitudinal and lateral acceleration (their moments about the centre of gravity) and the
 /// ground under each wheel (M-0073). Small angles; the rest position is the static equilibrium of
-/// the loads the [`SuspensionModel`] distributes.
+/// the loads the [`super::SuspensionModel`] distributes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BodySuspension {
     /// Height of the body above its rest position (m, up positive).
