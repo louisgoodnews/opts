@@ -1,6 +1,7 @@
 //! Road lanes built from splines: junction arms, arcs, mirrored and height-profiled lanes.
 
 use super::*;
+use crate::graph::Direction;
 
 #[test]
 fn a_two_lane_road_runs_into_a_junction_object_rotated_with_the_object() {
