@@ -1,4 +1,5 @@
-//! Spawning of the data-driven sky dome, lighting and discs.
+//! Spawning of the data-driven sky dome, lighting and discs. The dome and the sunlight are in
+//! [`dome`], the blend of the sky textures in [`blend`].
 
 use std::path::Path;
 
@@ -10,7 +11,13 @@ use opts_core::formats::envir::EnvirConfig;
 
 use crate::in_game::types::InGameEntity;
 
-use super::{MoonDisc, MoonDiscTexture, Sky, SkyDome, SunDisc, SunLight, DOME_RADIUS};
+use super::{MoonDisc, MoonDiscTexture, Sky, SunDisc};
+
+mod blend;
+mod dome;
+
+pub(super) use blend::blended_sky;
+use dome::spawn_dome_and_sun;
 
 fn load_texture(root: &Path, rel: &str) -> Result<Image, String> {
     let path = rel.replace('\\', "/");
@@ -19,68 +26,6 @@ fn load_texture(root: &Path, rel: &str) -> Result<Image, String> {
         .ok_or_else(|| format!("{rel} not found"))?;
     let bytes = std::fs::read(&full).map_err(|e| format!("{}: {e}", full.display()))?;
     opts_bevy::texture::load_bevy_image(&bytes).map_err(|e| format!("{rel}: {e}"))
-}
-
-/// Builds the dome: the UV-sphere's `u` is kept, `v` is rewritten to run 0 (zenith) → 1 (horizon).
-fn dome_mesh() -> Mesh {
-    let mut mesh = Sphere::new(DOME_RADIUS).mesh().uv(48, 24);
-    let uvs: Option<Vec<[f32; 2]>> = {
-        use bevy::mesh::VertexAttributeValues as V;
-        match (
-            mesh.attribute(Mesh::ATTRIBUTE_POSITION),
-            mesh.attribute(Mesh::ATTRIBUTE_UV_0),
-        ) {
-            (Some(V::Float32x3(p)), Some(V::Float32x2(uv))) => Some(
-                p.iter()
-                    .zip(uv)
-                    .map(|(p, uv)| {
-                        let el = (p[1] / DOME_RADIUS).clamp(-1.0, 1.0).asin();
-                        [
-                            uv[0],
-                            (1.0 - el / std::f32::consts::FRAC_PI_2).clamp(0.0, 1.0),
-                        ]
-                    })
-                    .collect(),
-            ),
-            _ => None,
-        }
-    };
-    if let Some(uvs) = uvs {
-        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-    }
-    mesh
-}
-
-/// The sky texture for the blend weights of the sun's height. `veil` gives, per row (`0` zenith …
-/// `1` horizon), how far the row is pulled towards `veil_color` (the fog colour, sRGB `0..=1`);
-/// a veil of 0 leaves the texture as it is.
-pub(super) fn blended_sky(
-    sky: &Sky,
-    weights: [f32; 3],
-    veil: impl Fn(f32) -> f32,
-    veil_color: [f32; 3],
-) -> Vec<u8> {
-    let (w, h) = (sky.textures[0].width, sky.textures[0].height);
-    let mut out = vec![255u8; w * h * 4];
-    for y in 0..h {
-        let v = veil(y as f32 / (h - 1).max(1) as f32).clamp(0.0, 1.0);
-        for x in 0..w {
-            for c in 0..3 {
-                let mut acc = 0.0;
-                for (t, wt) in sky.textures.iter().zip(weights) {
-                    if wt > 0.0 {
-                        let (tx, ty) = (x * t.width / w, y * t.height / h);
-                        acc += f32::from(t.rgba[(ty * t.width + tx) * 4 + c]) * wt;
-                    }
-                }
-                if v > 0.0 {
-                    acc += (veil_color[c] * 255.0 - acc) * v;
-                }
-                out[(y * w + x) * 4 + c] = acc.round().clamp(0.0, 255.0) as u8;
-            }
-        }
-    }
-    out
 }
 
 fn disc(
@@ -126,42 +71,6 @@ fn sky_texture(w: u32, h: u32) -> Image {
             ..default()
         });
     sky_image
-}
-
-/// The dome with the sky texture and the directional sunlight.
-fn spawn_dome_and_sun(
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    image: Handle<Image>,
-) {
-    commands.spawn((
-        (
-            Mesh3d(meshes.add(dome_mesh())),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color_texture: Some(image),
-                unlit: true,
-                cull_mode: Some(bevy::render::render_resource::Face::Front),
-                fog_enabled: false,
-                ..default()
-            })),
-        ),
-        bevy::light::NotShadowCaster,
-        bevy::light::NotShadowReceiver,
-        SkyDome,
-        InGameEntity,
-        Name::new("Sky_Dome"),
-    ));
-    commands.spawn((
-        (DirectionalLight {
-            shadow_maps_enabled: true,
-            ..default()
-        }),
-        SunLight,
-        opts_bevy::sun_rays::LightRole::Sun,
-        InGameEntity,
-        Name::new("Sun_Light"),
-    ));
 }
 
 /// Loads `envir.cfg` and spawns the dome, sun light, sun and moon discs.
