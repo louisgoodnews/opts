@@ -46,7 +46,7 @@ Where a platform has no source for a fact, the value is `Unknown` with the reaso
 
 - **Path allowlist.** `allowlist` is the only table of paths the probe may read, with the reason for each. A path outside it is refused before any I/O (`Reason::Unavailable`). The table refuses `/etc/hostname`, `/proc/self/environ`, network-interface addresses and DMI serial and UUID files.
 - **No network.** `tests/no_network.rs` fails if a networking crate appears in the dependency graph.
-- **No identifiers.** `tests/redaction.rs` checks that serialised output contains no MAC address or UUID-shaped value, and that every string value belongs to a closed vocabulary of allowed words.
+- **No identifiers.** `tests/redaction/main.rs` checks that serialised output contains no MAC address or UUID-shaped value, and that every string value belongs to a closed vocabulary of allowed words.
 - **No unsafe code.** The crate is `#![forbid(unsafe_code)]`.
 - **Field inventory.** `reference` checks the field table against the serialised profile and renders [Hardware Fields](../src/reference/hardware-fields.md). `UPDATE_HARDWARE_DOC=1 cargo test -p opts-hardware reference` rewrites that page.
 
