@@ -3,7 +3,6 @@
 use super::*;
 use crate::ai_variables::AiVariables;
 use crate::scenery_runtime::SceneryLight;
-use opts_core::formats::vehicles::model::ModelConfig;
 
 fn e(i: u32) -> Entity {
     Entity::from_raw_u32(i).expect("valid index")

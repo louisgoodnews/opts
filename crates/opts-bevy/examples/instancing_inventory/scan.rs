@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
+use super::SceneryObject;
 use opts_bevy::OmsiInstall;
-use opts_core::formats::scenery::SceneryObject;
 
 use super::{base_name, mesh_info, MeshInfo, ScoInfo, Totals};
 

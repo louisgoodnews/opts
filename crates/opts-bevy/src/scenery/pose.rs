@@ -1,6 +1,6 @@
 //! Centreline poses and cross-section stations of a placed spline, in the tile-local OMSI frame.
 
-use opts_core::formats::map::MapSplineInstance;
+use super::MapSplineInstance;
 
 /// Height above the segment start at arc length `s`.
 ///

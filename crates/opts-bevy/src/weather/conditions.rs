@@ -1,7 +1,7 @@
 //! The resolved conditions of the session: cloud layer, wind, temperature, precipitation and the
 //! humidity they imply.
 
-use opts_core::formats::weather::{CloudCover, CloudTypes, PrecipKind, WeatherFile};
+use super::{CloudCover, CloudTypes, PrecipKind, WeatherFile};
 
 /// A cloud layer of the resolved conditions.
 #[derive(Debug, Clone, PartialEq)]

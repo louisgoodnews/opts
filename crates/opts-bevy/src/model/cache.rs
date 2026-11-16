@@ -9,7 +9,7 @@ use bevy::image::Image;
 use bevy::mesh::Mesh;
 use bevy::pbr::StandardMaterial;
 
-use opts_core::formats::scenery::BaseSurface;
+use super::BaseSurface;
 
 use crate::install::OmsiInstall;
 

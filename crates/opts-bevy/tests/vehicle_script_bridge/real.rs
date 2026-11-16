@@ -1,9 +1,8 @@
 //! The real install (skipped without `OMSI_PATH`): the keyboard configuration and the SD77 triggers.
 
+use super::{BusManifest, KeyboardConfig};
 use bevy::prelude::*;
 use opts_bevy::ScriptKeyBindings;
-use opts_core::formats::engine_config::KeyboardConfig;
-use opts_core::formats::vehicles::bus::BusManifest;
 
 /// Real installation (skipped unless `OMSI_PATH` is set): every `[vehicles]` entry of
 /// `keyboard.cfg` has a known key, and the SD77's scripts handle the triggers that its keys

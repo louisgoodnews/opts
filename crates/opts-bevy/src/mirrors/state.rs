@@ -1,8 +1,8 @@
 //! Per-group state of the mirrors: the frame counter, the statistics, groups and cameras.
 
+use super::BusMirrorCamera;
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::*;
-use opts_core::formats::vehicles::BusMirrorCamera;
 
 use crate::glass::mirror_index;
 

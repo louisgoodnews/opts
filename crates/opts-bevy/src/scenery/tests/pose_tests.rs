@@ -1,7 +1,7 @@
 //! Centreline pose tests: a straight spline climbs, and a right turn ends south of its start.
 
+use super::super::MapSplineInstance;
 use bevy::math::Vec3;
-use opts_core::formats::map::MapSplineInstance;
 
 use super::super::pose::spline_pose;
 

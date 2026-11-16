@@ -1,5 +1,6 @@
 //! Spawning of an OMSI scenery object as a Bevy entity hierarchy.
 
+use super::SceneryObject;
 use bevy::asset::Handle;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::name::Name;
@@ -7,7 +8,6 @@ use bevy::ecs::system::Commands;
 use bevy::mesh::{Mesh, Mesh3d};
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy::transform::components::Transform;
-use opts_core::formats::scenery::SceneryObject;
 
 use crate::coords::OmsiTransform;
 

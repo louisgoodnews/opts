@@ -1,7 +1,7 @@
 //! Pure geometry and selection of the mirrors: reflection, pose, field of view, pane and UV.
 
+use super::BusMirrorCamera;
 use bevy::prelude::*;
-use opts_core::formats::vehicles::BusMirrorCamera;
 
 use super::settings::{MirrorAdjust, MIRROR_FOV_RANGE_DEG, MIRROR_OFFSET_M, MIRROR_VIEW_COS};
 

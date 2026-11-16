@@ -17,6 +17,7 @@
 
 use bevy::prelude::*;
 use opts_core::formats::scenery::ScoLight;
+use opts_core::formats::vehicles::model::ModelConfig;
 
 mod spawn;
 mod system;

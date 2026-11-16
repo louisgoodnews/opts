@@ -1,7 +1,7 @@
 //! The NLC dash and matrix script textures receive drawing (skipped without `OMSI_PATH`).
 
+use super::BusManifest;
 use bevy::prelude::*;
-use opts_core::formats::vehicles::bus::BusManifest;
 
 #[test]
 fn nlc_dash_and_matrix_script_textures_receive_drawing() {

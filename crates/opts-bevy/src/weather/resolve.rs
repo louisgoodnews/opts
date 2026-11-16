@@ -1,8 +1,8 @@
 //! Resolving a preset file into the [`WeatherConditions`] of the session, and the values derived
 //! from them.
 
+use super::{CloudCover, CloudTypes, PrecipKind, WeatherFile};
 use bevy::prelude::Vec2;
-use opts_core::formats::weather::{CloudCover, CloudTypes, PrecipKind, WeatherFile};
 
 use super::conditions::{absolute_humidity, CloudSpec, WeatherConditions, WeatherVars};
 use super::kind::WeatherKind;
