@@ -30,13 +30,14 @@ pub(super) fn longitudinal_force(
 }
 
 /// Steering authority under load (M-0124): the share of the empty bus's yaw response that a bus
-/// carrying `load_kg` of people keeps, `unladen / (unladen + load)`. It is exactly 1 without a
-/// load, so the setting off leaves the steering unchanged, and it falls as the load grows.
-pub(super) fn steering_authority(unladen_kg: f32, load_kg: f32) -> f32 {
-    if load_kg <= 0.0 || unladen_kg <= 0.0 {
+/// keeps, `unladen / (unladen + load)`, with both the static weights (N) on the steered axle
+/// ([`VehicleSimulation::steer_axle_weights_n`]). It is exactly 1 without a load, so the setting
+/// off leaves the steering unchanged, and it falls as the load on that axle grows.
+pub(super) fn steering_authority(unladen_n: f32, load_n: f32) -> f32 {
+    if load_n <= 0.0 || unladen_n <= 0.0 {
         return 1.0;
     }
-    unladen_kg / (unladen_kg + load_kg)
+    unladen_n / (unladen_n + load_n)
 }
 
 impl VehicleSimulation {
@@ -92,10 +93,11 @@ impl VehicleSimulation {
         );
 
         // 3. Kinematic turning yaw rate: omega = (v / L) * tan(delta). A loaded bus follows
-        // the steering at a fraction of its empty rate (M-0124 steering authority).
+        // the steering at a fraction of its empty rate, set by the load on the steered axle
+        // (M-0124 steering authority).
         let yaw_rate = (speed / self.wheelbase_m) * central_steer_rad.tan();
-        let load_kg = self.passenger_load_kg();
-        let authority = steering_authority(moving_mass_kg - load_kg, load_kg);
+        let (unladen_steer_n, people_steer_n) = self.steer_axle_weights_n();
+        let authority = steering_authority(unladen_steer_n, people_steer_n);
         let yaw_torque = (yaw_rate - self.chassis.yaw_rate_rad_s)
             * self.chassis.yaw_inertia_kg_m2
             * 10.0
