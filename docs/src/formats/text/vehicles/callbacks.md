@@ -105,6 +105,6 @@ Runners-up: the coin index to coin mapping of `GiveChangeCoin`, which of an `.ot
 
 ## Related
 
-[`.osc` language](osc.md) · [predefined variables](predefined-variables.md) · [`.hof`](hof.md) · [model.cfg](model_cfg.md) · [script VM](../../../architecture/script-vm.md) · [vehicle scripts route](../../../architecture/vehicle-scripts-route.md)
+[`.osc` language](osc.md) · [predefined variables](predefined-variables.md) · [`.hof`](hof.md) · [model.cfg](model_cfg.md) · [OMSI events and triggers](events.md) · [script VM](../../../architecture/script-vm.md) · [vehicle scripts route](../../../architecture/vehicle-scripts-route.md)
 
 **Clean-room attestation (ADR-0002):** no OMSI binaries were inspected; all statements come from shipped text files and are inferences, not facts about the engine.

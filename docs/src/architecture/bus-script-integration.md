@@ -7,6 +7,7 @@
 | **Refines** | [Vehicle scripts route](vehicle-scripts-route.md) (phases VS0-VS7) |
 | **Milestones** | [M-0096](../roadmap/phase-4/M-0096.md) to [M-0103](../roadmap/phase-4/M-0103.md) |
 | **Builds on** | [M-0026](../roadmap/phase-4/M-0026.md) (VM), [M-0045](../roadmap/phase-4/M-0045.md) (bridge), [M-0053](../roadmap/phase-4/M-0053.md) (articulation and consist mass), [M-0027](../roadmap/phase-4/M-0027.md) (audio), [M-0095](../roadmap/phase-4/M-0095.md) (AI profiles) |
+| **Event research** | [OMSI events and triggers](../formats/text/vehicles/events.md) (taxonomy, census, Q-BSI-4 candidates) and [event system design](event-system.md) (consolidation, [M-0118](../roadmap/phase-11/M-0118.md)) |
 
 Evidence tags as in the report: **[K]** code, **[C]** corpus, **[R]** run, ❓ inferred or to be settled by experiment.
 
