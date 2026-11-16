@@ -21,8 +21,10 @@ use crate::new_game_screen::weather::name_of;
 use crate::settings::GameSettings;
 use opts_bevy::{SessionEnvironment, WeatherCatalogue};
 
+mod fuel;
 mod texts;
 use super::params::{DisplayNodes, DisplayRows, DisplaySlots, TextEnv};
+use fuel::{lamp_text, level_text};
 use texts::{camera_label_text, clock_line, controls_hint, session_info_text};
 
 mod alerts;

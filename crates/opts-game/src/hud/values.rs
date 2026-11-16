@@ -7,6 +7,7 @@ use opts_bevy::{
 };
 use opts_sim::vehicle::inputs::GearPosition;
 
+use super::fuel_hud::{fuel_hud, FuelHud};
 use super::widget::VehicleKind;
 use crate::in_game::omsi_world::RailPlayer;
 
@@ -62,6 +63,8 @@ pub struct HudValues {
     pub sub_total: usize,
     /// The followed timetable, if any.
     pub timetable: Option<TimetableHud>,
+    /// The fuel readout, when the consumption setting is not `Off`.
+    pub fuel: Option<FuelHud>,
 }
 
 impl Default for HudValues {
@@ -80,6 +83,7 @@ impl Default for HudValues {
             sub_camera: 0,
             sub_total: 0,
             timetable: None,
+            fuel: None,
         }
     }
 }
@@ -141,6 +145,7 @@ pub fn sample_values(
         next.rpm = RPM_PROVIDED.then(|| c.engine_rpm());
         next.parking_brake = c.inputs().is_parking_brake_engaged();
         next.road_friction = c.sim.road_friction;
+        next.fuel = fuel_hud(c);
         next.rail = controls.map(|r| (r.direction, r.lever));
         next.sub_total = bus.map_or(0, |b| match camera.mode {
             CameraMode::Cockpit => b.driver_camera_count(),

@@ -24,6 +24,14 @@ keys! {
     CAPTION_DIRECTION = "hud-caption-direction",
     /// Caption of the rail power lever.
     CAPTION_LEVER = "hud-caption-lever",
+    /// Caption of the fuel level.
+    CAPTION_FUEL = "hud-caption-fuel",
+    /// Caption of the low-level flag.
+    CAPTION_RESERVE = "hud-caption-reserve",
+    /// Value of the low-level flag when the level is at or below the threshold.
+    FUEL_LOW = "hud-fuel-low",
+    /// Value of the low-level flag above the threshold.
+    FUEL_OK = "hud-fuel-ok",
     /// Rail direction: forward.
     RAIL_FORWARD = "hud-rail-forward",
     /// Rail direction: backwards.

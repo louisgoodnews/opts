@@ -66,6 +66,10 @@ pub fn update_texts(
                 }
                 loc.t(if on { keys::BRAKE_ON } else { keys::BRAKE_OFF })
             }
+            (Binding::Fuel, Part::Value) => level_text(values.fuel),
+            (Binding::FuelLow, Part::Value) => {
+                lamp_text(&loc, values.fuel, ink.map(|i| i.into_inner()))
+            }
             (Binding::SessionInfo, Part::Value) => session_info_text(&loc, &session, &place),
             (Binding::SessionClock, Part::Value) => clock_line(&loc, env, weather, &values),
             (Binding::ControlsHint, Part::Value) => {
@@ -101,7 +105,8 @@ pub fn update_widget_display(
             // Without a vehicle there are no instruments.
             && (values.has_vehicle || w.binding.row() != Some(Row::Instruments))
             && (w.when.kinds.is_empty() || w.when.kinds.contains(&values.kind))
-            && (!w.when.needs_rpm || (RPM_PROVIDED && values.rpm.is_some()));
+            && (!w.when.needs_rpm || (RPM_PROVIDED && values.rpm.is_some()))
+            && (!matches!(w.binding, Binding::Fuel | Binding::FuelLow) || values.fuel.is_some());
         let display = if on { Display::Flex } else { Display::None };
         if node.display != display {
             node.display = display;

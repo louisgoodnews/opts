@@ -100,3 +100,27 @@ pub(super) const MINIMAP: HudWidget = HudWidget {
     }),
     when: Condition::ALWAYS,
 };
+
+pub(super) const FUEL: HudWidget = HudWidget {
+    id: "fuel",
+    title_key: "hud-widget-fuel",
+    binding: Binding::Fuel,
+    format: Format::Number { precision: 0 },
+    slot: Slot::ClusterBottomLeft,
+    slots: &[Slot::ClusterBottomLeft],
+    priority: 75,
+    switch: None,
+    when: Condition::ALWAYS,
+};
+
+pub(super) const FUEL_LOW: HudWidget = HudWidget {
+    id: "fuel-low",
+    title_key: "hud-widget-fuel-low",
+    binding: Binding::FuelLow,
+    format: Format::Lamp,
+    slot: Slot::ClusterBottomLeft,
+    slots: &[Slot::ClusterBottomLeft],
+    priority: 70,
+    switch: None,
+    when: Condition::ALWAYS,
+};

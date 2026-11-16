@@ -139,6 +139,10 @@ pub enum Binding {
     CameraLabel,
     /// The mini map (a top-down drawing of the roads around the player).
     MiniMap,
+    /// The fuel level in percent (the model; hidden in consumption mode `Off`).
+    Fuel,
+    /// The low-level flag of the fuel model (`LOW` or `OK`).
+    FuelLow,
 }
 
 impl Binding {
@@ -151,7 +155,9 @@ impl Binding {
             | Self::Rpm
             | Self::ParkingBrake
             | Self::RailDirection
-            | Self::RailLever => Some(Row::Instruments),
+            | Self::RailLever
+            | Self::Fuel
+            | Self::FuelLow => Some(Row::Instruments),
             Self::ControlsHint => Some(Row::Hints),
             Self::Alerts => Some(Row::Alerts),
             Self::SessionInfo | Self::SessionClock | Self::CameraLabel | Self::MiniMap => None,
