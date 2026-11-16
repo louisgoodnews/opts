@@ -78,6 +78,7 @@ impl Plugin for SettingsRegistryPlugin {
                     live::sync_shadow_detail,
                     live::sync_audio,
                     crate::vehicle_setup_settings::sync_vehicle_setup,
+                    crate::vehicle_fuel_settings::sync_fuel_mode,
                     live::sync_weather_effects,
                     live::sync_tree_wind,
                 ),

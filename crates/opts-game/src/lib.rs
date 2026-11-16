@@ -66,6 +66,7 @@ pub mod theme_files;
 pub mod trip_start;
 pub mod ui_typography;
 pub mod vehicle_keys;
+pub mod vehicle_fuel_settings;
 pub mod vehicle_setup_settings;
 pub mod vehicle_sound;
 pub mod viewpoints;
