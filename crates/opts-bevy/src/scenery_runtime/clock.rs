@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 pub use crate::environment::NIGHT_SUN_ALT_DEG;
-use crate::environment::{sun_position, LATITUDE_DEG};
+use crate::environment::{LATITUDE_DEG, sun_position};
 
 /// Clock and environment of the scenery runtime.
 ///
@@ -118,6 +118,9 @@ pub enum HostVar {
     Phase,
     /// `Time` (seconds since midnight).
     Time,
+    /// `snow_visible`: the session has snow (`PrecipType` 2). ❓ The stock meaning is not
+    /// documented; OPTS takes snowing weather as the snow cover.
+    Snow,
     /// Anything else: reads 0.
     Zero,
 }
@@ -130,6 +133,7 @@ impl HostVar {
             "nightlighta" => Self::Night,
             "trafficlightphase" => Self::Phase,
             "time" => Self::Time,
+            "snow_visible" => Self::Snow,
             _ => Self::Zero,
         }
     }

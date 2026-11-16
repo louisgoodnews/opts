@@ -78,6 +78,10 @@ A texture without a property file defaults to ❓ (probably asphalt / dry).
 
 ---
 
+## OPTS handling
+
+OPTS reads the file next to each texture the model loader loads (`<texture>.cfg`, `model/moisture.rs`). `[moisture]` makes the material take the global wetness on the model's opaque materials (vehicles and scenery alike); a texture without the flag stays dry. `[puddles]` and `[surface]` are parsed (`TextureFlags`) but not yet used for non-ground objects. ❓ Repaint-replaced textures are keyed by the replacement's name only.
+
 ## 🧪 Examples
 
 ```

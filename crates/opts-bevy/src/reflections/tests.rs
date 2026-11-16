@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`reflections.rs`).
 
 use super::*;
+use crate::WeatherEffects;
 
 #[test]
 fn default_switches_are_all_off() {
@@ -27,4 +28,27 @@ fn wet_standard_is_identity_when_dry_and_darker_when_wet() {
 fn f16_encodes_one() {
     assert_eq!(f16_bits(1.0), 0x3c00);
     assert_eq!(f16_bits(0.0), 0);
+}
+
+#[test]
+fn only_moisture_materials_take_the_wetness() {
+    assert_eq!(material_wetness(true, 0.7), 0.7);
+    assert_eq!(material_wetness(true, 3.0), 1.0);
+    // A texture without the flag stays dry at any wetness.
+    assert_eq!(material_wetness(false, 1.0), 0.0);
+}
+
+#[test]
+fn wet_objects_follow_the_switch_or_the_setting() {
+    let off = ReflectionSwitches::default();
+    let on = ReflectionSwitches::parse("wet");
+    let ground = WeatherEffects::default();
+    let objects = WeatherEffects {
+        wet_objects: true,
+        ..WeatherEffects::default()
+    };
+    assert!(!wet_objects_on(&off, None));
+    assert!(!wet_objects_on(&off, Some(&ground)));
+    assert!(wet_objects_on(&off, Some(&objects)));
+    assert!(wet_objects_on(&on, None));
 }

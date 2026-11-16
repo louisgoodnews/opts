@@ -20,17 +20,21 @@ pub struct MaterialNote {
     pub base_color: Color,
     /// Original perceptual roughness.
     pub roughness: f32,
+    /// The texture's property file has `[moisture]`: the material takes the wetness.
+    pub moisture: bool,
 }
 
 static NOTES: Mutex<Option<HashMap<AssetId<StandardMaterial>, MaterialNote>>> = Mutex::new(None);
 
-/// Called by the model loader for every material it creates; free when no switch is on.
+/// Called by the model loader for every material it creates. Free unless a switch is on or the
+/// material takes the wetness (`moisture`, from the texture's `[moisture]` flag).
 pub fn note_material(
     handle: &Handle<StandardMaterial>,
     texture: Option<&str>,
+    moisture: bool,
     m: &StandardMaterial,
 ) {
-    if !switches().any() {
+    if !moisture && !switches().any() {
         return;
     }
     let note = MaterialNote {
@@ -38,6 +42,7 @@ pub fn note_material(
         alpha: m.alpha_mode,
         base_color: m.base_color,
         roughness: m.perceptual_roughness,
+        moisture,
     };
     if let Ok(mut g) = NOTES.lock() {
         g.get_or_insert_with(HashMap::new).insert(handle.id(), note);

@@ -4,7 +4,9 @@
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::*;
 
+use crate::WeatherEffects;
 use crate::ground_material::GroundMaterial;
+use crate::texture::{TextureFlags, texture_wetness};
 
 use super::flags::ReflectionSwitches;
 use super::notes::note_of;
@@ -33,17 +35,41 @@ pub fn wet_standard(base: Color, roughness: f32, w: f32) -> (Color, f32) {
     (wet, roughness * (1.0 - 0.65 * w))
 }
 
+/// Whether the wet pass is on: the `wet` prototype switch, or the setting that wets objects and
+/// vehicles (`WeatherEffects::wet_objects`).
+#[must_use]
+pub fn wet_objects_on(sw: &ReflectionSwitches, effects: Option<&WeatherEffects>) -> bool {
+    sw.wet || effects.is_some_and(|e| e.wet_objects)
+}
+
+/// The wetness of one material: the global wetness when its texture has `[moisture]`, dry
+/// otherwise (through [`texture_wetness`], the one rule for objects and vehicles).
+#[must_use]
+pub fn material_wetness(moisture: bool, w: f32) -> f32 {
+    texture_wetness(
+        TextureFlags {
+            moisture,
+            ..TextureFlags::default()
+        },
+        w,
+    )
+}
+
+/// Applies the wet look to the noted opaque materials. Off (or dry) restores their original
+/// colour and roughness exactly, so turning the setting off leaves objects dry again.
 pub(super) fn apply_wet(
     sw: Res<ReflectionSwitches>,
     wetness: Res<Wetness>,
+    effects: Option<Res<WeatherEffects>>,
     mut state: ResMut<WetState>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     ground: Res<Assets<GroundMaterial>>,
 ) {
-    if !sw.wet {
-        return;
-    }
-    let w = wetness.0;
+    let w = if wet_objects_on(&sw, effects.as_deref()) {
+        wetness.0
+    } else {
+        0.0
+    };
     let ground_count = ground.len();
     if (w - state.last).abs() < 1e-4 && state.applied_count == materials.len() + ground_count {
         return;
@@ -56,8 +82,13 @@ pub(super) fn apply_wet(
         if !matches!(note.alpha, AlphaMode::Opaque) {
             continue;
         }
+        let wv = material_wetness(note.moisture, w);
+        let (c, r) = if wv > 0.0 {
+            wet_standard(note.base_color, note.roughness, wv)
+        } else {
+            (note.base_color, note.roughness)
+        };
         if let Some(mut m) = materials.get_mut(id) {
-            let (c, r) = wet_standard(note.base_color, note.roughness, w);
             m.base_color = c;
             m.perceptual_roughness = r;
         }
