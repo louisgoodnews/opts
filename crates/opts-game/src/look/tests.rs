@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`look.rs`).
 
 use super::*;
+use bevy::render::view::ColorGrading;
 
 fn reinhard(x: f32) -> f32 {
     x / (1.0 + x)
