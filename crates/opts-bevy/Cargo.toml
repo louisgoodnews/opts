@@ -8,6 +8,9 @@ license.workspace = true
 description = "Bevy plugin and asset loaders for OPTS."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 # Internal
 opts-core = { workspace = true }

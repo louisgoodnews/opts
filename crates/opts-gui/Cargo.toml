@@ -8,6 +8,9 @@ license.workspace = true
 description = "Material Design 3 GUI widget library for OPTS."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 # Internal
 opts-l10n = { workspace = true }

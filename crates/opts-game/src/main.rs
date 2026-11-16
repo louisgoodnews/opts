@@ -32,6 +32,8 @@ fn main() {
 /// running the C exit handlers: the render pipelines' background compile tasks may still be
 /// inside the GPU driver, and the driver's own exit handlers tore it down under them (a SIGSEGV
 /// in `libnvidia-glcore` after `exited cleanly`, seen 2026-10-26 after a map reload).
+// `unsafe_code` is denied workspace-wide; this is the binary's only `unsafe`, so the exception is local.
+#[allow(unsafe_code)]
 fn end_process() {
     #[cfg(unix)]
     // SAFETY: `_exit` ends the process at once; nothing runs after it and no Rust state is left

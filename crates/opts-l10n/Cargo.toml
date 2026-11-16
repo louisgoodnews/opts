@@ -8,6 +8,9 @@ license.workspace = true
 description = "Localisation without the engine: Fluent-subset parser, language packs, checks, JSON interchange."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 serde_json = { workspace = true }
 directories = { workspace = true }

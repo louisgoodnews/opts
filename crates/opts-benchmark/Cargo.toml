@@ -9,6 +9,9 @@ description = "Benchmarks and corpus verification for OPTS (scenery object load 
 repository.workspace = true
 publish = false
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "opts-benchmark"
 path = "src/main.rs"

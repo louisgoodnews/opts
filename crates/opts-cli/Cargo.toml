@@ -8,6 +8,9 @@ license.workspace = true
 description = "Command-line arguments, the control-protocol types and the `opts-cli` remote-control client for OPTS."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [features]
 default = ["client"]
 # The remote-control client (binary `opts-cli`). Game crates depend on this crate without it.

@@ -8,6 +8,9 @@ license.workspace = true
 description = "SQLite path catalogue of an OMSI 2 installation (discovery, staleness, queries)."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 opts-core = { workspace = true }
 rusqlite = { workspace = true }

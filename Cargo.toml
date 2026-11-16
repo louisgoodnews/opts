@@ -9,6 +9,9 @@ repository = "https://github.com/louisgoodnews/opts"
 description = "Open Public Transport Simulator - Bringing OMSI 2 assets to the Bevy engine."
 default-run = "opts"
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "opts"
 path = "src/main.rs"
@@ -51,6 +54,9 @@ repository = "https://github.com/louisgoodnews/opts"
 description = "Open Public Transport Simulator - Bringing OMSI 2 assets to the Bevy engine."
 keywords = ["bevy", "simulation", "omsi", "transport", "gamedev"]
 categories = ["game-development", "simulation"]
+
+[workspace.lints.rust]
+unsafe_code = "deny"
 
 [workspace.dependencies]
 # --- Internal Crates ---

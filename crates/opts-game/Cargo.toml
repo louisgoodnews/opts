@@ -8,6 +8,9 @@ license.workspace = true
 description = "The main executable for the Open Public Transport Simulator."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "opts-game"
 path = "src/main.rs"

@@ -8,6 +8,9 @@ license.workspace = true
 description = "Privacy-respecting hardware capability probe and default recommendations for OPTS (no network, no identifiers)."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }

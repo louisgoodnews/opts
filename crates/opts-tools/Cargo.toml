@@ -8,6 +8,9 @@ license.workspace = true
 description = "CLI tools for inspecting and converting OMSI assets."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "opts-tools"
 path = "src/main.rs"

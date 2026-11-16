@@ -8,6 +8,9 @@ license.workspace = true
 description = "The native OPTS content model and its TOML form: what the engine reads, free of OMSI's file-format quirks."
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 opts-types = { workspace = true }
 serde = { workspace = true }
