@@ -232,7 +232,7 @@ of it, plus the old built-in ids. `sim.get` in a drive adds `weather_presets` (t
 
 ## 10. Grip, visibility and AI (M-0117, spec)
 
-Implemented in `opts-sim::surface_grip` (friction model, no engine dependency), `opts-sim` `VehicleSimulation::road_friction` (the tyre friction limit; the dry value is `ROAD_FRICTION` = 0.85) and `opts-traffic::weather` (AI driver parameters). The host has to write the coefficient into the vehicle each step; that wiring and the HUD are not done yet (see the milestone).
+Implemented in `opts-sim::surface_grip` (friction model, no engine dependency), `opts-sim` `VehicleSimulation::road_friction` (the tyre friction limit; the dry value is `ROAD_FRICTION` = 0.85) and `opts-traffic::weather` (AI driver parameters). The game writes the coefficient into the player's vehicle each frame (`in_game::weather::grip::drive_road_grip`, rate limited), feeds the AI world the same grip factor and the session's fog visibility (`AiWeather::sync_traffic`), and the HUD alert slot shows a warning below `g = 0.8` and below 100 m visibility (`hud::alerts::weather`). The exhaust plume and the on-screen checks are not done yet (see the milestone).
 
 **Coefficients** (tyre-road friction, μ; each ±0.1 ❓, from handbook ranges for tyres on asphalt, wet asphalt, packed snow and ice; to be checked against a source before a release):
 
@@ -245,6 +245,6 @@ Implemented in `opts-sim::surface_grip` (friction model, no engine dependency), 
 
 **Mapping:** `wet = lerp(dry, wet, wetness)`, `snowy = lerp(wet, snow, snow_cover)`, `μ = lerp(snowy, ice, ice)`, each input clamped to 0..=1. Wetness is the `Wetness` resource, snow cover from `[groundwet]`. The grip follows the target at most 0.5 per second (`approach`), so a change from dry to snow takes 1.2 s.
 
-**AI** (`opts-traffic::weather`): with grip factor `g = μ / 0.85` (clamped to ≥ 0.05): desired speed × √g, `max_accel`, `comfort_decel`, `max_decel` and `lat_accel` × g, time headway ÷ √g. Fog: headway × `clamp(300 m / visibility, 1, 3)`. Below 100 m visibility the HUD hint is due (`is_low_visibility`).
+**AI** (`opts-traffic::weather`): with grip factor `g = μ / 0.85` (clamped to ≥ 0.05): desired speed × √g, lane-limit speed factor × √g, `max_accel`, `comfort_decel`, `max_decel` and `lat_accel` × g, time headway ÷ √g. The traffic world applies this to every driver's acceleration and speed cap (`TrafficWorld::set_weather`). Fog: headway × `clamp(300 m / visibility, 1, 3)`. Below 100 m visibility the HUD hint is due (`is_low_visibility`).
 
 **Deviations from the milestone text:** the grip factor for AI is a scaling rule, not a fitted model; the braking test uses the sim's brake limit, not measured data.

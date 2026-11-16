@@ -114,6 +114,10 @@ keys! {
     ALERT_LINE = "hud-alert-line",
     /// Alert: the parking brake is on while the vehicle moves.
     ALERT_BRAKE_MOVING = "hud-alert-brake-moving",
+    /// Alert: the road has little grip (wet or snowy).
+    ALERT_LOW_GRIP = "hud-alert-low-grip",
+    /// Alert: the visibility is below the hint threshold (fog).
+    ALERT_LOW_VISIBILITY = "hud-alert-low-visibility",
     /// Alert: a test alert raised through the control protocol.
     ALERT_TEST = "hud-alert-test",
     /// Widget names.

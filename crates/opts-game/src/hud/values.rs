@@ -2,7 +2,9 @@
 
 use bevy::prelude::*;
 use opts_bevy::vehicle::BusVehicle;
-use opts_bevy::{ArticulatedChain, CameraMode, CameraState, PlayerVehicle, VehicleController};
+use opts_bevy::{
+    ArticulatedChain, CameraMode, CameraState, PlayerVehicle, SessionEnvironment, VehicleController,
+};
 use opts_sim::vehicle::inputs::GearPosition;
 
 use super::widget::VehicleKind;
@@ -14,44 +16,8 @@ use crate::in_game::omsi_world::RailPlayer;
 /// than showing "--".
 pub const RPM_PROVIDED: bool = false;
 
-/// Speed unit of the readout (`interface.units`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum SpeedUnit {
-    /// Kilometres per hour.
-    #[default]
-    Kmh,
-    /// Miles per hour.
-    Mph,
-}
-
-impl SpeedUnit {
-    /// From the stored setting text.
-    #[must_use]
-    pub fn parse(text: Option<&str>) -> Self {
-        match text {
-            Some("mph") => Self::Mph,
-            _ => Self::Kmh,
-        }
-    }
-
-    /// Message key of the unit caption.
-    #[must_use]
-    pub const fn caption_key(self) -> &'static str {
-        match self {
-            Self::Kmh => super::keys::UNIT_KMH,
-            Self::Mph => super::keys::UNIT_MPH,
-        }
-    }
-
-    /// `kmh` converted to this unit.
-    #[must_use]
-    pub fn convert(self, kmh: f32) -> f32 {
-        match self {
-            Self::Kmh => kmh,
-            Self::Mph => kmh * 0.621_371,
-        }
-    }
-}
+mod units;
+pub use units::SpeedUnit;
 
 /// The followed timetable of the player's vehicle, as the clock pill shows it.
 #[derive(Debug, Clone, PartialEq)]
@@ -81,6 +47,10 @@ pub struct HudValues {
     pub rpm: Option<f32>,
     /// Parking brake engaged.
     pub parking_brake: bool,
+    /// Friction of the road under the player's vehicle (`road_friction`, M-0117).
+    pub road_friction: f32,
+    /// Fog visibility in metres (M-0117).
+    pub visibility_m: f32,
     /// A rail vehicle's controls: the selected direction (`1` forward, `-1` backwards) and the
     /// power lever (`-1` braking to `1` traction); `None` for a road vehicle.
     pub rail: Option<(i8, f32)>,
@@ -103,6 +73,8 @@ impl Default for HudValues {
             gear: String::new(),
             rpm: None,
             parking_brake: false,
+            road_friction: opts_sim::vehicle::ROAD_FRICTION,
+            visibility_m: f32::INFINITY,
             rail: None,
             camera: CameraMode::External,
             sub_camera: 0,
@@ -147,6 +119,7 @@ type PlayerParts = (
 /// Samples the player's vehicle and the camera.
 pub fn sample_values(
     camera: Res<CameraState>,
+    env: Option<Res<SessionEnvironment>>,
     vehicle: Query<PlayerParts, With<PlayerVehicle>>,
     routes: Query<&opts_bevy::route::VehicleRoute, With<PlayerVehicle>>,
     mut values: ResMut<HudValues>,
@@ -155,6 +128,7 @@ pub fn sample_values(
     let mut next = HudValues {
         camera: camera.mode,
         sub_camera: camera.sub_camera_index,
+        visibility_m: env.as_ref().map_or(f32::INFINITY, |e| e.conditions().fog_visibility_m),
         ..HudValues::default()
     };
     if let Ok((c, rail, chain, bus, controls)) = vehicle.single() {
@@ -164,6 +138,7 @@ pub fn sample_values(
         next.gear = gear_text(c.gear());
         next.rpm = RPM_PROVIDED.then(|| c.engine_rpm());
         next.parking_brake = c.inputs().is_parking_brake_engaged();
+        next.road_friction = c.sim.road_friction;
         next.rail = controls.map(|r| (r.direction, r.lever));
         next.sub_total = bus.map_or(0, |b| match camera.mode {
             CameraMode::Cockpit => b.driver_camera_count(),
