@@ -97,29 +97,6 @@ pub struct MiniMapSurface;
 #[derive(Component, Debug, Clone, Copy)]
 pub struct MiniMapCaption;
 
-/// The map's colours from an instrument palette.
-#[must_use]
-pub fn colors_of(palette: &InstrumentPalette) -> MapColors {
-    let u8s = |c: Color| Srgba::from(c).to_u8_array();
-    let mut ground = u8s(palette.panel);
-    ground[3] = 255;
-    MapColors {
-        ground,
-        road: u8s(palette.text_dim),
-        active: u8s(palette.text),
-        other: u8s(palette.warning),
-        north: u8s(palette.text),
-        route: u8s(palette.ok),
-    }
-}
-
-/// The compass heading (radians) of a world transform, and its (east, north) position.
-#[must_use]
-pub fn pose_of(t: &GlobalTransform) -> (DVec2, f32) {
-    let p = t.translation();
-    let f = t.forward();
-    (DVec2::new(f64::from(p.x), f64::from(-p.z)), f.x.atan2(-f.z))
-}
 
 /// Keeps [`MiniMapState::config`] in step with the settings.
 pub fn sync_config(settings: Res<GameSettings>, mut state: ResMut<MiniMapState>) {
@@ -131,85 +108,10 @@ pub fn sync_config(settings: Res<GameSettings>, mut state: ResMut<MiniMapState>)
     }
 }
 
-/// F7 shows or hides the map, Shift+F7 switches north-up and heading-up, Ctrl+F7 switches the
-/// speed zoom on and off, `+` and `-` zoom (the actions `minimap_*`, rebindable; the numpad
-/// `+` and `-` always zoom). The keys change the settings, so the page and the keys agree and the choice is remembered.
-pub fn minimap_keys(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    action_keys: Option<Res<opts_bevy::ActionKeys>>,
-    mut api: crate::settings_registry::SettingsApi,
-) {
-    use crate::settings_registry::ChangeSource;
-    let keys = opts_bevy::action_keys_of(&action_keys);
-    let config = MiniMapConfig::read(&api.settings);
-    let change = if keys.just_pressed(&keyboard, "minimap_speed_zoom") {
-        Some((
-            SETTING_ZOOM_MODE,
-            config.zoom_mode.toggled().id().to_owned(),
-        ))
-    } else if keys.just_pressed(&keyboard, "minimap_rotate") {
-        Some((
-            SETTING_ORIENTATION,
-            config.orientation.toggled().id().to_owned(),
-        ))
-    } else if keys.just_pressed(&keyboard, "minimap_toggle") {
-        Some((SETTING_ENABLED, (!config.enabled).to_string()))
-    } else if keys.just_pressed(&keyboard, "minimap_zoom_in") {
-        Some((SETTING_ZOOM, format!("{}", step_zoom(config.zoom_m, 1))))
-    } else if keys.just_pressed(&keyboard, "minimap_zoom_out") {
-        Some((SETTING_ZOOM, format!("{}", step_zoom(config.zoom_m, -1))))
-    } else {
-        None
-    };
-    if let Some((key, value)) = change {
-        if let Err(e) = api.change(key, Some(&value), ChangeSource::Page, true) {
-            tracing::warn!("mini map setting {key}: {e}");
-        }
-    }
-}
-
-/// Creates the texture when the surface needs another size and hands it to the surface node.
-pub fn ensure_image(
-    mut images: ResMut<Assets<Image>>,
-    mut handle: ResMut<MiniMapImage>,
-    mut canvas: ResMut<MiniMapCanvas>,
-    mut state: ResMut<MiniMapState>,
-    mut surfaces: Query<(&ComputedNode, &mut ImageNode), With<MiniMapSurface>>,
-    palette_owner: (Option<Res<MaterialTheme>>, Res<InstrumentVariant>),
-) {
-    let Some((computed, mut image_node)) = surfaces.iter_mut().next() else {
-        return;
-    };
-    // The texture matches the physical size of the node, within sensible bounds.
-    let wanted = (computed.size().x.round() as u32).clamp(96, 448);
-    let ground = palette_owner.0.as_ref().map_or([12, 15, 20, 255], |t| {
-        colors_of(t.instrument(*palette_owner.1)).ground
-    });
-    if canvas.0.as_ref().is_none_or(|c| c.size != wanted) || handle.0.is_none() {
-        let c = Canvas::new(wanted, ground);
-        let image = Image::new(
-            Extent3d {
-                width: wanted,
-                height: wanted,
-                depth_or_array_layers: 1,
-            },
-            TextureDimension::D2,
-            c.data.clone(),
-            TextureFormat::Rgba8UnormSrgb,
-            RenderAssetUsages::default(),
-        );
-        handle.0 = Some(images.add(image));
-        canvas.0 = Some(c);
-        state.texture_px = wanted;
-        // Draw soon: do not wait for the next tick with an empty map.
-        state.since = UPDATE_INTERVAL.as_secs_f32();
-    }
-    if let Some(h) = &handle.0 {
-        if image_node.image != *h {
-            image_node.image = h.clone();
-        }
-    }
-}
+mod input;
+mod texture;
+pub use input::minimap_keys;
+pub use texture::{colors_of, ensure_image, pose_of};
 
 mod params;
 mod redraw;
