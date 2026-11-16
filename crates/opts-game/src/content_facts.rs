@@ -16,9 +16,11 @@
 //! * The work behind the store is a [`FactsProvider`], replaceable in tests (a slow fake proves
 //!   that the page builds within one frame, see `tests/content_page_budget.rs`).
 
+mod disk;
+mod poll;
+mod store;
+
 use std::path::PathBuf;
-use std::sync::mpsc::{self, Receiver, TryRecvError};
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -26,6 +28,9 @@ use opts_catalogue::KindCounts;
 
 use crate::catalogue_service::{catalogue_db_path, CatalogueService, DiscoveryStatus};
 use crate::settings::GameSettings;
+
+pub use disk::DiskFacts;
+pub use store::ContentFactsStore;
 
 /// How often the light facts are refreshed while a page that shows them is open.
 pub const LIGHT_REFRESH: Duration = Duration::from_secs(3);
@@ -91,219 +96,6 @@ pub trait FactsProvider: Send + Sync + 'static {
     /// The names of the available theme files (listed with the heavy facts).
     fn theme_files(&self) -> Vec<String> {
         Vec::new()
-    }
-}
-
-/// The real provider: the catalogue file, the OMSI folder and the texture cache folder.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct DiskFacts;
-
-impl FactsProvider for DiskFacts {
-    fn light(&self, req: &FactsRequest) -> LightFacts {
-        let root = req.root.clone().or_else(crate::omsi_root::known_omsi_root);
-        let root_state = match &root {
-            None => RootState::Unset,
-            Some(r) if r.is_dir() => RootState::Present,
-            Some(_) => RootState::Missing,
-        };
-        let (last_scan, entities) = open(req).map_or((None, 0), |c| {
-            (c.last_scan().ok().flatten(), c.totals().map_or(0, |t| t.1))
-        });
-        let folder_changed = matches!((&root, last_scan), (Some(r), Some(t)) if r.is_dir()
-            && crate::settings_screen::scan_status::folder_changed_since(r, t));
-        LightFacts {
-            last_scan,
-            entities,
-            root: root_state,
-            folder_changed,
-        }
-    }
-
-    fn theme_files(&self) -> Vec<String> {
-        crate::theme_files::discover_theme_files()
-    }
-
-    fn heavy(&self, req: &FactsRequest) -> HeavyFacts {
-        let kinds = open(req)
-            .and_then(|c| c.kind_counts().ok())
-            .unwrap_or_default();
-        HeavyFacts { kinds }
-    }
-}
-
-/// A read-only handle: no file is created, no schema migrated, nothing locks the scan's writes.
-fn open(req: &FactsRequest) -> Option<opts_catalogue::Catalogue> {
-    req.db_path
-        .as_deref()
-        .filter(|p| p.exists())
-        .and_then(|p| opts_catalogue::Catalogue::open_read_only(p).ok())
-}
-
-/// What a worker sends back: the light facts and, when asked, the heavy ones with the theme list.
-type Answer = (LightFacts, Option<(HeavyFacts, Vec<String>)>);
-
-/// The cached facts and the request in flight.
-#[derive(Resource)]
-pub struct ContentFactsStore {
-    provider: Arc<dyn FactsProvider>,
-    current: Option<ContentFacts>,
-    light_ready: bool,
-    heavy_ready: bool,
-    heavy_stale: bool,
-    pending: Option<(Mutex<Receiver<Answer>>, bool)>,
-    jobs: Vec<Mutex<Receiver<()>>>,
-    themes: Vec<String>,
-    since_light: Duration,
-    /// Increments whenever new facts arrived (for change detection by readers).
-    pub generation: u64,
-}
-
-impl Default for ContentFactsStore {
-    fn default() -> Self {
-        Self::new(Arc::new(DiskFacts))
-    }
-}
-
-impl ContentFactsStore {
-    /// A store over `provider`.
-    #[must_use]
-    pub fn new(provider: Arc<dyn FactsProvider>) -> Self {
-        Self {
-            provider,
-            current: None,
-            light_ready: false,
-            heavy_ready: false,
-            heavy_stale: true,
-            pending: None,
-            jobs: Vec::new(),
-            themes: Vec::new(),
-            since_light: LIGHT_REFRESH,
-            generation: 0,
-        }
-    }
-
-    /// The light facts, once known.
-    #[must_use]
-    pub fn light(&self) -> Option<LightFacts> {
-        self.light_ready
-            .then(|| self.current.unwrap_or_default().light)
-    }
-
-    /// The heavy facts, once known (a stale value stays visible until the new one arrives).
-    #[must_use]
-    pub fn heavy(&self) -> Option<HeavyFacts> {
-        self.heavy_ready
-            .then(|| self.current.unwrap_or_default().heavy)
-    }
-
-    /// The theme files found at the last heavy refresh (empty until then).
-    #[must_use]
-    pub fn theme_files(&self) -> &[String] {
-        &self.themes
-    }
-
-    /// The heavy facts changed (a scan finished, the cache was cleared, the folder changed):
-    /// recompute them in the background. The old values stay until the new ones are there.
-    pub fn invalidate(&mut self) {
-        self.heavy_stale = true;
-        self.since_light = LIGHT_REFRESH;
-    }
-
-    /// Runs `job` (file-system work such as clearing the texture cache) on a worker thread and
-    /// invalidates the heavy facts when it is done.
-    pub fn run_then_invalidate(&mut self, job: impl FnOnce() + Send + 'static) {
-        let (tx, rx) = mpsc::channel();
-        let spawned = std::thread::Builder::new()
-            .name("content-job".into())
-            .spawn(move || {
-                job();
-                let _ = tx.send(());
-            });
-        match spawned {
-            Ok(_) => self.jobs.push(Mutex::new(rx)),
-            Err(e) => tracing::warn!(err = %e, "cannot start the content job thread"),
-        }
-    }
-
-    /// A request is running.
-    #[must_use]
-    pub fn is_busy(&self) -> bool {
-        self.pending.is_some()
-    }
-
-    /// Takes a finished answer, if any. Never blocks.
-    fn poll(&mut self) {
-        let before = self.jobs.len();
-        self.jobs.retain(|rx| {
-            rx.lock()
-                .is_ok_and(|rx| matches!(rx.try_recv(), Err(TryRecvError::Empty)))
-        });
-        if self.jobs.len() != before {
-            self.invalidate();
-        }
-        let Some((rx, heavy)) = &self.pending else {
-            return;
-        };
-        let heavy_asked = *heavy;
-        let received = rx
-            .lock()
-            .map_or(Err(TryRecvError::Disconnected), |rx| rx.try_recv());
-        match received {
-            Ok((light, h)) => {
-                let mut f = self.current.unwrap_or_default();
-                f.light = light;
-                self.light_ready = true;
-                if let Some((h, themes)) = h {
-                    f.heavy = h;
-                    self.themes = themes;
-                    self.heavy_ready = true;
-                } else if heavy_asked {
-                    self.heavy_stale = true;
-                }
-                self.current = Some(f);
-                self.generation += 1;
-                self.pending = None;
-            }
-            Err(TryRecvError::Empty) => {}
-            Err(TryRecvError::Disconnected) => {
-                self.pending = None;
-                // A worker that died leaves the placeholders; try again at the next refresh.
-                self.heavy_stale |= heavy_asked;
-            }
-        }
-    }
-
-    /// Starts a request on a worker thread when one is due.
-    fn maybe_start(&mut self, elapsed: Duration, req: FactsRequest) {
-        self.since_light += elapsed;
-        if self.pending.is_some() {
-            return;
-        }
-        let heavy = self.heavy_stale || !self.heavy_ready;
-        if !heavy && self.since_light < LIGHT_REFRESH {
-            return;
-        }
-        self.since_light = Duration::ZERO;
-        self.heavy_stale = false;
-        let (tx, rx) = mpsc::channel();
-        let provider = self.provider.clone();
-        let req = FactsRequest { heavy, ..req };
-        let spawned = std::thread::Builder::new()
-            .name("content-facts".into())
-            .spawn(move || {
-                let light = provider.light(&req);
-                let h = req
-                    .heavy
-                    .then(|| (provider.heavy(&req), provider.theme_files()));
-                let _ = tx.send((light, h));
-            });
-        match spawned {
-            Ok(_) => self.pending = Some((Mutex::new(rx), heavy)),
-            Err(e) => {
-                tracing::warn!(err = %e, "cannot start the content facts thread");
-                self.heavy_stale |= heavy;
-            }
-        }
     }
 }
 
