@@ -62,7 +62,7 @@ pub fn mark_shadow_candidates(
 
 type ShadowPart<'a> = (Entity, &'a GlobalTransform, &'a Aabb, Has<ShadowCulled>);
 
-/// Switches candidates' shadows by distance and size every [`INTERVAL_S`], and at once when the
+/// Switches candidates' shadows by distance and size every `INTERVAL_S`, and at once when the
 /// setting changes; with the setting off every part it culled casts again.
 pub fn scenery_shadow_cull_system(
     time: Res<Time>,

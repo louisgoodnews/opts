@@ -84,10 +84,10 @@ pub struct MirrorCamera {
     /// The picture is at streaming size (virtual mirror).
     pub enlarged: bool,
     /// The `.bus` camera of this pane (`reflexion<N>.bmp` is tag N), when the vehicle has one and
-    /// [`MirrorSettings::use_tags`] is on: the camera then follows it instead of the reflection.
+    /// [`crate::mirrors::settings::MirrorSettings::use_tags`] is on: the camera then follows it instead of the reflection.
     pub tag: Option<BusMirrorCamera>,
     /// [`MirrorFrame`] of the camera's last render (0 = never): the oldest picture in view
-    /// renders next ([`pick_renders`]).
+    /// renders next ([`crate::mirrors::pick_renders`]).
     pub last_render: u64,
 }
 

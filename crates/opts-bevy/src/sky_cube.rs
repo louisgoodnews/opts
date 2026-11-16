@@ -3,8 +3,8 @@
 //!
 //! * The game writes [`SkyCubeInput`] (horizon and zenith colours of the session's sky, the sun,
 //!   the weather); this module owns **one** cube image and, while
-//!   [`LightQuality::glass_reflections`] is on, a [`GeneratedEnvironmentMapLight`] on the
-//!   [`MainCamera`] that points at it. Bevy filters the cube into diffuse and specular maps every
+//!   [`crate::light_quality::LightQuality::glass_reflections`] is on, a [`bevy::light::GeneratedEnvironmentMapLight`] on the
+//!   [`crate::camera::main_camera::MainCamera`] that points at it. Bevy filters the cube into diffuse and specular maps every
 //!   frame (that is the 1.2 ms of the budget; the source is read, nothing is cached), so the
 //!   regeneration of the *source* below is cheap CPU work, not GPU work.
 //! * [`should_regenerate`] is the policy: at most once per [`REGEN_MIN_INTERVAL_S`] real seconds,

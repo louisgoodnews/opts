@@ -3,7 +3,7 @@
 /// A cheap, borrowed description of a thing, tested against the filters before a record is built.
 #[derive(Debug, Clone, Copy)]
 pub struct Probe<'a> {
-    /// One of [`kind`].
+    /// One of `kind`.
     pub kind: &'a str,
     /// Tile the thing belongs to.
     pub tile: Option<(i32, i32)>,

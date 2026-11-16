@@ -2,7 +2,7 @@
 //!
 //! [`ContentLoader`] turns a mesh file plus its material/texture overrides (from a `.sco` or a
 //! vehicle `model.cfg`) into [`ModelPart`]s: one mesh per material slot, with textures resolved
-//! through [`OmsiInstall`]. It reuses the crate's mesh, material and texture converters and
+//! through [`crate::install::OmsiInstall`]. It reuses the crate's mesh, material and texture converters and
 //! is shared by scenery objects, splines and vehicles.
 
 use std::path::{Path, PathBuf};

@@ -6,7 +6,7 @@
 //!   ([`crate::scenery_runtime::scenery_light_system`]: size by brightness, fade by the cone).
 //!   Brightness = variable × factor, clamped to `0..=1`, approached with the block's time
 //!   constant. The variable comes from the vehicle's scripts or its AI variable table
-//!   ([`VariableSource`]), so player and AI vehicles share the code.
+//!   ([`crate::ai_variables::VariableSource`]), so player and AI vehicles share the code.
 //! * **Headlight pool:** forward-facing white light effects mark a vehicle's headlights. Of the
 //!   vehicles whose headlights shine, the nearest [`HEADLIGHT_POOL`] get one real, shadowless
 //!   `SpotLight` each (at the middle of the pair), with hysteresis so the choice is stable under
@@ -29,7 +29,7 @@ pub const HEADLIGHT_POOL: usize = 6;
 /// Headlights shine (for the pool) above this brightness.
 const HEADLIGHT_ON: f32 = 0.3;
 
-/// A light effect of a vehicle; the entity also carries the [`SceneryLight`] that is drawn.
+/// A light effect of a vehicle; the entity also carries the [`crate::scenery_runtime::SceneryLight`] that is drawn.
 #[derive(Component, Debug, Clone)]
 pub struct VehicleGlow {
     /// The vehicle root whose scripts or AI variables drive the light.

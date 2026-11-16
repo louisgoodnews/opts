@@ -12,7 +12,7 @@ type PlayerInput<'a> = (
     Option<&'a mut crate::rail_controls::RailControls>,
 );
 
-/// Systems that poll desktop keyboard inputs and translate them to [`VehicleInputs`].
+/// Systems that poll desktop keyboard inputs and translate them to [`opts_sim::vehicle::inputs::VehicleInputs`].
 pub fn vehicle_input_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     action_keys: Option<Res<crate::action_keys::ActionKeys>>,

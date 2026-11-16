@@ -7,7 +7,7 @@
 //! * the **carrier** is the directional light with a [`LightRole`] that has
 //!   `shadow_maps_enabled` and light (the game's carrier system keeps exactly one such light and
 //!   applies the 15 % hysteresis; this module only follows it, so a hand-over does not flicker);
-//! * with `shafts != Off` and a carrier (the moon only with `night_shafts`): [`VolumetricFog`]
+//! * with `shafts != Off` and a carrier (the moon only with `night_shafts`): [`bevy::light::VolumetricFog`]
 //!   (`step_count` from the quality, jitter on, `ambient_intensity` 0) goes on every
 //!   [`MainCamera`], [`VolumetricLight`] on the carrier only, and one camera-following
 //!   [`FogVolume`] cube ([`SHAFT_VOLUME_SIDE_M`]) exists;

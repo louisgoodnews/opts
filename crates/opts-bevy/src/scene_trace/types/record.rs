@@ -9,7 +9,7 @@ use super::mesh::MeshNote;
 /// a parked car replaced, the vehicle a part belongs to).
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct ParentRef {
-    /// What the parent is (a [`kind`] or `marker`).
+    /// What the parent is (a `kind` or `marker`).
     pub kind: String,
     /// File of the parent.
     #[serde(default)]
@@ -34,7 +34,7 @@ pub struct TraceRecord {
     /// Milliseconds since the trace started.
     #[serde(default)]
     pub t_ms: u64,
-    /// One of [`kind`].
+    /// One of `kind`.
     pub kind: String,
     /// Tile `(x, y)`.
     #[serde(default)]

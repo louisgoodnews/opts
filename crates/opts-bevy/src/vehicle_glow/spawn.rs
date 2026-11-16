@@ -25,7 +25,7 @@ pub fn detail_lights(model: &ModelConfig) -> impl Iterator<Item = &ScoLight> {
 
 /// Spawns the glow sprites of `model`'s light effects as children of `parent` (the vehicle unit
 /// they sit on), driven by the variables of `owner` (the vehicle root). Mesh and material are
-/// added by [`attach_glow_assets`]. Returns the sprite entities.
+/// added by [`super::attach_glow_assets`]. Returns the sprite entities.
 pub fn spawn_vehicle_glows(
     commands: &mut Commands,
     owner: Entity,

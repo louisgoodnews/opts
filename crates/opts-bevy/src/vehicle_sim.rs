@@ -1,8 +1,8 @@
 //! Vehicle physics simulation bridge and ECS integration for Bevy.
 //!
-//! Connects the authoritative [`VehicleSimulation`] domain model from `opts-sim`
+//! Connects the authoritative [`opts_sim::vehicle::VehicleSimulation`] domain model from `opts-sim`
 //! to Bevy's ECS architecture. Coordinates deterministic fixed-step physics execution
-//! in [`FixedUpdate`], smooth player input ingestion, chassis coordinate projection
+//! in [`bevy::app::FixedUpdate`], smooth player input ingestion, chassis coordinate projection
 //! into 3D transforms, dynamic wheel steering and rolling mesh animations, and
 //! chase/cockpit camera tracking.
 

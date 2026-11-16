@@ -1,6 +1,6 @@
 //! Articulated buses and multi-car trams: following segments and the joint variables.
 //!
-//! The leading unit of a vehicle is the root entity driven by its [`VehicleController`]; every
+//! The leading unit of a vehicle is the root entity driven by its [`crate::vehicle_sim::VehicleController`]; every
 //! further segment is an entity of its own ([`ArticulatedSegment`]) listed in the root's
 //! [`ArticulatedChain`]. The state of the following units lives in the root's
 //! [`opts_sim::VehicleSimulation::consist`] (hitch on the leader's rear coupling, rear axle
