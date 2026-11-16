@@ -55,6 +55,11 @@ use bevy::window::{PresentMode, WindowResolution};
 mod cone_material;
 use cone_material::{ConeMaterial, SHADER};
 
+mod components;
+use components::{
+    Assets3, Bench, Cam, Cone, Fog, HeadSpot, Mirror, MirrorEvery, NightLamp, Sun, WindowModeFlag,
+};
+
 const W: u32 = 1920;
 const H: u32 = 1080;
 
@@ -68,47 +73,6 @@ const H: u32 = 1080;
 
 mod config;
 use config::{arg, parse_kv, Cfg};
-
-#[derive(Resource)]
-struct Bench {
-    plan: Vec<Cfg>,
-    idx: usize,
-    /// Frames since the current item was applied.
-    frame: u32,
-    ms: Vec<f32>,
-    gpu: BTreeMap<String, Vec<f64>>,
-    out: Option<PathBuf>,
-    shots: Option<PathBuf>,
-    started: std::time::Instant,
-    item_start: std::time::Instant,
-    shot_done: bool,
-    max_seconds: f32,
-    load: String,
-}
-
-#[derive(Component)]
-struct Cone;
-#[derive(Component)]
-struct Sun;
-#[derive(Component)]
-struct NightLamp(usize);
-#[derive(Component)]
-struct HeadSpot(usize);
-#[derive(Component)]
-struct Cam;
-#[derive(Component)]
-struct Fog;
-#[derive(Component)]
-struct Mirror;
-#[derive(Resource, Default)]
-struct MirrorEvery(u32);
-
-#[derive(Resource)]
-struct Assets3 {
-    cone: Handle<Mesh>,
-    target: Option<Handle<Image>>,
-    quad: Handle<Mesh>,
-}
 
 fn main() {
     let base = parse_kv(&arg("--base").unwrap_or_default());
@@ -187,9 +151,6 @@ fn main() {
     app.add_systems(Update, mirror_toggle.after(drive));
     app.run();
 }
-
-#[derive(Resource)]
-struct WindowModeFlag(bool);
 
 // ---------------------------------------------------------------------------------------------
 // Scene
