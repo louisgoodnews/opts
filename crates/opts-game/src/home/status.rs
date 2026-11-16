@@ -1,5 +1,6 @@
 //! The parts of the home status that follow the catalogue: the chip, the buttons and the banners.
 
+use super::inputs::block_reason_key;
 use super::*;
 
 /// The status chip: refreshing (with the stage), ready with the counts, or nothing found.

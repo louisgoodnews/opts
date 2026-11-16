@@ -1,6 +1,7 @@
 //! Unit tests for `super` (`settings_theme.rs`).
 
 use super::*;
+use opts_gui::theme::{mode::format_time, AccentPreset, ThemeKind};
 use rusqlite::Connection;
 
 fn load(rows: &[(&str, &str)]) -> GameSettings {

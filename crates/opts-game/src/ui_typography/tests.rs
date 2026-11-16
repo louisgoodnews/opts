@@ -1,6 +1,8 @@
 //! Tests of the text preferences: the settings mapping and the font folder.
 
 use super::*;
+use bevy::text::FontCx;
+use crate::settings_registry::{ChangeSource, SettingChanged};
 
 #[test]
 fn the_size_is_read_clamped_and_defaults_to_14() {

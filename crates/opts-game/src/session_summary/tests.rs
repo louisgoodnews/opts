@@ -1,6 +1,9 @@
 //! The summary card.
 
 use super::*;
+use opts_bevy::reporting::{ReportModalData, ReportModalState};
+use opts_gui::interaction::activation::Activated;
+use opts_gui::prelude::*;
 use crate::pause::stats::SessionStats;
 use crate::shell::ShellPlugin;
 
