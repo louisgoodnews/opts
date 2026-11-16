@@ -12,6 +12,9 @@ use crate::settings_registry::SettingsRegistry;
 use crate::shell::keys;
 use crate::vehicle_keys::ACTIONS;
 
+mod widgets;
+use widgets::{chip, heading, note};
+
 /// The container the lists are built into; rebuilt when the settings or the vehicle change.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct VehicleControlsList;
@@ -26,47 +29,6 @@ pub fn spawn_list(parent: &mut ChildSpawnerCommands) {
         },
         VehicleControlsList,
     ));
-}
-
-fn heading(parent: &mut ChildSpawnerCommands, key: &'static str) {
-    parent.spawn((
-        Text::new(key),
-        L10nKey(key),
-        TextColor::default(),
-        TypeStyleToken(TypeScale::TitleMedium),
-        ForegroundRole(ColorRole::OnSurface),
-    ));
-}
-
-fn note(parent: &mut ChildSpawnerCommands, key: &'static str) {
-    parent.spawn((
-        Text::new(key),
-        L10nKey(key),
-        TextColor::default(),
-        TypeStyleToken(TypeScale::BodyMedium),
-        ForegroundRole(ColorRole::OnSurfaceVariant),
-    ));
-}
-
-fn chip(parent: &mut ChildSpawnerCommands, text: &str, min_width: f32) {
-    parent
-        .spawn((
-            Node {
-                min_width: Val::Px(min_width),
-                padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
-                ..default()
-            },
-            BackgroundRole(ColorRole::SurfaceContainerHighest),
-            RadiusToken(RadiusLevel::Small),
-        ))
-        .with_children(|c| {
-            c.spawn((
-                Text::new(text),
-                TextColor::default(),
-                TypeStyleToken(TypeScale::Label),
-                ForegroundRole(ColorRole::OnSurface),
-            ));
-        });
 }
 
 /// The names of the mouse controls of the player's vehicle, sorted and without repeats.

@@ -193,9 +193,10 @@ pub fn vp_json(vp: &Viewpoint) -> Value {
 }
 
 mod plugin;
-pub use plugin::{
-    load_viewpoint, persist_viewpoint, sync_default_fov, ViewpointPlugin, Viewpoints,
-};
+pub use plugin::{load_viewpoint, persist_viewpoint, sync_default_fov, ViewpointPlugin};
+
+mod resource;
+pub use resource::Viewpoints;
 
 pub mod protocol;
 pub mod share;
