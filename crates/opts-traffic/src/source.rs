@@ -1,4 +1,4 @@
-//! Turns placed splines and objects of a map tile into [`LaneSegment`]s.
+//! Turns placed splines and objects of a map tile into [`crate::graph::LaneSegment`]s.
 //!
 //! * A **spline** carries its lanes in its `.sli` profile (`[path]`: type, lateral offset,
 //!   width, direction); the lane follows the spline's centre line shifted sideways by the offset
@@ -49,7 +49,7 @@ pub trait PathSource {
     }
 }
 
-/// The light programs of every object of `tile`, keyed like [`LaneSegment::signal`]: the object's
+/// The light programs of every object of `tile`, keyed like [`crate::graph::LaneSegment::signal`]: the object's
 /// `id_code` and the program's index in declaration order across its groups.
 pub fn signals_from_tile(
     tile: &MapTile,

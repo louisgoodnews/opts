@@ -1,6 +1,6 @@
 //! Lane identifiers, kinds and travel directions of the lane graph.
 
-/// Index of a lane in a [`LaneGraph`].
+/// Index of a lane in a [`super::LaneGraph`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct LaneId(pub u32);
 
