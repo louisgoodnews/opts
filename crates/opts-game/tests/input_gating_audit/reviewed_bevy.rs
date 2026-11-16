@@ -37,4 +37,12 @@ pub(super) const REVIEWED: &[&str] = &[
     "opts-bevy/src/vehicle_triggers/scenery_click.rs",
     // Split out of `camera/viewpoint.rs`: the Tab key of the viewpoint editor, gated as its parent.
     "opts-bevy/src/camera/viewpoint/keys.rs",
+    // Split out of `camera/mode/vehicle_views.rs`: the camera keys, gated as its parent.
+    "opts-bevy/src/camera/mode/vehicle_views/input.rs",
+    // Split out of `vehicle_triggers.rs`: the trigger keys, registered with `not_modal_active` in `VehicleTriggerPlugin`.
+    "opts-bevy/src/vehicle_triggers/keys.rs",
+    // Split out of `vehicle_triggers.rs`: the trigger clicks, registered with `not_modal_active` in `VehicleTriggerPlugin`.
+    "opts-bevy/src/vehicle_triggers/mouse.rs",
+    // Split out of `action_keys.rs`: the key layout tables only ask `just_pressed(action)`; the systems that ask are gated where registered.
+    "opts-bevy/src/action_keys/layout.rs",
 ];

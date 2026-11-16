@@ -73,4 +73,8 @@ pub(super) const REVIEWED: &[&str] = &[
     "opts-game/src/save/quick.rs",
     // Split out of `vehicle_menu/entries.rs`: the search keys, same rule (the open menu holds `MenuModalActive`).
     "opts-game/src/in_game/vehicle_menu/entries/search.rs",
+    // Split out of `hud/minimap/mod.rs`: the mini map keys, gated with `not_modal_active` as their parent.
+    "opts-game/src/hud/minimap/input.rs",
+    // Test module of `hud/tests.rs`: presses keys to test the status bar.
+    "opts-game/src/hud/tests/status_bar.rs",
 ];
