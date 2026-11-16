@@ -69,6 +69,7 @@ pub(in crate::in_game::omsi_world) fn begin(
             splines_failed_before: 0,
             phase: Phase::TerrainRead,
             next_object: 0,
+            order: None,
         });
     }
 }

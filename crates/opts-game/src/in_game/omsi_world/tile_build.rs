@@ -75,6 +75,9 @@ pub(super) struct TileBuild {
     pub(super) splines_failed_before: usize,
     pub(super) phase: Phase,
     pub(super) next_object: usize,
+    /// The order in which the objects (tile, then attached) are placed; planned at the first
+    /// objects step (M-0114).
+    pub(super) order: Option<Vec<usize>>,
 }
 
 impl TileBuild {

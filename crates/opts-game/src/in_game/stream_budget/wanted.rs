@@ -16,13 +16,20 @@ pub fn chebyshev(a: TileKey, b: TileKey) -> i32 {
 /// distance the tile the observer is heading for is built first.
 #[must_use]
 pub fn priority(offset: (f32, f32), forward: (f32, f32)) -> f32 {
+    priority_weighted(offset, forward, super::policy::MAX_HEADING_WEIGHT)
+}
+
+/// [`priority`] with the heading weight given: a tile straight ahead counts as `weight` nearer
+/// than one behind; zero is plain distance.
+#[must_use]
+pub fn priority_weighted(offset: (f32, f32), forward: (f32, f32), weight: f32) -> f32 {
     let d = offset.0.hypot(offset.1);
     let f = forward.0.hypot(forward.1);
     if d < 1e-4 || f < 1e-4 {
         return d;
     }
     let cos = (offset.0 * forward.0 + offset.1 * forward.1) / (d * f);
-    d * (1.0 - 0.4 * cos)
+    d * (1.0 - weight * cos)
 }
 
 /// Tiles to have resident, best first.
@@ -41,6 +48,51 @@ pub fn wanted_tiles(
     resident: impl Fn(TileKey) -> bool,
     exists: impl Fn(TileKey) -> bool,
 ) -> Vec<TileKey> {
+    let weight = super::policy::MAX_HEADING_WEIGHT;
+    let frame = Frame {
+        centre,
+        radius,
+        cam,
+        forward,
+        ahead,
+        weight,
+    };
+    wanted_tiles_weighted(frame, resident, exists)
+}
+
+/// The inputs of [`wanted_tiles_weighted`]: the centre tile and radius, the camera in tile units,
+/// the travel direction, the look-ahead in tile steps and the heading weight.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Frame {
+    /// Centre tile.
+    pub centre: TileKey,
+    /// Chebyshev radius of the ring.
+    pub radius: i32,
+    /// Observer position in tile units (keys are integer corners).
+    pub cam: (f32, f32),
+    /// Direction of travel on the ground plane.
+    pub forward: (f32, f32),
+    /// Tile steps beyond the ring along the travel direction.
+    pub ahead: i32,
+    /// Heading weight of the priority.
+    pub weight: f32,
+}
+
+/// [`wanted_tiles`] with the heading weight of the priority given (M-0114: the weight follows
+/// the speed, see [`super::policy::heading_weight`]; zero is plain distance).
+pub fn wanted_tiles_weighted(
+    frame: Frame,
+    resident: impl Fn(TileKey) -> bool,
+    exists: impl Fn(TileKey) -> bool,
+) -> Vec<TileKey> {
+    let Frame {
+        centre,
+        radius,
+        cam,
+        forward,
+        ahead,
+        weight,
+    } = frame;
     let mut keys: Vec<TileKey> = Vec::new();
     for dy in -radius..=radius {
         for dx in -radius..=radius {
@@ -72,7 +124,7 @@ pub fn wanted_tiles(
             continue;
         }
         let off = (k.0 as f32 + 0.5 - cam.0, k.1 as f32 + 0.5 - cam.1);
-        let entry = (priority(off, forward), k);
+        let entry = (priority_weighted(off, forward, weight), k);
         if i < ring {
             near.push(entry);
         } else {

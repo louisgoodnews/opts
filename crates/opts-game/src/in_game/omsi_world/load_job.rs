@@ -36,6 +36,13 @@ pub struct WorldLoadJob {
     pub(super) building: Option<tile_build::TileBuild>,
     /// How long streaming may work on tiles in one frame (zero: one whole tile per frame).
     pub stream_budget: std::time::Duration,
+    /// `streaming.mode` (M-0114): auto follows the speed, tile or object forces the regime.
+    pub stream_mode: crate::in_game::stream_budget::policy::StreamMode,
+    /// The player's position in the scene frame while the object regime holds (M-0114): a tile
+    /// built now places its objects nearest to it first. `None` at speed.
+    pub(super) stream_focus: Option<(f32, f32)>,
+    /// The regime of the last streaming frame, for the reports (M-0114).
+    pub stream_status: crate::in_game::stream_budget::policy::StreamStatus,
     pub(super) total_tiles: usize,
     pub(super) sli_cache: HashMap<PathBuf, Option<Arc<SplineProfile>>>,
     /// Map-wide spline lookup for attachments, built on first use.

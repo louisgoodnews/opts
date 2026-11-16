@@ -12,16 +12,26 @@
 //! * [`evictable`]: resident tiles beyond the radius plus hysteresis.
 //! * [`Spread`]: queue that hands out at most `per_frame` items (despawn spreading).
 
+mod cap;
 mod frame;
+pub mod motion;
+pub mod order;
+pub mod policy;
 mod spread;
 mod wanted;
 
+#[cfg(test)]
+mod hybrid_tests;
 #[cfg(test)]
 mod tests;
 
 pub use frame::FrameBudget;
 pub use spread::Spread;
-pub use wanted::{chebyshev, evictable, priority, wanted_tiles};
+pub use cap::{over_cap, resident_cap};
+pub use motion::Motion;
+pub use wanted::{
+    chebyshev, evictable, priority, priority_weighted, wanted_tiles, wanted_tiles_weighted, Frame,
+};
 
 /// Integer tile key `(x, y)`; `y` grows north.
 pub type TileKey = (i32, i32);

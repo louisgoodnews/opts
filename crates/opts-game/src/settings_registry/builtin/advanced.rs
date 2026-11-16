@@ -90,5 +90,16 @@ pub(super) fn streaming() -> Vec<D> {
             "performance",
         ])
         .since("0.3"),
+        D::new(
+            "streaming.mode",
+            K::Enum(super::enums::STREAMING_MODES),
+            "auto",
+            C::Advanced,
+            81,
+            "set-streaming-mode",
+            "set-streaming-mode-desc",
+        )
+        .keywords(&["map", "tiles", "streaming", "speed", "object", "tile", "regime"])
+        .since("0.3"),
     ]
 }

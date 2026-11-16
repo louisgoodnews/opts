@@ -11,7 +11,6 @@ use opts_core::formats::map::MapObjectInstance;
 use opts_core::formats::vehicles::model::{ModelConfig, ModelLod};
 
 use crate::in_game::stream_budget::FrameBudget;
-use crate::in_game::tile_loading;
 
 use super::tile_build;
 use super::trees::spawn_tree;

@@ -2,9 +2,10 @@
 
 use super::super::super::tile::{spawn_object, Placement};
 use super::super::*;
+use crate::in_game::stream_budget::order::build_order;
 
 /// Spawns the scenery objects from where the build stopped, each one a step of its own. Returns
-/// `true` when all are placed.
+/// `true` when all are placed. The order is nearest-first while the player is slow (M-0114).
 pub(in super::super) fn objects_step(
     b: &mut TileBuild,
     (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
@@ -18,6 +19,10 @@ pub(in super::super) fn objects_step(
     let _t = opts_logging::stream_trace::span("tile.objects");
     let on_tile = b.tile.objects.len();
     let total = on_tile + b.attached.len();
+    if b.order.is_none() {
+        let points = scene_points(b);
+        b.order = Some(build_order(&points, job.stream_focus));
+    }
     let mut first = true;
     while b.next_object < total {
         // The step that was granted covers the first object; every further one asks again.
@@ -25,7 +30,7 @@ pub(in super::super) fn objects_step(
             return false;
         }
         first = false;
-        let i = b.next_object;
+        let i = b.order.as_ref().map_or(b.next_object, |o| o[b.next_object]);
         let (obj, placement, list, index) = if i < on_tile {
             (&b.tile.objects[i], Placement::Tile, "objects", i)
         } else {
@@ -49,4 +54,16 @@ pub(in super::super) fn objects_step(
         b.next_object += 1;
     }
     true
+}
+
+/// Scene-frame ground positions of the tile's objects, then its attachments (the order of
+/// `TileBuild::next_object`).
+fn scene_points(b: &TileBuild) -> Vec<(f32, f32)> {
+    let at = |p: bevy::math::Vec3| (b.origin.0 + p.x, b.origin.1 + p.y);
+    b.tile
+        .objects
+        .iter()
+        .map(|o| at(o.position))
+        .chain(b.attached.iter().map(|(o, _)| at(o.position)))
+        .collect()
 }
