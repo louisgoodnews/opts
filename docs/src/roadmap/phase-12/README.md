@@ -8,7 +8,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 12); this page
 
 ## Milestones (recommended execution order)
 
-1. [M-0120 — Material Overlays and Light Maps](M-0120.md) — 🚧 In progress; overlay core done (parts bound to script variables); audit, setting, `[nightmapmode]` and docs open.
+1. [M-0120 — Material Overlays and Light Maps](M-0120.md) — 🚧 In progress; overlay core, setting and audit done; `[nightmapmode]`, `[matl_change]` and rendering checks open.
 2. [M-0121 — Wetness and Snow on Vehicles and Scenery](M-0121.md) — 🚧 In progress 2026-11-16; texture `.cfg` flags parsed, wetness ramp, material wetness, setting, snow and season variables done; vehicle wet paint and on-screen evidence open; builds on M-0120 and the existing ground wetness.
 3. [M-0124 — Passenger Load Physics](M-0124.md) — 🟢 Complete (2026-11-16): steer-axle steering effort built; the fore/aft load and the M-0073 rear-axle clause are recorded limits.
 4. [M-0123 — Fuel and Battery State](M-0123.md) — 🚧 In progress 2026-11-16; simulation core, setting, save section and HUD readout done; bar gauge, VM, refuel action and audit open.

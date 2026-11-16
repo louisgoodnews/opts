@@ -184,3 +184,7 @@ Keep MSAA 4×. Evaluate SMAA for shader and specular aliasing, and contrast-adap
 - **Corpus scan:** a Python script reading the headers of every image file under the reference installation (DDS header fields, magic bytes of other formats); no file content was decoded or copied.
 - **Experiment:** debug build of the game with a local, uncommitted patch; throw-away configuration, a copy of the decoder cache; GPU: RTX 3060; screenshots and metrics are kept under `~/.local/share/opts/benchmark/dev-textures/` and are **not** in the repository because they show OMSI content.
 - **Clean-room attestation ([ADR-0002](../adr/0002-clean-room-policy.md)):** no OMSI executable or DLL was inspected; no GPL source code was read; no OMSI asset was committed.
+
+## Weather overlay textures (M-0120, 2026-11-16)
+
+The rain-on-glass, dirt and condensation overlays are ordinary alpha textures of the vehicle model (`[alphascale]` parts). They go through the same texture path as every other object texture, so findings F1 to F2 apply to them unchanged; this milestone changes their visibility and alpha only, not their sampling or mipmaps. The overlay alpha is the texture alpha times the clamped script variable (`vehicle_lights::alpha::scaled_alpha`).

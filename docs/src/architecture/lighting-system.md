@@ -566,6 +566,12 @@ Steps 5 and 6 of the plan; design from the [reflections research](reflections-re
 * **Light-map luminance.** The cameras run at a fixed physical exposure at which 1 cd/m² is black, so a `[matl_lightmap]` at factor 1 was invisible (the NF6D's `Scheinwerfer_A` lens and its tail and indicator lenses did not glow although the variable was 1). A light map now emits `factor × LIGHT_MAP_NITS` (100) (`vehicle_lights.rs`).
 * **Light maps light the texture (2026-10-25).** A light map is a mask of the light's colour; the emitted picture is now the material's texture × light map (`opts_bevy::model::compose_light`, cached per pair) at gain 1 (`LIGHT_MAP_GAIN`; emission is drawn without exposure, `emissive_exposure_weight` 0, so 100 overdrove every lit texture to white: the MB C2's instrument display was a white panel). Checked: the C2's display shows its page, the MAN SD77's panel at night shows lit dials; the SD77's headlight lenses have no light map (dark before and after). ❓ Not checked: lamp lenses that glowed only through the old gain of 100 (the NF6D's `Scheinwerfer_A`; its headlights could not be switched on from the control protocol).
 
+## Material overlays and light maps (M-0120, 2026-11-16)
+
+* **Vehicle light maps follow their script variable every frame** (`vehicle_light_map_system`): the emission is the variable clamped to `0..=MAX_BRIGHTNESS` times `LIGHT_MAP_GAIN`. Only `NightlightA` is read from the clock. Interior light maps therefore follow the interior-light variables, not the clock.
+* **`[nightmapmode]` 0-4 is not applied yet** (open, ❓). The mode is parsed (`SceneryObject::night_map_mode`) and never read; all variable-less light maps use `NightlightA`. The corpus census is in [M-0120](../roadmap/phase-12/M-0120.md#audit-table-2026-11-16).
+* **Weather overlays are built and follow their variable** (vehicles): alpha = texture alpha × clamped variable, the part is hidden at 0. Scenery objects still hide them (10 uses in the corpus).
+
 ## 13. Spatial zones and the consumer contract (M-0115)
 
 Status (2026-11-16): the zone model and the hysteresis tracker exist in `opts_bevy::spatial_zones`

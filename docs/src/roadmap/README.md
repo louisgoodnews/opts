@@ -440,7 +440,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## 🎨 Phase 12: Visual Fidelity & Advanced Physics
 *Goal: Close the visible gap between OPTS and a good OMSI 2 screenshot (dirt, light maps, wet and snowy surfaces, a modern lighting and anti-aliasing pipeline) and make vehicles behave under load (fuel or battery, passengers). Status: planned 2026-10-18; approved by the project lead 2026-10-20, open for implementation. Documents: [phase page](phase-12/README.md), [graphics design brief](../architecture/graphics-overhaul.md). Phase 8 keeps its own open items; M-0122 references them.*
 
-- [~] **🧼 Material Overlays and Light Maps** — [M-0120](phase-12/M-0120.md) — 🚧 in progress (overlay core done; audit, setting, nightmapmode and docs open)
+- [~] **🧼 Material Overlays and Light Maps** — [M-0120](phase-12/M-0120.md) — 🚧 in progress (overlay core, setting and audit done; `[nightmapmode]`, `[matl_change]` and rendering checks open)
   - [ ] Audit, then render dirt, rain and condensation overlays from script variables; apply `[nightmapmode]` 0-4; overlay setting.
 - [~] **🌧️ Wetness and Snow on Vehicles and Scenery** — [M-0121](phase-12/M-0121.md) — 🚧 in progress 2026-11-16: texture `.cfg` flags parsed, wetness ramp, material wetness, setting, snow and season variables done; vehicle wet paint and on-screen evidence open
   - [~] Per-texture `[moisture]`/`[puddles]`, wet vehicles and scenery from the `Wetness` driver, `snow_visible` and winter variants.

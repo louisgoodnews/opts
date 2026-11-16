@@ -15,6 +15,8 @@ pub enum Consumer {
     Passengers,
     /// Force feedback device.
     ForceFeedback,
+    /// Weather overlay alpha (`[alphascale]` parts of the vehicle, `vehicle_alpha_scale_system`).
+    Overlay,
     /// Developer diagnostics.
     Debug,
     /// Suspension, climate and other values nothing reads yet.
@@ -68,7 +70,7 @@ pub const OUTPUT_TABLE: &[OutputRow] = &[
     out("cabinair_temp", Consumer::None, false),
     out("cabinair_abshum", Consumer::None, false),
     out("cabinair_relhum", Consumer::None, false),
-    out("dirt_norm", Consumer::None, false),
+    out("dirt_norm", Consumer::Overlay, false),
     out("tank_percent", Consumer::None, false),
     out("debug_", Consumer::Debug, false),
 ];
@@ -87,4 +89,21 @@ pub fn output_row(name: &str) -> Option<&'static OutputRow> {
             r.name == lower
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dirt_norm_is_consumed_by_the_weather_overlays() {
+        assert_eq!(
+            output_row("Dirt_Norm").map(|r| r.consumer),
+            Some(Consumer::Overlay)
+        );
+        assert_eq!(
+            output_row("dirt_norm").map(|r| r.consumer),
+            Some(Consumer::Overlay)
+        );
+    }
 }
