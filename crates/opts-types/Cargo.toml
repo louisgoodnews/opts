@@ -2,6 +2,7 @@
 name = "opts-types"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "Shared geometry and coordinate types of the legacy OMSI readers and the native model (no file formats)."

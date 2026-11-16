@@ -2,6 +2,7 @@
 name = "opts"
 version = "0.1.0"
 edition = "2021"
+rust-version.workspace = true
 authors = ["OPTS Contributors"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/louisgoodnews/opts"
@@ -43,7 +44,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.76" # Minimum Supported Rust Version (MSRV)
+rust-version = "1.97.1" # Minimum Supported Rust Version (MSRV): the pinned toolchain; the locked dependency set needs 1.97.1
 authors = ["OPTS Contributors"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/louisgoodnews/opts"

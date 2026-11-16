@@ -2,6 +2,7 @@
 name = "opts-game"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "The main executable for the Open Public Transport Simulator."

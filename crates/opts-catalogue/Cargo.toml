@@ -2,6 +2,7 @@
 name = "opts-catalogue"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "SQLite path catalogue of an OMSI 2 installation (discovery, staleness, queries)."
