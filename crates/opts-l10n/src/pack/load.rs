@@ -2,6 +2,14 @@
 
 use super::*;
 
+mod files;
+mod parse;
+mod warnings;
+
+use files::*;
+use parse::*;
+use warnings::*;
+
 /// A pack read from disk: its identity, the messages that passed the checks, and every finding.
 #[derive(Debug, Clone)]
 pub struct Pack {
@@ -51,206 +59,11 @@ impl Pack {
     }
 }
 
-fn read_text(path: &Path, shown: &str, issues: &mut Vec<Issue>) -> Option<String> {
-    let fail = |issues: &mut Vec<Issue>, why: String| {
-        issues.push(Issue::new(Severity::Error, "read", shown, None, None, why));
-    };
-    match std::fs::metadata(path) {
-        Ok(m) if m.len() > MAX_FILE_BYTES => {
-            fail(
-                issues,
-                format!(
-                    "larger than {} KiB; the file is skipped",
-                    MAX_FILE_BYTES / 1024
-                ),
-            );
-            return None;
-        }
-        Ok(_) => {}
-        Err(e) => {
-            fail(issues, format!("cannot be read ({e}); the file is skipped"));
-            return None;
-        }
-    }
-    match std::fs::read(path) {
-        Ok(bytes) => match String::from_utf8(bytes) {
-            Ok(t) => Some(t.strip_prefix('\u{feff}').map_or(t.clone(), str::to_string)),
-            Err(e) => {
-                fail(
-                    issues,
-                    format!("is not UTF-8 text (invalid byte at offset {}); save it as UTF-8. The file is skipped", e.utf8_error().valid_up_to()),
-                );
-                None
-            }
-        },
-        Err(e) => {
-            fail(issues, format!("cannot be read ({e}); the file is skipped"));
-            None
-        }
-    }
-}
 
-fn load_meta(dir: &Path, folder: &str, issues: &mut Vec<Issue>) -> Option<PackMeta> {
-    let meta_path = dir.join("pack.json");
-    if meta_path.exists() {
-        read_text(&meta_path, "pack.json", issues).and_then(|t| {
-            let (m, i) = parse_meta(&t, folder);
-            issues.extend(i);
-            m
-        })
-    } else {
-        issues.push(Issue::new(
-            Severity::Error,
-            "pack-json",
-            "pack.json",
-            None,
-            None,
-            "missing; create it with `opts-tools l10n new <code>` or copy it from another pack. The folder is ignored",
-        ));
-        None
-    }
-}
 
-fn list_pack_files(dir: &Path, issues: &mut Vec<Issue>) -> Vec<String> {
-    let mut names: Vec<String> = std::fs::read_dir(dir)
-        .into_iter()
-        .flatten()
-        .flatten()
-        .filter(|e| e.path().is_file())
-        .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| {
-            !n.starts_with('.') && (n.ends_with(".ftl") || n.ends_with(".json")) && n != "pack.json"
-        })
-        .collect();
-    names.sort();
-    if names.len() > MAX_FILES {
-        issues.push(Issue::new(
-            Severity::Warning,
-            "read",
-            ".",
-            None,
-            None,
-            format!(
-                "{} string files; only the first {MAX_FILES} are read",
-                names.len()
-            ),
-        ));
-        names.truncate(MAX_FILES);
-    }
-    names
-}
 
-fn parse_pack_file(
-    name: &str,
-    text: &str,
-    meta: Option<&PackMeta>,
-    issues: &mut Vec<Issue>,
-) -> Table {
-    if name.ends_with(".json") {
-        let imported = interchange::parse_json(text);
-        if let (Some(l), Some(m)) = (&imported.language, meta) {
-            if *l != m.code {
-                issues.push(Issue::new(
-                    Severity::Warning,
-                    "language-mismatch",
-                    name,
-                    interchange::line_of_json_key(text, "language", 0),
-                    None,
-                    format!("`language` is `{l}` but the pack is `{}`", m.code),
-                ));
-            }
-        }
-        imported.table
-    } else {
-        fluent::parse(text)
-    }
-}
 
-fn merge_file_messages(
-    name: &str,
-    checked: check::Checked,
-    origin: &mut std::collections::HashMap<String, String>,
-    table: &mut Table,
-    issues: &mut Vec<Issue>,
-) {
-    issues.extend(checked.issues);
-    for key in checked.table.order {
-        if let Some(prev) = origin.insert(key.clone(), name.to_string()) {
-            issues.push(Issue::new(
-                Severity::Warning,
-                "duplicate-key",
-                name,
-                checked.table.lines.get(&key).copied(),
-                Some(&key),
-                format!("also defined in {prev}; this later definition wins"),
-            ));
-        } else {
-            table.order.push(key.clone());
-        }
-        if let Some(p) = checked.table.messages.get(&key) {
-            table.messages.insert(key.clone(), p.clone());
-        }
-    }
-}
 
-fn check_pack_warnings(
-    meta: Option<&PackMeta>,
-    table: &Table,
-    reference: &Reference,
-    issues: &mut Vec<Issue>,
-) -> (BTreeSet<&'static str>, bool) {
-    let (missing_fonts, rtl_text) = check::scripts_beyond_fonts(table);
-    if let Some(m) = meta {
-        if !missing_fonts.is_empty() {
-            issues.push(Issue::new(
-                Severity::Warning,
-                "font-coverage",
-                "pack.json",
-                None,
-                None,
-                format!(
-                    "the text uses {} which the bundled fonts (Latin, Greek, Cyrillic) do not cover; those characters will show as empty boxes",
-                    missing_fonts.iter().copied().collect::<Vec<_>>().join(", ")
-                ),
-            ));
-        }
-        if m.direction == Direction::Rtl {
-            issues.push(Issue::new(
-                Severity::Warning,
-                "rtl-unsupported",
-                "pack.json",
-                None,
-                None,
-                "right-to-left languages are not supported by the interface yet; the language is listed but cannot be selected",
-            ));
-        } else if rtl_text {
-            issues.push(Issue::new(
-                Severity::Warning,
-                "direction",
-                "pack.json",
-                None,
-                None,
-                "the text is written right to left but `direction` is \"ltr\"; set \"rtl\" (not supported by the interface yet)",
-            ));
-        }
-    }
-    let revision = reference.revision();
-    let outdated = meta.is_some_and(|m| !m.base_version.is_empty() && m.base_version != revision);
-    if outdated {
-        issues.push(Issue::new(
-            Severity::Warning,
-            "outdated",
-            "pack.json",
-            None,
-            None,
-            format!(
-                "made against English revision {} but the current one is {revision}; run `opts-tools l10n check` and translate the new or changed keys, then update `base_version`",
-                meta.map_or("", |m| m.base_version.as_str())
-            ),
-        ));
-    }
-    (missing_fonts, outdated)
-}
 
 /// Reads and checks the pack in `dir` against `reference`.
 #[must_use]

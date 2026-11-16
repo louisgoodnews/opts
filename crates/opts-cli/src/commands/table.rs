@@ -4,17 +4,35 @@
 use super::CommandSpec;
 
 mod basics;
-mod drive_and_session;
+mod config_audio;
+mod drive_controls;
+mod hud_and_navigation;
+mod output_and_capture;
+mod reload_and_debug;
 mod scene_and_trace;
-mod ui_and_capture;
+mod session_saves;
+mod settings_and_l10n;
+mod sim_and_scene;
+mod ui_screen;
+mod vehicle_and_spawn;
+mod vehicle_dynamics;
 mod viewpoint;
 
 const PARTS: &[&[CommandSpec]] = &[
     basics::PART,
-    ui_and_capture::PART,
+    sim_and_scene::PART,
+    settings_and_l10n::PART,
+    reload_and_debug::PART,
+    output_and_capture::PART,
+    ui_screen::PART,
+    drive_controls::PART,
     scene_and_trace::PART,
+    hud_and_navigation::PART,
+    vehicle_and_spawn::PART,
     viewpoint::PART,
-    drive_and_session::PART,
+    session_saves::PART,
+    vehicle_dynamics::PART,
+    config_audio::PART,
 ];
 
 /// The number of entries of all parts.

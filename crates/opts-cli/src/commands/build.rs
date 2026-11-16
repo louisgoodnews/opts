@@ -1,0 +1,146 @@
+//! Building the `params` object of a command from command-line words: positional values,
+//! `--name value` flags and the `--json` object form.
+
+use serde_json::{json, Map, Value};
+
+use super::decl::{coerce, parse_decls, Kind, ParamDecl};
+use super::CommandSpec;
+
+/// Builds the `params` object of `spec` from command-line words.
+///
+/// Words are positional values, `--name value`, `--name=value` or `name=value`; `--json '{...}'`
+/// supplies a whole parameter object (explicit words override it).
+///
+/// # Errors
+/// A readable message for unknown flags, bad values and missing required parameters.
+pub fn build_params(spec: &CommandSpec, words: &[String]) -> Result<Value, String> {
+    let decls = parse_decls(spec.params);
+    let mut out = Map::new();
+    let mut positional = 0usize;
+    let mut i = 0;
+    while i < words.len() {
+        let w = &words[i];
+        let (key, inline): (Option<&str>, Option<&str>) = if let Some(flag) = w.strip_prefix("--") {
+            match flag.split_once('=') {
+                Some((k, v)) => (Some(k), Some(v)),
+                None => (Some(flag), None),
+            }
+        } else if let Some((k, v)) = w.split_once('=').filter(|(k, _)| is_name(k)) {
+            (Some(k), Some(v))
+        } else {
+            (None, None)
+        };
+        if let Some(key) = key {
+            handle_named_param(spec, &decls, words, &mut i, key, inline, &mut out)?;
+        } else {
+            let decl = decls
+                .iter()
+                .find(|d| d.position == Some(positional))
+                .ok_or_else(|| format!("`{}` takes no value `{w}`", spec.method))?;
+            out.insert(decl.name.to_string(), coerce(decl.kind, decl.name, w)?);
+            positional += 1;
+        }
+        i += 1;
+    }
+    if let Some(missing) = decls
+        .iter()
+        .find(|d| !d.optional && !out.contains_key(d.name))
+    {
+        return Err(format!("`{}` needs `{}`", spec.method, missing.name));
+    }
+    Ok(if out.is_empty() {
+        Value::Null
+    } else {
+        Value::Object(out)
+    })
+}
+
+fn handle_named_param(
+    spec: &CommandSpec,
+    decls: &[ParamDecl<'_>],
+    words: &[String],
+    i: &mut usize,
+    key: &str,
+    inline: Option<&str>,
+    out: &mut Map<String, Value>,
+) -> Result<(), String> {
+    if key == "json" {
+        return handle_json_param(words, i, inline, out);
+    }
+    let norm_key = key.replace('-', "_");
+    if spec.method.is_empty() {
+        let raw = read_flag_value(words, i, inline, &norm_key)?;
+        let value = serde_json::from_str(&raw).unwrap_or_else(|_| json!(raw));
+        out.insert(norm_key, value);
+        return Ok(());
+    }
+    let decl = decls
+        .iter()
+        .find(|d| d.name == norm_key || d.aliases.iter().any(|a| a.replace('-', "_") == norm_key))
+        .ok_or_else(|| format!("`{}` has no parameter `{norm_key}`", spec.method))?;
+    let raw = match inline {
+        Some(v) => v.to_string(),
+        None if decl.kind == Kind::Bool
+            && words.get(*i + 1).is_none_or(|n| n.starts_with("--")) =>
+        {
+            "true".to_string()
+        }
+        None => {
+            *i += 1;
+            words
+                .get(*i)
+                .cloned()
+                .ok_or_else(|| format!("`--{norm_key}` needs a value"))?
+        }
+    };
+    out.insert(decl.name.to_string(), coerce(decl.kind, decl.name, &raw)?);
+    Ok(())
+}
+
+fn handle_json_param(
+    words: &[String],
+    i: &mut usize,
+    inline: Option<&str>,
+    out: &mut Map<String, Value>,
+) -> Result<(), String> {
+    let raw = match inline {
+        Some(v) => v.to_string(),
+        None => {
+            *i += 1;
+            words.get(*i).cloned().ok_or("--json needs a value")?
+        }
+    };
+    let v: Value = serde_json::from_str(&raw).map_err(|e| format!("--json: {e}"))?;
+    let Value::Object(map) = v else {
+        return Err("--json must be an object".into());
+    };
+    for (k, v) in map {
+        out.entry(k).or_insert(v);
+    }
+    Ok(())
+}
+
+fn read_flag_value(
+    words: &[String],
+    i: &mut usize,
+    inline: Option<&str>,
+    key: &str,
+) -> Result<String, String> {
+    match inline {
+        Some(v) => Ok(v.to_string()),
+        None => {
+            *i += 1;
+            words
+                .get(*i)
+                .cloned()
+                .ok_or_else(|| format!("`--{key}` needs a value"))
+        }
+    }
+}
+
+fn is_name(s: &str) -> bool {
+    !s.is_empty()
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
