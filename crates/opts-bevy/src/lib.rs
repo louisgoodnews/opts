@@ -39,6 +39,7 @@ pub mod human;
 pub mod install;
 pub mod instancing;
 pub mod light_cones;
+pub mod bloom;
 pub mod light_quality;
 pub mod light_rooms;
 pub mod loader;

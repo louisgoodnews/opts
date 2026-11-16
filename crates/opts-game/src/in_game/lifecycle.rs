@@ -16,6 +16,7 @@ pub(super) fn add_lifecycle(app: &mut App) {
     app.add_plugins((
         moon::MoonPlugin,
         opts_bevy::sun_rays::SunRaysPlugin,
+        opts_bevy::bloom::BloomPlugin,
         opts_bevy::reflections::ReflectionsPlugin,
     ));
     app.add_message::<crate::pause::PauseRequest>();
