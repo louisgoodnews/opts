@@ -2,13 +2,11 @@
 
 use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
-use opts_core::formats::scenery::ScoLight;
-use opts_core::formats::vehicles::model::ModelConfig;
 
 use crate::coords::omsi_to_bevy_pos;
 use crate::scenery_runtime::{SceneryLight, VarRef};
 
-use super::{is_headlight, VehicleGlow};
+use super::{is_headlight, ModelConfig, ScoLight, VehicleGlow};
 
 /// The light effects of `model` that belong to the meshes drawn up close: those outside any
 /// `[LOD]` group and those of the detail group(s) ([`ModelConfig::detail_lod`]).

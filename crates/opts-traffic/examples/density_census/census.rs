@@ -3,10 +3,8 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use super::{parse_unsched_trafficdens, parse_unsched_vehgroups, AiLists, MapManifest, TileGrid};
 use glam::DVec2;
-use opts_core::formats::map::{
-    parse_unsched_trafficdens, parse_unsched_vehgroups, AiLists, MapManifest, TileGrid,
-};
 use opts_traffic::tile_origin;
 
 use crate::files::{read, Files};

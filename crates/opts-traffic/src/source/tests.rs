@@ -7,7 +7,7 @@ mod rules;
 use super::*;
 use crate::graph::{ConnectParams, LaneGraph};
 use glam::Vec3;
-use opts_core::formats::map::{MapObjectInstance, MapSplineInstance};
+use opts_core::formats::map::MapSplineInstance;
 
 struct Fixed {
     sli: Vec<SplinePath>,

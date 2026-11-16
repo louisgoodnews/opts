@@ -1,7 +1,6 @@
 //! Joining a group's panes to its camera, or creating the camera of a new group.
 
 use bevy::prelude::*;
-use opts_core::formats::vehicles::BusMirrorCamera;
 
 use crate::mirrors::*;
 

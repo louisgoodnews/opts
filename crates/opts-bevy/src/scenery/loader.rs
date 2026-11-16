@@ -1,9 +1,9 @@
 //! Bevy asset loaders for OMSI `.sco` scenery objects and `.sli` spline profiles.
 
+use super::{SceneryObject, SceneryParseError, SplineProfile};
 use bevy::asset::io::Reader;
 use bevy::asset::{Asset, AssetLoader, LoadContext};
 use bevy::reflect::TypePath;
-use opts_core::formats::scenery::{SceneryObject, SceneryParseError, SplineProfile};
 use thiserror::Error;
 
 /// Errors that can occur when loading scenery object or spline assets.

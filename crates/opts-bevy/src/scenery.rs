@@ -5,6 +5,9 @@
 //! spline extrusion meshes. The parts live in `scenery/`: the loaders, the centreline poses,
 //! the extrusion and the spawning.
 
+use opts_core::formats::map::MapSplineInstance;
+use opts_core::formats::scenery::{SceneryObject, SceneryParseError, SplineProfile};
+
 mod extrude;
 mod loader;
 mod pose;

@@ -2,7 +2,6 @@
 
 use bevy::math::Vec3;
 use bevy::mesh::Mesh;
-use opts_core::formats::map::MapSplineInstance;
 use opts_core::formats::scenery::{SplineGraphicalProfile, SplineProfile, SplineProfilePoint};
 
 use super::pose::height_offset;

@@ -1,7 +1,7 @@
 //! The vehicle script corpus families (skipped without `OMSI_PATH`): no unimplemented callbacks.
 
+use super::BusManifest;
 use bevy::prelude::*;
-use opts_core::formats::vehicles::bus::BusManifest;
 
 use super::corpus_support;
 

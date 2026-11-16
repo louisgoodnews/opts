@@ -1,7 +1,6 @@
 //! What a map says about its AI traffic, and the new and old model's group factors at noon.
 
-use opts_core::formats::map::lists::{day, GroupDensity, UnschedGroup};
-use opts_core::formats::map::{AiLists, DensityProfile, MapManifest};
+use super::{day, AiLists, DensityProfile, GroupDensity, MapManifest, UnschedGroup};
 
 pub(crate) const HOUR: f32 = 12.0;
 

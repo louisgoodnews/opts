@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use opts_core::formats::map::{MapTile, TileGrid};
+use super::{MapTile, TileGrid};
 use opts_traffic::{segments_from_tile, tile_origin, ConnectParams, LaneGraph, LaneKind};
 
 use crate::files::{read, Files};

@@ -4,7 +4,6 @@ use super::*;
 
 #[test]
 fn rules_apply_to_the_addressed_path_of_their_owner() {
-    use opts_core::formats::map::MapTrafficRule;
     let rule = |owner, path_index, rule_type: &str, value| MapTrafficRule {
         owner: Some(owner),
         path_index,

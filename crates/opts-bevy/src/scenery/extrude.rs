@@ -1,9 +1,8 @@
 //! Extrusion of `.sli` graphical profiles along a placed spline into Bevy meshes.
 
+use super::{MapSplineInstance, SplineProfile};
 use bevy::math::Vec3;
 use bevy::mesh::Mesh;
-use opts_core::formats::map::MapSplineInstance;
-use opts_core::formats::scenery::SplineProfile;
 
 use super::pose::spline_stations;
 use crate::mesh::smooth_normal_mesh;

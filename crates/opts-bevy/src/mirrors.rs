@@ -42,7 +42,6 @@ use bevy::pbr::StandardMaterial;
 use bevy::prelude::*;
 use bevy::render::view::Tonemapping;
 
-#[cfg(test)]
 use opts_core::formats::vehicles::BusMirrorCamera;
 
 use crate::glass::{surface_kind, SurfaceKind};
