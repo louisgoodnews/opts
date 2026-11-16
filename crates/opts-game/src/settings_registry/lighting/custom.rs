@@ -52,7 +52,10 @@ pub fn custom_of(settings: &GameSettings) -> LightQuality {
         mirror_count: num(CUSTOM_KEYS[6], u32::from(def.mirror_count)) as u8,
         mirror_every: num(CUSTOM_KEYS[7], u32::from(def.mirror_every)) as u8,
         glass_reflections: flag(CUSTOM_KEYS[8], def.glass_reflections),
-        bloom: flag(CUSTOM_KEYS[9], def.bloom),
+        bloom: settings
+            .raw(CUSTOM_KEYS[9])
+            .and_then(|s| BloomLevel::parse(&s))
+            .unwrap_or(def.bloom),
     }
     .clamped()
 }
@@ -70,7 +73,7 @@ pub fn texts_of(q: &LightQuality) -> [String; 10] {
         q.mirror_count.to_string(),
         q.mirror_every.to_string(),
         q.glass_reflections.to_string(),
-        q.bloom.to_string(),
+        q.bloom.name().to_string(),
     ]
 }
 

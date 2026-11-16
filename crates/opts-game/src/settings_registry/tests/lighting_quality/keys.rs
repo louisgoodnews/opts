@@ -17,7 +17,7 @@ fn defaults_are_level_zero_in_automatic_mode() {
         ("graphics.mirror_count", "2"),
         ("graphics.mirror_rate", "2"),
         ("graphics.glass_reflections", "true"),
-        ("graphics.bloom", "false"),
+        ("graphics.bloom", "off"),
         ("graphics.light_governor_target_fps", "60"),
     ];
     for (key, default) in want {

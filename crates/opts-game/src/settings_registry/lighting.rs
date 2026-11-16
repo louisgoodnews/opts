@@ -7,8 +7,8 @@
 
 use bevy::prelude::*;
 use opts_bevy::light_quality::{
-    ladder_preset, GovernorGate, GovernorTargetFps, LightMode, LightQuality, LightQualityInput,
-    LightQualitySet, Shafts,
+    ladder_preset, BloomLevel, GovernorGate, GovernorTargetFps, LightMode, LightQuality,
+    LightQualityInput, LightQualitySet, Shafts,
 };
 
 use super::descriptor::{opt, Category as C, SettingDescriptor as D, SettingKind as K};
@@ -39,6 +39,13 @@ const SHAFTS: &[super::EnumOption] = &[
     opt("medium", "set-opt-shafts-medium"),
     opt("high", "set-opt-shafts-high"),
     opt("ultra", "set-opt-shafts-ultra"),
+];
+
+const BLOOM_LEVELS: &[super::EnumOption] = &[
+    opt("off", "set-opt-bloom-off"),
+    opt("low", "set-opt-bloom-low"),
+    opt("natural", "set-opt-bloom-natural"),
+    opt("high", "set-opt-bloom-high"),
 ];
 
 const MIRROR_RATES: &[super::EnumOption] = &[

@@ -22,7 +22,7 @@ fn the_resolved_quality_follows_mode_level_and_custom_values() {
     // Automatic to custom: the level stays, the values are the user's.
     let mut custom = ladder_preset(3);
     custom.cone_cap = 80;
-    custom.bloom = true;
+    custom.bloom = BloomLevel::Natural;
     *app.world_mut().resource_mut::<LightQualityInput>() = LightQualityInput {
         mode: LightMode::Custom,
         custom,
@@ -31,7 +31,7 @@ fn the_resolved_quality_follows_mode_level_and_custom_values() {
     let q = *app.world().resource::<LightQuality>();
     assert_eq!(
         (q.mode, q.level, q.cone_cap, q.bloom),
-        (LightMode::Custom, 3, 80, true)
+        (LightMode::Custom, 3, 80, BloomLevel::Natural)
     );
 
     // Custom to automatic restarts at level 0.

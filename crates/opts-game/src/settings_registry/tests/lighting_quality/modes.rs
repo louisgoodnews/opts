@@ -7,20 +7,21 @@ fn custom_mode_applies_the_controls_live() {
     let mut app = app();
     assert_eq!(quality(&app), ladder_preset(0));
     // Automatic: the controls do not change what is applied.
-    set(&mut app, "graphics.bloom", "true");
+    set(&mut app, "graphics.bloom", "natural");
     app.update();
-    assert!(!quality(&app).bloom);
+    assert_eq!(quality(&app).bloom, BloomLevel::Off);
     // Custom: they are authoritative.
     set(&mut app, "graphics.light_quality_mode", "custom");
     app.update();
     app.update();
     let q = quality(&app);
     assert_eq!(q.mode, LightMode::Custom);
-    assert!(
-        !q.bloom,
+    assert_eq!(
+        q.bloom,
+        BloomLevel::Off,
         "the switch copied the automatic level over the old custom values"
     );
-    set(&mut app, "graphics.bloom", "true");
+    set(&mut app, "graphics.bloom", "natural");
     set(&mut app, "graphics.light_shafts", "ultra");
     set(&mut app, "graphics.light_cone_cap", "96");
     set(&mut app, "graphics.mirror_rate", "4");
