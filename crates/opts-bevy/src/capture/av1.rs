@@ -28,47 +28,10 @@ fn fail(what: &str, e: impl std::fmt::Display) -> CaptureError {
     CaptureError::Failed(format!("AV1 {what} failed: {e}"))
 }
 
-/// Converts RGB to limited-range BT.709 YUV 4:2:0 planes (Y, U, V).
-#[must_use]
-pub fn to_yuv420(f: &RgbFrame) -> [Vec<u8>; 3] {
-    let (w, h) = (f.width as usize, f.height as usize);
-    let (cw, ch) = (w.div_ceil(2), h.div_ceil(2));
-    let mut y = vec![0u8; w * h];
-    let mut u = vec![0u8; cw * ch];
-    let mut v = vec![0u8; cw * ch];
-    let px = |x: usize, yy: usize| {
-        let i = (yy.min(h - 1) * w + x.min(w - 1)) * 3;
-        (
-            i32::from(f.data[i]),
-            i32::from(f.data[i + 1]),
-            i32::from(f.data[i + 2]),
-        )
-    };
-    for row in 0..h {
-        for col in 0..w {
-            let (r, g, b) = px(col, row);
-            y[row * w + col] =
-                (16 + ((187 * r + 629 * g + 63 * b + 512) >> 10)).clamp(16, 235) as u8;
-        }
-    }
-    for row in 0..ch {
-        for col in 0..cw {
-            let (mut r, mut g, mut b) = (0, 0, 0);
-            for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
-                let (pr, pg, pb) = px(col * 2 + dx, row * 2 + dy);
-                r += pr;
-                g += pg;
-                b += pb;
-            }
-            let (r, g, b) = ((r + 2) >> 2, (g + 2) >> 2, (b + 2) >> 2);
-            u[row * cw + col] =
-                (128 + ((-103 * r - 347 * g + 450 * b + 512) >> 10)).clamp(16, 240) as u8;
-            v[row * cw + col] =
-                (128 + ((450 * r - 408 * g - 42 * b + 512) >> 10)).clamp(16, 240) as u8;
-        }
-    }
-    [y, u, v]
-}
+mod yuv;
+
+pub use yuv::*;
+
 
 /// AV1 in IVF.
 pub struct Av1Ivf {
@@ -179,88 +142,4 @@ impl Encoder for Av1Ivf {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::capture::ivf;
-
-    fn gradient(w: u32, h: u32, t: u32) -> RgbFrame {
-        let mut data = Vec::new();
-        for y in 0..h {
-            for x in 0..w {
-                data.extend_from_slice(&[((x + t * 4) % 256) as u8, (y * 255 / h) as u8, 90]);
-            }
-        }
-        RgbFrame {
-            width: w,
-            height: h,
-            data,
-        }
-    }
-
-    #[test]
-    fn dropped_frames_leave_a_gap_in_presentation_time() {
-        let path = std::env::temp_dir().join(format!("opts_av1_vfr_{}.ivf", std::process::id()));
-        let mut enc = Av1Ivf::create(&path, 64, 48, 30, 60).expect("create");
-        // 30 fps clock; frames 1 and 2 were dropped, so the third arrives at 100 ms.
-        for (i, wall_ms) in [0u64, 33, 133, 166].into_iter().enumerate() {
-            let info = FrameInfo {
-                index: i as u64,
-                sim_time: 0.0,
-                frame: 0,
-                wall_ms,
-            };
-            enc.push(&gradient(64, 48, i as u32), &info).expect("push");
-        }
-        Box::new(enc).finish().expect("finish");
-        let i = ivf::inspect(&std::fs::read(&path).expect("read")).expect("ivf");
-        assert_eq!(i.counted_frames, 4);
-        assert_eq!(
-            i.last_pts, 5,
-            "166 ms at 30 fps is tick 5, not frame number 3"
-        );
-    }
-
-    #[test]
-    fn quantizer_follows_quality() {
-        assert!(quantizer_for(100) < quantizer_for(50));
-        assert!(quantizer_for(50) < quantizer_for(1));
-    }
-
-    #[test]
-    fn white_and_black_map_to_the_limited_range() {
-        let white = RgbFrame {
-            width: 2,
-            height: 2,
-            data: vec![255; 12],
-        };
-        let black = RgbFrame {
-            width: 2,
-            height: 2,
-            data: vec![0; 12],
-        };
-        assert_eq!(to_yuv420(&white)[0][0], 235);
-        assert_eq!(to_yuv420(&black)[0][0], 16);
-        assert_eq!(to_yuv420(&white)[1][0], 128);
-    }
-
-    #[test]
-    fn a_short_clip_is_a_well_formed_ivf_with_every_frame() {
-        let path = std::env::temp_dir().join(format!("opts_av1_{}.ivf", std::process::id()));
-        let mut enc = Av1Ivf::create(&path, 160, 90, 30, 60).expect("create");
-        let info = FrameInfo {
-            index: 0,
-            sim_time: 0.0,
-            frame: 0,
-            wall_ms: 0,
-        };
-        for t in 0..6 {
-            enc.push(&gradient(160, 90, t), &info).expect("push");
-        }
-        Box::new(enc).finish().expect("finish");
-        let bytes = std::fs::read(&path).expect("read");
-        let i = ivf::inspect(&bytes).expect("ivf");
-        assert_eq!((i.fourcc, i.width, i.height), (*b"AV01", 160, 90));
-        assert_eq!(i.header_frames, 6);
-        assert_eq!(i.counted_frames, 6);
-    }
-}
+mod tests;
