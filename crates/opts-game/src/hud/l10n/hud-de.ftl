@@ -36,6 +36,7 @@ hud-widget-rpm = Motordrehzahl
 hud-widget-parking-brake = Feststellbremse
 hud-widget-fuel = Tankfüllung
 hud-widget-fuel-low = Tankreserve
+hud-widget-fuel-bar = Tankfüllung (Balken)
 hud-widget-session = Karte und Startpunkt
 hud-widget-clock = Uhr und Wetter
 hud-widget-controls-hint = Tastenhinweise

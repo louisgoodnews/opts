@@ -113,6 +113,7 @@ help-group-menus = Menus and tools
 help-key-throttle = Throttle and brake (road vehicles)
 help-key-steer = Steer (road vehicles)
 help-key-parking = Parking brake (road vehicles)
+help-key-refuel = Refuel (fills the fuel or battery)
 help-key-gears = Drive, neutral, reverse (road vehicles)
 help-key-tram = Choose the way at the next points (trams)
 help-key-rail-direction = Direction of travel: forward, backwards (trams)

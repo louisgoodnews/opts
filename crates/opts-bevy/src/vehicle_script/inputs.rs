@@ -81,6 +81,8 @@ pub fn host_inputs(
             sim.chassis.ground_vertical_acc_m_s2
                 + sim.body.as_ref().map_or(0.0, |b| b.vertical_acc_m_s2),
         ],
+        // The fuel model's level (M-0123); a vehicle without a model reads full.
+        tank_percent: sim.fuel_level().map_or(100.0, |level| level * 100.0),
         throttle: sim.inputs.throttle(),
         brake: sim.inputs.service_brake(),
         ai: false,

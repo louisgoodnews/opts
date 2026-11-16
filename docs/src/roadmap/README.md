@@ -430,7 +430,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [~] Streaming strategy that adapts to the player's speed: tiles at speed, objects when slow.
 - [ ] **🌦️ Real Weather Research** — [M-0116](phase-11/M-0116.md) — 🟡 research complete, pending review (2026-11-16)
   - [ ] Providers, licensing, offline policy, mapping to `.owt` presets, location source, go/no-go (research only).
-- [~] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](phase-11/M-0117.md) — 🚧 in progress 2026-11-16 (sim-side grip and exhaust rule done; game wiring, AI loop call, HUD hint, exhaust effect and verification open)
+- [~] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](phase-11/M-0117.md) — 🚧 in progress 2026-11-16 (grip, AI, HUD hint and exhaust puffs with the setting and cap done; outlet from the vehicle data and on-screen checks open)
   - [~] Wet and snow grip, fog visibility hint, exhaust particles.
 - [x] **🚏 Scheduled AI Traffic** — [M-0112](phase-11/M-0112.md) — ✅ done 2026-10-23
   - [x] Buses, trams and trains that spawn at the route start, follow the timetable and despawn at the end (needs M-0099/M-0098).
@@ -442,11 +442,11 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 
 - [~] **🧼 Material Overlays and Light Maps** — [M-0120](phase-12/M-0120.md) — 🚧 in progress (overlay core, setting and audit done; `[nightmapmode]`, `[matl_change]` and rendering checks open)
   - [ ] Audit, then render dirt, rain and condensation overlays from script variables; apply `[nightmapmode]` 0-4; overlay setting.
-- [~] **🌧️ Wetness and Snow on Vehicles and Scenery** — [M-0121](phase-12/M-0121.md) — 🚧 in progress 2026-11-16: texture `.cfg` flags parsed, wetness ramp, material wetness, setting, snow and season variables done; vehicle wet paint and on-screen evidence open
+- [~] **🌧️ Wetness and Snow on Vehicles and Scenery** — [M-0121](phase-12/M-0121.md) — 🚧 in progress 2026-11-16: texture `.cfg` flags parsed, wetness ramp, material wetness, setting, snow and season variables, vehicle paint and tyres done; on-screen evidence open
   - [~] Per-texture `[moisture]`/`[puddles]`, wet vehicles and scenery from the `Wetness` driver, `snow_visible` and winter variants.
 - [x] **🧍 Passenger Load Physics** — [M-0124](phase-12/M-0124.md) — 🟢 complete (2026-11-16): steer-axle steering effort built; fore/aft load and the M-0073 rear-axle clause recorded as limits
   - [ ] Dynamic mass from the passenger count into acceleration, braking, steering effort and ride height. *Status 2026-11-15 (owner decision):* the toggle exists (`gameplay.passenger_weight`, a bool, default on: `crates/opts-game/src/settings_registry/builtin/interface/gameplay.rs:137`, read in `crates/opts-game/src/passengers/weight.rs:13`), and the mass reaches acceleration and braking (`crates/opts-sim/src/vehicle/step.rs:145`, `crates/opts-sim/src/vehicle/consist_ops.rs:77`). **Not built:** the steer-axle load input for the load-dependent steering effort. The handling part is built on 2026-11-16 (`agent/m0124`): `steering_authority` in `crates/opts-sim/src/vehicle/step.rs` scales the yaw response by the unladen mass over the mass with passengers (1 with no load). Before that, the steering code had no mass term (checked by reading, 2026-11-15).
-- [~] **⛽ Fuel and Battery State** — [M-0123](phase-12/M-0123.md) — 🚧 in progress 2026-11-16: simulation core, setting, save section, control command and HUD readout (`fuel`, `fuel-low`, text only) done; bar gauge and its on-screen check, VM, refuel action and audit open
+- [~] **⛽ Fuel and Battery State** — [M-0123](phase-12/M-0123.md) — 🚧 in progress 2026-11-16 (fourth pass: bar gauge `fuel-bar`, `tank_percent` fed to the scripts, refuel key F12): simulation core, setting, save section, control command and HUD readout (`fuel`, `fuel-low`, text only) done; bar gauge, `tank_percent` and refuel key F12 built; on-screen checks, script authority, refuel-when-stopped and audit open
   - [~] Fuel/battery depletion, torque cut at empty, `tank_percent` to scripts, HUD gauge, Off/Realistic/Accelerated, session save.
 - [~] **✨ Graphics Overhaul** — [M-0122](phase-12/M-0122.md) — 🚧 in progress 2026-11-16: bloom done; PBR, AO, AA, measurements and ladder placement open
   - [~] PBR audit, ambient occlusion, anti-aliasing decision, restrained bloom; benchmarked on an RTX 3060 at 1080p against the reference ([design brief](../architecture/graphics-overhaul.md)).

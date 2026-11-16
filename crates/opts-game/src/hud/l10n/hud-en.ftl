@@ -36,6 +36,7 @@ hud-widget-rpm = Engine speed
 hud-widget-parking-brake = Parking brake
 hud-widget-fuel = Fuel
 hud-widget-fuel-low = Fuel reserve
+hud-widget-fuel-bar = Fuel bar
 hud-widget-session = Map and entry point
 hud-widget-clock = Clock and weather
 hud-widget-controls-hint = Key hints

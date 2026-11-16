@@ -104,11 +104,14 @@ pub(in super::super::super) fn load_segment_meshes_for(
         materials,
         images,
     };
-    SegmentState::new(commands, (root, owner), lod0, (model_dir, tex_dirs)).load_all(
+    let vehicle_part = std::mem::replace(&mut job.cache.vehicle_part, true);
+    let counts = SegmentState::new(commands, (root, owner), lod0, (model_dir, tex_dirs)).load_all(
         job,
         commands,
         &mut assets,
-    )
+    );
+    job.cache.vehicle_part = vehicle_part;
+    counts
 }
 
 #[cfg(test)]

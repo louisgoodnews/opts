@@ -113,6 +113,7 @@ help-group-menus = Menüs und Werkzeuge
 help-key-throttle = Gas und Bremse (Straßenfahrzeuge)
 help-key-steer = Lenken (Straßenfahrzeuge)
 help-key-parking = Feststellbremse (Straßenfahrzeuge)
+help-key-refuel = Betanken (füllt Tank oder Batterie)
 help-key-gears = Fahren, Leerlauf, Rückwärts (Straßenfahrzeuge)
 help-key-tram = Weg an der nächsten Weiche wählen (Bahnen)
 help-key-rail-direction = Fahrtrichtung: vorwärts, rückwärts (Bahnen)

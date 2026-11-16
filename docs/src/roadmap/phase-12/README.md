@@ -9,9 +9,9 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 12); this page
 ## Milestones (recommended execution order)
 
 1. [M-0120 — Material Overlays and Light Maps](M-0120.md) — 🚧 In progress; overlay core, setting and audit done; `[nightmapmode]`, `[matl_change]` and rendering checks open.
-2. [M-0121 — Wetness and Snow on Vehicles and Scenery](M-0121.md) — 🚧 In progress 2026-11-16; texture `.cfg` flags parsed, wetness ramp, material wetness, setting, snow and season variables done; vehicle wet paint and on-screen evidence open; builds on M-0120 and the existing ground wetness.
+2. [M-0121 — Wetness and Snow on Vehicles and Scenery](M-0121.md) — 🚧 In progress 2026-11-16; texture `.cfg` flags parsed, wetness ramp, material wetness, setting, snow and season variables, vehicle paint and tyres done; on-screen evidence open; builds on M-0120 and the existing ground wetness.
 3. [M-0124 — Passenger Load Physics](M-0124.md) — 🟢 Complete (2026-11-16): steer-axle steering effort built; the fore/aft load and the M-0073 rear-axle clause are recorded limits.
-4. [M-0123 — Fuel and Battery State](M-0123.md) — 🚧 In progress 2026-11-16; simulation core, setting, save section and HUD readout done; bar gauge, VM, refuel action and audit open.
+4. [M-0123 — Fuel and Battery State](M-0123.md) — 🚧 In progress 2026-11-16; simulation core, setting, save section, HUD readout and bar gauge, `tank_percent` fed and refuel key F12 done; on-screen checks, script authority, refuel-when-stopped and audit open.
 5. [M-0122 — Graphics Overhaul](M-0122.md) — 🚧 In progress 2026-11-16; bloom done, the rest open. Last on purpose: the audit, ambient occlusion, anti-aliasing and bloom decisions are judged on a scene that already has dirt, light maps and wetness, and after the open Phase 8 items it depends on.
 
 Rationale: M-0120 and M-0121 are small, concrete and mostly verification; M-0122 is the largest and is measured against everything else, so it goes last. M-0123 and M-0124 are physics and can run in parallel with the graphics track by another agent (they touch `opts-sim`, `opts-game` and the save registry, not the render path). This is a recommendation; the user may reorder.

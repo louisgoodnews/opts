@@ -42,6 +42,8 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `graphics.bloom` | Bloom | `off`, `low`, `natural`, `high` | `off` | at once | available | A soft glow around very bright lights. |
 | `graphics.light_governor_target_fps` | Governor target frame rate | whole number 30 to 240 | `60` | at once | available | The frame rate the automatic lighting quality tries to keep. Without vsync it is the deadline; with vsync the deadline is your display's refresh interval, or this rate if that is lower. Frames that miss it by a wide margin make the quality step down; with no missed frames for a while it steps up again. |
 | `graphics.overlays` | Window and body overlays | `off`, `simple`, `full` | `full` | at once | available | Dirt, rain on the windows and condensation on vehicles. Off draws none of them and costs nothing. Simple draws the window overlays only. Full draws both. A raised setting applies to vehicles loaded from then on. |
+| `graphics.exhaust` | Engine exhaust | `off`, `on` | `on` | at once | available | The exhaust plume of the vehicle you drive: puffs from the back of the engine on a cold start and under heavy throttle. Off draws none and costs nothing. On draws the plume, within the cap below. |
+| `graphics.exhaust_particles` | Most exhaust puffs | whole number 4 to 48 | `12` | at once | available | How many exhaust puffs may be alive at the same time, from 4 to 48. The emitter waits when the cap is reached, so a lower value costs less and shows a thinner plume. |
 
 ## Audio
 
@@ -88,6 +90,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.vehicle.ticket_take` | Collect money | input binding | `Shift+T` | at once | available | Geld einsammeln |
 | `controls.mouse_driving` | Drive with the mouse | on / off | `true` | at once | available | The mouse wheel press switches mouse driving: the cursor's height is throttle (upper half) and brake (lower half), its width is the steering. A right click frees the mouse until the next right click. Applies at once. |
 | `controls.drive.parking_brake` | Parking brake | input binding | `Period` | at once | available | Applies or releases the parking brake. |
+| `controls.drive.refuel` | Refuel | input binding | `F12` | at once | available | Fills the fuel tank or battery of the vehicle. |
 | `controls.drive.rail_forward` | Rail: forward | input binding | `W` | at once | available | Rail vehicles: drive forward (the cab's direction switch; a tram's reverse-drive switch off). |
 | `controls.drive.rail_reverse` | Rail: reverse | input binding | `S` | at once | available | Rail vehicles: drive backwards (a standing tram only). |
 | `controls.drive.rail_lever_up` | Rail: power lever up | input binding | `Q` | at once | available | Rail vehicles: moves the power lever towards traction while held; it stays where it is left. |

@@ -62,3 +62,10 @@ set-overlays-desc = Schmutz, Regen auf den Scheiben und Beschlag an Fahrzeugen. 
 set-opt-overlays-off = Aus
 set-opt-overlays-simple = Einfach (Fenster)
 set-opt-overlays-full = Voll
+
+set-exhaust = Motorabgas
+set-exhaust-desc = Die Abgasfahne des Fahrzeugs, das du fährst: Stöße aus dem Motorheck beim Kaltstart und bei starkem Gas. Aus zeichnet keine und kostet nichts. Ein zeichnet die Fahne innerhalb der Obergrenze unten.
+set-opt-exhaust-off = Aus
+set-opt-exhaust-on = Ein
+set-exhaust-particles = Meiste Abgasstöße
+set-exhaust-particles-desc = Wie viele Abgasstöße gleichzeitig existieren dürfen, von 4 bis 48. Der Erzeuger wartet, wenn die Obergrenze erreicht ist; ein niedriger Wert kostet weniger und zeigt eine dünnere Fahne.

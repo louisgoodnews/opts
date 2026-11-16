@@ -106,7 +106,8 @@ pub fn update_widget_display(
             && (values.has_vehicle || w.binding.row() != Some(Row::Instruments))
             && (w.when.kinds.is_empty() || w.when.kinds.contains(&values.kind))
             && (!w.when.needs_rpm || (RPM_PROVIDED && values.rpm.is_some()))
-            && (!matches!(w.binding, Binding::Fuel | Binding::FuelLow) || values.fuel.is_some());
+            && (!matches!(w.binding, Binding::Fuel | Binding::FuelLow | Binding::FuelBar)
+                || values.fuel.is_some());
         let display = if on { Display::Flex } else { Display::None };
         if node.display != display {
             node.display = display;

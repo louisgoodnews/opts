@@ -22,19 +22,21 @@ pub struct MaterialNote {
     pub roughness: f32,
     /// The texture's property file has `[moisture]`: the material takes the wetness.
     pub moisture: bool,
+    /// A vehicle's tyre (see [`super::vehicle_wet::is_tyre_texture`]): takes the tyre share.
+    pub tyre: bool,
 }
 
 static NOTES: Mutex<Option<HashMap<AssetId<StandardMaterial>, MaterialNote>>> = Mutex::new(None);
 
 /// Called by the model loader for every material it creates. Free unless a switch is on or the
-/// material takes the wetness (`moisture`, from the texture's `[moisture]` flag).
+/// material takes the wetness (`moisture`, from the texture's `[moisture]` flag, or `tyre`).
 pub fn note_material(
     handle: &Handle<StandardMaterial>,
     texture: Option<&str>,
-    moisture: bool,
+    (moisture, tyre): (bool, bool),
     m: &StandardMaterial,
 ) {
-    if !moisture && !switches().any() {
+    if !moisture && !tyre && !switches().any() {
         return;
     }
     let note = MaterialNote {
@@ -43,6 +45,7 @@ pub fn note_material(
         base_color: m.base_color,
         roughness: m.perceptual_roughness,
         moisture,
+        tyre,
     };
     if let Ok(mut g) = NOTES.lock() {
         g.get_or_insert_with(HashMap::new).insert(handle.id(), note);

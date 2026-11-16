@@ -22,6 +22,7 @@ use crate::settings::GameSettings;
 use opts_bevy::{SessionEnvironment, WeatherCatalogue};
 
 mod fuel;
+pub use fuel::update_fuel_bars;
 mod texts;
 use super::params::{DisplayNodes, DisplayRows, DisplaySlots, TextEnv};
 use fuel::{lamp_text, level_text};

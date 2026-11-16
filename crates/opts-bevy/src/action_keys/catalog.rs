@@ -65,6 +65,8 @@ pub(super) const fn rail(
 /// The actions, in the order of the settings page.
 pub const ACTIONS: &[ActionDef] = &[
     road("drive", "parking_brake", "Period"),
+    // Fills the fuel or battery of the vehicle (M-0123); F12 is not used by any other action.
+    def("drive", "refuel", "F12"),
     // The controls of rail vehicles: no pedals and no parking brake. W and S choose the
     // direction of travel, Q and Y (the key at the Z position of a QWERTY keyboard) move the
     // power lever up (towards traction) and down (towards braking), the arrows choose the way at
