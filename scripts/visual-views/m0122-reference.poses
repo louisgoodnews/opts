@@ -1,0 +1,16 @@
+# M-0122 reference-view set (docs/src/architecture/graphics-overhaul.md section 13), as data.
+# Use:  POSE_FILE=scripts/visual-views/m0122-reference.poses scripts/visual-ab.sh <config> <map> <vehicle>
+# Format per line: name forward_m right_m up_m yaw_offset_deg pitch_deg (relative to the player vehicle).
+#
+# STATUS: starting poses, NOT yet run or tuned. They are offsets from the vehicle, so the bus-stop
+# view depends on where the vehicle stands at the stop. Tune them on the first run and record the
+# final values here; the lead confirms the scene and map (design page section 19).
+#
+# The Phase 8 views (driver, road_grazing, foliage, far, sign_close) are in visual-ab.sh by default.
+#
+# name            fwd   right  up    yaw   pitch
+bus_door_kerb     7.0   4.5    1.4   -20   -4
+bus_interior      1.5   0.4    1.7   0     -2
+bus_stop_sign     12.0  5.0    2.0   -25   0
+distant_trees     45.0  -12.0  4.0   -10   -2
+low_sun_street    -30.0 0.0    1.5   180   -3

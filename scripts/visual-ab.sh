@@ -13,6 +13,7 @@
 #   PORT (44251; not the default 44201, so a running game is not disturbed), WARM (seconds to let
 #   the streaming settle after the HUD is up, 12), LOOKS.
 # Poses: "name forward_m right_m up_m yaw_offset_deg pitch_deg" relative to the vehicle's heading.
+# POSE_FILE=<file> reads the poses from a data file instead (see POSES above the loop).
 set -euo pipefail
 name=$1; map=$2; veh=$3; shift 3
 OMSI=${OMSI:-"/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2"}
@@ -26,6 +27,9 @@ road_grazing 12 0 0.9 0 -4
 foliage 6 -4 2.0 -55 3
 far 6 0 9.0 0 -4
 sign_close 14 3.5 1.6 25 0"}
+# POSE_FILE: a data file of poses (same format; `#` lines and blank lines are skipped) that
+# replaces POSES, e.g. scripts/visual-views/m0122-reference.poses.
+if [ -n "${POSE_FILE:-}" ]; then POSES=$(sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' "$POSE_FILE"); fi
 mkdir -p "$OUT"
 cfg=$(mktemp -d); data=$(mktemp -d)
 cli() { "$CLI" --port "$PORT" --json --quiet "$@"; }
