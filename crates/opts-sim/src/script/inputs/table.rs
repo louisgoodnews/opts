@@ -38,7 +38,7 @@ const SECTIONS: &[&[InputRow]] = &[
 ];
 
 /// Scalar inputs. Wheel and door families are in [`WHEEL_FAMILIES`] and [`DOOR_FAMILIES`].
-pub const INPUT_TABLE: &[InputRow] = &concat::<50>(SECTIONS);
+pub const INPUT_TABLE: &[InputRow] = &concat::<51>(SECTIONS);
 
 /// Joins the sections into one table; panics at compile time if the length is not `N`.
 const fn concat<const N: usize>(sections: &[&[InputRow]]) -> [InputRow; N] {

@@ -39,6 +39,9 @@ pub struct HostInputs {
     pub a_trans: [f32; 3],
     /// Odometer (m).
     pub odometer_m: f64,
+    /// Fuel or battery content of the vehicle, percent of its capacity (0 to 100; the model of
+    /// `vehicle/fuel.rs`, M-0123). A vehicle without a model reads full.
+    pub tank_percent: f32,
     /// Accelerator 0..1.
     pub throttle: f32,
     /// Service brake 0..1.

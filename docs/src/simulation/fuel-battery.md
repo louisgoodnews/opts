@@ -48,8 +48,8 @@ The `fuel` section (version 1, `Vehicles` stage, after the vehicles exist) holds
 
 ## 5. Not yet done
 
-- **HUD readout, on-screen check open.** Built (`hud/fuel_hud.rs`, `update/fuel.rs`): the widget `fuel` shows the level in percent and `fuel-low` shows `LOW` or `OK` (a word, not only a colour) at or below 10 %, in the bottom-left instrument row of the bus, articulated bus and trolleybus profiles. Both are hidden when the setting is *Off* (no readout). A bar gauge is not drawn; a person still has to look at it on screen.
-- **VM variable.** `tank_percent` has no consumer. The stock scripts write it themselves from `engine_tank_content` (`engine_GN.osc:275`), so a host write would fight the script; the authority per vehicle family needs the audit first.
-- **Refuel action** on a key or in a menu when stopped. Only the control command exists.
+- **HUD readout, on-screen check open.** Built (`hud/fuel_hud.rs`, `update/fuel.rs`): the widget `fuel` shows the level in percent and `fuel-low` shows `LOW` or `OK` (a word, not only a colour) at or below 10 %, in the bottom-left instrument row of the bus, articulated bus and trolleybus profiles. The widget `fuel-bar` draws the level as a bar gauge (track and fill, alarm colour at the low level) after the readout in the same row. All are hidden when the setting is *Off* (no readout). A person still has to look at them on screen.
+- **VM variable: value fed, authority open.** `tank_percent` is a host input (`HostInputs::tank_percent`, row in the input table, `shared`): the level times 100, or 100 for a vehicle without a model. Like the throttle, a script that writes `tank_percent` keeps its own value and the host leaves it alone; the stock scripts write it from `engine_tank_content` (`engine_GN.osc:275`), so for them the host value is not used. Which owner each vehicle family should have needs the audit first.
+- **Refuel action: key, on the road and rail vehicles.** The action `refuel` (`controls.drive.refuel`, default **F12**) fills the store on press. It is not limited to a stop; a stopped-only rule is not applied.
 - **Stations.** Refuelling at `[petrolstation]` objects is a stretch decision for a follow-up milestone.
 - **Audit.** The table of which vehicles use `engine_tank_content`, `tank_percent`, `veh_tank` and which electric vehicles expose a charge.

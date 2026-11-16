@@ -2,6 +2,8 @@
 
 set-bk-parking_brake = Feststellbremse
 set-bk-parking_brake-desc = Zieht die Feststellbremse an oder löst sie.
+set-bk-refuel = Betanken
+set-bk-refuel-desc = Füllt den Tank oder die Batterie des Fahrzeugs.
 set-bk-minimap_toggle = Minimap an oder aus
 set-bk-minimap_toggle-desc = Blendet die Minimap ein oder aus.
 set-bk-minimap_rotate = Minimap: Norden oben oder Fahrtrichtung oben

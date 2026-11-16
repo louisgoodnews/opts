@@ -83,3 +83,12 @@ fn a_key_that_says_another_letter_is_labelled_with_it() {
     // A key that says what its position says is left alone.
     assert!(!keys.learn_letter(KeyCode::KeyQ, 'q'));
 }
+
+#[test]
+fn refuel_is_a_rebindable_key_on_f12() {
+    let mut keys = ActionKeys::default();
+    assert_eq!(keys.label("refuel"), "F12");
+    assert_eq!(action("refuel").map(|a| a.scope), Some(ActionScope::All));
+    keys.set("refuel", None);
+    assert_eq!(keys.label("refuel"), "none");
+}

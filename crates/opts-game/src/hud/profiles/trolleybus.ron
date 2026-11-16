@@ -13,7 +13,8 @@ HudProfile(
         (id: "rpm", order: 50),
         (id: "parking-brake", order: 60),
         (id: "fuel", order: 65),
-        (id: "fuel-low", order: 66),
+        (id: "fuel-bar", order: 66),
+        (id: "fuel-low", order: 67),
         (id: "minimap", order: 10),
     ],
 )

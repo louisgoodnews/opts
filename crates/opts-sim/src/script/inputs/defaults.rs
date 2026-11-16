@@ -10,6 +10,7 @@ impl Default for HostInputs {
             n_wheel_rpm: 0.0,
             a_trans: [0.0; 3],
             odometer_m: 0.0,
+            tank_percent: 100.0,
             throttle: 0.0,
             brake: 0.0,
             clutch: 0.0,

@@ -26,8 +26,8 @@ use crate::in_game::types::{InGameEntity, InGameHudRoot, PauseMenuBtn};
 
 use super::parts::{build_instrument, panel, panel_node, text_widget, texts, CameraLabelRow};
 pub use super::parts::{
-    ActiveProfile, AlertPill, ClusterBox, HudRoot, HudRow, HudSlot, HudText, HudWidgetNode, MapBox,
-    Part, ReadoutBox,
+    ActiveProfile, AlertPill, ClusterBox, HudBarFill, HudBarTrack, HudRoot, HudRow, HudSlot,
+    HudText, HudWidgetNode, MapBox, Part, ReadoutBox,
 };
 
 mod camera_label;

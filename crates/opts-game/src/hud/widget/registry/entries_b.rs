@@ -113,6 +113,18 @@ pub(super) const FUEL: HudWidget = HudWidget {
     when: Condition::ALWAYS,
 };
 
+pub(super) const FUEL_BAR: HudWidget = HudWidget {
+    id: "fuel-bar",
+    title_key: "hud-widget-fuel-bar",
+    binding: Binding::FuelBar,
+    format: Format::Bar,
+    slot: Slot::ClusterBottomLeft,
+    slots: &[Slot::ClusterBottomLeft],
+    priority: 72,
+    switch: None,
+    when: Condition::ALWAYS,
+};
+
 pub(super) const FUEL_LOW: HudWidget = HudWidget {
     id: "fuel-low",
     title_key: "hud-widget-fuel-low",

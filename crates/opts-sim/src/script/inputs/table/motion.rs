@@ -3,8 +3,8 @@
 use super::super::{InputRow, Kind, Source};
 use super::row;
 
-/// Rows 0..14 of the input table, in table order.
-pub(super) const ROWS: [InputRow; 14] = [
+/// Rows 0..15 of the input table, in table order.
+pub(super) const ROWS: [InputRow; 15] = [
     row(
         "velocity",
         "km/h",
@@ -78,6 +78,15 @@ pub(super) const ROWS: [InputRow; 14] = [
         "ai_target_index",
         "hof row",
         Source::Timetable,
+        Kind::Float,
+        true,
+        true,
+    ),
+    // The fuel or battery content (M-0123): the host's model. A script that writes it keeps it.
+    row(
+        "tank_percent",
+        "%",
+        Source::Physics,
         Kind::Float,
         true,
         true,

@@ -12,9 +12,11 @@ use crate::in_game::instruments::{InstrumentFade, InstrumentInk, InstrumentPanel
 
 mod builders;
 mod components;
+mod fuel_bar;
 mod instrument;
 mod readout;
 pub(super) use builders::{panel, panel_node, texts};
 pub use components::*;
+pub(super) use fuel_bar::fuel_bar;
 pub(super) use instrument::{build_instrument, text_widget};
 pub(super) use readout::readout;
