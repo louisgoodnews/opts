@@ -27,10 +27,12 @@
 mod flags;
 mod notes;
 mod stats;
+mod vehicle_wet;
 mod wet;
 
 pub use flags::{switches, ReflectionSwitches};
 pub use notes::{note_material, MaterialNote};
+pub use vehicle_wet::{is_tyre_texture, part_wetness, TYRE_WET_SHARE};
 pub use wet::{material_wetness, wet_objects_on, wet_standard, Wetness, WetnessHold};
 
 use bevy::pbr::ScreenSpaceReflections;

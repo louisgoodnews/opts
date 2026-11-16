@@ -52,7 +52,17 @@ impl ContentLoader<'_> {
         if let Some(m) = self.materials.get(&material) {
             crate::glass::note_surface(&material, res.tex_name.as_deref(), m, false);
             let moisture = self.texture_takes_wetness(res.tex_name.as_deref());
-            crate::reflections::note_material(&material, res.tex_name.as_deref(), moisture, m);
+            let tyre = self.cache.vehicle_part
+                && res
+                    .tex_name
+                    .as_deref()
+                    .is_some_and(crate::reflections::is_tyre_texture);
+            crate::reflections::note_material(
+                &material,
+                res.tex_name.as_deref(),
+                (moisture, tyre),
+                m,
+            );
         }
         let part = ModelPart {
             mesh: self.cache.pool.mesh(self.meshes, mesh),
