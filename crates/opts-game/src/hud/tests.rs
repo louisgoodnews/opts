@@ -84,6 +84,7 @@ mod profiles;
 mod layout;
 
 mod alerts;
+mod status_bar;
 
 mod details;
 
