@@ -85,8 +85,8 @@ pub struct StreamViewpoint<'w, 's> {
 ///
 /// The observer is the 3D camera. In radius mode the tiles within the radius (Chebyshev
 /// distance) are resident and tiles beyond the radius + the hysteresis are despawned; in *load
-/// all* mode every tile is wanted and none is despawned ([`tile_loading`], M-0080). The speed of
-/// the player picks the regime (M-0114, [`hybrid`]): at speed the queue is ordered by the heading
+/// all* mode every tile is wanted and none is despawned ([`crate::in_game::tile_loading`], M-0080). The speed of
+/// the player picks the regime (M-0114, `hybrid`): at speed the queue is ordered by the heading
 /// and tiles are loaded ahead; when slow the tile being built places its nearest objects first.
 /// Parsed objects and textures stay cached, so revisiting a tile is cheap.
 pub fn stream_world_tiles(

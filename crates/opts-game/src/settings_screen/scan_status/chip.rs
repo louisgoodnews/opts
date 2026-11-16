@@ -23,7 +23,7 @@ pub struct ScanChipLabel;
 #[derive(Component, Debug, Clone, Copy)]
 pub struct ScanChipReason;
 
-/// Spawns the chip and its caption below the *Scan now* row; [`refresh_scan_chip`] fills it.
+/// Spawns the chip and its caption below the *Scan now* row; [`super::refresh::refresh_scan_chip`] fills it.
 pub fn spawn_chip(c: &mut Commands, pane: Entity) {
     let (bg, fg, glyph) = look(ScanLevel::Needed);
     let wrap = c

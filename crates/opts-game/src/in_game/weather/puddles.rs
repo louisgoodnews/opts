@@ -8,7 +8,7 @@
 //! (roughness 0.03, the sky cube of `opts_bevy::reflections` as the environment).
 //!
 //! * **Where.** Random points in a ring around the camera ([`MIN_DISTANCE_M`]..[`MAX_DISTANCE_M`]);
-//!   a point counts when the [`GroundIndex`] says a road lies there and the road is level across
+//!   a point counts when the [`crate::in_game::omsi_world::GroundIndex`] says a road lies there and the road is level across
 //!   the patch (within [`FLAT_TOLERANCE_M`] over its extent), so patches never float on a slope.
 //! * **How many.** [`puddle_target`]: [`MAX_PUDDLES`] at full coverage and wetness, none when it
 //!   is dry or snow covers the ground. At most [`SPAWN_PER_TICK`] appear per tick; puddles left

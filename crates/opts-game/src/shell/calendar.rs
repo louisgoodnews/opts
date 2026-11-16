@@ -2,7 +2,7 @@
 //! menu's *Environment* page: the stepper arithmetic, fixed-size `[-] value [+]` steppers and the
 //! frame of a choice chip.
 //!
-//! The arithmetic works on [`CalendarDate`] and an hour/minute pair, so the wizard
+//! The arithmetic works on [`opts_bevy::environment::CalendarDate`] and an hour/minute pair, so the wizard
 //! (`NewGameSetup`) and the running session (`SessionEnvironment`) step the same way. Labels use
 //! the wizard's message keys (`wiz-when-*`, `wiz-month-*`).
 

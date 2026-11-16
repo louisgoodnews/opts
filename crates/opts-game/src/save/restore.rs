@@ -3,9 +3,9 @@
 //!
 //! 1. [`begin_restore`] reads and checks the file, runs every section's `prepare` (they write the
 //!    choices the loading pipeline reads) and enters the session.
-//! 2. When the HUD is up, the [`Stage::World`] sections run (they queue the saved vehicles).
+//! 2. When the HUD is up, the [`super::registry::Stage::World`] sections run (they queue the saved vehicles).
 //! 3. The spawner rebuilds the vehicles; each receives its state once its scripts have started.
-//! 4. When no vehicle is spawning and none waits for its state, the [`Stage::Settled`] sections run
+//! 4. When no vehicle is spawning and none waits for its state, the [`super::registry::Stage::Settled`] sections run
 //!    (active vehicle, camera, counters, paused state) and the restore is done.
 
 use bevy::prelude::*;

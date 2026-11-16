@@ -5,8 +5,8 @@
 //! settings page, persistence (`settings.db`), validation, *Reset*, search, the control-protocol
 //! commands `settings.*` and the generated reference follow from it. Values are stored as text
 //! in the key/value table, the descriptor is the schema. The typed fields of
-//! [`GameSettings`] stay for the existing consumers; the registry reaches them through the
-//! loader's own parser ([`GameSettings::raw`] / [`GameSettings::set_raw`]).
+//! [`crate::settings::GameSettings`] stay for the existing consumers; the registry reaches them through the
+//! loader's own parser ([`crate::settings::GameSettings::raw`] / [`crate::settings::GameSettings::set_raw`]).
 
 use std::collections::BTreeSet;
 

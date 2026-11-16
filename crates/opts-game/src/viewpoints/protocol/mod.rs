@@ -1,5 +1,5 @@
 //! Control-protocol methods of the viewpoint editor: `camera.viewpoint.get`, `.set`, `.save`,
-//! `.reset`, `.export` and `.import`. They work on the same [`ViewpointState`] as the keys and the panel, so a scripted run
+//! `.reset`, `.export` and `.import`. They work on the same [`opts_bevy::camera::viewpoint::ViewpointState`] as the keys and the panel, so a scripted run
 //! sees exactly what a player gets.
 
 use bevy::prelude::*;

@@ -3,7 +3,7 @@
 //!
 //! * **continuous voices** (a `[sound]` without `[trigger]`, `[conditionSingle]` or `[noloop]`:
 //!   hums, ambience, birdsong; ❓ inferred, see `docs/src/formats/text/vehicles/sound_cfg.md`) get
-//!   a looping [`SoundEmitter`] while the listener is within their range, with a level from their
+//!   a looping [`opts_bevy::audio::SoundEmitter`] while the listener is within their range, with a level from their
 //!   `[volcurve]`s over the session clock (`Time`, `DayOfYear`, `SunAlt`);
 //! * **triggered voices** (`[trigger] name`) play a one-shot when the object's script raises that
 //!   event (`(T.L.name)`), at the voice's place;

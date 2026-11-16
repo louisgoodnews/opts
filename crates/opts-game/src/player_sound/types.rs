@@ -25,7 +25,7 @@ pub struct PlayerVoice {
     /// unit of it (a trailer shares the head's scripts, `[scriptshare]`); `None`: its parent.
     pub owner: Option<Entity>,
     /// Where the emitter's gain and speed are heading (set twenty times a second, followed every
-    /// frame by [`smooth_player_voices`]): a change of the engine speed is a glide, not steps.
+    /// frame by [`super::triggers::smooth_player_voices`]): a change of the engine speed is a glide, not steps.
     pub goal: Option<(f32, f32)>,
     /// Seconds the voice has been active without a break: the volume curves with the variable
     /// `-1` ([`crate::sound_logic::AGE_VARIABLE`]) fade the voice in over it.

@@ -16,7 +16,7 @@ pub struct SessionMetrics {
     /// The vehicle (display name, empty without one).
     #[serde(default)]
     pub vehicle: String,
-    /// Hash of the map-eligible values of the session ([`super::profile::settings_hash`]).
+    /// Hash of the map-eligible values of the session ([`crate::map_profiles::profile::settings_hash`]).
     #[serde(default)]
     pub settings_hash: String,
     /// RFC 3339 date.

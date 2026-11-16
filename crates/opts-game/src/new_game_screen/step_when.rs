@@ -30,7 +30,7 @@ pub struct WhenValue(pub Field);
 pub struct EraHint;
 
 /// A line under the time that says where a default time comes from; [`refresh_when`] shows the
-/// one that matches [`PlannerState::time_source`] and none once the user has set the time.
+/// one that matches [`super::planner::PlannerState::time_source`] and none once the user has set the time.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TimeSourceLabel(pub TimeSource);
 

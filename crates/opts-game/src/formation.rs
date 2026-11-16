@@ -1,4 +1,4 @@
-//! Train formations in the game: resolving a [`TrainFormation`] against the installation, and the
+//! Train formations in the game: resolving a `TrainFormation` against the installation, and the
 //! control-protocol methods `formation.validate` and `formation.spawn`.
 //! Design: `docs/src/architecture/train-formation-editor.md`, ADR-0013.
 

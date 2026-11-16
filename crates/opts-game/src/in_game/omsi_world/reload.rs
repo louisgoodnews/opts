@@ -7,7 +7,7 @@ use bevy::prelude::*;
 mod bookkeeping;
 mod plan;
 
-/// What the application has to do after [`WorldLoadJob::plan_reload`].
+/// What the application has to do after [`crate::in_game::omsi_world::load_job::WorldLoadJob::plan_reload`].
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ReloadPlan {
     /// Tiles taken down (the streamer re-queues and reloads them); [`ReloadPlan::apply`] despawns
