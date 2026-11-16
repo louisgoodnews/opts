@@ -45,7 +45,7 @@ fn retire_scheduled(
 pub fn move_traffic(
     time: Res<Time>,
     mut commands: Commands,
-    env: Option<Res<opts_bevy::SessionEnvironment>>,
+    weather: crate::in_game::weather::grip::AiWeather,
     mut state: ResMut<TrafficState>,
     mut sched: ResMut<ScheduledTraffic>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
@@ -59,9 +59,10 @@ pub fn move_traffic(
 ) {
     let dt = f64::from(time.delta_secs().min(0.2));
     // The lights follow the session's time of day.
-    if let Some(e) = &env {
+    if let Some(e) = &weather.env {
         state.world.set_clock(e.seconds_of_day());
     }
+    weather.sync_traffic(&mut state.world);
     // Sub-steps of at most 0.1 s keep the car-following law stable.
     let steps = (dt / 0.1).ceil().max(1.0);
     for _ in 0..steps as usize {

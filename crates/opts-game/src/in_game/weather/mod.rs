@@ -11,6 +11,7 @@ use crate::app_state::AppState;
 
 pub mod clouds;
 pub mod fog;
+pub mod grip;
 pub mod precip;
 pub mod puddles;
 pub mod surfaces;
@@ -87,6 +88,7 @@ impl Plugin for WeatherPlugin {
                     precip::update_precipitation,
                     puddles::update_puddles.after(surfaces::drive_wetness),
                     (surfaces::drive_wetness, surfaces::update_surfaces).chain(),
+                    grip::drive_road_grip.after(surfaces::drive_wetness),
                 )
                     .after(EnvironmentSet)
                     .after(super::sky::update_sky)
