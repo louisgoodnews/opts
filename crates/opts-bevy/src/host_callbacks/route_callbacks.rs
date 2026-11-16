@@ -6,7 +6,7 @@ mod queries;
 mod timetable;
 
 use queries::*;
-pub use timetable::*;
+pub(in crate::host_callbacks) use timetable::{handle_route_callback, handle_timetable_callback};
 
 pub(super) fn handle_terminus_callback(ctx: &VehicleHostContext, name: &str, st: &mut Stacks) -> Option<bool> {
     match name {

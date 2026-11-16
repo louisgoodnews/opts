@@ -1,8 +1,5 @@
 //! The shadow and light modes: the shafts and light mode presets with their parsers.
 
-use super::*;
-
-
 /// Sun-ray (volumetric fog) quality: the ray-march step count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Shafts {
