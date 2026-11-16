@@ -3,6 +3,7 @@
 use super::discover::discover;
 use super::*;
 use std::fs;
+use std::time::Duration;
 
 mod discovery;
 mod references;
