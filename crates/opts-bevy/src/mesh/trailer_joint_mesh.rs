@@ -45,13 +45,14 @@ fn write_skin(mesh: &mut Mesh, table: &[SkinEntry]) {
 /// trailer-end axis in the Bevy model space of the meshes (see
 /// [`super::trailer_joint::model_dir_from_omsi`]). The band is the trailer-end face of all parts
 /// together, its ring the joint that carries most of it, and that ring's weight there moves to
-/// `trailer_joint`. Returns the ring, `None` when no part has a trailer end.
+/// `trailer_joint`. `(bones, trailer_joint)`: the ring must be one of the `bones` joints, else
+/// nothing changes. Returns the ring, `None` when no part has a trailer end on a bone.
 #[must_use]
 pub fn remap_bellow_trailer_end(
     meshes: &mut Assets<Mesh>,
     handles: &[Handle<Mesh>],
     axis: Vec3,
-    trailer_joint: u16,
+    (bones, trailer_joint): (u16, u16),
 ) -> Option<u16> {
     let parts: Vec<(Handle<Mesh>, Vec<Vec3>, Vec<SkinEntry>)> = handles
         .iter()
@@ -77,6 +78,9 @@ pub fn remap_bellow_trailer_end(
             .zip(&bands)
             .flat_map(|((_, _, t), b)| b.iter().map(move |&i| &t[i])),
     )?;
+    if ring >= bones {
+        return None;
+    }
     for ((handle, _, table), band) in parts.iter().zip(&bands) {
         let (out, n) = remap_trailer_end(table, band, ring, trailer_joint);
         if n > 0 {

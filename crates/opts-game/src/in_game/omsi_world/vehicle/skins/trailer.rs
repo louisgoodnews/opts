@@ -32,16 +32,3 @@ pub(in super::super::super) fn trailer_link(
     let (coupling, front) = coupling_joint(head, false, &trailer, false)?;
     Some(TrailerLink { coupling, front })
 }
-
-/// Whether a skinned mesh is an articulated bellow: driven by an `articulation_*` variable, or one
-/// of a run of numbered dummies (`run`, see [`super::articulation_runs`]).
-#[must_use]
-pub(in super::super) fn is_articulated_bellow(
-    mesh: &opts_core::formats::vehicles::model::ModelMesh,
-    run: bool,
-) -> bool {
-    run || mesh.anims.iter().any(|a| {
-        a.driver_variable()
-            .is_some_and(|v| v.to_ascii_lowercase().starts_with("articulation_"))
-    })
-}

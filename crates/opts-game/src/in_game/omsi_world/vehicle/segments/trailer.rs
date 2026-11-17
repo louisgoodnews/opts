@@ -1,7 +1,7 @@
 //! The trailer end of an articulated head's bellow: its trailer-end vertices move to the
 //! trailer-front joint, which follows the coupled trailer (`opts_bevy::articulation`).
 
-use super::super::skins::{is_articulated_bellow, joint_slots};
+use super::super::skins::joint_slots;
 use super::state::ModelMeshDef;
 use super::*;
 
@@ -18,19 +18,21 @@ impl<'a> SegmentState<'a> {
     ) -> Option<Vec3> {
         let link = self.trailer?;
         let mesh_def: &ModelMeshDef = &self.lod0.meshes[mesh_index];
-        let run = self.sibling_run.get(mesh_index).copied().unwrap_or(false);
-        if mesh_def.bones.len() < 2 || !is_articulated_bellow(mesh_def, run) {
+        // A bellow is a skinned mesh with its bones (`[setbone]`): the articulation drives its dummies,
+        // not the bellow itself, so the bellow carries no driver of its own.
+        if mesh_def.bones.len() < 2 {
             return None;
         }
         // The trailer end faces away from the hitch: the trailer-end axis (OMSI) in the model space.
         let axis = opts_bevy::mesh::trailer_end_axis(link.coupling, link.front)?;
-        let trailer_joint = u16::try_from(joint_slots(&mesh_def.bones) + 1).ok()?;
+        let bones = u16::try_from(joint_slots(&mesh_def.bones)).ok()?;
+        let trailer_joint = bones.checked_add(1)?;
         let handles: Vec<Handle<Mesh>> = parts.iter().map(|p| p.mesh.clone()).collect();
         let ring = opts_bevy::mesh::remap_bellow_trailer_end(
             meshes,
             &handles,
             opts_bevy::mesh::model_dir_from_omsi(axis),
-            trailer_joint,
+            (bones, trailer_joint),
         )?;
         tracing::info!(
             ring,
