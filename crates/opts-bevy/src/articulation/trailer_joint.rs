@@ -36,10 +36,11 @@ pub fn joint_model_transform(j: DMat4) -> Transform {
 }
 
 /// The trailer-front transform of a simulation for the hitch `hitch`: the first trailer's yaw,
-/// pitch and roll about the hitch. Identity when no trailer follows.
+/// pitch and roll about the hitch. The first trailer is unit 0 of the consist (the one behind the
+/// chassis, `articulation_0_*`). Identity when no trailer follows.
 #[must_use]
 pub fn trailer_front_transform(sim: &VehicleSimulation, hitch: bevy::math::DVec3) -> Transform {
-    let (Some(alpha), Some((beta, gamma))) = (sim.consist_alpha_rad(1), sim.joint_angles_deg(1))
+    let (Some(alpha), Some((beta, gamma))) = (sim.consist_alpha_rad(0), sim.joint_angles_deg(0))
     else {
         return Transform::IDENTITY;
     };
