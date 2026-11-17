@@ -1,6 +1,7 @@
 //! Spatial zones: the game knows when the player vehicle or the camera is inside a tunnel
 //! (M-0115; `docs/src/architecture/lighting-system.md`, section 13).
 //!
+//! * [`ceiling`]: the covered-section rule (spline ceiling profiles), a pure function.
 //! * [`model`]: the zone component, its kinds and the [`ZoneEntered`] / [`ZoneLeft`] messages.
 //! * [`tracker`]: the hysteresis state machine that turns per-sample coverage into transitions,
 //!   and the 10 Hz sampling gate. Pure logic, no world access.
@@ -10,11 +11,12 @@
 //! * [`sampler`]: the 10 Hz system that tests each [`sampler::ZoneSubject`] against the zones and
 //!   emits the messages.
 //!
-//! The detector that derives the boxes (roof ray casts, tile data) is not wired yet; see the
-//! milestone page for what is open.
+//! The detector is the spline ceiling rule in [`ceiling`]; the tile loader does not yet feed it the
+//! placed splines, so no zone is built in the game yet. See the milestone page for what is open.
 
 use bevy::prelude::*;
 
+pub mod ceiling;
 pub mod model;
 pub mod overlay;
 pub mod query;

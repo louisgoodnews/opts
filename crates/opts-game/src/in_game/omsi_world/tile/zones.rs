@@ -3,15 +3,17 @@
 //! world loses them.
 
 use bevy::prelude::*;
+use opts_bevy::spatial_zones::ceiling::{covered_zones, SplineCandidate};
 use opts_bevy::spatial_zones::{SpatialZone, ZoneRegistry};
 
 use crate::in_game::omsi_world::WorldLoadJob;
 
-/// The zones of a tile. The detector that derives them from the tile data is still open (M-0115),
-/// so every tile has none yet and only the bookkeeping runs.
+/// The zones of a tile, derived from the placed splines of the tile by the covered-section rule
+/// (M-0115). The tile loader does not yet keep the parsed splines, so the game passes none and
+/// every tile has no zones until that feed is wired.
 #[must_use]
-pub fn detect_tile_zones(_tile: (i32, i32)) -> Vec<SpatialZone> {
-    Vec::new()
+pub fn detect_tile_zones(_tile: (i32, i32), splines: &[SplineCandidate]) -> Vec<SpatialZone> {
+    covered_zones(splines)
 }
 
 /// Brings the zone registry in line with the resident tiles of the world. Without a world every
@@ -23,5 +25,7 @@ pub fn sync_tile_zones(
 ) {
     let resident: Vec<(i32, i32)> =
         job.map_or_else(Vec::new, |job| job.resident.keys().copied().collect());
-    registry.reconcile(&mut commands, &resident, detect_tile_zones);
+    registry.reconcile(&mut commands, &resident, |tile| {
+        detect_tile_zones(tile, &[])
+    });
 }
