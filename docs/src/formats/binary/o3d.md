@@ -206,6 +206,7 @@ Observations [S]:
 - Present only in animated/deformable meshes: pedestrians (`Hip`, `Head`, `Hand_L`, …, `Main`) and articulation bellows (`Gelenk_A` … `Bone`).
 - Weights are in `[-0.0053, 1.0053]`.
 - A vertex can appear in several bones, and **the same vertex can appear more than once in one bone's list** (e.g. a bone with more entries than the mesh has vertices). Entries are not sorted.
+- **Skinning de-duplicates repeats.** `skin_table_slots` (`crates/opts-bevy/src/mesh.rs`) takes the first positive entry per (vertex, bone) pair and ignores later repeats of it, so a bone counts once per vertex. Adding the repeats would over-weight the bone and could push a real bone out of the four influences. In the articulated bellows mesh `przegub_zew.o3d` of the Citybus 530 Facelift the repeats (up to six per pair) all carry the same weight; no pair has two different weights. If a repeat ever carries a different weight, first-wins is not a valid rule and the case needs a decision.
 - In ~7 of 400 bone files an index is `≥ vertex_count`. Treat as authoring noise and clamp or skip.
 - Meaning of the name: it matches the bone names used by the model's `.cfg` files ❓ — not yet cross-checked.
 

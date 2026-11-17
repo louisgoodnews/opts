@@ -12,6 +12,8 @@
 //! - Triangle face indices $[i_0, i_1, i_2]$ are reversed to $[i_0, i_2, i_1]$ to preserve
 //!   front-face counter-clockwise rasterization after the single-axis reflection.
 
+use std::collections::HashSet;
+
 use bevy::asset::RenderAssetUsages;
 use bevy::math::Vec3;
 use bevy::mesh::{Indices, Mesh, PrimitiveTopology};
@@ -75,6 +77,17 @@ pub fn o3d_to_bevy_mesh(o3d: &O3d) -> Mesh {
     mesh
 }
 
+/// The first positive weight of each vertex among one bone's chunk entries. The chunk repeats a
+/// (vertex, weight) pair once per face corner; the repeats are identical, so only the first counts.
+pub(crate) fn first_positive_entries(entries: &[(u16, f32)]) -> Vec<(u16, f32)> {
+    let mut seen = HashSet::new();
+    entries
+        .iter()
+        .copied()
+        .filter(|&(vertex, weight)| weight > 0.0 && seen.insert(vertex))
+        .collect()
+}
+
 /// Per-vertex skinning table `(joint indices, weights)` from the bone-weight chunk, with joint
 /// indices following the bone order of the chunk. Each vertex keeps its four strongest
 /// influences, normalised to sum to 1; vertices without influence bind fully to joint 0.
@@ -121,11 +134,11 @@ pub fn skin_table_slots(
         let Ok(joint) = u16::try_from(bone_idx) else {
             continue;
         };
-        for &(vertex, weight) in &bone.entries {
-            if weight > 0.0 {
-                if let Some(list) = per_vertex.get_mut(vertex as usize) {
-                    list.push((joint, weight));
-                }
+        // The chunk repeats a (vertex, weight) pair once per face corner; the repeats are
+        // identical, so only the first positive entry of each vertex counts for this bone.
+        for (vertex, weight) in first_positive_entries(&bone.entries) {
+            if let Some(list) = per_vertex.get_mut(vertex as usize) {
+                list.push((joint, weight));
             }
         }
     }
@@ -177,5 +190,7 @@ pub use xfile::{
 mod tree;
 pub use tree::{tree_billboard_material, tree_billboard_mesh};
 
+#[cfg(test)]
+mod skin_tests;
 #[cfg(test)]
 mod tests;
