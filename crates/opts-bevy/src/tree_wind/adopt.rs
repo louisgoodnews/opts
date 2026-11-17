@@ -52,9 +52,11 @@ pub fn adopt_tree_material(
             adopted.insert(key, h.clone());
             h
         };
+        // A tile can unload between this query and the deferred commands, so the entity may be gone
+        // by the time they apply: the `try_` forms skip it instead of panicking.
         commands
             .entity(entity)
-            .remove::<MeshMaterial3d<StandardMaterial>>()
-            .insert(MeshMaterial3d(handle));
+            .try_remove::<MeshMaterial3d<StandardMaterial>>()
+            .try_insert(MeshMaterial3d(handle));
     }
 }
