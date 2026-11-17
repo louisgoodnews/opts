@@ -10,8 +10,8 @@
 //! (`docs/src/architecture/articulation.md`):
 //!
 //! * `articulation_<n>_alpha` — yaw of segment `n + 1` against the unit ahead, **degrees**,
-//!   positive when the segment is turned clockwise (the models rotate the bellows dummies by
-//!   fractions `0.25 … 1.0` of it with factors in degrees);
+//!   positive when the segment is turned counter-clockwise, a right-hand curve (the models rotate
+//!   the bellows dummies by fractions `0.25 … 1.0` of it, with factors in degrees);
 //! * `articulation_<n>_beta` / `_gamma` — pitch and roll of the unit against the one ahead,
 //!   degrees, from the simulation's fixed-step ground following (`0` without ground samples).
 

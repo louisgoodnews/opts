@@ -81,12 +81,15 @@ impl VehicleSimulation {
         self.trailer_loads = units;
     }
 
-    /// Yaw angle of consist unit `k` against the unit ahead in radians (positive = turned
-    /// clockwise), the value published as `articulation_<k>_alpha`; `None` for a missing unit.
+    /// Published yaw angle of consist unit `k` against the unit ahead, in radians, the value
+    /// written as `articulation_<k>_alpha`. Positive means turned counter-clockwise, a right-hand
+    /// curve (OMSI's articulation convention). The simulation keeps the clockwise angle
+    /// internally ([`TrailerKinematics::alpha_against`]), so the sign is flipped here only.
+    /// `None` for a missing unit.
     #[must_use]
     pub fn consist_alpha_rad(&self, k: usize) -> Option<f64> {
         let unit = self.consist.get(k)?;
-        Some(unit.alpha_against(self.leader_pose_of(k).1))
+        Some(-unit.alpha_against(self.leader_pose_of(k).1))
     }
 
     /// Re-seeds every following unit straight behind its leader, without velocity.

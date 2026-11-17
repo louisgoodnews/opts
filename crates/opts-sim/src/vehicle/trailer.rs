@@ -14,6 +14,10 @@
 //! between the units (`α`, positive when the segment is turned clockwise against the leader) is
 //! limited by the joint (`[coupling_front_character]`, typically ±52.5°).
 //!
+//! This clockwise `α` is the simulation's own angle. The value scripts see,
+//! `articulation_<k>_alpha`, is the negation of it (counter-clockwise positive, a right-hand
+//! curve), applied in `VehicleSimulation::consist_alpha_rad` and nowhere else.
+//!
 //! Conventions: world `x` east, `y` north, headings compass-style (clockwise from north).
 
 use glam::DVec2;
@@ -48,7 +52,8 @@ pub struct TrailerState {
     pub origin: DVec2,
     /// Heading of the segment (compass radians).
     pub heading: f64,
-    /// Yaw angle against the leader in radians (positive = segment turned clockwise).
+    /// Yaw angle against the leader in radians (positive = segment turned clockwise; the
+    /// published sign is the negation, see the module docs).
     pub alpha: f64,
 }
 

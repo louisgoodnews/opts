@@ -45,13 +45,14 @@ fn spawn_articulated(app: &mut App, steering: f32) -> (Entity, Entity) {
     (root, segment)
 }
 
-/// Sign convention (Q-ART-01), pinned with explicit expectations. World headings are compass
-/// style (clockwise from north), a right-hand turn increases the heading, and `alpha` is
-/// positive when the segment is turned clockwise against its leader. The segment lags in a curve,
-/// so in a right-hand curve `articulation_0_alpha` is NEGATIVE and in a left-hand curve POSITIVE.
-/// Whether OMSI uses the same sign is not decided here (needs OMSI, see M-0053).
+/// Sign convention of the published joint angle (Q-ART-01; the owner decided on 2026-11-17 that
+/// OPTS publishes counter-clockwise positive), pinned with explicit expectations. World headings
+/// are compass style (clockwise from north), a right-hand turn increases the heading, and the
+/// segment lags in a curve. So in a right-hand curve `articulation_0_alpha` is POSITIVE and in a
+/// left-hand curve NEGATIVE, and `consist_alpha_rad` returns the same sign. Whether OMSI uses the
+/// same sign is not decided here (needs OMSI, see M-0053).
 #[test]
-fn alpha_is_negative_in_a_right_hand_curve_and_positive_in_a_left_hand_one() {
+fn published_alpha_is_positive_in_a_right_hand_curve_and_negative_in_a_left_hand_one() {
     for steering in [0.6_f32, -0.6] {
         let mut app = app();
         let (root, _) = spawn_articulated(&mut app, steering);
@@ -72,9 +73,9 @@ fn alpha_is_negative_in_a_right_hand_curve_and_positive_in_a_left_hand_one() {
         assert!(turned.abs() > 0.3, "the vehicle did not turn: {turned} rad");
         let right_hand = turned > 0.0;
         assert!(
-            (published < -3.0) == right_hand && (published > 3.0) == !right_hand,
+            (published > 3.0) == right_hand && (published < -3.0) == !right_hand,
             "steering {steering}: heading {turned} rad, alpha {published} deg"
         );
-        assert_eq!(sim_alpha < 0.0, right_hand, "simulation alpha {sim_alpha}");
+        assert_eq!(sim_alpha > 0.0, right_hand, "joint angle {sim_alpha} rad");
     }
 }

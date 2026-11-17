@@ -107,8 +107,9 @@ pub fn rail_player_pose(
             };
             let d = (own - previous + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
                 - std::f32::consts::PI;
-            // Bevy yaw is counter-clockwise; the models expect clockwise degrees.
-            alphas.push(-d.to_degrees());
+            // Bevy yaw is counter-clockwise, and so is the published joint angle (positive is a
+            // right-hand curve, the same convention as `TrailerKinematics` for road chains).
+            alphas.push(d.to_degrees());
             previous = own;
             if let Ok(mut u) = units.get_mut(e) {
                 *u = pose;

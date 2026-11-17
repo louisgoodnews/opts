@@ -17,6 +17,7 @@ fn bevy(p: Vec3) -> Vec3 {
     Vec3::new(p.x, p.z, -p.y)
 }
 
+mod bellows;
 mod dash;
 mod motion;
 mod steering;

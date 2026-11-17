@@ -75,6 +75,14 @@ The scripts add behaviour on top: the anti-jackknife protection (`articulation_k
 
 `scripts/bellows_census.py` parses every `.bus` and its model `.cfg` (case-insensitive paths), collects the meshes with `[smoothskin]`/`[setbone]` and the `[newanim]` drivers that start with `articulation_`, groups numbered dummies and reports the bones that find no dummy. The in-game check starts each family on Hohenkirchen and counts `no dummy mesh for bone` warnings (0 for all verified vehicles; before the generalisation the AGG300, Citybus 60LF and NG313 each logged some, and the census counted 2,871 unbound bones, from the Chicago, Bremen, VA GS and Polish families among others).
 
+## Sign Verification (alpha, 2026-11-17)
+
+**Decision (owner):** `articulation_<k>_alpha` is published **counter-clockwise positive** (a right-hand curve, the segment lags, is positive). Before 2026-11-17 it was clockwise positive, and the bellows ring (`origin_rot_y -90`, factor `1.0`, see the first example above) turned the wrong way on a turn.
+
+- The ring turns counter-clockwise for a positive `articulation_0_alpha`, so the end of the bellows behind the joint swings to the side the trailer's tail swings to on a right-hand curve.
+- Test `vehicle_anim::tests::bellows::ring_yaw_moves_the_point_behind_the_joint_like_the_trailer_tail` pins the ring against this convention. Test `articulation_sign.rs` pins the published value's sign in a curve.
+- Not verified against OMSI (Q-ART-01).
+
 ## Sign Verification (P-1011)
 
 **Question:** is `articulation_<k>_beta` = follower pitch minus leader pitch (nose up positive) the right sign?
@@ -83,7 +91,7 @@ The scripts add behaviour on top: the anti-jackknife protection (`articulation_k
 - The bellows dummies are `[newanim]` blocks with `anim_rot articulation_<k>_beta` and a positive factor in the
   large majority (1,312 of ~1,400 beta animations; no origin rotation, so the axis is the lateral X axis). OPTS
   applies `anim_rot` as a right-handed rotation by `-variable·factor` about the frame X axis; this is the same rule
-  that makes the wheel top move forward for a growing `Wheel_Rotation` and that gives clockwise `alpha`.
+  that makes the wheel top move forward for a growing `Wheel_Rotation` and that gave the clockwise `alpha` of the old sign (the published `alpha` is counter-clockwise since 2026-11-17).
 - The end of the bellows joined to the follower (behind the joint) must land where the follower's front lands. A
   follower pitched nose up by `p` (rotation by `+p` about the lateral axis) moves points behind the joint **down**.
   The dummy with `beta = +p` moves them **up** (rotation by `-p`). So with the old definition the bellows bent
@@ -95,6 +103,6 @@ The scripts add behaviour on top: the anti-jackknife protection (`articulation_k
   leader: `beta` is now negative there.
 
 **Limits:** this is a geometric argument from OPTS's own `anim_rot` convention, not an OMSI comparison; it holds
-if OMSI's bellows meshes were authored against the same convention that the wheels and `alpha` follow. The flat
+if OMSI's bellows meshes were authored against the same convention that the wheels follow. The flat
 start road of the Aachen map gives |beta| < 0.5 degrees, so no slope screenshot exists yet; confirm with an OMSI
 reference or a slope when one is available.
