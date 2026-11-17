@@ -26,7 +26,9 @@ use driver::{cockpit_offset_of, seat_driver};
 mod passengers;
 mod segments;
 use segments::{ensure_repaints, repaint_map};
-pub(super) use segments::{first_ai_list_vehicle, load_segment_meshes, load_segment_meshes_for};
+pub(super) use segments::{
+    first_ai_list_vehicle, load_head_segment_meshes, load_segment_meshes, load_segment_meshes_for,
+};
 
 mod setup;
 use setup::{
@@ -85,14 +87,15 @@ pub fn load_player_vehicle(
     ensure_repaints(job, &bus_path, &manifest);
     job.cache.texture_replacements = repaint_map(job, &model);
     super::trace::begin_frame();
-    let (mesh_count, vertex_count, min, max) = load_segment_meshes(
+    let trailer = skins::trailer_link(job, &bus_dir, &manifest);
+    let (mesh_count, vertex_count, min, max) = load_head_segment_meshes(
         job,
         commands,
         (&mut *meshes, &mut *materials, &mut *images),
         root,
         lod0,
-        &model_dir,
-        &tex_dirs,
+        (&model_dir, &tex_dirs),
+        trailer,
     );
     let trace_frame = super::trace::end_frame();
     job.cache.texture_replacements.clear();

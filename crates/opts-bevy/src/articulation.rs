@@ -19,10 +19,14 @@ mod chain;
 mod scripts;
 mod segment;
 mod system;
+mod trailer_joint;
 
 pub use chain::{joint_beta_deg, ArticulatedChain};
 pub use segment::{ArticulatedSegment, SegmentGround, SegmentWheel};
 pub use system::{articulation_render_system, articulation_system};
+pub use trailer_joint::{
+    joint_model_transform, trailer_front_system, trailer_front_transform, TrailerFrontJoint,
+};
 
 use bevy::prelude::*;
 
@@ -47,7 +51,11 @@ impl Plugin for ArticulationPlugin {
         // After the ground follower of the game (Update) has set the root's height.
         .add_systems(
             PostUpdate,
-            articulation_render_system.before(TransformSystems::Propagate),
+            (
+                articulation_render_system,
+                trailer_front_system.after(articulation_render_system),
+            )
+                .before(TransformSystems::Propagate),
         );
     }
 }

@@ -7,6 +7,8 @@ mod mesh;
 mod overrides;
 mod parts;
 mod state;
+mod trailer;
+use super::skins::TrailerLink;
 use state::{SegmentAssets, SegmentState};
 
 /// Reads the first vehicle listed in the map's `ailists.cfg` (fallback when no `--vehicle-path`).
@@ -99,17 +101,65 @@ pub(in super::super::super) fn load_segment_meshes_for(
     model_dir: &Path,
     tex_dirs: &[PathBuf],
 ) -> (usize, usize, Vec3, Vec3) {
+    load_segment_linked(
+        job,
+        commands,
+        (meshes, materials, images),
+        (root, owner),
+        lod0,
+        (model_dir, tex_dirs),
+        None,
+    )
+}
+
+/// [`load_segment_meshes`] for the head of an articulated vehicle: the bellow's trailer end
+/// follows the coupled `trailer` (see [`TrailerLink`]), when there is one.
+pub(in super::super::super) fn load_head_segment_meshes(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    stores: (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    root: Entity,
+    lod0: &opts_core::formats::vehicles::model::ModelLod,
+    (model_dir, tex_dirs): (&Path, &[PathBuf]),
+    trailer: Option<TrailerLink>,
+) -> (usize, usize, Vec3, Vec3) {
+    load_segment_linked(
+        job,
+        commands,
+        stores,
+        (root, root),
+        lod0,
+        (model_dir, tex_dirs),
+        trailer,
+    )
+}
+
+fn load_segment_linked(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    (meshes, materials, images): (
+        &mut Assets<Mesh>,
+        &mut Assets<StandardMaterial>,
+        &mut Assets<Image>,
+    ),
+    (root, owner): (Entity, Entity),
+    lod0: &opts_core::formats::vehicles::model::ModelLod,
+    (model_dir, tex_dirs): (&Path, &[PathBuf]),
+    trailer: Option<TrailerLink>,
+) -> (usize, usize, Vec3, Vec3) {
     let mut assets = SegmentAssets {
         meshes,
         materials,
         images,
     };
     let vehicle_part = std::mem::replace(&mut job.cache.vehicle_part, true);
-    let counts = SegmentState::new(commands, (root, owner), lod0, (model_dir, tex_dirs)).load_all(
-        job,
-        commands,
-        &mut assets,
-    );
+    let mut state = SegmentState::new(commands, (root, owner), lod0, (model_dir, tex_dirs));
+    state.trailer = trailer;
+    let counts = state.load_all(job, commands, &mut assets);
     job.cache.vehicle_part = vehicle_part;
     counts
 }

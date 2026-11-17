@@ -1,15 +1,32 @@
 //! Binding skinned meshes to their bones: the skin binding and the joints it is assigned.
 
 use super::*;
+use bevy::math::{DVec3, Vec3};
 
 /// A skinned mesh waiting for its bones: its entities, its `[setbone]` list, the run of
 /// `bone_<letter>` dummies declared before it and the frame its parts hang in (the vehicle root,
-/// or the pivot of its `[animparent]`).
+/// or the pivot of its `[animparent]`). `trailer` is the hitch of an articulated head's coupled
+/// trailer when this skin is its bellow: its trailer end then has the trailer-front joint, the
+/// last joint of the skin.
 pub(in super::super) struct SkinBinding {
     pub(in super::super) entities: Vec<Entity>,
     pub(in super::super) bones: Vec<opts_core::formats::vehicles::model::MeshBone>,
     pub(in super::super) run: Vec<Entity>,
     pub(in super::super) frame: Entity,
+    pub(in super::super) trailer: Option<Vec3>,
+}
+
+/// The number of joints a skin's bones number: one more than the highest `[setbone]` index.
+/// Joint `joint_slots` is the extra joint that stays on the vehicle (bones the file does not
+/// list), and the trailer-front joint of a bellow, when there is one, comes after it.
+pub(in super::super) fn joint_slots(
+    bones: &[opts_core::formats::vehicles::model::MeshBone],
+) -> usize {
+    bones
+        .iter()
+        .map(|b| usize::try_from(b.index).map_or(0, |i| i + 1))
+        .max()
+        .unwrap_or(0)
 }
 
 /// The entity each joint of a skin follows: the dummy named like the bone, else the dummy of the
@@ -76,19 +93,16 @@ pub(in super::super) fn bind_skins(
         bones,
         run,
         frame,
+        trailer,
     } in skins
     {
-        let n = bones
-            .iter()
-            .map(|b| usize::try_from(b.index).map_or(0, |i| i + 1))
-            .max()
-            .unwrap_or(0);
+        let n = joint_slots(&bones);
         if n == 0 {
             continue;
         }
         let joints = assign_joints(root, dummies, (&bones, &run), n);
         commands.queue(move |world: &mut World| {
-            let joints = joints_in_frame(&joints, root, frame, |dummy| {
+            let mut joints = joints_in_frame(&joints, root, frame, |dummy| {
                 let anim = world.get::<opts_bevy::MeshAnimation>(dummy).cloned();
                 let name = world
                     .get::<Name>(dummy)
@@ -104,6 +118,28 @@ pub(in super::super) fn bind_skins(
                 }
                 proxy.id()
             });
+            if let Some(hitch) = trailer {
+                // The trailer-front joint: the last joint of the skin (see `joint_slots`), below
+                // the frame so that the bellow's own transform does not move it.
+                debug_assert_eq!(joints.len(), n + 1);
+                let joint = world
+                    .spawn((
+                        Name::new("trailer_front_joint"),
+                        Transform::IDENTITY,
+                        Visibility::Inherited,
+                        ChildOf(frame),
+                        opts_bevy::articulation::TrailerFrontJoint {
+                            root,
+                            hitch: DVec3::new(
+                                f64::from(hitch.x),
+                                f64::from(hitch.y),
+                                f64::from(hitch.z),
+                            ),
+                        },
+                    ))
+                    .id();
+                joints.push(joint);
+            }
             let handle = world
                 .resource_mut::<Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>()
                 .add(bevy::mesh::skinning::SkinnedMeshInverseBindposes::from(

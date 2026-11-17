@@ -65,3 +65,10 @@ fn a_skin_takes_the_last_run_long_enough_for_its_bones() {
     assert_eq!(pick_run(&runs, Some(1), &[bone("b1", 0)]), vec![e(5)]);
     assert!(pick_run(&[], None, &[bone("b1", 0)]).is_empty());
 }
+
+#[test]
+fn joint_slots_is_one_past_the_highest_bone_and_zero_without_bones() {
+    use super::skins::joint_slots;
+    assert_eq!(joint_slots(&[bone("gelenk_a", 0), bone("gelenk_d", 3)]), 4);
+    assert_eq!(joint_slots(&[]), 0);
+}

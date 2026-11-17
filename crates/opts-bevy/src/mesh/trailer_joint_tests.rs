@@ -34,13 +34,36 @@ fn small_bellow() -> [Vec3; 4] {
 #[test]
 fn band_is_the_lowest_slab_along_the_axis() {
     let p = small_bellow();
-    assert_eq!(trailer_end_vertices(&p, 2), vec![1, 2]);
-    assert_eq!(trailer_end_vertices(&p, 1), vec![0, 1, 3]);
+    assert_eq!(trailer_end_vertices(&p, Vec3::Z), vec![1, 2]);
+    assert_eq!(trailer_end_vertices(&p, Vec3::Y), vec![0, 1, 3]);
 }
 
 #[test]
 fn an_empty_mesh_has_no_trailer_end() {
-    assert!(trailer_end_vertices(&[], 2).is_empty());
+    assert!(trailer_end_vertices(&[], Vec3::Z).is_empty());
+}
+
+#[test]
+fn the_kajosoft_axis_is_forward_in_omsi_and_z_in_the_o3d_file() {
+    let coupling = Vec3::new(0.0, -4.421, 0.4);
+    let hitch = Vec3::new(0.0, 4.116, 0.4);
+    let axis = trailer_end_axis(coupling, hitch).expect("two points");
+    assert!(axis.abs_diff_eq(Vec3::Y, 1e-6), "{axis:?}");
+    assert!(raw_dir_from_omsi(axis).abs_diff_eq(Vec3::Z, 1e-6));
+    assert!(model_dir_from_omsi(axis).abs_diff_eq(-Vec3::Z, 1e-6));
+}
+
+#[test]
+fn the_axis_needs_two_distinct_points() {
+    assert!(trailer_end_axis(Vec3::ONE, Vec3::ONE).is_none());
+}
+
+#[test]
+fn the_dominant_joint_is_the_one_carrying_most_of_the_band() {
+    let table = small_table();
+    // Vertices 1 and 2 carry ring D; vertex 1 also carries joint 2 (weight 0.4).
+    assert_eq!(dominant_joint(table[1..3].iter()), Some(RING_D));
+    assert_eq!(dominant_joint(std::iter::empty::<&SkinEntry>()), None);
 }
 
 #[test]

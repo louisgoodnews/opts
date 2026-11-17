@@ -1,6 +1,8 @@
 //! Per-segment state and the per-mesh stages of `load_segment_meshes_for`.
 
-use super::super::skins::{anim_pivots, articulation_runs, bind_skins, mesh_pivot, SkinBinding};
+use super::super::skins::{
+    anim_pivots, articulation_runs, bind_skins, mesh_pivot, SkinBinding, TrailerLink,
+};
 use super::*;
 
 pub(super) type ModelMeshDef = opts_core::formats::vehicles::model::ModelMesh;
@@ -51,6 +53,8 @@ pub(in super::super) struct SegmentState<'a> {
     pub(super) last_run: Option<usize>,
     // How often a mesh of each file name came before (see `in_file_order`).
     pub(super) repeats: std::collections::HashMap<String, u32>,
+    // The coupled trailer of an articulated head: its bellow's trailer end follows it.
+    pub(super) trailer: Option<TrailerLink>,
 }
 
 /// Shadow-only and AI-only meshes are not part of the visible player model; the developer aid
@@ -100,6 +104,7 @@ impl<'a> SegmentState<'a> {
             bone_runs: Vec::new(),
             last_run: None,
             repeats: Default::default(),
+            trailer: None,
         }
     }
     /// Loads every visible mesh of the segment, then binds the skinned ones to their bones.

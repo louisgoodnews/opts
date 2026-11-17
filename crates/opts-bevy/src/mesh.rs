@@ -191,7 +191,12 @@ mod tree;
 pub use tree::{tree_billboard_material, tree_billboard_mesh};
 
 mod trailer_joint;
-pub use trailer_joint::{remap_trailer_end, trailer_end_vertices, TRAILER_BAND_M};
+pub use trailer_joint::{
+    dominant_joint, model_dir_from_omsi, raw_dir_from_omsi, remap_trailer_end, trailer_end_axis,
+    trailer_end_vertices, SkinEntry, TRAILER_BAND_M,
+};
+mod trailer_joint_mesh;
+pub use trailer_joint_mesh::remap_bellow_trailer_end;
 
 #[cfg(test)]
 mod skin_tests;

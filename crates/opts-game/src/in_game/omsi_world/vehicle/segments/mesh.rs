@@ -43,11 +43,13 @@ impl<'a> SegmentState<'a> {
         let view_scope = opts_bevy::ViewScope::of(mesh_def.viewpoint);
         let hot_spot = super::super::hot_spots::hot_spot_of(&self.lod0.meshes, mesh_index);
         if loaded.skinned {
+            let trailer = self.trailer_front(assets.meshes, mesh_index, &loaded.parts);
             self.skins.push(SkinBinding {
                 entities: spawned.clone(),
                 bones: mesh_def.bones.clone(),
                 run: pick_run(&self.bone_runs, self.last_run, &mesh_def.bones),
                 frame: parts_parent,
+                trailer,
             });
         }
         for (e, part) in spawned.iter().copied().zip(&loaded.parts) {
