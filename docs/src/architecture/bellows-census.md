@@ -70,6 +70,7 @@ The scripts add behaviour on top: the anti-jackknife protection (`articulation_k
 4. **Physics** ignores the articulation: the trailers do not load the tractor, brakes and steering are the head's alone.
 5. **Sounds** of the joint (creaks, buzzer) are variables without an audio consumer.
 6. The ground under a trailer comes from the same height query as the head; where the trailer stands on a different surface (a ramp on one side) roll is only as good as the four samples.
+7. **Rest gap of the Kajosoft Citybus 530 Facelift bellow (accepted, owner decision 2026-11-17).** At the trailer end, OMSI's authored bellow (`C1_G\przegub_zew.o3d`) does not meet the trailer's front face at rest: about 12.6 mm at the outer top corners, flush at the bottom. This is OMSI's own authored geometry, so it is treated as faithful and kept. OPTS places the trailer exactly at the coupling pair and applies no per-vehicle front offset. The residual is re-measured at articulation 0, 12 and 25 degrees on both sides; see [articulation](articulation.md) (L-ART-04).
 
 ## Method
 

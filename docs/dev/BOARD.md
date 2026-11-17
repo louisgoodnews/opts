@@ -552,6 +552,7 @@ The agent should check these during P-001 audits:
 
 ## 📝 Changelog
 
+- `2026-11-17` — Docs (`docs/bellow-accepted-gap`): the trailer-end rest gap of the Kajosoft Citybus 530 Facelift bellow (about 12.6 mm at the outer top corners, flush at the bottom) is accepted as OMSI's authored geometry; OPTS places the trailer exactly at the coupling pair with no per-vehicle front offset. Recorded in `articulation.md` (L-ART-04) and `bellows-census.md` (gap 7). Residual re-measurement is a separate probe.
 - `2026-11-16` — M-0121 vehicle paint and tyres (`agent/m0121b`, code and docs): `reflections/vehicle_wet.rs` maps the two parts; the paint takes the `[moisture]` rule, a tyre (texture name, ❓ assumed) takes `TYRE_WET_SHARE` (0.5) of the wetness; the vehicle loader marks its parts (`ContentCache::vehicle_part`); all under the wet-objects setting. On-screen evidence stays open.
 - `2026-11-16` — M-0123 fourth pass (`agent/m0123c2`, code and docs): HUD bar gauge `fuel-bar` (track and fill, alarm fill at the low level) next to the `fuel` readout in the bus, articulated bus and trolleybus rows; `tank_percent` is a host input fed from the model (level x 100, `shared` row, so a script that writes it keeps its value); action `refuel` on F12 (rebindable, help row) fills the store on press. On-screen checks, the stock-script authority, the stopped-only rule, the menu entry and the audit stay open.
 - `2026-10-04` — Initial board created. M-0000 and M-0001 marked complete. M-0002 items moved to Ready. Blocked items identified for parser work.
