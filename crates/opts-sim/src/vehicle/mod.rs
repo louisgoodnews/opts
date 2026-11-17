@@ -16,6 +16,7 @@ pub mod spec;
 pub mod surface;
 pub mod suspension;
 pub mod trailer;
+pub mod trailer_front;
 pub mod wheels;
 
 use self::brakes::BRAKE_FACTOR;
