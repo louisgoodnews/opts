@@ -8,8 +8,14 @@ pub(super) fn handle_profile(
 ) -> Result<(), SceneryParseError> {
     match block.keyword.as_str() {
         "profile" => {
+            // A malformed texture index falls back to texture 0 (format doc, error handling), so
+            // the `[profilepnt]` lines that follow still attach to this strip.
             if let Some(val) = block.parameters.first() {
-                let tex_idx = parse_usize(val, "profile texture_index", block.line_number)?;
+                let tex_idx = parse_usize(val, "profile texture_index", block.line_number)
+                    .unwrap_or_else(|e| {
+                        tracing::warn!(line = block.line_number, error = %e, "profile texture index");
+                        0
+                    });
                 sli.graphical_profiles.push(SplineGraphicalProfile {
                     texture_index: tex_idx,
                     points: Vec::new(),

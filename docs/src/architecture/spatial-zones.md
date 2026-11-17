@@ -78,8 +78,12 @@ name, 218 with a tunnel texture). Known classes:
   `U-Bahn_Tunnel-Dach_*` (Kartoffelphantom), and the Spandau `rail_wood_S49_tunnel`.
 * False positives: the overhead-line profiles `Meterspur_normal_OL_*` (ceiling-like profiles at 4.5 to 5.8 m,
   which are catenary wires, not roofs). The rule must exclude them.
-* Misses: 148 of the 224 tunnel-named profiles yield no profile points under this parser, and only 19 of them are
-  flagged. The format variants (the Kartoffelphantom, Ahlheim and Waldheini12 add-ons among them) are not parsed yet.
+* Misses: none in the reader. The earlier "148 of 224 yield no points" came from the scratch census script, which
+  tried UTF-16 before CP-1252 and so misread most files (76 of 224 found a `[profilepnt]` under that order; 224 of 224
+  under the reader's decode). The reader parses all 226 tunnel-named `.sli` files of the install with points
+  (`crates/opts-omsi/tests/sli_profile_corpus.rs`). Five add-on files of the whole corpus were rejected outright by a
+  stray line inside a block (`[path]` type `1.5`, `[matl]` `== START ==`); the reader now skips such a block with a
+  warning, so the corpus has 0 errors.
 
 ## 4. Consequences for the detector
 
