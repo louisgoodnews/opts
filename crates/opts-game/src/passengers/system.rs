@@ -4,12 +4,14 @@ use bevy::math::Affine3A;
 use bevy::mesh::skinning::SkinnedMeshInverseBindposes;
 use bevy::prelude::*;
 use opts_bevy::bus_stops::{nearest_stop, BusStopMarker};
+use opts_bevy::route::VehicleRoute;
 use opts_bevy::{Human, HumanPose, PlayerVehicle, VehicleController, VehicleScripts};
-use opts_sim::passengers::Doors;
+use opts_sim::passengers::{admits, Destination, Doors};
 
 use crate::in_game::omsi_world::{advance_phase, apply_gait, apply_rest_pose, PedestrianPool};
 
 use super::crowd::{StopCrowds, ACTOR_BUDGET, UNSEEN_BOARD_S};
+use super::destinations::sync_destinations;
 use super::rig::{PassengerRig, Shown};
 use super::{
     draw, facing, feed, AT_STOP_M, LEFT_M, MOVING_KMH, OUTSIDE_SPEED_M_S, SETTING, STOPPED_KMH,
@@ -34,11 +36,14 @@ pub struct PassengerEnv<'w, 's> {
     globals: Query<'w, 's, &'static GlobalTransform>,
     transforms: Query<'w, 's, &'static mut Transform>,
     crowds: ResMut<'w, StopCrowds>,
+    markers: Query<'w, 's, &'static BusStopMarker>,
 }
 
+mod forced;
 mod stop;
 
-use stop::{arrive_at_stop, leave_stop, spawn_forced_group};
+use forced::spawn_forced_group;
+use stop::{arrive_at_stop, leave_stop};
 
 /// What a vehicle's passengers are driven from.
 type RigRow = (
@@ -47,7 +52,24 @@ type RigRow = (
     &'static GlobalTransform,
     &'static VehicleController,
     Option<&'static opts_bevy::host_callbacks::PassengerCountsHandle>,
+    Option<&'static VehicleRoute>,
 );
+
+/// The frame of each unit of the chain, head first (the vehicle's own where a unit has none).
+fn unit_frames(
+    rig: &PassengerRig,
+    globals: &Query<&GlobalTransform>,
+    to_world: Affine3A,
+) -> Vec<Affine3A> {
+    rig.units
+        .iter()
+        .map(|u| {
+            globals
+                .get(u.root)
+                .map_or(to_world, GlobalTransform::affine)
+        })
+        .collect()
+}
 
 /// Runs the passengers of the player's vehicle.
 pub fn update_passengers(
@@ -66,23 +88,16 @@ pub fn update_passengers(
         .as_ref()
         .and_then(|s| s.raw(SETTING))
         .is_none_or(|v| v.trim() != "false");
-    for (vehicle, mut rig, vgt, controller, handle) in &mut rigs {
+    for (vehicle, mut rig, vgt, controller, handle, route) in &mut rigs {
         let rig = &mut *rig;
         if !on {
             send_everybody_home(&mut e, rig);
             continue;
         }
         e.pool.want();
+        let bus = sync_destinations(rig, route);
         let to_world = vgt.affine();
-        let frames: Vec<Affine3A> = rig
-            .units
-            .iter()
-            .map(|u| {
-                e.globals
-                    .get(u.root)
-                    .map_or(to_world, GlobalTransform::affine)
-            })
-            .collect();
+        let frames = unit_frames(rig, &e.globals, to_world);
         let speed = controller.forward_speed_km_h().abs();
         let here = vgt.translation();
         let markers: Vec<(Entity, Transform)> = e
@@ -115,8 +130,14 @@ pub fn update_passengers(
         }
         let (entry_slots, exit_slots) = rig.door_slots();
         let doors = read_doors(&e.engines, &entry_slots, &exit_slots);
-        walk_to_doors(&mut e, rig, (&frames, to_world, vehicle), &doors, dt);
-        board_unseen(rig, &doors, dt);
+        walk_to_doors(
+            &mut e,
+            rig,
+            (&frames, to_world, vehicle, bus.as_ref()),
+            &doors,
+            dt,
+        );
+        board_unseen(rig, &doors, dt, bus.as_ref());
         // The passengers.
         rig.sim.step(dt, &doors);
         feed::apply_sim_events(rig, &frames, to_world, &mut e.commands, &mut e.transforms);

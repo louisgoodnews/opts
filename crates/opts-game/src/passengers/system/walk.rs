@@ -6,7 +6,7 @@ use super::*;
 pub(super) fn walk_to_doors(
     e: &mut PassengerEnv,
     rig: &mut PassengerRig,
-    (frames, to_world, vehicle): (&[Affine3A], Affine3A, Entity),
+    (frames, to_world, vehicle, bus): (&[Affine3A], Affine3A, Entity, Option<&Destination>),
     doors: &Doors,
     dt: f32,
 ) {
@@ -29,8 +29,9 @@ pub(super) fn walk_to_doors(
             still.push(w);
         } else if doors.entries.get(w.entry).copied().unwrap_or(false)
             && rig.sim.passengers().len() < rig.sim.capacity()
+            && admits(w.dest.as_ref(), bus)
         {
-            if let Some(id) = rig.sim.board(w.age, w.stops, w.entry) {
+            if let Some(id) = rig.sim.board_to(w.age, w.stops, w.entry, w.dest.clone()) {
                 // Beyond the figure budget a person boards unseen.
                 if rig.actors.len() >= ACTOR_BUDGET {
                     e.commands.entity(w.entity).despawn();

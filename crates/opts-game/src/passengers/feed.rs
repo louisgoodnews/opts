@@ -141,6 +141,7 @@ pub(super) fn apply_sim_events(
                         age: 0,
                         stops: 0,
                         walked_m: 0.0,
+                        dest: None,
                     });
                 }
             }
