@@ -1,5 +1,6 @@
 //! The passenger simulation of one unit.
 
+use super::destination::Destination;
 use super::graph::CabinGraph;
 use super::rng::Rng;
 use super::spec::{Cabin, Paths, TicketBook};

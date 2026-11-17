@@ -7,6 +7,7 @@
 //! `docs/src/simulation/passengers.md`.
 
 mod crowd;
+mod destination;
 mod graph;
 mod rng;
 mod sim;
@@ -14,6 +15,7 @@ mod spec;
 mod state;
 
 pub use crowd::standing_room;
+pub use destination::{admits, pick, Destination, DestinationTable};
 pub use graph::CabinGraph;
 pub use rng::Rng;
 pub use sim::{Doors, Event, Passenger, PassengerSim, Phase, WALK_SPEED_M_S};

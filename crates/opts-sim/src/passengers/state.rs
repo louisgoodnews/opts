@@ -1,6 +1,7 @@
 //! The state of a passenger and what the simulation tells its host: the phases, the doors, the
 //! events.
 
+use super::destination::Destination;
 use glam::Vec3;
 
 /// What a passenger does now.
@@ -71,6 +72,8 @@ pub struct Passenger {
     pub(super) route: Vec<usize>,
     pub(super) next: Next,
     pub(super) place: Option<usize>,
+    /// Where the passenger wants to go; `None` when no trip serves the stop they waited at.
+    pub dest: Option<Destination>,
 }
 
 /// The state of the doors the passengers use, by entry and exit index of the cabin.

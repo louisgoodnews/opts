@@ -15,8 +15,13 @@ pub(super) fn send_everybody_home(e: &mut PassengerEnv, rig: &mut PassengerRig) 
 }
 
 /// The rest of the crowd boards through the open doors, one person per door in turn, while there
-/// is room.
-pub(super) fn board_unseen(rig: &mut PassengerRig, doors: &Doors, dt: f32) {
+/// is room and the bus takes their destination.
+pub(super) fn board_unseen(
+    rig: &mut PassengerRig,
+    doors: &Doors,
+    dt: f32,
+    bus: Option<&Destination>,
+) {
     rig.unseen_timer += dt;
     if rig.unseen_timer >= UNSEEN_BOARD_S && !rig.unseen.is_empty() {
         rig.unseen_timer = 0.0;
@@ -24,9 +29,13 @@ pub(super) fn board_unseen(rig: &mut PassengerRig, doors: &Doors, dt: f32) {
             if !doors.entries[entry] || rig.sim.passengers().len() >= rig.sim.capacity() {
                 continue;
             }
-            if let Some(i) = rig.unseen.iter().position(|u| u.entry == entry) {
+            let found = rig
+                .unseen
+                .iter()
+                .position(|u| u.entry == entry && admits(u.dest.as_ref(), bus));
+            if let Some(i) = found {
                 let u = rig.unseen.remove(i);
-                rig.sim.board(u.age, u.stops, u.entry);
+                rig.sim.board_to(u.age, u.stops, u.entry, u.dest);
             }
         }
     }

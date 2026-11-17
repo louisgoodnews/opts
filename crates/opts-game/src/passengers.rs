@@ -40,6 +40,7 @@ pub(crate) fn facing(direction: Vec3) -> Quat {
 
 mod convert;
 mod crowd;
+mod destinations;
 mod draw;
 mod feed;
 mod protocol;

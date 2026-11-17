@@ -6,6 +6,17 @@ impl PassengerSim {
     /// A passenger of `age` who rides `stops` stops arrives at entry `entry` (clamped to the
     /// entries there are). `None` when the unit has no entry.
     pub fn board(&mut self, age: u32, stops: u32, entry: usize) -> Option<u32> {
+        self.board_to(age, stops, entry, None)
+    }
+
+    /// Like [`board`](Self::board), for a passenger who wants to go to `dest`.
+    pub fn board_to(
+        &mut self,
+        age: u32,
+        stops: u32,
+        entry: usize,
+        dest: Option<Destination>,
+    ) -> Option<u32> {
         if self.entry_nodes.is_empty() {
             return None;
         }
@@ -26,6 +37,7 @@ impl PassengerSim {
             route: Vec::new(),
             next: Next::Place,
             place: None,
+            dest,
         });
         Some(id)
     }

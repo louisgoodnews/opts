@@ -1,12 +1,15 @@
 //! The passenger rig: what the passengers of a vehicle chain are, as the game keeps them.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use bevy::prelude::*;
 use opts_core::formats::ticketpack::TicketPack;
 use opts_core::formats::vehicles::cabin::PassengerCabin;
 use opts_core::formats::vehicles::PassengerPaths;
-use opts_sim::passengers::{chain, PassengerSim, Rng, TicketBook, Unit};
+use opts_sim::passengers::{
+    chain, Destination, DestinationTable, PassengerSim, Rng, TicketBook, Unit,
+};
 
 use super::{ticket_book, unit_spec};
 
@@ -38,6 +41,10 @@ pub struct PassengerRig {
     pub force_group: u32,
     /// The entry that group is sent to (its number in the chain).
     pub force_entry: usize,
+    /// The destinations of the map's stops, built from its timetables on first use.
+    pub(super) destinations: Option<Arc<DestinationTable>>,
+    /// The ID code of the stop the bus stands at (key of the destinations).
+    pub(super) stop_id: Option<u64>,
 }
 
 /// A door as the scripts know it: the engine's entity and the door's number in it.
@@ -72,11 +79,12 @@ pub(super) struct SeatPose {
 }
 
 /// A person at the stop who is not drawn (the crowd beyond [`super::MAX_VISIBLE_WAITING`]).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(super) struct Unseen {
     pub(super) entry: usize,
     pub(super) age: u32,
     pub(super) stops: u32,
+    pub(super) dest: Option<Destination>,
 }
 
 /// A person outside: walking up to the bus or away from it.
@@ -90,6 +98,7 @@ pub(super) struct Walker {
     pub(super) age: u32,
     pub(super) stops: u32,
     pub(super) walked_m: f32,
+    pub(super) dest: Option<Destination>,
 }
 
 impl PassengerRig {
@@ -133,6 +142,8 @@ impl PassengerRig {
             stops_served: 0,
             force_group: 0,
             force_entry: 0,
+            destinations: None,
+            stop_id: None,
         })
     }
 
