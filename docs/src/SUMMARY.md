@@ -197,6 +197,7 @@
 - [Session Save](architecture/session-save.md)
 - [Session Environment (date, time, weather)](architecture/session-environment.md)
 - [Lighting System (sun, moon, light rooms, god rays)](architecture/lighting-system.md)
+- [Spatial Zones: Tunnel Census (M-0115)](architecture/spatial-zones.md)
 - [Weather](architecture/weather.md)
 - [Real Weather: Research and Decision (M-0116)](architecture/real-weather.md)
 - [Vegetation Wind](architecture/vegetation-wind.md)
