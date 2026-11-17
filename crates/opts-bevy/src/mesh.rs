@@ -190,7 +190,12 @@ pub use xfile::{
 mod tree;
 pub use tree::{tree_billboard_material, tree_billboard_mesh};
 
+mod trailer_joint;
+pub use trailer_joint::{remap_trailer_end, trailer_end_vertices, TRAILER_BAND_M};
+
 #[cfg(test)]
 mod skin_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod trailer_joint_tests;
