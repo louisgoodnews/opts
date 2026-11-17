@@ -128,4 +128,6 @@ pub use lanes::{LaneKind, BIKE_LANE_MAX_WIDTH_M};
 pub use surface::{SurfaceSegment, SURFACE_MAX_HEIGHT_M, SURFACE_MAX_SLOPE};
 
 #[cfg(test)]
+mod parse_tests;
+#[cfg(test)]
 mod tests;
