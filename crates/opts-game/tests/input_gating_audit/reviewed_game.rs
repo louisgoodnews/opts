@@ -11,6 +11,8 @@ pub(super) const REVIEWED: &[&str] = &[
     // F11 toggles the lane and agent-id drawing flags only. Nothing is drawn unless the F10 panel
     // is shown, and the toggle changes no simulation state or text field, so it needs no gate.
     "opts-game/src/in_game/omsi_world/traffic/lane_overlay.rs",
+    // Shift+F12 toggles the spatial-zone drawing flag only (`ZoneOverlay`); the drawing reads no input.
+    "opts-game/src/in_game/omsi_world/spatial_zone_overlay.rs",
     // P pauses the simulation; it checks `ReportModalState` and `MenuModalActive` itself, so it
     // is ignored while a modal is open.
     "opts-game/src/in_game/pause_toggle.rs",

@@ -97,6 +97,8 @@ pub const ACTIONS: &[ActionDef] = &[
     def("ui", "switch_vehicle_prev", "Shift+F8"),
     def("ui", "developer_panel", "F10"),
     def("ui", "developer_panel_detail", "Shift+F10"),
+    // The spatial-zone debug overlay (M-0115). F11 is the lane overlay (hard-wired), Shift+F12 is free.
+    def("ui", "spatial_zone_overlay", "Shift+F12"),
 ];
 
 /// The setting that holds the chord of an action.

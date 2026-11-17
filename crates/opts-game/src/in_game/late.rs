@@ -47,6 +47,7 @@ pub(super) fn add_late_systems(app: &mut App) {
     );
 
     omsi_world::traffic::lane_overlay::add_lane_overlay(app);
+    omsi_world::spatial_zone_overlay::add_spatial_zone_overlay(app);
     // Input-driven systems stand still while the report modal is open.
     app.add_systems(
         Update,

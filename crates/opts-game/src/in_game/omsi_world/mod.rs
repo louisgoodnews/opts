@@ -38,6 +38,7 @@ mod reload;
 mod respawn;
 mod scenery_objects;
 mod setvar_state;
+pub(crate) mod spatial_zone_overlay;
 mod tile;
 mod tile_build;
 mod tile_ground;

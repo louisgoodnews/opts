@@ -83,6 +83,8 @@ keys! {
     HELP_KEY_THEME = "help-key-theme",
     /// Message `help-key-dev`.
     HELP_KEY_DEV = "help-key-dev",
+    /// Message `help-key-zones`.
+    HELP_KEY_ZONES = "help-key-zones",
     /// Message `help-guides-body`.
     HELP_GUIDES_BODY = "help-guides-body",
     /// Message `help-report-body`.

@@ -4,7 +4,7 @@ use bevy::prelude::KeyCode;
 
 use super::table::{
     bind, rebindable, CAMERA, DEV, DOOR_CAMERA, EGO, FULLMAP, HELP, MINIMAP, PAUSE, QUICK_SAVE,
-    SESSION, SIM_PAUSE, THEME, VIRTUAL_MIRRORS,
+    SESSION, SIM_PAUSE, THEME, VIRTUAL_MIRRORS, ZONE_OVERLAY,
 };
 use super::Group;
 use crate::shell::keys;
@@ -115,6 +115,13 @@ pub(super) const MENUS_GROUP: Group = (
             &[KeyCode::F10],
             keys::HELP_KEY_DEV,
             DEV,
+        ),
+        rebindable(
+            &["spatial_zone_overlay"],
+            "Shift+F12",
+            &[KeyCode::F12],
+            keys::HELP_KEY_ZONES,
+            ZONE_OVERLAY,
         ),
     ],
 );
