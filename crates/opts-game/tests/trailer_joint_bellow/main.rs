@@ -11,6 +11,7 @@ use opts_bevy::mesh::{
 };
 
 mod rigid;
+mod seam;
 
 const RING_D: u16 = 3;
 const TRAILER_JOINT: u16 = 5;
