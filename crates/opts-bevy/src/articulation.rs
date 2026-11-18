@@ -16,12 +16,14 @@
 //!   degrees, from the simulation's fixed-step ground following (`0` without ground samples).
 
 mod chain;
+mod placement;
 mod scripts;
 mod segment;
 mod system;
 mod trailer_joint;
 
 pub use chain::{joint_beta_deg, ArticulatedChain};
+pub use placement::segment_placement;
 pub use segment::{ArticulatedSegment, SegmentGround, SegmentWheel};
 pub use system::{articulation_render_system, articulation_system};
 pub use trailer_joint::{

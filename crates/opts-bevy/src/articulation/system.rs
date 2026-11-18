@@ -3,11 +3,11 @@
 use bevy::math::{Vec2, Vec3};
 use bevy::prelude::*;
 
-use crate::coords::omsi_to_bevy_pos;
 use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::VehicleController;
 
 use super::chain::{detect_position_jump, seed_consist, ArticulatedChain};
+use super::placement::segment_placement;
 use super::scripts::apply_articulation_scripts;
 use super::segment::{ArticulatedSegment, SegmentGround, SegmentWheel};
 
@@ -119,7 +119,6 @@ pub fn articulation_render_system(
                 (_, c) => c,
             };
             let z = ground.map_or(root_tf.translation.y, |g| g.elevation);
-            tf.translation = omsi_to_bevy_pos(Vec3::new(p.x, p.y, z));
             let turn = if seg.reversed {
                 std::f32::consts::PI
             } else {
@@ -128,9 +127,11 @@ pub fn articulation_render_system(
             // A reversed segment's model faces the other way: its pitch and roll flip.
             let flip = if seg.reversed { -1.0 } else { 1.0 };
             let (pitch, roll) = ground.map_or((0.0, 0.0), |g| (g.pitch * flip, g.roll * flip));
-            tf.rotation = Quat::from_rotation_y(-h - turn)
-                * Quat::from_rotation_x(pitch)
-                * Quat::from_rotation_z(roll);
+            let front = Vec3::new(seg.front_local.x, seg.front_local.y, seg.front_z);
+            let (translation, rotation) =
+                segment_placement(Vec3::new(p.x, p.y, z), front, -h - turn, pitch, roll);
+            tf.translation = translation;
+            tf.rotation = rotation;
         }
     }
 }

@@ -10,6 +10,9 @@ pub struct ArticulatedSegment {
     pub hitch_local: Vec2,
     /// Front coupling `(x, y)` of this segment.
     pub front_local: Vec2,
+    /// Height `z` of the segment's front coupling above its origin (m, OMSI); the tilt pivots about
+    /// the coupling (see [`super::system::segment_placement`]).
+    pub front_z: f32,
     /// Position `y` of the segment's rearmost axle in its own frame.
     pub rear_axle_y: f32,
     /// Joint limit on `|α|` in degrees (`[coupling_front_character]`).
@@ -65,6 +68,7 @@ impl ArticulatedSegment {
         Self {
             hitch_local,
             front_local,
+            front_z: 0.0,
             rear_axle_y,
             max_alpha_deg,
             load: None,
