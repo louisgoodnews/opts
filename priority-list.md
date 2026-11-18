@@ -6,6 +6,8 @@
 | **Baseline** | `master` (`9b00249b`; re-synced against `606e50ef` on 2026-10-29) — 146 numbered milestone files (refreshed 2026-11-15: 82 done, 39 in progress, 22 open, 2 deferred, 1 obsolete; M-0151 added 2026-11-15) + un-numbered Phase 1/5/6/7/13 items |
 | **Sources** | [`ROADMAP.md`](ROADMAP.md), [`docs/dev/BOARD.md`](docs/dev/BOARD.md), [`docs/src/architecture/ai-token-optimization.md`](docs/src/architecture/ai-token-optimization.md) |
 
+> **Sync 2026-11-18 (issue register and OMSI parity):** `master` `63f9b605`. Added the [issue register](docs/audit/issues-2026-11-18.md) (ISS-001 to ISS-041), the [feature](docs/audit/feature-audit-2026-11-18.md) and [project](docs/audit/project-audit-2026-11-18.md) audits, and the [OMSI parity matrix](docs/audit/omsi-parity-matrix-2026-11-18.md) (GAP-01 to GAP-20). Four fixes are on `master`: `17473f64` (joint reads unit 0), `3baee292` (yaw and suspension interpolation; heave and pitch untested), `914edeec` (render pivot), `3f614abe` (sim origin elevation). The trailer-front seam is still unverified across angles. New milestones M-0152 to M-0164 (Phases 16 and 17) are proposed; none has code. The new tiers S, D and F come first; the older tiers below keep their order and numbers.
+>
 > **Sync 2026-11-15 (count and audit check):** the milestone count is corrected from 144 to **145**. The figure was taken from the milestone files `docs/src/roadmap/*/M-*.md` (IDs `M-0000` to `M-0150`, six IDs without a file), counting each file's status row by its leading status symbol. Result: 83 done (✅/🟢), 36 in progress (🟡), 23 open (📝/⏳), 2 deferred (`M-0079`, `M-0138`), 1 obsolete (`M-0104`); 83+36+23+2+1 = 145. The 144 was short by one because `M-0028.md` was added in `1beb969d` (2026-10-29), after the count was taken. An earlier survey gave 37 in progress and 22 open; the difference is `M-0062`, whose row starts with ⏳ although its sync note says all deliverables are implemented and only the acceptance is pending, so it is counted open here. Known gaps, not created here: ROADMAP.md refers to `M-0030`, `M-0031`, `M-0033`, `M-0034` and `M-0036`, which have no milestone file; `M-0107` also has no file. The line "73 open milestones" in the rationale below is superseded: 62 are not done (59 open or in progress, 2 deferred, 1 obsolete).
 >
 > **Sync 2026-11-15 (refresh, `agent/docs-refresh`):** the milestone count is **146** (`scripts/roadmap_audit.py`: 146 milestones, 5 findings, all explained in `docs/dev/roadmap-audit-known.txt`). By leading status symbol: 82 done (44 🟢, 38 ✅), 39 in progress (🟡), 22 open (19 📝, 3 ⏳), 3 special (`M-0079` and `M-0138` deferred, `M-0104` obsolete); 82+39+22+3 = 146. The 2026-11-15 recount does not reproduce the 83/36/23 split of the note above, so the split is recounted here. [`M-0151`](docs/src/roadmap/phase-15/M-0151.md) (file-size split to the 150-line rule) is in progress: `scripts/structure_audit.py check` reports **536 of 2,153** `crates/**/*.rs` files over 150 code lines (736 at the owner decision), 0 functions over 80 lines and 0 signature allows; by crate `opts-game` 234, `opts-bevy` 145, `opts-omsi` 47, `opts-gui` 31, `opts-traffic` 15, `opts-benchmark` 15, `opts-cli` 10, `opts-hardware` 9, `opts-l10n` 8, `opts-sim` 6, `opts-catalogue` 6, `opts-tools` 4, `opts-logging` 4, `opts-types` 2.
@@ -52,6 +54,66 @@ With **61 open milestones** (39 in progress, 22 planned or proposed) spanning 15
 | **🟡 Tier P4** | **Controls, UI Polish, Accessibility & Event Architecture** | `M-0142`, `M-0143`, `M-0035`, `M-0061`, `M-0063`, `M-0064`, `M-0065`, `M-0083`, `M-0118`, `M-0103` | ~8–12 sessions | Removes the remaining `"Feature not available yet!"` UI stubs, completes input rebinding, and formalizes the OMSI event system. |
 | **🟢 Tier P5** | **Next-Wave Realism, Weather & Vehicle Override Profiles** | `M-0135`–`M-0137`, `M-0120`–`M-0123`, `M-0114`–`M-0117`, `M-0074` | ~15–20 sessions | Builds Phase 14 vehicle overrides/mesh editor and Phase 11/12 weather, fuel/battery, and graphics overhaul on top of a clean codebase. |
 | **⚪ Tier P6** | **Long-Horizon Modding Suite, Alpha Packaging & Deferred** | `M-0030`–`M-0033`, `M-0092`, `M-0055`, `M-0056`, `M-0051`, `M-0034`, `M-0036`, `M-0048`, `M-0105`, `M-0004` + Deferred (`M-0138`, `M-0079`, `M-0104`) | Long-term | Standalone authoring suites (Editor Mode, Visual Script Editor), optional DLSS, and `v0.1.0-alpha` release packaging. |
+
+---
+
+## 🔴 Tier S — Open Safety and Correctness (issue register 2026-11-18)
+
+*Rationale: the register's blockers and majors that can make a release unsafe or a claimed behaviour false. Ranked by risk; the blocker first. Source: [issues-2026-11-18.md](docs/audit/issues-2026-11-18.md).*
+
+| Rank | Issue / milestone | Item | Current state | Priority rationale |
+| ---: | :--- | :--- | :--- | :--- |
+| **S1** | ISS-001, ISS-002, ISS-003, ISS-004 | Control server: refuse empty and short tokens and non-loopback binds; throttle `auth`; read timeout and connection cap; token on loopback and out of argv | open (blocker for any non-loopback bind) | Any LAN peer can drive the game once bound; a one-line guard comes first. |
+| **S2** | ISS-022, ISS-023 | Fails-on-parent rule in the Definition of Done; record the live test failure on the parent of `3420545e`; log hook skips | open (blocker, process) | The inert joint shipped on a green unrelated suite; the rule stops it recurring. |
+| **S3** | ISS-011, ISS-037 ([M-0053](docs/src/roadmap/phase-4/M-0053.md)) | Trailer-front seam: multi-angle, multi-trailer live test; pivot-at-H assertion; pitch and roll | yaw, render and sim fixed on `master`; seam unverified | The board says done; a visibly broken articulated bus would not be caught. |
+| **S4** | ISS-014 ([M-0160](docs/src/roadmap/phase-17/M-0160.md)) | Battery-off path: script-rig test; four HH109 `cockpit.osc` checks | untested | Electrics claimed working with no test of the off path. |
+| **S5** | ISS-005, ISS-006 | Text X parser bound on file-supplied counts; huge-count test; fuzz targets for untrusted formats | open or unverified | A crash on a malformed installation file. |
+| **S6** | ISS-012 ([M-0115](docs/src/roadmap/phase-11/M-0115.md)) | Tile loader feeds splines to zone detection; label one real tunnel | open (detector not wired) | Zones and `zones.query` answer empty in play. |
+| **S7** | ISS-013 | Door arming claim: locate its source; readback test | unverified | A claimed behaviour with no Rust code and no test. |
+| **S8** | ISS-024, ISS-025, ISS-026, ISS-027 | Worktrees and `agent/residual`; hashes on `[x]` lines; M-0053 one status (done 2026-11-18); M-0124 reopened or evidenced | partly done | Records that cannot be checked make the board unreliable. |
+
+---
+
+## 🟥 Tier D — Player-Visible Defects
+
+*Rationale: defects a player or tester hits in the running game. Below the safety tier, above the parity phases.*
+
+| Rank | Issue / milestone | Item | Current state | Priority rationale |
+| ---: | :--- | :--- | :--- | :--- |
+| **D1** | ISS-036 ([M-0152](docs/src/roadmap/phase-16/M-0152.md)) | Free drive boards nobody (the wizard default) | open; owner decision needed | The default drive has no passengers; the most visible gap. |
+| **D2** | ISS-039, ISS-040, ISS-041 | Choppy first-person driving: heave and pitch interpolation tests, frame time, drive-state logging; straightening collapse and the 70 m x-jump | yaw fixed (`3baee292`); the rest unverified | The reported driving feel; measure before any fix. |
+| **D3** | ISS-015, ISS-017 | Help table omits live keys; lighting doc contradicts the bloom and mirror ladder | open | Players read the Help table and the docs; both are wrong. |
+| **D4** | ISS-016, ISS-038 | Snow on scenery depends on load order; exhaust smoke ignores the trailer's own emitter | open | Visible in weather and on articulated buses. |
+| **D5** | ISS-018, ISS-019, ISS-020 | Bloom needs HDR (undocumented); overlay and indicator tests missing | minor | Documentation and test gaps around visible features. |
+
+---
+
+## 🟦 Tier F — Feature Parity with OMSI (in gap-rank order)
+
+*Rationale: the parity phases, in the order of the gap ranking in the [OMSI parity matrix](docs/audit/omsi-parity-matrix-2026-11-18.md). Phase 16 first (bus operation), then Phase 17; a milestone already in progress keeps its place in [Tier P](#-tier-p0--immediate-guardrails-active-wip--review-sign-offs) and is listed here for the gap order.*
+
+| Rank | Milestone | Gap | Phase | Priority rationale |
+| ---: | :--- | :--- | :--- | :--- |
+| **F1** | [M-0152](docs/src/roadmap/phase-16/M-0152.md) Free-drive boarding rule | GAP-01 | 16 | Same item as D1; rule decision first. |
+| **F2** | [M-0157](docs/src/roadmap/phase-16/M-0157.md) Breakdowns, failures and repair | GAP-03 | 16 | Largest gap; owner decision whether breakdowns are wanted. |
+| **F3** | [M-0156](docs/src/roadmap/phase-16/M-0156.md) Cash desk and change | GAP-06 | 16 | Needs the M-0101 money model. |
+| **F4** | [M-0155](docs/src/roadmap/phase-16/M-0155.md) Timetable circuits by day type and night | GAP-07 | 16 | Uses `TTData` from M-0099. |
+| **F5** | [M-0153](docs/src/roadmap/phase-16/M-0153.md) Stop request and stop-door interlocks | GAP-08 | 16 | Small. |
+| **F6** | [M-0154](docs/src/roadmap/phase-16/M-0154.md) Alighting on the real stop sequence | GAP-14 | 16 | After M-0152. |
+| **F7** | [M-0159](docs/src/roadmap/phase-16/M-0159.md) Passenger greetings and voices | GAP-16 | 16 | Needs the audio payload events. |
+| **F8** | [M-0158](docs/src/roadmap/phase-16/M-0158.md) Depot wash and tanking | GAP-19 | 16 | Depot zones and fuel. |
+| **F9** | [M-0053](docs/src/roadmap/phase-4/M-0053.md) Articulation seam | GAP-02 | 4 (in progress) | See S3. |
+| **F10** | [M-0115](docs/src/roadmap/phase-11/M-0115.md) Tunnel zones | GAP-04 | 11 (in progress) | See S6. |
+| **F11** | [M-0160](docs/src/roadmap/phase-17/M-0160.md) Battery-off path test | GAP-05 | 17 | See S4. |
+| **F12** | [M-0161](docs/src/roadmap/phase-17/M-0161.md) Rail control scheme | GAP-09 | 17 | Trams; first slice of M-0141 was road only. |
+| **F13** | [M-0162](docs/src/roadmap/phase-17/M-0162.md) Overhead line and pantograph | GAP-10 | 17 | Large; research first. |
+| **F14** | [M-0111](docs/src/roadmap/phase-11/M-0111.md) AI traffic depth (bus priority, AI reaction to the player) | GAP-11, GAP-13 | 11 (in progress) | Existing milestone. |
+| **F15** | [M-0050](docs/src/roadmap/phase-4/M-0050.md) Pedestrian crossings | GAP-12 | 4 (in progress) | Needs F14's signal model. |
+| **F16** | [M-0121](docs/src/roadmap/phase-12/M-0121.md) Snow and wetness | GAP-15 | 12 (in progress) | See D4. |
+| **F17** | [M-0163](docs/src/roadmap/phase-17/M-0163.md) Cabin climate | GAP-17 | 17 | Heater and HVAC reads. |
+| **F18** | [M-0164](docs/src/roadmap/phase-17/M-0164.md) Help table complete | GAP-18 | 17 | See D3; cheap. |
+
+GAP-20 (editors) stays planned under [M-0051](docs/src/roadmap/phase-6/M-0051.md) and is not ranked here.
 
 ---
 

@@ -28,6 +28,8 @@
 | 🏗️ **Phase 13** — Crate Architecture: Legacy vs. Native Separation | `opts-omsi` (legacy parsers, leaf adapter), `opts-model` (native TOML), shared base crate; no engine crate depends on `opts-omsi` | ✅ delivered 2026-10-19 (no direct Cargo dependency on opts-omsi); consumer migration not started — engine crates still reach OMSI types through the opts-core facade (omsi_uses.py: bevy 130, sim 31, traffic 14, catalogue 5, unchanged since 2026-10-19) | [`phase-13/`](docs/src/roadmap/phase-13/README.md) |
 | 🛠️ **Phase 14** — Vehicle Overrides & Visual Editor | `VehicleProfile` TOML patch layer (sound, script, constant, mesh swaps with validation) and an in-game visual mesh editor | 📝 proposed 2026-10-19, design first | [`phase-14/`](docs/src/roadmap/phase-14/README.md) |
 | 🤖 **Phase 15** — AI-Optimized Code Structure & Pre-Commit Enforcement | 150-line source file rule (owner decision 2026-11-15), 80-line function ratchet, `SystemParam` bundling, and `< 1.5 s` pre-commit enforcement | 🟢 complete — M-0147, M-0148, and M-0149 done 2026-10-28 (against the 250/350-line limits then in force; 120 files split, structure-known.txt emptied then); M-0150 done 2026-10-30 (0 functions over 80 lines, 0 signature allows); M-0151 🟢 Complete (2026-11-16): all files under the 150-line limit; acceptance 3 (`//!` module doc, enforced by `structure_audit.py`) and G1 (`./scripts/local-ci.sh` passes on the final tree) met| [`phase-15/`](docs/src/roadmap/phase-15/README.md) |
+| 🚌 **Phase 16** — Feature parity with OMSI: bus operation | close the OMSI bus-operation gaps in the order of player impact: free-drive boarding, failures and repair, cash desk and change, timetable circuits, stop requests, stop sequence, voices, depot service | 📝 proposed 2026-11-18 from the [OMSI parity matrix](docs/audit/omsi-parity-matrix-2026-11-18.md) (GAP-01, 03, 06, 07, 08, 14, 16, 19); no milestone has code yet | [`phase-16/`](docs/src/roadmap/phase-16/README.md) |
+| 🏙️ **Phase 17** — Feature parity: world, traffic and vehicle systems | close the remaining OMSI parity gaps in the world, traffic, rail and vehicle systems; reuses in-progress milestones where they exist | 📝 proposed 2026-11-18 (GAP-02, 04, 05, 09, 10, 11, 12, 13, 15, 17, 18); M-0053, M-0115, M-0111, M-0050 and M-0121 already in progress | [`phase-17/`](docs/src/roadmap/phase-17/README.md) |
 | ♾️ **Phase 999** — Refactoring Taskforce (continuous) | a structural cleanup without behaviour change at the end of every development cycle and before every versioned release | ♾️ continuous; set-up and cycle 1 done 2026-10-19 (63 → 0 files over 500 lines of code, still 0 on 2026-10-25); cycle 2 not started | [`phase-999/`](docs/src/roadmap/phase-999/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
@@ -184,11 +186,11 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Interior rattling ([M-0146](docs/src/roadmap/phase-4/M-0146.md), 2026-10-26): the road textures' unevenness (`.surf` height maps, else the surface type) shakes the body on its springs, `A_Trans_Z` reaches the vehicles' rattle scripts.
 - [ ] **🎛️ Vehicle Controls and Systems** — [M-0141](docs/src/roadmap/phase-4/M-0141.md) — requested 2026-10-20
   - [~] The driver's workplace works: electrics, engine start procedure per vehicle, lights, doors, heating, wipers and every dashboard control with a function; a start-procedure test per reference vehicle (Citybus 530, MAN NL/SD200/NG272 and BRT C2 start from cold since 2026-10-20, the Luzern VBL Citybus, Valiant 7000 and MB C2 BVG families since 2026-10-25, then the TH Überlandbus, Studio Polygon Lite, Citybus S31x and others; all 948 installed buses reach drive readiness (the last, the MB O530 GDH serial hybrid, since 2026-10-25); dashboard displays: printers, VDV display and the HH109 EFAD LCD work since 2026-10-25, NG272/HH109 destination boards open).
-  - [~] Articulated buses — trailing segments follow the leader kinematically, the joint angle reaches the scripts, bellows are skinned ([spec](docs/src/architecture/articulation.md), M-0022 addendum 2026-10-11); one serialisable consist state, consist mass and β/γ in the fixed step done 2026-10-14 (M-0053 Parts 1–3), AI trailer chains done, β limits verified and tested 2026-10-31; `[couple_front]` and parked trailers open (no data path found) — [M-0053](docs/src/roadmap/phase-4/M-0053.md) (critical review 2026-10-11 F-002, F-003).
+  - [~] Articulated buses — trailing segments follow the leader kinematically, the joint angle reaches the scripts, bellows are skinned ([spec](docs/src/architecture/articulation.md), M-0022 addendum 2026-10-11); one serialisable consist state, consist mass and β/γ in the fixed step done 2026-10-14 (M-0053 Parts 1–3), AI trailer chains done, β limits verified and tested 2026-10-31; trailer-front seam: yaw (`17473f64`), render pivot (`914edeec`) and sim origin elevation (`3f614abe`) are on `master`, the seam is unverified across angles and speeds, pitch and roll are open (ISS-011, ISS-037); `[couple_front]` and parked trailers open (no data path found) — [M-0053](docs/src/roadmap/phase-4/M-0053.md) (critical review 2026-10-11 F-002, F-003).
 - [~] **🚶 Pedestrians** — [M-0050](docs/src/roadmap/phase-4/M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](docs/src/simulation/pedestrians.md)); `[trafficdensity_passenger]` applied; stops and boarding through M-0101 (first slice 2026-10-21); crossings/signals, holidays and LOD open; walkers keep to the right of their lane since 2026-10-29, a reaction between walkers is open.
 - [~] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [x] Document the passenger simulation model in `docs/src/simulation/passengers.md` (written 2026-10-21 with M-0101) — prerequisite for M-0050's stop/boarding items (critical review 2026-10-11 F-023).
-  - [~] Implement bus stop logic and passenger boarding/alighting — first slice [M-0101](docs/src/roadmap/phase-4/M-0101.md) 2026-10-21: `[busstop]` objects, boarding through the scripts' doors, tickets, articulated buses and trams; cash desk open. *Requirement from rail operation (2026-10-12): a stop evaluates the leading head's direction of travel and door side, so a tram arriving B-head first is recognised without a mirrored second stop cube ([rail-vehicles §8–9](docs/src/simulation/rail-vehicles.md)).*
+  - [~] Implement bus stop logic and passenger boarding/alighting — first slice [M-0101](docs/src/roadmap/phase-4/M-0101.md) 2026-10-21: `[busstop]` objects, boarding through the scripts' doors, tickets, articulated buses and trams; cash desk open; a free drive with no trip boards nobody, so the item is not complete (ISS-036, [M-0152](docs/src/roadmap/phase-16/M-0152.md)). *Requirement from rail operation (2026-10-12): a stop evaluates the leading head's direction of travel and door side, so a tram arriving B-head first is recognised without a mirrored second stop cube ([rail-vehicles §8–9](docs/src/simulation/rail-vehicles.md)).*
   - [~] Implement a basic routing algorithm (e.g., RAPTOR or Dijkstra via `petgraph`). *Vehicle routing over lanes exists (`LaneGraph::shortest_route`, used by scheduled AI and the route line on the map); passenger journey routing open.*
 - [~] **🎮 The Game Binary** *(status corrected 2026-10-11, critical review F-014)*
   - [x] Assemble `opts-game/src/main.rs` by adding the `opts-bevy` and `opts-sim` plugins to the Bevy `App` (`crates/opts-game/src/app.rs`).
@@ -211,7 +213,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](docs/src/meta/critical-review-2026-10-11.md))**
   - [x] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0093](docs/src/roadmap/phase-4/M-0093.md) (complete 2026-10-14).
   - [x] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0094](docs/src/roadmap/phase-4/M-0094.md) (complete 2026-10-14).
-  - [~] Articulated vehicle completion: one articulation model with one serialised state in `opts-sim`, consist mass in the longitudinal dynamics, β/γ in the fixed step ([design](docs/src/architecture/articulation-physics.md); scope proposed 2026-10-14), `[couple_front]`, trailers for AI and parked vehicles — [M-0053](docs/src/roadmap/phase-4/M-0053.md) (F-002, F-003). (Parts 1–4 done; `[couple_front]`/parked trailers have no data path, 2026-10-31; trailer-front joint stages 1–3 on `master` 2026-11-17, trailer-end seam not yet verified at all angles)
+  - [~] Articulated vehicle completion: one articulation model with one serialised state in `opts-sim`, consist mass in the longitudinal dynamics, β/γ in the fixed step ([design](docs/src/architecture/articulation-physics.md); scope proposed 2026-10-14), `[couple_front]`, trailers for AI and parked vehicles — [M-0053](docs/src/roadmap/phase-4/M-0053.md) (F-002, F-003). (Parts 1–4 done; `[couple_front]`/parked trailers have no data path, 2026-10-31; trailer-front joint stages 1–3 on `master` 2026-11-17, trailer-end seam not yet verified at all angles; yaw, render pivot and sim elevation fixed on `master` by `17473f64`, `914edeec` and `3f614abe` (2026-11-18), pitch and roll seam open)
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](docs/src/roadmap/phase-4/M-0046.md); F-009).
 - [x] **🗺️ Tile Loading Controls** — [M-0080](docs/src/roadmap/phase-4/M-0080.md) — ✅ done 2026-10-29
   - [x] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21). — done 2026-10-29 (settings, live streaming and `scene.tiles` 2026-10-18; wizard switch with estimate, memory guard and "Automatic (currently N)" 2026-10-29).
@@ -492,6 +494,54 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Decompose the production functions > 80 code lines into helpers and replace the `too_many_arguments`/`type_complexity` allows with `#[derive(SystemParam)]` structs: done 2026-10-30 (M-0150); `python3 scripts/structure_audit.py check` on 2026-11-15 reports 0 functions > 80 LOC and 0 signature allows.
 - [x] **📏 Batch 4: Source Files to the 150-Line Rule** — [M-0151](docs/src/roadmap/phase-15/M-0151.md) — 🟢 Complete (2026-11-16): all files under the 150-line limit; acceptance 3 (`//!` module doc, enforced by `structure_audit.py`) and G1 (`./scripts/local-ci.sh` passes on the final tree) met
   - [ ] Split the source files over 150 code lines by concern, one batch per crate, largest first (2026-11-15 baseline: 536 of 2,153 `crates/**/*.rs` files over the limit, 736 at the owner decision). Checked 2026-11-16: `docs/dev/structure-known.txt` is empty and `python3 scripts/structure_audit.py check` reports 0 files over 150 LOC; the milestone lists the criteria still open.
+
+---
+
+## 🚌 Phase 16: Feature parity with OMSI: bus operation
+*Goal: close the OMSI 2 bus-operation gaps in the order of player impact (boarding, failures, cash, timetable circuits, stops, stop sequence, voices, depot service). Status: proposed 2026-11-18 from the [OMSI parity matrix](docs/audit/omsi-parity-matrix-2026-11-18.md); no milestone of this phase has code yet. Documents: [phase page](docs/src/roadmap/phase-16/README.md).*
+
+- [ ] **🎫 Free-drive boarding rule** — [M-0152](docs/src/roadmap/phase-16/M-0152.md) — owner decision first (GAP-01, ISS-036)
+  - [ ] Choose the rule (a served-stop rule or a default trip), implement it, and test a bus with no timetable run.
+- [ ] **🔧 Breakdowns, failures and repair** — [M-0157](docs/src/roadmap/phase-16/M-0157.md) — owner decision first (GAP-03)
+  - [ ] Decision memo; if approved, one failure class with repair, off by default.
+- [ ] **💶 Cash desk and change** — [M-0156](docs/src/roadmap/phase-16/M-0156.md) (GAP-06)
+  - [ ] Money model, change action, `GivenTicket` and `GiveChangeCoin` acting on it.
+- [ ] **📅 Timetable circuits by day type and night** — [M-0155](docs/src/roadmap/phase-16/M-0155.md) (GAP-07)
+  - [ ] Circuit selection from `TTData` by day type and time; night lines only at night.
+- [ ] **🛑 Stop request and stop-door interlocks** — [M-0153](docs/src/roadmap/phase-16/M-0153.md) (GAP-08)
+  - [ ] Stop request light and button; rear-door and baby-switch behaviour from the scripts, tested.
+- [ ] **🗺️ Alighting on the real stop sequence** — [M-0154](docs/src/roadmap/phase-16/M-0154.md) (GAP-14)
+  - [ ] Passengers alight at their stop, coupled to `bus.set_stop`.
+- [ ] **🔊 Passenger greetings and voices** — [M-0159](docs/src/roadmap/phase-16/M-0159.md) (GAP-16)
+  - [ ] Greeting on boarding, voice per ticket pack, through the audio system.
+- [ ] **🧽 Depot wash and tanking** — [M-0158](docs/src/roadmap/phase-16/M-0158.md) (GAP-19)
+  - [ ] Wash in a depot zone (`veh_wash`); tanking takes a modelled time at a depot or station.
+
+---
+
+## 🏙️ Phase 17: Feature parity: world, traffic and vehicle systems
+*Goal: close the remaining OMSI 2 parity gaps in the world, traffic, rail and vehicle systems. Status: proposed 2026-11-18 from the [OMSI parity matrix](docs/audit/omsi-parity-matrix-2026-11-18.md); the articulation, tunnel, traffic, pedestrian and snow items are owned by milestones already in progress and are listed here in gap order. Documents: [phase page](docs/src/roadmap/phase-17/README.md).*
+
+- [ ] **🧩 Articulation seam (GAP-02)** — [M-0053](docs/src/roadmap/phase-4/M-0053.md), in progress (existing)
+  - [ ] Multi-angle, multi-trailer live seam test with a pivot-at-H assertion; pitch and roll (ISS-011, ISS-037).
+- [ ] **🚇 Tunnel zones fed by the tile loader (GAP-04)** — [M-0115](docs/src/roadmap/phase-11/M-0115.md), in progress (existing)
+  - [ ] Feed the parsed splines; label one real tunnel (ISS-012).
+- [ ] **🔌 Battery-off path test (GAP-05)** — [M-0160](docs/src/roadmap/phase-17/M-0160.md) (ISS-014)
+  - [ ] Script-rig test of the battery switch; the four HH109 `cockpit.osc` files checked and recorded.
+- [ ] **🚋 Rail control scheme (GAP-09)** — [M-0161](docs/src/roadmap/phase-17/M-0161.md)
+  - [ ] Lever and direction for the trams, mapped to their script variables, documented and in Help.
+- [ ] **⚡ Overhead line and pantograph (GAP-10)** — [M-0162](docs/src/roadmap/phase-17/M-0162.md)
+  - [ ] Research note and design first; then a pantograph state and a power input.
+- [ ] **🚦 Bus-priority signals and AI reaction to the player (GAP-11, GAP-13)** — [M-0111](docs/src/roadmap/phase-11/M-0111.md), in progress (existing)
+  - [ ] Bus-priority behaviour at signals; AI traffic reacts to the player (collisions.md item 1).
+- [ ] **🚶 Pedestrian crossings and signals (GAP-12)** — [M-0050](docs/src/roadmap/phase-4/M-0050.md), in progress (existing)
+  - [ ] Yield at crossings, using the M-0111 signal model.
+- [ ] **❄️ Snow and wetness load order (GAP-15)** — [M-0121](docs/src/roadmap/phase-12/M-0121.md), in progress (existing)
+  - [ ] Refresh loaded textures on a snow-flag change, or record the limit (ISS-016).
+- [ ] **🌡️ Cabin climate (GAP-17)** — [M-0163](docs/src/roadmap/phase-17/M-0163.md)
+  - [ ] Heater state reaches `Cabinair_Temp`; confirmed on screen.
+- [ ] **⌨️ Help table complete (GAP-18)** — [M-0164](docs/src/roadmap/phase-17/M-0164.md) (ISS-015)
+  - [ ] Missing rows added; reverse test over every bound action.
 
 ---
 
