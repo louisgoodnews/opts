@@ -105,8 +105,9 @@ pub use crate::vehicle_script::{
 pub use crate::vehicle_setup::{StartLights, VehicleSetup};
 pub use crate::vehicle_sim::{
     vehicle_camera_system, vehicle_input_system, vehicle_physics_step_system,
-    vehicle_transform_sync_system, wheel_transform_sync_system, PlayerVehicle, VehicleCameraMode,
-    VehicleCameraRig, VehicleController, VehicleInputConfig, WheelSide, WheelVisual,
+    vehicle_transform_sync_system, wheel_transform_sync_system, PlayerVehicle, RenderPose,
+    VehicleCameraMode, VehicleCameraRig, VehicleController, VehicleInputConfig, WheelSide,
+    WheelVisual,
 };
 pub use crate::vehicle_triggers::{
     dik_to_keycode, hover_system, script_key_trigger_system, script_mouse_trigger_system,
