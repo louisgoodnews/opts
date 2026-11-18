@@ -48,14 +48,20 @@ use wheels::{add_unevenness, axle_extent, set_wheel_twist, support_height};
 /// ground the vehicle falls under gravity instead of snapping down.
 pub fn follow_ground(
     time: Res<Time>,
+    fixed: Res<Time<Fixed>>,
     index: Res<GroundIndex>,
     mut motions: Local<std::collections::HashMap<Entity, BodyMotion>>,
     mut vehicles: Query<GroundBody, GroundBound>,
 ) {
     let dt = time.delta_secs().min(0.1);
+    let alpha = fixed.overstep_fraction().clamp(0.0, 1.0);
     motions.retain(|e, _| vehicles.contains(*e));
     for (entity, mut controller, mut tf) in &mut vehicles {
         let motion = motions.entry(entity).or_default();
+        // The rendered yaw, heave and suspension pitch and roll, interpolated between the last two
+        // fixed steps (the pose the transform sync renders). The ground under the wheels is
+        // sampled at the simulation's own heading and position.
+        let pose = controller.render_pose(alpha);
         let (front, rear, track) = axle_extent(&controller.sim.axles);
         let ch = &mut controller.sim.chassis;
         let (px, py) = (ch.position.x, ch.position.y);
@@ -78,23 +84,17 @@ pub fn follow_ground(
         let heights = [fl, fr, rl, rr];
         settle_elevation(ch, motion, (support_height(&heights, z), z), dt);
         blend_tilt(motion, heights, (front - rear, track), dt);
-        // The body on its springs (M-0073): heave, pitch and roll of the suspension model, on top
-        // of the plane through the wheels (its roll is right side down positive, this one's right
-        // side up).
-        let (heave, spring_pitch, spring_roll) = controller
-            .sim
-            .body
-            .as_ref()
-            .map_or((0.0, 0.0, 0.0), |b| (b.heave_m, b.pitch_rad, -b.roll_rad));
         // What the ground under each wheel adds to the plane through the four (the twist), for
         // the springs: front pair and rear pair of the outer axles.
         let twist = (fl - fr - rl + rr) * 0.25;
         let sim = &mut controller.sim;
         set_wheel_twist(sim, twist);
         add_unevenness(sim, &index, (px, py, sin, cos), z);
-        tf.translation.y = sim.chassis.elevation_z + heave;
-        tf.rotation = Quat::from_rotation_y(-h)
-            * Quat::from_rotation_x(motion.pitch + spring_pitch)
-            * Quat::from_rotation_z(motion.roll + spring_roll);
+        // The body on its springs (M-0073) on top of the plane through the wheels: its roll is
+        // right side down positive, the root's is right side up.
+        tf.translation.y = sim.chassis.elevation_z + pose.heave_m;
+        tf.rotation = Quat::from_rotation_y(-pose.heading_rad)
+            * Quat::from_rotation_x(motion.pitch + pose.pitch_rad)
+            * Quat::from_rotation_z(motion.roll - pose.roll_rad);
     }
 }

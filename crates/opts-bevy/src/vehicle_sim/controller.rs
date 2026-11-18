@@ -11,15 +11,31 @@ use opts_sim::vehicle::{
     VehicleSimulation,
 };
 
+/// The body's pose at one fixed step: what the frame interpolates between. Heights, pitch and roll
+/// are the simulation's values (the suspension body, where the vehicle has one).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RenderPose {
+    /// Chassis position (m, OMSI ground plane).
+    pub position: Vec2,
+    /// Chassis heading (rad, OMSI yaw: positive turns left).
+    pub heading_rad: f32,
+    /// Heave of the body on its springs (m, up positive).
+    pub heave_m: f32,
+    /// Pitch of the body on its springs (rad, nose up positive).
+    pub pitch_rad: f32,
+    /// Roll of the body on its springs (rad, right side down positive).
+    pub roll_rad: f32,
+}
+
 /// Component wrapping an authoritative [`VehicleSimulation`] state for an entity.
 #[derive(Component, Debug, Clone)]
 pub struct VehicleController {
     /// Authoritative simulation instance from `opts-sim`.
     pub sim: VehicleSimulation,
-    /// The chassis pose before the last fixed step `(position, heading, elevation)`: the rendered
-    /// pose interpolates from it to the current one by the fraction of the next step that has
-    /// elapsed, so motion is smooth at any frame rate (the simulation steps at a fixed rate).
-    pub render_prev: Option<(Vec2, f32, f32)>,
+    /// The pose before the last fixed step. The rendered pose interpolates from it to the current
+    /// one by the fraction of the next step that has elapsed ([`VehicleController::render_pose`]),
+    /// so motion is smooth at any frame rate (the simulation steps at a fixed rate).
+    pub render_prev: Option<RenderPose>,
 }
 
 impl VehicleController {
@@ -47,6 +63,46 @@ impl VehicleController {
         Self {
             sim: VehicleSimulation::from_manifest(manifest),
             render_prev: None,
+        }
+    }
+
+    /// The pose of the simulation now.
+    #[must_use]
+    pub fn pose(&self) -> RenderPose {
+        let ch = &self.sim.chassis;
+        let (heave_m, pitch_rad, roll_rad) = self
+            .sim
+            .body
+            .as_ref()
+            .map_or((0.0, 0.0, 0.0), |b| (b.heave_m, b.pitch_rad, b.roll_rad));
+        RenderPose {
+            position: ch.position,
+            heading_rad: ch.heading_rad,
+            heave_m,
+            pitch_rad,
+            roll_rad,
+        }
+    }
+
+    /// The pose to render at `alpha` (0 = the last fixed step, 1 = the next): every value lerped
+    /// from [`Self::render_prev`] to the current pose, the heading the short way round. Without a
+    /// previous pose the current one is rendered.
+    #[must_use]
+    pub fn render_pose(&self, alpha: f32) -> RenderPose {
+        let curr = self.pose();
+        let Some(prev) = self.render_prev else {
+            return curr;
+        };
+        let alpha = alpha.clamp(0.0, 1.0);
+        let dh = (curr.heading_rad - prev.heading_rad + std::f32::consts::PI)
+            .rem_euclid(std::f32::consts::TAU)
+            - std::f32::consts::PI;
+        RenderPose {
+            position: prev.position.lerp(curr.position, alpha),
+            heading_rad: prev.heading_rad + dh * alpha,
+            heave_m: prev.heave_m + (curr.heave_m - prev.heave_m) * alpha,
+            pitch_rad: prev.pitch_rad + (curr.pitch_rad - prev.pitch_rad) * alpha,
+            roll_rad: prev.roll_rad + (curr.roll_rad - prev.roll_rad) * alpha,
         }
     }
 

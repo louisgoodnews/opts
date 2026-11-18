@@ -14,7 +14,7 @@ mod sync;
 
 pub use camera::{vehicle_camera_system, VehicleCameraMode, VehicleCameraRig};
 pub use controller::{
-    PlayerVehicle, VehicleController, VehicleInputConfig, WheelSide, WheelVisual,
+    PlayerVehicle, RenderPose, VehicleController, VehicleInputConfig, WheelSide, WheelVisual,
 };
 pub use input::vehicle_input_system;
 pub use plugin::OptsVehiclePlugin;
