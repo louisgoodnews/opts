@@ -28,6 +28,7 @@ pub(super) fn articulated_segment(
     );
     s.reversed = reversed;
     s.front_z = f.z;
+    s.hitch_z = b.z;
     s.load = Some(load.clone());
     // The bus files list min and max in either order (3 files have 20,-20).
     s.beta_limits_deg = manifest.coupling_front_limits.map(|l| {

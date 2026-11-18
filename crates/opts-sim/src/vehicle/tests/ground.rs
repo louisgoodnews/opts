@@ -28,7 +28,14 @@ fn fixed_step_ground_following_gives_zero_on_flat_and_the_grade_difference_on_a_
     s[1] = samples_on_slope(&flat_head, 0.1)[1];
     flat_head.apply_ground(&s, 1.0 / 64.0);
     let (beta, _) = flat_head.joint_angles_deg(0).unwrap();
-    assert!((beta + grade_deg).abs() < 0.2, "{beta} vs {grade_deg}");
+    // The coupling sits on the level hitch, 7 m ahead of the rear axle, which stands on the grade
+    // at height `0.1·y`: beta = asin(drop / 7) with the drop below the level hitch (rigid coupling model).
+    let drop = f64::from(flat_head.ground_probes()[1].points()[0].y * 0.1);
+    let expected = (drop / 7.0).asin().to_degrees() as f32;
+    assert!(
+        (beta - expected).abs() < 0.05,
+        "{beta} vs {expected} (grade {grade_deg})"
+    );
 }
 
 #[test]

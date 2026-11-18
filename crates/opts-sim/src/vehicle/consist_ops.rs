@@ -38,6 +38,7 @@ impl VehicleSimulation {
             heading,
         ));
         self.consist_bodies.push(None);
+        self.consist_couplings.push([0.0, 0.0]);
         self.trailer_loads.push(load.unwrap_or(UnitLoad {
             mass_kg: 0.0,
             axles: Vec::new(),
@@ -66,11 +67,21 @@ impl VehicleSimulation {
         ))
     }
 
+    /// Heights of the couplings of consist unit `k` above its origin (m, OMSI): `(hitch_z, front_z)`,
+    /// the rear coupling of the unit ahead in its frame and the unit's own front coupling. Zero
+    /// until set (the couplings of a bus file are set by the host, see [`super::hitch_pose`]).
+    pub fn set_consist_couplings_z(&mut self, k: usize, hitch_z: f64, front_z: f64) {
+        if let Some(c) = self.consist_couplings.get_mut(k) {
+            *c = [hitch_z, front_z];
+        }
+    }
+
     /// Removes all following units.
     pub fn clear_consist(&mut self) {
         self.consist.clear();
         self.trailer_loads.clear();
         self.consist_bodies.clear();
+        self.consist_couplings.clear();
         self.head_body = None;
     }
 

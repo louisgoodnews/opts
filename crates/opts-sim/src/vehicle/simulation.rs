@@ -44,6 +44,10 @@ pub struct VehicleSimulation {
     /// The same for each following unit, in the order of [`VehicleSimulation::consist`].
     #[serde(default)]
     pub consist_bodies: Vec<Option<UnitBody>>,
+    /// The couplings' heights `[hitch_z, front_z]` of each following unit (see
+    /// [`VehicleSimulation::set_consist_couplings_z`]), in the order of [`VehicleSimulation::consist`].
+    #[serde(default)]
+    pub consist_couplings: Vec<[f64; 2]>,
     /// Number of [`VehicleSimulation::teleport`] calls so far (wrapping). Readers that keep
     /// per-step state of their own compare it with the last value they saw to learn that the
     /// consist was re-seeded.

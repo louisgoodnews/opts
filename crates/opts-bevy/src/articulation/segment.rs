@@ -13,6 +13,9 @@ pub struct ArticulatedSegment {
     /// Height `z` of the segment's front coupling above its origin (m, OMSI); the tilt pivots about
     /// the coupling (see [`super::system::segment_placement`]).
     pub front_z: f32,
+    /// Height `z` of the rear coupling of the unit ahead above its origin (m, OMSI): the hitch the
+    /// simulation's coupling solve puts the front coupling on.
+    pub hitch_z: f32,
     /// Position `y` of the segment's rearmost axle in its own frame.
     pub rear_axle_y: f32,
     /// Joint limit on `|α|` in degrees (`[coupling_front_character]`).
@@ -69,6 +72,7 @@ impl ArticulatedSegment {
             hitch_local,
             front_local,
             front_z: 0.0,
+            hitch_z: 0.0,
             rear_axle_y,
             max_alpha_deg,
             load: None,

@@ -5,6 +5,7 @@ use crate::vehicle::inputs::GearPosition;
 
 mod grip;
 mod ground;
+mod hitch_pose;
 mod loads;
 mod roll;
 mod stepping;

@@ -42,6 +42,11 @@ pub struct TrailerKinematics {
     pub heading: f64,
     /// World position of the segment's origin.
     pub origin: DVec2,
+    /// Plan shift of the hitch under the leader's tilt (m, world): the rear coupling is raised
+    /// above the leader's origin, so its plan position moves with the leader's pitch and roll.
+    /// Set by the ground step ([`super::hitch_pose`]), zero on flat ground.
+    #[serde(default)]
+    pub hitch_shift: DVec2,
     prev_hitch: Option<DVec2>,
 }
 
@@ -57,11 +62,11 @@ pub struct TrailerState {
     pub alpha: f64,
 }
 
-fn fwd(h: f64) -> DVec2 {
+pub(super) fn fwd(h: f64) -> DVec2 {
     DVec2::new(h.sin(), h.cos())
 }
 
-fn right(h: f64) -> DVec2 {
+pub(super) fn right(h: f64) -> DVec2 {
     DVec2::new(h.cos(), -h.sin())
 }
 
@@ -87,6 +92,7 @@ impl TrailerKinematics {
             max_alpha: max_alpha_deg.to_radians().abs().clamp(0.1, 3.0),
             heading: leader_heading,
             origin: leader_pos,
+            hitch_shift: DVec2::ZERO,
             prev_hitch: None,
         };
         t.reseed(leader_pos, leader_heading);
@@ -114,6 +120,13 @@ impl TrailerKinematics {
         leader_pos
             + right(leader_heading) * self.hitch_local.x
             + fwd(leader_heading) * self.hitch_local.y
+            + self.hitch_shift
+    }
+
+    /// Moves the origin behind the hitch of the leader pose `(leader_pos, leader_heading)`, keeping
+    /// the segment's heading (after the hitch has moved under a tilt).
+    pub fn place(&mut self, leader_pos: DVec2, leader_heading: f64) {
+        self.origin = self.hitch(leader_pos, leader_heading) - self.front_offset(self.heading);
     }
 
     fn front_offset(&self, heading: f64) -> DVec2 {

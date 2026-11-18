@@ -60,6 +60,7 @@ const STANDSTILL_M_S: f32 = 0.01;
 mod consist_ops;
 mod construct;
 mod ground_ops;
+mod hitch_pose;
 mod simulation;
 mod step;
 

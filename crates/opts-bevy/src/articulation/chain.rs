@@ -44,6 +44,8 @@ pub(super) fn seed_consist(
             f64::from(seg.max_alpha_deg),
             seg.load.clone(),
         );
+        let k = sim.consist.len() - 1;
+        sim.set_consist_couplings_z(k, f64::from(seg.hitch_z), f64::from(seg.front_z));
     }
 }
 
