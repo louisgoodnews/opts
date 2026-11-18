@@ -97,7 +97,7 @@ _Work actively being executed in the current session._
 - [~] 🟡 **Wetness and snow on vehicles and scenery: texture flags, wetness ramp, material wetness, setting, snow and season variables, vehicle paint and tyres done; on-screen evidence open** (M-0121) — [Wetness and Snow on Vehicles and Scenery](../src/roadmap/phase-12/M-0121.md) — status 2026-11-16.
 - [~] 🟡 **Graphics overhaul: bloom done with its Off / Low / Natural / High setting; PBR wiring, ambient occlusion, anti-aliasing and measurements open; bloom ladder placement decided (manual only)** (M-0122) — [Graphics Overhaul](../src/roadmap/phase-12/M-0122.md) — status 2026-11-16.
 - [~] 🟡 **Fuel and battery state: simulation core, setting, save section, control command, HUD readout and bar gauge, `tank_percent` fed to the scripts and refuel key (F12) done; on-screen checks, script authority, refuel-when-stopped and audit open** (M-0123) — [Fuel and Battery State](../src/roadmap/phase-12/M-0123.md) — status 2026-11-16. Battery-off trigger untested and the card names no real trigger (ISS-014; [M-0160](../src/roadmap/phase-17/M-0160.md)).
-- [x] 🟢 **Passenger load: closed 2026-11-16** (M-0124) — [Passenger Load Physics](../src/roadmap/phase-12/M-0124.md) — steer-axle steering effort built (`agent/m0124b`); fore/aft load and the M-0073 rear-axle clause are recorded limits.
+- [~] 🟡 **Passenger load: reopened 2026-11-18** (M-0124, ISS-027; the dynamic-mass item is open) — [Passenger Load Physics](../src/roadmap/phase-12/M-0124.md) — steer-axle steering effort built (`agent/m0124b`); fore/aft load and the M-0073 rear-axle clause are recorded limits.
 - [x] 🟠 **Batch 4: Source files to the 150-line rule** (M-0151, refactor) — 🟢 Complete (2026-11-16): all files under the 150-line limit; acceptance 3 (`//!` module doc, enforced by `structure_audit.py`) and G1 (`./scripts/local-ci.sh` passes on the final tree) met
 
 > 📝 The agent populates this column only after starting execution
@@ -591,6 +591,7 @@ The agent should check these during P-001 audits:
 ---
 
 ## 📝 Changelog
+- `2026-11-18` — M-0124 reopened (ISS-027): the dynamic-mass item (acceleration, braking, steering effort and ride height from the passenger count) was never evidenced; the steering effort built 2026-11-16 stays. The passenger-boarding block moved from Phase 4 to Phase 10 in ROADMAP.md. Trailer-ground (`3f614abe`) is on `master` via `63f9b605`, so no merge decision is left open.
 - `2026-11-18` — Issue register and audits (`agent/roadmap-parity`, docs only): [issue register](../audit/issues-2026-11-18.md) ISS-001 to ISS-041; [feature audit](../audit/feature-audit-2026-11-18.md) (FEAT-01 to FEAT-15) and [project audit](../audit/project-audit-2026-11-18.md) (PRJ-01 to PRJ-20), both read against master `295df09f`; [OMSI parity matrix](../audit/omsi-parity-matrix-2026-11-18.md) (GAP-01 to GAP-20). Read-only: no cargo, no game run.
 - `2026-11-18` — Joint reads unit 0 (`17473f64`, on `master`): the trailer-front joint reads the coupled trailer, which fixed the yaw seam. The live test `trailer_front_live.rs` covers one trailer at two steer values only (ISS-011).
 - `2026-11-18` — Player root yaw and suspension interpolate between physics steps (`3baee292`, on `master` via `63f9b605`). Heave and pitch interpolation have no passing test; frame time is not measured (ISS-041).
