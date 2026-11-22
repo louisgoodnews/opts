@@ -28,7 +28,7 @@ cannot stall rendering; cannot become a remote-code-execution hole; small enough
 `127.0.0.1`.**
 
 - Off unless `--cli-port <N>` is passed (`0` = ephemeral port, logged); default port `44201`.
-- Non-loopback binds need both `--cli-bind` and `--cli-token`; the token is checked by an `auth` call.
+- Every server needs a token, loopback included (`OPTS_CLI_TOKEN` or `--cli-token-file`; never argv); the token is checked by an `auth` call. A non-loopback bind also needs `--cli-bind`. Reads time out after 30 s and at most 8 connections are served at once (ISS-002 to ISS-004).
 - The server runs on plain `std` threads (one listener, one per connection); it communicates with Bevy only
   through channels, drained by one system per frame. No async runtime is added.
 - Methods are specified in [Control Protocol](../architecture/control-protocol.md); results and error codes

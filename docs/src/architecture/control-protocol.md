@@ -14,8 +14,10 @@ schemas is the generated [Control Protocol Reference](../reference/control-proto
 | Transport | TCP |
 | Default bind | `127.0.0.1:44201` (only when `--cli-port <N>` is given) |
 | Ephemeral port | `--cli-port 0`: the OS picks a port; the address is logged at `INFO` as `control server listening addr=127.0.0.1:NNNNN` |
-| Token | a token of at least 32 characters; an empty or shorter `--cli-token` is refused at start, on every bind |
-| Non-loopback | refused unless a valid `--cli-token` is set (`--cli-bind 0.0.0.0` additionally required) |
+| Token | **required on every bind, loopback included**; a token of at least 32 characters, read from the environment variable `OPTS_CLI_TOKEN` or from the file given by `--cli-token-file <PATH>` (§7); the server refuses to start without one, and an empty or shorter token is refused at start |
+| Non-loopback | `--cli-bind` with an address other than loopback (`0.0.0.0` for LAN) additionally needs the same token |
+| Read timeout | a connection that sends no complete line for **30 s** is closed |
+| Connection cap | at most **8** connections at once; a ninth gets one error line (`1006 Busy`, id `null`) and is closed |
 | Framing | UTF-8 JSON, one message per line (`\n`-terminated), at most 1 MiB per line |
 | Concurrency | one thread per connection; any number of clients; requests of one connection are answered in order |
 
@@ -75,7 +77,7 @@ specified and answers `1007` until implemented.
 | `help` | `[command]` | the descriptor of one command: `{command, group, summary, since, args:[{name,type,required,position,aliases,values?}], result, doc, debug, implemented}` | P1 |
 | `commands` | `[group]` | every descriptor as above plus the error table; the machine-readable twin of the [reference page](../reference/control-protocol.md) (protocol 1.1) | P1 |
 | `capabilities` | — | `{groups:{name:[{method,since,implemented}]}}` | P1 |
-| `auth` | `{token}` | `{ok:true}` — required first when `--cli-token` is set | P1 |
+| `auth` | `{token}` | `{ok:true}` — required first on every server (the token is always set) | P1 |
 | `shutdown` | `[force]` | `{ok:true}` then the app exits (`force` skips the clean shutdown path) | P1 |
 
 ### 4.2 Query
@@ -281,8 +283,15 @@ comparing versions.
 ## 7. Security model
 
 - Default is **off**. Without `--cli-port` no socket exists.
-- Loopback only by default. A non-loopback bind requires `--cli-token` and `--cli-bind`; the token is compared in
-  constant time and required via `auth` before any other call.
+- Loopback only by default. There is no unauthenticated mode, loopback included: every server needs a token, and
+  the token is compared in constant time and required via `auth` before any other call. A non-loopback bind also
+  needs `--cli-bind`.
+- **Token sources.** The token is read from the environment variable `OPTS_CLI_TOKEN` or from a file named by
+  `--cli-token-file <PATH>` (first line, the line end removed; keep the file readable only by you). Setting both
+  is refused. The token is never taken from the command line: `--cli-token` (game) and `--token` (`opts-cli`) are
+  refused with an error, because argv is visible to other users and stays in the shell history.
+- **Read timeout and connection cap.** A connection that is silent for 30 s is closed. At most 8 connections are
+  served at once; a ninth gets `1006 Busy` and is closed (§1).
 - **Token rules.** An empty token, or one shorter than **32 characters**, is refused when the server starts, on any
   bind. Use a random token of that length.
 - **Auth throttle.** `auth` is not exempt from limits. Failed `auth` calls are counted per peer address and
@@ -321,8 +330,7 @@ brake and throttle, `ui.wait_for distance_above 100` (the bus had driven 100.2 m
 the pause overlay, `pause.settings`, `ui.scroll to bottom` on the settings view, `ui.click` on a texture-filtering option
 (`settings.get` confirmed it), `pause.leave` and the confirmation, back on Home. Nothing in it sleeps: every step waits for a condition.
 
-**Connecting.** Start the game with `opts-game --cli-port 44201` (add `--cli-token <T>` if the port is
-reachable by others). The listening address is logged at `INFO` (`control server listening addr=…`), which is
+**Connecting.** Start the game with `opts-game --cli-port 44201` and `OPTS_CLI_TOKEN` set to a token of at least 32 characters (or `--cli-token-file <PATH>`; the token is required even on loopback). The listening address is logged at `INFO` (`control server listening addr=…`), which is
 how an agent finds an ephemeral port (`--cli-port 0`).
 
 | Use | When |
