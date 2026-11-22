@@ -422,7 +422,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **🗺️ Full-Size In-Game Map and Map Switching** — [M-0108](phase-11/M-0108.md) — ✅ done 2026-10-19
   - [x] Full-size map on F6 (pan, zoom, the whole map, position and heading); builds on the mini map (M-0071).
   - [x] Map switching from the Alt menu (builds on sessions M-0068/M-0069).
-- [~] **🚇 Tunnel Detection and Spatial Zones** — [M-0115](phase-11/M-0115.md) — 🚧 in progress 2026-11-16, partial (zone model, tracker, per-tile registry wired to tile load and unload, sampler, `zones.query` and the debug overlay done; census, detector prototypes, measurement and detector open)
+- [~] **🚇 Tunnel Detection and Spatial Zones** — [M-0115](phase-11/M-0115.md) — 🚧 in progress 2026-11-16, partial (zone model, tracker, per-tile registry wired to tile load and unload, sampler, `zones.query`, the debug overlay and the tile-loader feed of splines (ISS-012, 2026-11-22) done; census, real-data check, detector prototypes and measurement open)
   - [~] Tunnel detection and a `SpatialZone` abstraction as the precursor for reverb and light-room ambience.
 - [x] **🎛️ Setvar Runtime Editor and CTI Value Types** — [M-0110](phase-11/M-0110.md) — ✅ done 2026-10-30
   - [x] Alt-menu setvar editor (2026-10-20); ints, choices and numbers beyond binary exist since M-0078 and are carried by configurations; the per-option "needs respawn" marker and group headings are done 2026-10-30 (only documented restarts are marked; Q-SV02 stays open for the rest).
@@ -524,7 +524,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 
 - [ ] **🧩 Articulation seam (GAP-02)** — [M-0053](phase-4/M-0053.md), in progress (existing)
   - [ ] Multi-angle, multi-trailer live seam test with a pivot-at-H assertion; pitch and roll (ISS-011, ISS-037).
-- [ ] **🚇 Tunnel zones fed by the tile loader (GAP-04)** — [M-0115](phase-11/M-0115.md), in progress (existing)
+- [~] **🚇 Tunnel zones fed by the tile loader (GAP-04)** — [M-0115](phase-11/M-0115.md), feed done 2026-11-22 (ISS-012); the real-data check and labelling stay open on M-0115
   - [ ] Feed the parsed splines; label one real tunnel (ISS-012).
 - [ ] **🔌 Battery-off path test (GAP-05)** — [M-0160](phase-17/M-0160.md) (ISS-014)
   - [ ] Script-rig test of the battery switch; the four HH109 `cockpit.osc` files checked and recorded.

@@ -14,8 +14,9 @@ pub enum ZoneKind {
     Tunnel,
 }
 
-/// A zone in the world: an axis-aligned box in the ground plane (`x` east, `y` north), built at
-/// tile load and dropped at unload.
+/// A zone in the world: an axis-aligned box in the ground plane, built at tile load and dropped at
+/// unload. The plane is the one the sampler reads: `x` is east and `y` is the Bevy `z` axis, which
+/// is `-north` (ISS-012 corrected this comment; it said `y` north).
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct SpatialZone {
     pub id: ZoneId,

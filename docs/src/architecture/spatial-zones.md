@@ -95,6 +95,17 @@ name, 218 with a tunnel texture). Known classes:
 * No object in the corpus declares an inside volume (see [lighting system §4](lighting-system.md)), so the
   boxes will be derived, not read.
 
+## 4a. The tile feed (ISS-012)
+
+The tile loader keeps each tile's parsed `[spline]` instances (`WorldLoadJob::tile_splines`, filled when the tile
+is read) and parses each spline's `.sli` profile once (`WorldLoadJob::sli`). `sync_tile_zones` passes both to
+`tile_zones` (`in_game/omsi_world/tile/zones.rs`). That reads only splines of at least 15 m that are not
+overhead-line profiles, and hands the rest to `detect_tile_zones`, the covered-section rule.
+
+The boxes are in the plane the sampler reads: the spline's ground ends (`spline_pose`, plus the tile origin) with
+north as `-z`, the same mapping the mesh extrusion uses. The thresholds of section 3 are unchanged (3.5 m, 2.0 m,
+15 m, all provisional and unmeasured on real data; see the ISS-012 issue file).
+
 ## 5. Open items
 
 * Corpus-wide placements (the `.sco` placements on other maps, and whether the 200 candidates sit on a road
