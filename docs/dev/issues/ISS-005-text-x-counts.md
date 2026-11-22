@@ -6,7 +6,7 @@
 | **Severity** | major (robustness) |
 | **Milestone** | [M-0018](../../src/roadmap/phase-3/M-0018.md) 3D Mesh Asset Loaders and Conversion Bridge (`.o3d` and `.x`), which owns the `.x` reader |
 | **Feature audit** | none (project audit PRJ-04, safety 6) |
-| **Status** | in progress 2026-11-22 on `agent/text-x-bounds` |
+| **Status** | done 2026-11-22 (bound and tests; see outcome) |
 
 ## Problem
 
@@ -27,4 +27,8 @@ The binary reader bounds its counts: `MAX_LIST = 50_000_000` in `x/binary.rs:26`
 
 ## Outcome
 
-Open. Filled in at completion.
+- Done 2026-11-22 on `agent/text-x-bounds`. Every file-supplied list count in `parse/mesh.rs` and `parse/material.rs` goes through `TokenReader::parse_count` (`parse/reader.rs`), which rejects a count larger than the tokens left with an error and allocates nothing.
+- Count tests `count_tests` (4 of 4): a valid quad still parses; huge vertex, face and per-face index counts (`4000000000`) return an error whose message names the tokens left (`txb-count-final.log`).
+- Removal check: the bound was stripped (`if false && count > left`) and `count_tests::a_huge_vertex_count_is_an_error_not_an_allocation` FAILED with `a count beyond the file must fail: expected the count bound error, got UnexpectedToken { offset: 137, expected: "float number", found: "CloseBrace" }` (`txb-removal2.log`). `reader.rs` was restored and verified byte-identical to the saved copy; the test passes again with the bound.
+- Earlier removal run (before the tests asserted the message) passed with the bound removed, because the parse fell through to end-of-file; the assertion now checks the message, which is why the test discriminates.
+- Note: the removal FAILED line is the cargo-test output for the huge-count test only; the other two count tests were not removal-checked.

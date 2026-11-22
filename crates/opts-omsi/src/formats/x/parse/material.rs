@@ -8,7 +8,7 @@ pub(super) fn parse_material_list(
 ) -> Result<(Vec<u32>, Vec<XMaterial>), XParseError> {
     reader.expect_open_brace()?;
     let _n_materials = reader.parse_u32()? as usize;
-    let n_faces = reader.parse_u32()? as usize;
+    let n_faces = reader.parse_count()?;
     let mut face_materials = Vec::with_capacity(n_faces);
     for _ in 0..n_faces {
         face_materials.push(reader.parse_u32()?);

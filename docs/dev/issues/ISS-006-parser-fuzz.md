@@ -6,7 +6,7 @@
 | **Severity** | major (robustness) |
 | **Milestone** | [M-0018](../../src/roadmap/phase-3/M-0018.md) 3D Mesh Asset Loaders and Conversion Bridge (`.o3d` and `.x`); the `.bus`, `.sli` and `.hof` readers are owned by their own milestones and are covered here only for truncation |
 | **Feature audit** | none (project audit PRJ-04, architecture 2) |
-| **Status** | in progress 2026-11-22 on `agent/text-x-bounds` |
+| **Status** | done 2026-11-22 for truncation tests; fuzz targets open |
 
 ## Problem
 
@@ -20,4 +20,6 @@ There is no `fuzz/` directory and no proptest, quickcheck or arbitrary dependenc
 
 ## Outcome
 
-Open. Filled in at completion.
+- Truncation tests in `crates/opts-omsi/tests/truncation_parsers.rs` (4 of 4 pass, `txb-trunc-final.log`): every prefix of an in-code sample of text `.x` (`parse_x`), `.bus` (`BusManifest::parse_bytes`), `.sli` (`SplineProfile::parse`) and `.hof` (`HofFile::parse_bytes`) returns without panic; each full sample parses. No game file is read.
+- Removal check for the truncation tests was not run; the tests were run only in their passing form. The earlier X-format panics in `txb-x.log` do not reproduce on the current code.
+- Still open: the cargo-fuzz targets for `.x`, `.o3d`, `.bus` and the map formats. No `fuzz/` directory or toolchain exists; cargo-fuzz is not installed.

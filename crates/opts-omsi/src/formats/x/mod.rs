@@ -23,4 +23,6 @@ pub use header::{parse_header, XHeader};
 pub use parse::parse_x;
 
 #[cfg(test)]
+mod count_tests;
+#[cfg(test)]
 mod tests;
