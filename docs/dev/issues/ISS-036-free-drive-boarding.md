@@ -6,7 +6,7 @@
 | **Severity** | major (player) |
 | **Milestone** | [M-0152](../../src/roadmap/phase-16/M-0152.md) Free-drive boarding rule; builds on [M-0101](../../src/roadmap/phase-4/M-0101.md) |
 | **Feature audit** | FEAT-05 in [feature-audit-2026-11-18](../../audit/feature-audit-2026-11-18.md) |
-| **Status** | closed 2026-11-22 in commit 7e465ce7 on `agent/free-drive`: rule (a) in `admits`, a `bus = None` boarding test that fails with the branch removed, spec and cards updated.  |
+| **Status** | rule closed 2026-11-22 in commit 7e465ce7 on `agent/free-drive`: rule (a) in `admits` and an `admits`-level test. Boarding-path tests added 2026-11-22 on `agent/free-drive-rig` (commit: see the board). The in-game check at a timetabled stop is open. |
 
 ## Problem
 
@@ -33,6 +33,7 @@ A free drive (no trip) boards any waiting person whose destination the stop serv
 
 ## Done when
 
-- A free drive takes passengers at a stop that serves their destination, shown by a test that drives this path.
-- The test fails when the free-drive branch is removed.
+- A free drive takes passengers at a stop that serves their destination, shown by a test that drives the boarding path (not only `admits`): `passengers::system::board::tests::a_free_drive_boards_an_unseen_passenger_whose_destination_the_stop_serves` drives `board_unseen`, and `a_free_drive_boards_a_walking_passenger_whose_destination_the_stop_serves` drives `walk_to_doors`. Both use a `bus = None` and in-code fixtures: no installed game data is needed, and nothing skips. A person whose destination the stop does not serve stays behind in both tests. The test is an ECS-free call of the two functions, not a run of `update_passengers` in the game.
+- The tests fail when the free-drive branch is removed. Checked 2026-11-22: with `(Some(_), None) => false` both fail (assertions `the served person boards`, `only the served person boards`), and the branch restored passes.
+- Open: the in-game check (M-0152 acceptance 3, a free drive at a timetabled stop). The game was not run.
 - M-0152 and the board say what was built, with the commit hash.

@@ -131,7 +131,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 - [ ] 🔴 **Control server: refuse empty and short tokens and any non-loopback bind until auth is throttled, reads time out and connections are capped; token on loopback; token out of argv** (ISS-001 blocker, ISS-002, ISS-003, ISS-004; PRJ-02, PRJ-06, PRJ-07, PRJ-15).
 - [ ] 🔴 **Fails-on-parent rule: run `trailer_front_live.rs` on the parent of `3420545e` and record the failure; add the rule and a logged-skip rule to the Definition of Done** (ISS-022 blocker, ISS-023; PRJ-01, PRJ-08). Governance: a suite pass is not evidence for a fix.
-- [x] 🟠 **Free-drive boarding rule and a `bus = None` boarding test** (ISS-036; [M-0152](../src/roadmap/phase-16/M-0152.md)) — rule decided 2026-11-22 (board anyone whose destination the stop serves); done 2026-11-22 on `agent/free-drive`, commit 7e465ce7; work item [ISS-036](issues/ISS-036-free-drive-boarding.md).
+- [x] 🟠 **Free-drive boarding rule and a `bus = None` boarding test** (ISS-036; [M-0152](../src/roadmap/phase-16/M-0152.md)) — rule decided 2026-11-22 (board anyone whose destination the stop serves); rule and `admits` test done 2026-11-22 on `agent/free-drive`, commit 7e465ce7; boarding-path tests (`board_unseen`, `walk_to_doors`) done 2026-11-22 on `agent/free-drive-rig`, commit: see the completion line; in-game check open; work item [ISS-036](issues/ISS-036-free-drive-boarding.md).
 - [~] 🟠 **Help controls table: add the missing live bindings and a reverse test over `action_keys::ACTIONS`** (ISS-015; in progress 2026-11-22 on `agent/feature-gap`; [M-0164](../src/roadmap/phase-17/M-0164.md)).
 - [ ] 🟠 **Lighting doc: correct `lighting-system.md` lines 428 and 444 and the mirror column to match `light_quality/ladder.rs`** (ISS-017; FEAT-07).
 - [ ] 🟠 **Battery-off path: script-rig test and the four HH109 `cockpit.osc` checks** (ISS-014; [M-0160](../src/roadmap/phase-17/M-0160.md)).
@@ -176,7 +176,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Agent rules into the repository (a CLAUDE.md or the Definition of Done)** (ISS-029; PRJ-20).
 
 #### M-0152–M-0159 — Phase 16: Feature parity with OMSI: bus operation (proposed 2026-11-18, [phase page](../src/roadmap/phase-16/README.md))
-- [x] 🟠 **M-0152 Free-drive boarding rule** — rule decided 2026-11-22; done 2026-11-22 on `agent/free-drive`, commit 7e465ce7.
+- [x] 🟠 **M-0152 Free-drive boarding rule** — rule decided 2026-11-22; done 2026-11-22 on `agent/free-drive` (rule, commit 7e465ce7) and `agent/free-drive-rig` (boarding-path tests); in-game check (acceptance 3) open.
 - [ ] 🟡 **M-0157 Breakdowns, failures and repair** — owner decision whether breakdowns are wanted (GAP-03).
 - [ ] 🟡 **M-0156 Cash desk and change** (GAP-06).
 - [ ] 🟡 **M-0155 Timetable circuits by day type and night** (GAP-07).
