@@ -6,7 +6,7 @@
 | **Severity** | blocker (safety) |
 | **Milestone** | [M-0043](../../src/roadmap/phase-5/M-0043.md) CLI Control Protocol & Hot Reload (owns [ADR-0006](../../src/adr/0006-control-protocol.md) and the [control protocol](../../src/architecture/control-protocol.md)) |
 | **Audit** | PRJ-02 in [project-audit-2026-11-18](../../audit/project-audit-2026-11-18.md), safety note 1 |
-| **Status** | in progress (agent/control-server-auth, started 2026-11-22, from master `b8a4b706`) |
+| **Status** | done (commit `0c6f1fbb` on agent/control-server-auth, from master `b8a4b706`; started and finished 2026-11-22) |
 
 ## Problem
 
@@ -38,4 +38,22 @@ Refuse empty and short tokens (at least 32 random characters). Throttle failed `
 
 ## Outcome
 
-Open. See the Work list; filled in when the fix lands.
+Fixed in `0c6f1fbb` (`fix(control): refuse short tokens and throttle failed auth calls`, M-0043). The commit does what the Work list asks:
+
+- `start` in `crates/opts-bevy/src/control/server.rs` refuses a `--cli-token` shorter than `MIN_TOKEN_CHARS` (32), an empty one included, before the bind check, so every bind is covered.
+- `crates/opts-bevy/src/control/server/throttle.rs` counts failed `auth` calls per peer (5 in a row: 60 s lockout) and across peers (50 in 60 s: 60 s lockout for everyone). `auth` is no longer exempt in `dispatch.rs`; `auth.rs` and `connection.rs` are updated to match.
+- Tests: `control/server/tests.rs` and `control/server/tests_throttle.rs`.
+
+Test runs (`cargo test -p opts-bevy --lib control::server:: --no-fail-fast`, shared target `opts-scratch/target-featuregap`):
+
+- Earlier runs (before this session, filters not recorded in the logs): `test1.log` 13 passed, `test2.log` 3 passed, `test3.log` 13 passed, all `ok`.
+- Removal check: the token-length check in `start` was removed (`git` diff of `server.rs`, 8 lines). Result, log `opts-scratch/work/iss001/removal.log`:
+  - `control::server::tests::an_empty_token_is_refused_on_loopback ... FAILED` (`tests.rs:45`, `assertion \`left == right\` failed`, left `None`, right `Some(InvalidInput)`)
+  - `control::server::tests::a_short_token_is_refused_on_loopback ... FAILED` (`tests.rs:54`, same assertion)
+  - `test result: FAILED. 11 passed; 2 failed; 0 ignored; 0 measured; 630 filtered out; finished in 0.00s`
+- Restored with `git checkout -- crates/opts-bevy/src/control/server.rs` (tree equal to HEAD), log `opts-scratch/work/iss001/restored.log`:
+  - `test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 630 filtered out; finished in 0.00s`
+
+A first removal run (`removal-stale-run.log`) reported 3 tests and passed. It used a stale test binary in the shared target directory, so it was not evidence and is kept only for the record. The rerun above recompiled `opts-bevy` after touching the sources.
+
+Still open: ISS-002 (loopback without a token), ISS-003, ISS-004 (token in argv).
