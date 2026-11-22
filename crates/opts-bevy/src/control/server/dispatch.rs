@@ -10,6 +10,7 @@ use serde_json::Value;
 
 use super::auth::{auth_reply, gate};
 use super::limiter::Limiter;
+use super::throttle::Caller;
 use crate::control::state::{Pending, PendingFlags};
 
 /// Seconds the app has to pick a request up before it fails with `1005`.
@@ -70,10 +71,11 @@ pub(super) fn handle_single(
     token: Option<&str>,
     authed: &mut bool,
     limiter: &mut Limiter,
+    caller: Caller<'_>,
 ) -> Option<Response> {
     let id = req.id.clone();
     if req.method == "auth" {
-        let r = auth_reply(&req, token, authed);
+        let r = auth_reply(&req, token, authed, caller);
         return id.map(|_| r);
     }
     let reply_id = id.clone().unwrap_or(Value::Null);
@@ -92,6 +94,7 @@ pub(super) fn handle_batch(
     token: Option<&str>,
     authed: &mut bool,
     limiter: &mut Limiter,
+    caller: Caller<'_>,
 ) -> Vec<Response> {
     if items.len() > MAX_BATCH {
         let e = RpcError::new(
@@ -117,7 +120,7 @@ pub(super) fn handle_batch(
         let id = req.id.clone();
         let reply_id = id.clone().unwrap_or(Value::Null);
         if req.method == "auth" {
-            let r = auth_reply(&req, token, authed);
+            let r = auth_reply(&req, token, authed, caller);
             slots.push(if id.is_some() {
                 Slot::Done(r)
             } else {

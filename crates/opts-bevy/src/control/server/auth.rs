@@ -1,9 +1,12 @@
 //! Authentication and admission gate for incoming control requests.
 
+use std::time::Instant;
+
 use opts_cli::protocol::{code, Request, Response, RpcError};
 use serde_json::{json, Value};
 
 use super::limiter::Limiter;
+use super::throttle::Caller;
 
 pub(super) fn constant_time_eq(a: &str, b: &str) -> bool {
     let (a, b) = (a.as_bytes(), b.as_bytes());
@@ -37,16 +40,33 @@ pub(super) fn gate(
     }
 }
 
-pub(super) fn auth_reply(req: &Request, token: Option<&str>, authed: &mut bool) -> Response {
+pub(super) fn auth_reply(
+    req: &Request,
+    token: Option<&str>,
+    authed: &mut bool,
+    caller: Caller<'_>,
+) -> Response {
     let id = req.id.clone().unwrap_or(Value::Null);
-    match token {
-        None => Response::ok(id, json!({ "ok": true })),
-        Some(t) => match req.params.get("token").and_then(Value::as_str) {
-            Some(given) if constant_time_eq(given, t) => {
-                *authed = true;
-                Response::ok(id, json!({ "ok": true }))
-            }
-            _ => Response::err(id, RpcError::new(code::UNAUTHORIZED, "wrong token")),
-        },
+    let Some(t) = token else {
+        return Response::ok(id, json!({ "ok": true }));
+    };
+    let now = Instant::now();
+    if let Err(wait) = caller.throttle.check(caller.addr, now) {
+        let msg = format!(
+            "too many failed attempts; retry in {} s",
+            wait.as_secs() + 1
+        );
+        return Response::err(id, RpcError::new(code::BUSY, msg));
+    }
+    match req.params.get("token").and_then(Value::as_str) {
+        Some(given) if constant_time_eq(given, t) => {
+            *authed = true;
+            caller.throttle.succeeded(caller.addr);
+            Response::ok(id, json!({ "ok": true }))
+        }
+        _ => {
+            caller.throttle.failed(caller.addr, now);
+            Response::err(id, RpcError::new(code::UNAUTHORIZED, "wrong token"))
+        }
     }
 }

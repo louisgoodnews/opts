@@ -15,15 +15,20 @@ mod auth;
 mod connection;
 mod dispatch;
 mod limiter;
+mod throttle;
 
 #[cfg(test)]
 use self::auth::constant_time_eq;
 use self::connection::serve_connection;
 #[cfg(test)]
 use self::limiter::Limiter;
+use self::throttle::AuthThrottle;
 
 /// Capacity of the command queue.
 pub const QUEUE_CAPACITY: usize = 1024;
+
+/// Shortest token `--cli-token` accepts (audit PRJ-02: at least 32 random characters).
+pub const MIN_TOKEN_CHARS: usize = 32;
 
 /// Server settings.
 #[derive(Debug, Clone)]
@@ -53,8 +58,17 @@ impl Drop for ServerHandle {
 /// Starts the listener thread.
 ///
 /// # Errors
-/// An `io::Error` when the address is invalid, not loopback without a token, or cannot be bound.
+/// An `io::Error` when the address is invalid, the token is shorter than [`MIN_TOKEN_CHARS`] (an empty
+/// token included), a non-loopback address has no token, or the address cannot be bound.
 pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<ServerHandle> {
+    if let Some(t) = &config.token {
+        if t.chars().count() < MIN_TOKEN_CHARS {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("--cli-token must be at least {MIN_TOKEN_CHARS} characters"),
+            ));
+        }
+    }
     let ip: IpAddr = config.bind.parse().map_err(|e| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
@@ -72,6 +86,7 @@ pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<
     let stop = Arc::new(AtomicBool::new(false));
     let flag = stop.clone();
     let token = config.token.clone();
+    let throttle = Arc::new(AuthThrottle::default());
     std::thread::Builder::new()
         .name("control-listener".into())
         .spawn(move || {
@@ -81,9 +96,12 @@ pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<
                 }
                 let Ok(stream) = stream else { continue };
                 let (tx, token, flag) = (tx.clone(), token.clone(), flag.clone());
+                let throttle = throttle.clone();
                 let spawned = std::thread::Builder::new()
                     .name("control-conn".into())
-                    .spawn(move || serve_connection(stream, &tx, token.as_deref(), &flag));
+                    .spawn(move || {
+                        serve_connection(stream, &tx, token.as_deref(), &flag, &throttle);
+                    });
                 if let Err(e) = spawned {
                     tracing::warn!(target: "opts_bevy::control", "cannot start connection thread: {e}");
                 }
@@ -97,3 +115,5 @@ pub type CommandSender = Sender<Pending>;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_throttle;
