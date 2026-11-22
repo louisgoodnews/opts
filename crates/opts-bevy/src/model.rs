@@ -36,6 +36,7 @@ mod cache;
 mod moisture;
 mod o3d_loading;
 mod overrides;
+mod season_refresh;
 mod texture_load;
 mod types;
 
@@ -46,6 +47,7 @@ pub use overrides::{
     find_override, is_weather_overlay, overlay_class, transmap_glass_rgba, OverlayClass,
     TextureOverride, TRANSMAP_OPAQUE, TRANSMAP_SPLIT_SHARE,
 };
+pub use season_refresh::{refresh_loaded, SeasonTexturePlugin};
 pub use types::{ContentStats, ModelPart};
 
 /// The sampler of OMSI textures: repeating on all axes, filtered per the "Texture filtering"

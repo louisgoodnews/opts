@@ -27,9 +27,10 @@ pub struct WeatherEffects {
     /// setting *Wet and snowy surfaces*, All; `docs/src/roadmap/phase-12/M-0121.md`).
     pub wet_objects: bool,
     /// How strong rain is drawn, in percent of what the weather says (100: as the preset; the
-    /// settings `gameplay.rain_intensity`): the rate of the drops, the wetness, the puddles.
+    /// settings `graphics.rain_intensity`): the rate of the drops, the wetness, the puddles.
     pub rain_percent: u16,
-    /// The same for snow (`gameplay.snow_intensity`): the rate of the flakes and the cover.
+    /// The same for snow (`graphics.snow_intensity`): the rate of the flakes, and the cover of
+    /// the ground and roads while the wet and snowy ground setting is on (`wanted_state`).
     pub snow_percent: u16,
 }
 
