@@ -165,7 +165,7 @@ _None._
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
 #### Issue register 2026-11-18 (minor and structural; [register](../audit/issues-2026-11-18.md))
-- [x] 🟠 **Tunnel zones: the tile loader feeds parsed splines** (ISS-012; done 2026-11-22 in `cd2ccceb` on `agent/tunnel-zones`; [issue file](issues/ISS-012-tunnel-zones-empty-splines.md)). The real-data check and the labelled tunnel stay open on [M-0115](../src/roadmap/phase-11/M-0115.md).
+- [x] 🟠 **Tunnel zones: the tile loader feeds parsed splines** (ISS-012; done 2026-11-22 in `cd2ccceb` on `agent/tunnel-zones`; [issue file](issues/ISS-012-tunnel-zones-empty-splines.md)). Real-data test run 2026-11-22 (ran, 2 zones; removal FAILED); ISS-012 stays in progress. The labelled tunnel and the thresholds stay open on [M-0115](../src/roadmap/phase-11/M-0115.md).
 - [x] 🟠 **Snow on scenery: refresh loaded textures on a snow-flag change** (ISS-016; [M-0121](../src/roadmap/phase-12/M-0121.md); [issue file](issues/ISS-016-snow-load-order.md)) — done 2026-11-22 on agent/snow-refresh (commit 6395d448); derived copies are not refreshed (limit recorded).
 - [ ] 🟠 **Scale and boundary: a dated burn-down per engine crate, one adapter per format; extend the ratchet to `opts-game/src/in_game/omsi_world`** (ISS-031, ISS-032; PRJ-03, PRJ-05).
 - [ ] 🟡 **Control-server and file safety: symlink refusal in `check_write`, save-path component check, `expect` on the rail path** (ISS-007, ISS-008, ISS-009).

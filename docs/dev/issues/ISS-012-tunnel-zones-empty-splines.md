@@ -6,7 +6,7 @@
 | **Severity** | major (correctness) |
 | **Milestone** | [M-0115](../../src/roadmap/phase-11/M-0115.md) Tunnel Detection and Spatial Zones |
 | **Feature audit** | FEAT-06 in [feature-audit-2026-11-18](../../audit/feature-audit-2026-11-18.md) |
-| **Status** | feed fixed 2026-11-22 on `agent/tunnel-zones` (the tile loader feeds the splines; M-0164 is on master, so the sequencing below is met). Real-data check and labelling still open, see Outcome |
+| **Status** | feed fixed 2026-11-22 on `agent/tunnel-zones`; real-data test run 2026-11-22 on `agent/tunnel-real-data` (ran, 2 zones, removal FAILED). Still in progress: `zones.query` in play, thresholds, precision and recall, on-screen check. See Outcome |
 
 ## Problem
 
@@ -79,3 +79,31 @@ Start only after [M-0164](../../src/roadmap/phase-17/M-0164.md) (Help table, bra
   Berlin-Spandau: its only covered profile is the S-Bahn `rail_wood_S49_tunnel.sli` (ceiling at 6 m, 120 m). The
   label should use that S-Bahn track, or the owner names another tunnel.
 - Thresholds: unchanged; no measured evidence from real data in this run.
+
+## Real-data check (2026-11-22, `agent/tunnel-real-data`)
+
+- Run: `OMSI_PATH="/…/steamapps/common/OMSI 2"`, `cargo test -p opts-game zones -- --nocapture`. The test ran and did
+  not skip. Summary: `Berlin-Spandau: 329 tiles, 2 covered-spline zones`; `berlin_spandau_covered_track_gives_zones_from_the_installed_tiles ... ok`;
+  `test result: ok. 3 passed; 0 failed`. Log: `opts-scratch/work/tunnel-real/run1-real.log`.
+- Covered sections: the only roofed profile on the map is `rail_wood_S49_tunnel.sli` (ceiling 6.00 m, half-width 2.60 m) on
+  `tile_2405_11277.map`, four placed instances: spline 2700263 (80 m), 2700266 (20 m), 2700265 (10 m), 3224975 (10 m).
+  The rule gives a zone for the two 15 m and longer ones (2 zones). The census figure of 120 m is the four instances together.
+  No U-Bahn tunnel is found on the map. Labels: `docs/dev/issues/ISS-012-berlin-spandau-labels.md`.
+- Thresholds: unchanged. Against this tunnel the height (6.00 m vs 3.5 m) and width (5.2 m vs 2.0 m) pass with margin; the
+  length does not: the two 10 m pieces of the same profile fall below 15 m. Whether they are roofed in the game is not
+  verified, so this is evidence to check, not a reason to change 15 m. The nearest tall non-tunnel profile
+  (`grenzmauer75_01.sli`, 3.74 m) is a wall, rejected by the width test.
+- Removal check: the feed was cut at the real-data test's `tile_zones` call (empty spline list). Result:
+  `berlin_spandau_covered_track_gives_zones_from_the_installed_tiles ... FAILED`, `panicked at zones_data_tests.rs:52:5`:
+  `the covered S-Bahn track gives no zone`; `Berlin-Spandau: 329 tiles, 0 covered-spline zones`. File restored
+  (`git checkout`), and the rerun passes. Log: `opts-scratch/work/tunnel-real/run2-feed-removed.log`.
+  Gap: the cut at `sync_tile_zones` (passing `&[]` into `tile_zones`) is not caught by this test; it calls `tile_zones` directly.
+
+Done-when status:
+
+- `zones.query` returns sections for a real tunnel in play: not met (no game run in this check).
+- A test fails when the feed is removed: met for `tile_zones` input (FAILED above). Not met for the loader call site in `sync_tile_zones`.
+- Thresholds checked against one labelled tunnel, result on M-0115: met in part (the comparison is in the labels file and M-0115 card); the label is by profile, not by eye.
+
+Still open: the thresholds (15 m and the 10 m pieces), precision and recall on the labelled set of the other two maps, the
+on-screen overlay check, and a test that covers the `sync_tile_zones` feed.
