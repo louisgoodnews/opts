@@ -67,6 +67,17 @@ fn bloom_needs_hdr_and_does_not_switch_it_on() {
 }
 
 #[test]
+fn bloom_is_removed_when_the_camera_loses_hdr() {
+    let mut app = app(on(BloomLevel::Natural));
+    let cam = camera(&mut app, true);
+    app.update();
+    assert!(app.world().get::<Bloom>(cam).is_some());
+    app.world_mut().entity_mut(cam).remove::<Hdr>();
+    app.update();
+    assert!(app.world().get::<Bloom>(cam).is_none());
+}
+
+#[test]
 fn other_cameras_never_get_bloom() {
     let mut app = app(on(BloomLevel::Natural));
     let other = app.world_mut().spawn(Hdr).id();

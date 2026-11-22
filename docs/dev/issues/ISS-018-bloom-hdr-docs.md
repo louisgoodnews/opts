@@ -26,3 +26,10 @@
 - Both bloom unit tests pass.
 - The intensities remain marked unmeasured in the lighting document.
 - The board line and this file's status are updated on completion.
+
+## Outcome (2026-11-22, `agent/settings-test-hygiene`)
+
+- Docs: the HDR dependency is in the `graphics.bloom` row of `docs/src/reference/settings.md`, in `set-bloom-desc` (en and de), and in `lighting-system.md` section 9.1. The reference page was checked by the generator test and matches it (`reference_page_is_up_to_date ... ok`); no regeneration was needed beyond the row edit.
+- Tests: `cargo test -p opts-bevy --lib bloom` gives `test result: ok. 7 passed; 0 failed` (includes `bloom::tests::bloom_needs_hdr_and_does_not_switch_it_on` and the new `bloom::tests::bloom_is_removed_when_the_camera_loses_hdr`).
+- Removal check: in `crates/opts-bevy/src/bloom.rs` the removal branch of `sync_bloom` was changed to `if have.is_some() && want.is_none()`, so Bloom is kept on an HDR-less camera. The new test then fails (`bloom_is_removed_when_the_camera_loses_hdr ... FAILED`, panic at `bloom/tests.rs:77`, 6 passed, 1 failed). `bloom.rs` was restored from git and matches HEAD exactly. `bloom_needs_hdr_and_does_not_switch_it_on` still passed under the mutation, so the new test is the one that guards removal.
+- Limits: the Low (0.03) and High (0.10) intensities are still unmeasured in the game; the lighting document marks them so. The game was not run for this issue.

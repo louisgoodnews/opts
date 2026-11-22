@@ -441,7 +441,7 @@ Switching from Automatic to Custom keeps the level reached so far as the startin
 
 ### 9.1 Implemented: settings, ladder state and governor (2026-10-17, `agent/lighting-settings`)
 
-Rays, cones, light rooms, the sky cube map for glass and the mirror cameras are built (sections 6.6, 9.2, 9.3); bloom is built too (M-0122, 2026-11-16), but the ladder keeps it off in every row. What exists is everything they **read** and the controls that drive it.
+Rays, cones, light rooms, the sky cube map for glass and the mirror cameras are built (sections 6.6, 9.2, 9.3); bloom is built too (M-0122, 2026-11-16), but the ladder keeps it off in every row. **Bloom needs HDR:** `bloom.rs` removes the `Bloom` component from the main camera while it has no `Hdr`, so `graphics.bloom` has no effect with `graphics.hdr` off (the setting text says so). Intensities: Low 0.03 and High 0.10 are **unmeasured** (the +0.3 ms cost above was measured for Natural only). What exists is everything they **read** and the controls that drive it.
 
 **State.** `opts_bevy::light_quality::LightQuality` is the resource the effects read: `mode` (`Automatic` or `Custom`), `level` (0-5), `shafts` (`Off`, `Low` 8, `Medium` 16, `High` 32, `Ultra` 64 steps), `night_shafts`, `lantern_cones`, `headlight_cones`, `cone_cap` (0-96), `cone_depth_fade`, `mirror_count` (0-2), `mirror_every` (1, 2 or 4), `glass_reflections`, `bloom`. Order of systems: input (settings) → governor → resolve, all in `LightQualitySet`; effects schedule `.after(LightQualitySet)`. HDR is not part of it.
 
