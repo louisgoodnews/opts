@@ -23,6 +23,9 @@ def run(root: Path, *args: str) -> tuple[int, str]:
     return code, out.getvalue()
 
 
+DEMO_CODE = 510  # the demo crate's code lines in the fixture below (measured with `json`)
+
+
 def body(lines: int) -> str:
     return "".join(f"    let v{i} = {i};\n" for i in range(lines))
 
@@ -55,6 +58,8 @@ class Fixture(unittest.TestCase):
         )
         # a single-file module directory, with its module doc
         (src / "single/mod.rs").write_text("//! Only.\npub fn only() {}\n")
+        # the total budget of the demo crate (ISS-034): its current code lines
+        (self.root / "docs/dev/crate-budget.txt").write_text(f"demo {DEMO_CODE}  # fixture\n")
 
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)
@@ -81,6 +86,27 @@ class Fixture(unittest.TestCase):
             },
         )
         self.assertEqual([f["name"] for f in lib["functions"]], ["big"])
+
+    def test_the_total_budget_per_crate_fails_on_growth_and_on_a_missing_entry(self):
+        budget = self.root / "docs/dev/crate-budget.txt"
+        self.assertEqual(run(self.root, "seed")[0], 0)
+        self.assertEqual(run(self.root, "check")[0], 0)
+        lib = self.root / "crates/demo/src/lib.rs"
+        original = lib.read_text()
+        lib.write_text(original + "pub const EXTRA: u32 = 1;\n")
+        code, out = run(self.root, "check")
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL demo:", out)
+        self.assertIn("over its total budget of", out)
+        lib.write_text(original)
+        text = budget.read_text()
+        budget.unlink()
+        code, out = run(self.root, "check")
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL demo:", out)
+        self.assertIn("not in docs/dev/crate-budget.txt", out)
+        budget.write_text(text)
+        self.assertEqual(run(self.root, "check")[0], 0)
 
     def test_the_report_names_what_the_fixture_has(self):
         out = self.root / "report.md"
@@ -156,6 +182,8 @@ class Fixture(unittest.TestCase):
             "//! Prod without inline tests.\n"
             + "".join(f"pub const P{i}: u32 = {i};\n" for i in range(140))
         )
+        # the new file is part of the demo crate: its total budget moves with it (140 lines more)
+        (self.root / "docs/dev/crate-budget.txt").write_text(f"demo {DEMO_CODE + 140}  # fixture + with_tests.rs\n")
         self.assertEqual(run(self.root, "check")[0], 0)
 
     def test_function_and_signature_allow_ratchets_fail_on_growth_or_new_violations(self):

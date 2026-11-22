@@ -1,0 +1,20 @@
+# Total budget per crate (ISS-034): the code lines in each crate's src/ (structure_audit.py `crate_table`).
+# Format: <crate> <lines of code>  # <reason>. A budget may only shrink; `check` fails when a crate grows
+# above its budget or has no entry. Edit by hand: `seed` does not change budgets.
+opts-benchmark 5607  # set 2026-11-22 to the current total
+opts-bevy 45877  # set 2026-11-22 to the current total
+opts-catalogue 2066  # set 2026-11-22 to the current total
+opts-cli 3562  # set 2026-11-22 to the current total
+opts-core 4  # set 2026-11-22 to the current total
+opts-game 91320  # set 2026-11-22 to the current total
+opts-gui 18409  # set 2026-11-22 to the current total
+opts-hardware 2642  # set 2026-11-22 to the current total
+opts-importer 60  # set 2026-11-22 to the current total
+opts-l10n 2743  # set 2026-11-22 to the current total
+opts-logging 1288  # set 2026-11-22 to the current total
+opts-model 107  # set 2026-11-22 to the current total
+opts-omsi 18200  # set 2026-11-22 to the current total
+opts-sim 11508  # set 2026-11-22 to the current total
+opts-tools 1245  # set 2026-11-22 to the current total
+opts-traffic 6300  # set 2026-11-22 to the current total
+opts-types 461  # set 2026-11-22 to the current total

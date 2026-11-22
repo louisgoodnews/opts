@@ -58,6 +58,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 KNOWN = ROOT / "docs/dev/structure-known.txt"
 FN_KNOWN = ROOT / "docs/dev/function-known.txt"
+BUDGET = ROOT / "docs/dev/crate-budget.txt"
 FILE_LIMIT = 150
 # R2 uses the file limit: with a single 150-line threshold a file with inline tests is simply over
 # the limit; the separate message ("move #[cfg(test)] to tests.rs") is kept for those files.
@@ -499,6 +500,26 @@ def read_fn_known() -> tuple[dict[str, int], dict[str, str]]:
     return read_known_file(FN_KNOWN)
 
 
+def check_crate_budget(files: list[FileInfo]) -> int:
+    """Total budget per crate (ISS-034): the code lines in a crate's src/ may not exceed its budget."""
+    budget, _ = read_known_file(BUDGET)
+    bad = 0
+    for row in crate_table(files):
+        crate, code = row["crate"], row["code"]
+        if crate not in budget:
+            print(f"FAIL {crate}: {code} lines of code, not in docs/dev/crate-budget.txt (add a total budget)")
+            bad += 1
+        elif code > budget[crate]:
+            print(
+                f"FAIL {crate}: {code} lines of code, over its total budget of {budget[crate]} "
+                f"(budgets only shrink: move code out of the crate or cut it)"
+            )
+            bad += 1
+        elif code < budget[crate]:
+            print(f"ok   {crate}: {code} (budget {budget[crate]}: lower it in docs/dev/crate-budget.txt)")
+    return bad
+
+
 def cmd_check(files: list[FileInfo]) -> int:
     by_path = {f.path: f for f in files}
     now = over_limit(files)
@@ -555,6 +576,7 @@ def cmd_check(files: list[FileInfo]) -> int:
     for key in sorted(set(fn_known) - set(fn_now)):
         print(f"ok   {key}: no longer over the limit (remove it from docs/dev/function-known.txt with `seed`)")
 
+    bad += check_crate_budget(files)
     n_over_limit = sum(1 for f in files if f.code > FILE_LIMIT and f.marker != "table")
     inline_count = sum(1 for f in files if has_inline_test_violation(f))
     fns_80 = sum(1 for k in fn_now if not k.endswith("::@allow"))
@@ -744,11 +766,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path)
     ap.add_argument("--root", type=Path, help="measure another tree (tests)")
     a = ap.parse_args(argv)
-    global ROOT, KNOWN, FN_KNOWN
+    global ROOT, KNOWN, FN_KNOWN, BUDGET
     if a.root:
         ROOT = a.root.resolve()
         KNOWN = ROOT / "docs/dev/structure-known.txt"
         FN_KNOWN = ROOT / "docs/dev/function-known.txt"
+        BUDGET = ROOT / "docs/dev/crate-budget.txt"
     files = collect()
     if a.command == "check":
         return cmd_check(files)

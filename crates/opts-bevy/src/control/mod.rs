@@ -54,6 +54,7 @@ pub struct ControlAddr(pub SocketAddr);
 
 /// Keeps the server alive for the lifetime of the app.
 #[derive(Resource)]
+// The allow stays: the field is never read, and dropping it would stop the server.
 #[allow(dead_code)]
 struct ServerGuard(ServerHandle);
 
