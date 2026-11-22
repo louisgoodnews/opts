@@ -119,6 +119,7 @@ if command -v python3 >/dev/null 2>&1; then
     STRUCT_OK=1
     python3 scripts/test_structure_audit.py >/dev/null 2>&1 || { echo >&2 "scripts/test_structure_audit.py failed"; STRUCT_OK=0; }
     python3 scripts/test_bench_compare.py >/dev/null 2>&1 || { echo >&2 "scripts/test_bench_compare.py failed"; STRUCT_OK=0; }
+    python3 scripts/test_roadmap_audit.py >/dev/null 2>&1 || { echo >&2 "scripts/test_roadmap_audit.py failed"; STRUCT_OK=0; }
     if ! python3 scripts/structure_audit.py check; then
         echo >&2 "A file, inline-test block, function, or allow grew beyond docs/dev/structure-known.txt or function-known.txt."
         echo >&2 "Split by concern or extract helpers (standards.md §3.7 & §3.14); see the FAIL lines above."

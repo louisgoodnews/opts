@@ -15,6 +15,8 @@ Checks (each finding has a code):
   B02  a completed milestone has no open (`[ ]` or `[~]`) board entry of its own
   B03  a board entry says its branch is "not merged" but the branch is in master
   F01  every field-report row names a milestone
+  H01  every checked board line (`- [x]`) cites a commit hash that git resolves to a commit
+       (ISS-025); the target is the line's slug (its bold title, lowercased, dashes)
 
 `--check` exits 1 for any finding that is not explained in `docs/dev/roadmap-audit-known.txt`
 (`CODE target: reason`, one per line); a stale explanation fails too. Without `--check` it prints
@@ -84,6 +86,37 @@ class Milestone:
 
 def milestones() -> list[Milestone]:
     return [Milestone(p) for p in sorted(PHASES.glob("phase-*/M-*.md"))]
+
+
+# H01 (ISS-025): a checked board line must cite a commit. A hash counts only if git resolves it,
+# so an invented or mistyped hash fails like a missing one.
+HEX_TOKEN = re.compile(r"(?<![0-9A-Za-z])[0-9a-f]{7,40}(?![0-9A-Za-z])")
+CHECKED = re.compile(r"^- \[x\] ")
+
+
+def slug(line: str) -> str:
+    """The line's bold title (or its start) as a dashed lowercase id: the known-file target of H01."""
+    m = re.search(r"\*\*(.+?)\*\*", line)
+    text = m.group(1) if m else line[len("- [x] "):]
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:80]
+
+
+def resolved_commits(tokens: list[str]) -> set[str]:
+    """The tokens that git resolves to a commit (`cat-file --batch-check` answers each input once)."""
+    if not tokens:
+        return set()
+    proc = subprocess.run(["git", "cat-file", "--batch-check"], cwd=ROOT,
+                          input="\n".join(tokens) + "\n", capture_output=True, text=True)
+    answers = proc.stdout.splitlines()
+    return {t for t, a in zip(tokens, answers) if a.split()[1:2] == ["commit"]}
+
+
+def unhashed_board_lines(board_lines: list[str]) -> list[tuple[str, str]]:
+    """`(slug, line)` of each checked board line that cites no commit git resolves."""
+    checked = [l for l in board_lines if CHECKED.match(l)]
+    tokens = [sorted(set(HEX_TOKEN.findall(l))) for l in checked]
+    ok = resolved_commits(sorted({t for ts in tokens for t in ts}))
+    return [(slug(l), l) for l, ts in zip(checked, tokens) if not ok.intersection(ts)]
 
 
 def line_of(path: Path, needle: str) -> int:
@@ -192,6 +225,8 @@ def audit() -> list[tuple[str, str, str]]:
             m = re.match(r"\|\s*(R-\d+)\s*\|", l)
             if m and not re.search(r"M-\d{4}", l):
                 out.append(("F01", f"{fr.name}:{m.group(1)}", "row names no milestone"))
+    for key, line in unhashed_board_lines(board_lines):
+        out.append(("H01", key, f"checked board line cites no commit hash git resolves: {line[:90]}"))
     return out
 
 
