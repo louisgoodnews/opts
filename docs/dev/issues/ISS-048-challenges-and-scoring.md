@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-048. Research item RG-07 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | none yet: needs an owner decision on a proposed milestone, tied to the vision's scenario editor |
-| **Status** | open (proposed 2026-11-22 from the feature research; no milestone yet) |
+| **Milestone** | none yet: owner decision 2026-11-22: in scenario editor, no milestone yet (no scenario-editor milestone exists) |
+| **Status** | owner decision 2026-11-22: in scenario editor, no milestone yet |
 
 ## Problem
 

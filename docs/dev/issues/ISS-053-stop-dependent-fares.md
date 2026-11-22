@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-053. Research item RG-12 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | [M-0156](../../src/roadmap/phase-16/M-0156.md) Cash Desk and Change (proposed 2026-11-18), with fare computation added to its scope if the owner agrees |
-| **Status** | open (proposed 2026-11-22 from the feature research; milestone suggested, not yet assigned) |
+| **Milestone** | [M-0170](../../src/roadmap/phase-18/M-0170.md) Stop-Dependent Fares (proposed 2026-11-22), kept separate from [M-0156](../../src/roadmap/phase-16/M-0156.md) Cash Desk and Change, which is not extended |
+| **Status** | owner decision 2026-11-22: kept separate, milestone M-0170 (not approved to start) |
 
 ## Problem
 

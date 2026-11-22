@@ -89,6 +89,7 @@ These are the pillars of the simulator. Each is a major undertaking in its own r
 - Single-player career mode with progression.
 - Scenario editor for community-created challenges.
 - Multiplayer (long-term) with dispatcher/driver roles.
+- Virtual reality (long-term; owner decision 2026-11-22: vision item only, no milestone).
 - Free-play sandbox mode for creative exploration.
 
 ### 🛠️ A Modding Platform

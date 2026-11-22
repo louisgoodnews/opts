@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-045. Research item RG-04 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | none yet: needs an owner decision first |
-| **Status** | open (proposed 2026-11-22 from the feature research; no milestone yet) |
+| **Milestone** | [M-0166](../../src/roadmap/phase-18/M-0166.md) TrackIR Head Tracking (proposed 2026-11-22) |
+| **Status** | owner decision 2026-11-22: in scope, milestone M-0166 (not approved to start) |
 
 ## Problem
 

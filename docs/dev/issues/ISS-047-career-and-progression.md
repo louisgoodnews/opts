@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-047. Research item RG-06 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | major (planning) |
-| **Milestone** | none yet: needs an owner decision on a proposed milestone |
-| **Status** | open (proposed 2026-11-22 from the feature research; no milestone yet) |
+| **Milestone** | [M-0167](../../src/roadmap/phase-18/M-0167.md) Career and Progression (proposed 2026-11-22; owner confirmation of its scope still to come) |
+| **Status** | owner decision 2026-11-22: in scope, milestone M-0167 (not approved to start) |
 
 ## Problem
 

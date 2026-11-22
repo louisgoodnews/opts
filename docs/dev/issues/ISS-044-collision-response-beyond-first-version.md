@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-044. Research item RG-03 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | none yet: needs an owner decision on a proposed milestone |
-| **Status** | open (proposed 2026-11-22 from the feature research; no milestone yet) |
+| **Milestone** | none new: extend the current collision work. The milestone that holds the first version is not named in the roadmap; owner to name it, then an addendum |
+| **Status** | owner decision 2026-11-22: extend the current collision work (no new milestone); holding milestone to be named |
 
 ## Problem
 

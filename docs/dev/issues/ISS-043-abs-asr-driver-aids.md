@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-043. Research item RG-02 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor (provisional; rises to major if the scripts supply the aids and OPTS does not run them) |
-| **Milestone** | none yet: needs an owner decision on a proposed milestone. The report's alternative is [M-0097](../../src/roadmap/phase-4/M-0097.md) (script physics contract), if that contract takes the aids |
-| **Status** | open (proposed 2026-11-22 from the feature research; no milestone yet) |
+| **Milestone** | [M-0165](../../src/roadmap/phase-18/M-0165.md) ABS and ASR Driver Aids (proposed 2026-11-22) |
+| **Status** | owner decision 2026-11-22: in scope, milestone M-0165 (not approved to start) |
 
 ## Problem
 

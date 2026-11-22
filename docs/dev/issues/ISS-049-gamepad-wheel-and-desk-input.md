@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-049. Research item RG-08 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | [M-0142](../../src/roadmap/phase-7/M-0142.md) for gamepad and wheel (its status says open, but its scope section defers them); a new proposed item for the desk interface, not yet created |
-| **Status** | open (proposed 2026-11-22 from the feature research; no milestone for the desk interface yet) |
+| **Milestone** | [M-0035](../../src/roadmap/phase-7/M-0035.md) for gamepad and wheel (owner decision 2026-11-22; [M-0142](../../src/roadmap/phase-7/M-0142.md) status line now agrees); [M-0168](../../src/roadmap/phase-18/M-0168.md) Driver's Desk Hardware Interface (proposed 2026-11-22) for the desk |
+| **Status** | owner decision 2026-11-22: gamepad and wheel in M-0035; desk interface in scope, milestone M-0168 (not approved to start) |
 
 ## Problem
 

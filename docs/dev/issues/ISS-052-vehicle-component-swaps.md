@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-052. Research item RG-11 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | [M-0135](../../src/roadmap/phase-14/M-0135.md) Vehicle Profile Design (proposed 2026-10-19; design only), if its scope is extended; otherwise a new proposed item |
-| **Status** | open (proposed 2026-11-22 from the feature research; milestone suggested, not yet assigned) |
+| **Milestone** | [M-0169](../../src/roadmap/phase-18/M-0169.md) Vehicle Component Swaps (proposed 2026-11-22), kept separate from [M-0135](../../src/roadmap/phase-14/M-0135.md), which is not extended |
+| **Status** | owner decision 2026-11-22: kept separate, milestone M-0169 (not approved to start) |
 
 ## Problem
 

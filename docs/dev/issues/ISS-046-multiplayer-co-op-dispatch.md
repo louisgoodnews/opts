@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-046. Research item RG-05 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | none yet (vision only) |
-| **Status** | open (proposed 2026-11-22 from the feature research; no milestone yet) |
+| **Milestone** | none (vision only) |
+| **Status** | owner decision 2026-11-22: vision item, no milestone |
 
 ## Problem
 
