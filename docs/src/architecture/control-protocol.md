@@ -288,7 +288,8 @@ comparing versions.
   the token is compared in constant time and required via `auth` before any other call. A non-loopback bind also
   needs `--cli-bind`.
 - **Token sources.** The token is read from the environment variable `OPTS_CLI_TOKEN` or from a file named by
-  `--cli-token-file <PATH>` (first line, the line end removed; keep the file readable only by you). Setting both
+  `--cli-token-file <PATH>` (first line, the line end removed). On Unix a token file that group or others can read
+  (mode `& 0o077 != 0`, for example `0644`) is refused with an error that names its mode; use `0600`. Setting both
   is refused. The token is never taken from the command line: `--cli-token` (game) and `--token` (`opts-cli`) are
   refused with an error, because argv is visible to other users and stays in the shell history.
 - **Read timeout and connection cap.** A connection that is silent for 30 s is closed. At most 8 connections are
