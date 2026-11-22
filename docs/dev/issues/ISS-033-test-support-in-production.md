@@ -6,7 +6,7 @@
 | **Severity** | minor (architecture, test hygiene) |
 | **Milestone** | [M-0040](../../src/roadmap/phase-5/M-0040.md) Code-quality debt (test support feature-gated 2026-10-11, commit 28249ea8); the structure ratchet is [M-0147](../../src/roadmap/phase-15/README.md) |
 | **Audit** | Project audit 2026-11-18, architecture 6 (PRJ-13) |
-| **Status** | in progress 2026-11-22 on `agent/test-fixtures`. The gate was already in place on master (`ecefa84b`), so the 2026-11-18 evidence is stale for the module. Open: the two dead-code allows, and the production-build and removal checks. |
+| **Status** | in progress 2026-11-22 on `agent/test-fixtures-2`. The gate is on master (`28249ea8`), so the 2026-11-18 evidence is stale for the module. Done: production build `cargo build -p opts-game` without the feature finished (`Finished dev profile in 3m 56s`), `cargo test -p opts-game --lib` 757 passed, 0 failed. Decision: both dead-code allows stay, each with a one-line justification in code (`ServerGuard` in `opts-bevy/src/control/mod.rs`; `Binding` in `opts-game/src/help/controls.rs`, already there). Open: the gate-removal check (step 3). |
 
 ## Problem
 
