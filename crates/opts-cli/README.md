@@ -11,11 +11,13 @@ Command-line pieces of OPTS:
 The server is off unless you ask for it, and listens on loopback only:
 
 ```text
-cargo run --release -p opts-game -- --map-path "/path/to/OMSI 2/maps/BRT Berlin" --autostart --cli-port 44201
+OPTS_CLI_TOKEN=<token of 32+ characters> cargo run --release -p opts-game -- --map-path "/path/to/OMSI 2/maps/BRT Berlin" --autostart --cli-port 44201
 ```
 
+The token is required on every bind, loopback included. It comes from `OPTS_CLI_TOKEN` or from `--cli-token-file <PATH>`;
+it is never a command-line argument (`--cli-token` and `opts-cli --token` are refused).
 `--cli-port 0` picks a free port and logs it (`control server listening addr=…`). Other flags:
-`--cli-token <T>` (required to bind anything but loopback), `--cli-allow-dir <DIR>` (extra directory for
+`--cli-bind <ADDR>` (non-loopback), `--cli-allow-dir <DIR>` (extra directory for
 reads and writes), `--no-hot-reload`, `--hot-reload-root <DIR>`, `--hot-reload-debounce-ms <MS>`.
 
 ## A quick tour

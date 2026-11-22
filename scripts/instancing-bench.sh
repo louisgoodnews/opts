@@ -36,6 +36,9 @@ envs=(XDG_CONFIG_HOME="$cfg" XDG_DATA_HOME="$data" XDG_CACHE_HOME="$CACHE" OPTS_
 [ "$entry" != "-" ] && envs+=(OPTS_DEV_ENTRY="$entry")
 load0=$(cut -d" " -f1-3 /proc/loadavg)
 t0=$(date +%s.%N)
+# The control server needs a token (ISS-002): keep one from the environment or make a 32-hex-char one.
+: "${OPTS_CLI_TOKEN:=$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')}"
+export OPTS_CLI_TOKEN
 env "${envs[@]}" "$BIN" --omsi-path "$OMSI" --map-path "$OMSI/maps/$map" --vehicle-path "$OMSI/Vehicles/$veh" \
   --autostart --windowed --camera ego --traffic 0 --pedestrians 0 --no-hot-reload \
   --cli-port "$PORT" --cli-allow-dir "$OUT" > "$OUT/game.log" 2>&1 &

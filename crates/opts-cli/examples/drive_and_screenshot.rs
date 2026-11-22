@@ -1,7 +1,7 @@
 //! Loads a map, drives forward for a few seconds and saves a screenshot.
 //!
 //! ```text
-//! opts-game --cli-port 44201 &                 # start the game with the control server
+//! OPTS_CLI_TOKEN=<32+ chars> opts-game --cli-port 44201 &   # start the game with the control server (token required)
 //! cargo run -p opts-cli --example drive_and_screenshot -- "/path/to/OMSI 2/maps/BRT Berlin" 5
 //! ```
 //!

@@ -11,6 +11,7 @@ use crate::protocol::DEFAULT_PORT;
 
 mod batch;
 mod method;
+mod token;
 use batch::run_batch;
 use method::{apply_cli_defaults, is_slow, split_method};
 
@@ -26,8 +27,15 @@ pub struct Cli {
     /// Port of the control server.
     #[arg(long, default_value_t = DEFAULT_PORT)]
     pub port: u16,
-    /// Token for servers started with `--cli-token`.
-    #[arg(long)]
+    /// Refused: the token is not read from the command line (ISS-004). Set `OPTS_CLI_TOKEN` or
+    /// pass `--token-file`.
+    #[arg(long = "token", value_name = "TOKEN", hide = true)]
+    pub token_argv: Option<String>,
+    /// File whose first line is the token of the server (alternative to `OPTS_CLI_TOKEN`).
+    #[arg(long, value_name = "PATH")]
+    pub token_file: Option<std::path::PathBuf>,
+    /// The token, resolved by [`Cli::resolve_token`]; not a flag.
+    #[arg(skip)]
     pub token: Option<String>,
     /// Print results as JSON.
     #[arg(long)]
@@ -81,6 +89,10 @@ pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
         return 1;
     };
     let method = method.as_str();
+    if let Some(e) = token::auth_argument_error(method, rest) {
+        errln!("{e}");
+        return 1;
+    }
     let params = match find(method) {
         Some(spec) => build_params(spec, rest),
         None => build_params(&crate::commands::generic_spec(), rest),

@@ -21,6 +21,7 @@ Results: <out>/before.png, <out>/after_<name>.png, <out>/options.json, <out>/rep
 import argparse
 import json
 import os
+import secrets
 import shutil
 import socket
 import subprocess
@@ -90,6 +91,7 @@ def main():
     out = Path(a.out) if a.out else base / time.strftime("%Y%m%dT%H%M%S")
     out.mkdir(parents=True, exist_ok=True)
     cfgd, datad = tempfile.mkdtemp(dir=base), tempfile.mkdtemp(dir=base)
+    os.environ.setdefault("OPTS_CLI_TOKEN", secrets.token_hex(16))  # the control server needs a token (ISS-002)
     env = dict(os.environ, XDG_CONFIG_HOME=cfgd, XDG_DATA_HOME=datad, OPTS_DEV_HOUR="12")
     cmd = [binp, "--omsi-path", omsi, "--map-path", f"{omsi}/maps/{a.map}",
            "--vehicle-path", f"{omsi}/Vehicles/{a.bus}", "--autostart", "--windowed",

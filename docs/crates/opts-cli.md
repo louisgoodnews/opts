@@ -42,8 +42,8 @@ line-editor dependency.
 | Flag | Default | Meaning |
 | :--- | :--- | :--- |
 | `--cli-port <PORT>` | off | start the control server (`0` = any free port) |
-| `--cli-bind <ADDR>` | `127.0.0.1` | bind address; non-loopback needs `--cli-token` |
-| `--cli-token <TOKEN>` | none | shared secret checked by `auth` |
+| `--cli-bind <ADDR>` | `127.0.0.1` | bind address; the token is required on every bind |
+| `--cli-token-file <PATH>` | none | file whose first line is the token (or set `OPTS_CLI_TOKEN`); `--cli-token` on argv is refused |
 | `--cli-allow-dir <DIR>` | none | extra directory for reads/writes (repeatable) |
 | `--no-hot-reload` | off | disable the file watcher |
 | `--hot-reload-root <DIR>` | none | extra recursive watch root (repeatable) |

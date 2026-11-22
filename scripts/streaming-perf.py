@@ -27,6 +27,7 @@ import re
 import shutil
 import socket
 import statistics
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -158,6 +159,7 @@ def run(a):
         sys.exit("set DECODER_CACHE to a directory containing a copy of opts/descramble")
     cfgd = tempfile.mkdtemp(dir=base)
     datad = tempfile.mkdtemp(dir=base)
+    os.environ.setdefault("OPTS_CLI_TOKEN", secrets.token_hex(16))  # the control server needs a token (ISS-002)
     env = dict(os.environ, XDG_CONFIG_HOME=cfgd, XDG_DATA_HOME=datad, XDG_CACHE_HOME=cache,
                OPTS_DEV_HOUR="12", OPTS_STREAM_TRACE=str(out / "trace.jsonl"))
     if a.entry:

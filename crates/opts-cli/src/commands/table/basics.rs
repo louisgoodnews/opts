@@ -17,7 +17,7 @@ pub(super) const PART: &[CommandSpec] = &[
         "auth",
         "meta",
         "Authenticate with the server token",
-        "token:s@0",
+        "token:s@0?",
     ),
     c("shutdown", "meta", "Exit the application", "force:b?"),
     c("state", "query", "App state, camera mode, fps, worst frame time of the last 10 s (frame_ms_max), frame", ""),

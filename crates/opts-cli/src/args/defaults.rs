@@ -1,6 +1,6 @@
 //! Defaults of the command-line arguments and the parsing helpers of [`CliArgs`].
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 
 use super::{CliArgs, MIN_WINDOW_SIZE};
 
@@ -27,6 +27,8 @@ impl Default for CliArgs {
             headless: false,
             cli_port: None,
             cli_bind: "127.0.0.1".to_string(),
+            cli_token_argv: None,
+            cli_token_file: None,
             cli_token: None,
             pedestrians: None,
             trains: None,
@@ -52,7 +54,37 @@ impl Default for CliArgs {
 impl CliArgs {
     /// Parses arguments from the process environment (`std::env::args`).
     pub fn parse_args() -> Self {
-        Self::parse()
+        let mut args = Self::parse();
+        if let Err(e) = args.resolve_cli_token() {
+            Self::command()
+                .error(clap::error::ErrorKind::ArgumentConflict, e)
+                .exit();
+        }
+        args
+    }
+
+    /// Refuses the old `--cli-token` flag and reads the token from `OPTS_CLI_TOKEN` or the file
+    /// given by `--cli-token-file` into [`CliArgs::cli_token`].
+    ///
+    /// # Errors
+    /// `--cli-token` was given, both sources are set, the file cannot be read, or `--cli-port`
+    /// is given without a token.
+    pub fn resolve_cli_token(&mut self) -> Result<(), String> {
+        if self.cli_token_argv.is_some() {
+            return Err(
+                "--cli-token is refused: the token is not read from the command line. \
+                 Set OPTS_CLI_TOKEN or pass --cli-token-file <PATH>"
+                    .into(),
+            );
+        }
+        self.cli_token = crate::token::from_sources(self.cli_token_file.as_deref())?;
+        if self.cli_port.is_some() && self.cli_token.is_none() {
+            return Err(
+                "--cli-port needs a token: set OPTS_CLI_TOKEN or pass --cli-token-file <PATH>"
+                    .into(),
+            );
+        }
+        Ok(())
     }
 
     /// Parses window resolution width and height from the `--window-size` flag.

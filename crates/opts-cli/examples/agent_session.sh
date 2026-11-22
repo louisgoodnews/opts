@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # A shell session the way an AI agent would drive OPTS through the control protocol.
 #
-#   opts-game --cli-port 44201 &              # start the game first
+#   OPTS_CLI_TOKEN=<32+ chars> opts-game --cli-port 44201 &   # start the game first (token required)
 #   MAP="/path/to/OMSI 2/maps/BRT Berlin" VEHICLE="/path/to/OMSI 2/Vehicles/MAN_SD200/MAN_SD77.bus" \
 #       crates/opts-cli/examples/agent_session.sh
 #

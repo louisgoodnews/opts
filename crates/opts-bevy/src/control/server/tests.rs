@@ -64,8 +64,11 @@ fn a_token_of_the_minimum_length_is_accepted_on_loopback() {
 }
 
 #[test]
-fn loopback_without_a_token_still_starts() {
-    assert_eq!(start_kind(&config("127.0.0.1", None)), None);
+fn loopback_without_a_token_is_refused() {
+    assert_eq!(
+        start_kind(&config("127.0.0.1", None)),
+        Some(std::io::ErrorKind::PermissionDenied)
+    );
 }
 
 #[test]

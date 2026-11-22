@@ -30,6 +30,9 @@ sign_close 14 3.5 1.6 25 0"}
 # POSE_FILE: a data file of poses (same format; `#` lines and blank lines are skipped) that
 # replaces POSES, e.g. scripts/visual-views/m0122-reference.poses.
 if [ -n "${POSE_FILE:-}" ]; then POSES=$(sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' "$POSE_FILE"); fi
+# The control server needs a token (ISS-002): keep one from the environment or make a 32-hex-char one.
+: "${OPTS_CLI_TOKEN:=$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')}"
+export OPTS_CLI_TOKEN
 mkdir -p "$OUT"
 cfg=$(mktemp -d); data=$(mktemp -d)
 cli() { "$CLI" --port "$PORT" --json --quiet "$@"; }

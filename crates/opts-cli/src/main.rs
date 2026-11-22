@@ -2,9 +2,14 @@
 
 use std::process::ExitCode;
 
-use clap::Parser;
+use clap::error::ErrorKind;
+use clap::{CommandFactory, Parser};
 use opts_cli::run::{run, Cli};
 
 fn main() -> ExitCode {
-    ExitCode::from(run(&Cli::parse()))
+    let mut cli = Cli::parse();
+    if let Err(e) = cli.resolve_token() {
+        Cli::command().error(ErrorKind::ArgumentConflict, e).exit();
+    }
+    ExitCode::from(run(&cli))
 }

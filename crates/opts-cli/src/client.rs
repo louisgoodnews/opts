@@ -137,6 +137,7 @@ impl Client {
         if self.conn.is_none() {
             self.connect()?;
         }
+        let params = crate::token::with_auth_token(method, params, self.config.token.as_deref());
         match self.exchange(method, params.clone()) {
             Err(ClientError::Connection(_)) if self.was_connected => {
                 self.conn = None;

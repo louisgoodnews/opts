@@ -4,6 +4,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{IpAddr, Ipv4Addr, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::SyncSender;
+use std::time::Duration;
 
 use opts_cli::protocol::{code, parse_line, Incoming, Response, RpcError, MAX_LINE_BYTES};
 use serde_json::Value;
@@ -34,8 +35,10 @@ pub(super) fn serve_connection(
     token: Option<&str>,
     stop: &AtomicBool,
     throttle: &AuthThrottle,
+    idle: Duration,
 ) {
     let _ = stream.set_nodelay(true);
+    let _ = stream.set_read_timeout(Some(idle));
     let addr = stream
         .peer_addr()
         .map_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED), |a| a.ip());

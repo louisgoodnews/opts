@@ -26,5 +26,6 @@ pub mod reference;
 pub mod repl;
 #[cfg(feature = "client")]
 pub mod run;
+pub mod token;
 #[cfg(feature = "client")]
 pub mod transport;

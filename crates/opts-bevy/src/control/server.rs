@@ -11,12 +11,14 @@ use std::time::Duration;
 
 use super::state::Pending;
 
+mod admission;
 mod auth;
 mod connection;
 mod dispatch;
 mod limiter;
 mod throttle;
 
+use self::admission::{refuse, Slots, READ_TIMEOUT};
 #[cfg(test)]
 use self::auth::constant_time_eq;
 use self::connection::serve_connection;
@@ -27,7 +29,7 @@ use self::throttle::AuthThrottle;
 /// Capacity of the command queue.
 pub const QUEUE_CAPACITY: usize = 1024;
 
-/// Shortest token `--cli-token` accepts (audit PRJ-02: at least 32 random characters).
+/// Shortest token the server accepts (audit PRJ-02: at least 32 random characters).
 pub const MIN_TOKEN_CHARS: usize = 32;
 
 /// Server settings.
@@ -58,14 +60,14 @@ impl Drop for ServerHandle {
 /// Starts the listener thread.
 ///
 /// # Errors
-/// An `io::Error` when the address is invalid, the token is shorter than [`MIN_TOKEN_CHARS`] (an empty
-/// token included), a non-loopback address has no token, or the address cannot be bound.
+/// An `io::Error` when the address is invalid, no token is set (on every bind, loopback included), the
+/// token is shorter than [`MIN_TOKEN_CHARS`] (an empty token included), or the address cannot be bound.
 pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<ServerHandle> {
     if let Some(t) = &config.token {
         if t.chars().count() < MIN_TOKEN_CHARS {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
-                format!("--cli-token must be at least {MIN_TOKEN_CHARS} characters"),
+                format!("the token must be at least {MIN_TOKEN_CHARS} characters"),
             ));
         }
     }
@@ -75,10 +77,10 @@ pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<
             format!("bad --cli-bind: {e}"),
         )
     })?;
-    if !ip.is_loopback() && config.token.is_none() {
+    if config.token.is_none() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::PermissionDenied,
-            "binding a non-loopback address requires --cli-token",
+            "the control server requires a token: set OPTS_CLI_TOKEN or --cli-token-file",
         ));
     }
     let listener = TcpListener::bind((ip, config.port))?;
@@ -90,17 +92,30 @@ pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<
     std::thread::Builder::new()
         .name("control-listener".into())
         .spawn(move || {
+            let slots = Slots::default();
             for stream in listener.incoming() {
                 if flag.load(Ordering::SeqCst) {
                     break;
                 }
                 let Ok(stream) = stream else { continue };
+                let Some(slot) = slots.take() else {
+                    refuse(stream);
+                    continue;
+                };
                 let (tx, token, flag) = (tx.clone(), token.clone(), flag.clone());
                 let throttle = throttle.clone();
                 let spawned = std::thread::Builder::new()
                     .name("control-conn".into())
                     .spawn(move || {
-                        serve_connection(stream, &tx, token.as_deref(), &flag, &throttle);
+                        let _slot = slot;
+                        serve_connection(
+                            stream,
+                            &tx,
+                            token.as_deref(),
+                            &flag,
+                            &throttle,
+                            READ_TIMEOUT,
+                        );
                     });
                 if let Err(e) = spawned {
                     tracing::warn!(target: "opts_bevy::control", "cannot start connection thread: {e}");
@@ -115,5 +130,7 @@ pub type CommandSender = Sender<Pending>;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_admission;
 #[cfg(test)]
 mod tests_throttle;

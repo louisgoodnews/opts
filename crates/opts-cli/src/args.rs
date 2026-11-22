@@ -98,12 +98,22 @@ pub struct CliArgs {
     #[arg(long, value_name = "PORT")]
     pub cli_port: Option<u16>,
 
-    /// Address of the control server. Anything but a loopback address requires `--cli-token`.
+    /// Address of the control server. Anything but a loopback address also needs the token.
     #[arg(long, value_name = "ADDR", default_value = "127.0.0.1")]
     pub cli_bind: String,
 
-    /// Shared secret the control clients must present (`auth`) before any other command.
-    #[arg(long, value_name = "TOKEN")]
+    /// Refused: the token is not read from the command line (ISS-004). Set `OPTS_CLI_TOKEN` or
+    /// pass `--cli-token-file`.
+    #[arg(long = "cli-token", value_name = "TOKEN", hide = true)]
+    pub cli_token_argv: Option<String>,
+
+    /// File whose first line is the control token, which clients must present (`auth`) before any
+    /// other command. Alternative to `OPTS_CLI_TOKEN`; the token is required on every bind.
+    #[arg(long, value_name = "PATH")]
+    pub cli_token_file: Option<PathBuf>,
+
+    /// The control token, resolved by [`CliArgs::resolve_cli_token`]; not a flag.
+    #[arg(skip)]
     pub cli_token: Option<String>,
 
     /// Extra directory the control server may read from and write to (repeatable).

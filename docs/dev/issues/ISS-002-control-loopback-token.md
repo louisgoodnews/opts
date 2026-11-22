@@ -21,4 +21,11 @@ The control server starts on loopback without a token. `ControlConfig::default()
 
 ## Outcome
 
-Open.
+Spec first in `5a087e03` (section 1, section 7, ADR-0006): a token is required on every bind, loopback included. Code: `start` in `crates/opts-bevy/src/control/server.rs` refuses a server without a token (`PermissionDenied`, names `OPTS_CLI_TOKEN` and `--cli-token-file`). `auth` is unchanged.
+
+Removal check (the token-required check in `start` removed; file restored byte-identical):
+- `control::server::tests::loopback_without_a_token_is_refused ... FAILED`
+- `control::server::tests::non_loopback_binds_need_a_token ... FAILED`
+- `test result: FAILED. 13 passed; 2 failed`
+
+Passing with the change: `cargo test -p opts-bevy --lib control::server` 15 passed, 0 failed (exit 0); `cargo test -p opts-cli --lib` 37 passed, 0 failed (exit 0). Logs: `opts-scratch/work/iss002-004/`.

@@ -35,7 +35,7 @@ let (width, height) = args.parse_dimensions();
 | `--windowed` | `bool` | `false` | Explicitly request windowed mode (overrides fullscreen) |
 | `--window-size <WxH>` | `String` | `"1920x1080"` | Initial window dimension (e.g. `1920x1080`); sizes below the minimum window of 1024x640 are raised to it |
 | `--headless` | `bool` | `false` | Run without opening an OS display window (ideal for CI testing) |
-| `--cli-port`, `--cli-bind`, `--cli-token`, `--cli-allow-dir` | | off | Control server (see the [manual](../opts-cli.md)) |
+| `--cli-port`, `--cli-bind`, `--cli-token-file`, `--cli-allow-dir` | | off | Control server (see the [manual](../opts-cli.md)) |
 | `--no-hot-reload`, `--hot-reload-root`, `--hot-reload-debounce-ms` | | on, 250 ms | Hot reload of edited content |
 
 ## 📦 Dependencies

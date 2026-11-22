@@ -35,7 +35,7 @@ Every error carries `data.name` (the symbolic code) and `data.retryable`.
 | `version` | - | 1.0 | App and protocol version |
 | [`help`](#help) | `command?` (string) | 1.0 | Describe one command (or list all) |
 | `capabilities` | - | 1.0 | List all commands by group |
-| `auth` | `token` (string) | 1.0 | Authenticate with the server token |
+| `auth` | `token?` (string) | 1.0 | Authenticate with the server token |
 | `shutdown` | `force?` (boolean) | 1.0 | Exit the application |
 | [`commands`](#commands) | `group?` (string) | 1.1 | Every command with its argument schema, result and documentation |
 | [`batch`](#batch) | `commands` (json)<br>`stop_on_error?` (boolean) | 1.0 | Run several commands in order in one round trip |

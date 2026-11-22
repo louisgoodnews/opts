@@ -25,7 +25,7 @@ Environment variables and flags that change behaviour for development, tests and
 
 ## Control protocol
 
-`--cli-port <n>` starts the control server (loopback only); `--cli-allow-dir <dir>` permits screenshots and reads there. Clients and examples read `OPTS_CLI_PORT` (default 44201) and `OPTS_CLI_TOKEN`. See [control protocol](../architecture/control-protocol.md).
+`--cli-port <n>` starts the control server (loopback only by default; the token comes from `OPTS_CLI_TOKEN` or `--cli-token-file`, and is required); `--cli-allow-dir <dir>` permits screenshots and reads there. Clients and examples read `OPTS_CLI_PORT` (default 44201) and `OPTS_CLI_TOKEN`. See [control protocol](../architecture/control-protocol.md).
 
 ## Tests and examples
 

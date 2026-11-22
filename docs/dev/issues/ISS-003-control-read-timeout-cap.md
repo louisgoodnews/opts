@@ -22,4 +22,10 @@
 
 ## Outcome
 
-Open.
+Spec first in `5a087e03` (section 1): a connection silent for 30 s is closed; at most 8 connections are served at once, a ninth gets one `1006 Busy` line and is closed. Code: `admission.rs` (cap, `Slots` guard, `refuse`); `connection.rs` takes the idle timeout as a parameter; `server.rs` listener uses both. The stop flag still waits for a blocked read to time out (at most 30 s); socket shutdown on stop is not done.
+
+Removal checks (each file restored byte-identical):
+- read timeout (`set_read_timeout` removed): `control::server::tests_admission::a_silent_client_is_dropped_after_the_read_timeout ... FAILED`; `test result: FAILED. 14 passed; 1 failed`
+- connection cap (cap check removed): `control::server::tests_admission::the_ninth_connection_is_refused_with_busy ... FAILED`; `test result: FAILED. 14 passed; 1 failed`
+
+Passing with the change: `cargo test -p opts-bevy --lib control::server` 15 passed, 0 failed (exit 0); `cargo test -p opts-cli --lib` 37 passed, 0 failed (exit 0). Logs: `opts-scratch/work/iss002-004/`.

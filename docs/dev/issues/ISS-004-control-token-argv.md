@@ -22,4 +22,10 @@ The token is a plain argument: `--cli-token` in the game (`crates/opts-cli/src/a
 
 ## Outcome
 
-Open.
+Spec first in `5a087e03` (section 7). The token comes from `OPTS_CLI_TOKEN` or a file (`--cli-token-file` for the game, `--token-file` for `opts-cli`); setting both is refused. `--cli-token` (game) and `--token` (`opts-cli`) are refused with a clear error. `opts-cli auth` takes no argument and sends the configured token. The shared helper is `crates/opts-cli/src/token.rs`. Not done: the token file's permissions are not checked (the audit asked for 0600).
+
+Removal check (the `--cli-token` refusal in `args/defaults.rs` removed; file restored byte-identical):
+- `args::tests::the_old_cli_token_flag_is_refused_with_a_clear_error ... FAILED`
+- `test result: FAILED. 6 passed; 1 failed`
+
+Passing with the change: `cargo test -p opts-bevy --lib control::server` 15 passed, 0 failed (exit 0); `cargo test -p opts-cli --lib` 37 passed, 0 failed (exit 0). Logs: `opts-scratch/work/iss002-004/`.

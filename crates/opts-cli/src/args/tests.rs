@@ -72,3 +72,33 @@ fn test_cli_parsing_defaults() {
     assert!(!args.fullscreen);
     assert_eq!(args.parse_dimensions(), (1920.0, 1080.0));
 }
+
+#[test]
+fn the_old_cli_token_flag_is_refused_with_a_clear_error() {
+    let mut args = CliArgs::try_parse_from(["opts", "--cli-port", "0", "--cli-token=secret"])
+        .expect("the flag still parses, so that it can be refused");
+    let err = args.resolve_cli_token().expect_err("argv token refused");
+    assert!(err.contains("--cli-token is refused"), "{err}");
+    assert_eq!(args.cli_token, None);
+}
+
+#[test]
+fn a_missing_token_file_is_an_error() {
+    let mut args = CliArgs::try_parse_from([
+        "opts",
+        "--cli-token-file",
+        "/nonexistent/opts-token-for-tests",
+    ])
+    .expect("parse");
+    assert!(args.resolve_cli_token().is_err());
+}
+
+#[test]
+fn a_control_port_without_a_token_is_refused_at_start() {
+    let mut args = CliArgs::try_parse_from(["opts", "--cli-port", "0"]).expect("parse");
+    if std::env::var_os(crate::token::TOKEN_ENV).is_some() {
+        return; // the test environment supplies a token: nothing to refuse
+    }
+    let err = args.resolve_cli_token().expect_err("no token");
+    assert!(err.contains("needs a token"), "{err}");
+}

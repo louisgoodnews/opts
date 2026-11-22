@@ -29,7 +29,7 @@ pub use state::{ControlRegistry, Outcome};
 pub struct ControlConfig {
     /// Port to listen on; `None` keeps the server off, `Some(0)` picks a free port.
     pub port: Option<u16>,
-    /// Address to bind; anything but loopback requires a token.
+    /// Address to bind. A token is required on every bind, loopback included.
     pub bind: String,
     /// Shared secret for `auth`.
     pub token: Option<String>,

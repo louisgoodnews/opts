@@ -2,7 +2,7 @@
 # An end-to-end session through the control protocol, the way an AI agent plays OPTS without a human:
 # Home -> plan a drive (wizard) -> loading -> drive 100 m -> scroll and change settings -> pause -> leave.
 #
-#   opts-game --omsi-path "/path/to/OMSI 2" --cli-port 44201 &
+#   OPTS_CLI_TOKEN=<32+ chars> opts-game --omsi-path "/path/to/OMSI 2" --cli-port 44201 &
 #   crates/opts-cli/examples/play_session.sh
 #
 # Needs `opts-cli` on PATH (or OPTS_CLI) and `jq`. Every step waits for a condition (`ui.wait_for`)

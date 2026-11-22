@@ -31,6 +31,9 @@ cli() { "$CLI" --port "$PORT" --json --quiet "$@"; }
 cleanup() { cli shutdown >/dev/null 2>&1 || true; kill "$pid" 2>/dev/null || true; rm -rf "$cfg" "$data"; }
 envs=(XDG_CONFIG_HOME="$cfg" XDG_DATA_HOME="$data" OPTS_DEV_HOUR="${HOUR:-12}" OPTS_RENDER_DIAG=1)
 [ "$entry" != "-" ] && envs+=(OPTS_DEV_ENTRY="$entry")
+# The control server needs a token (ISS-002): keep one from the environment or make a 32-hex-char one.
+: "${OPTS_CLI_TOKEN:=$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')}"
+export OPTS_CLI_TOKEN
 env "${envs[@]}" "$BIN" --omsi-path "$OMSI" --map-path "$OMSI/maps/$map" --vehicle-path "$OMSI/Vehicles/$veh" \
   --autostart --windowed --camera ego --traffic 0 --pedestrians 0 --no-hot-reload \
   --cli-port "$PORT" > "$OUT/game.log" 2>&1 &
