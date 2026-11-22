@@ -170,9 +170,9 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Scale and boundary: a dated burn-down per engine crate, one adapter per format; extend the ratchet to `opts-game/src/in_game/omsi_world`** (ISS-031, ISS-032; PRJ-03, PRJ-05).
 - [ ] 🟡 **Control-server and file safety: symlink refusal in `check_write`, save-path component check, `expect` on the rail path** (ISS-007, ISS-008, ISS-009).
 - [ ] 🟡 **Dependencies: `cargo deny check advisories` when network is available; confirm font licence notices in the binary** (ISS-010).
-- [ ] 🟡 **Overlay, indicators, bloom and CLI: tests and docs** (ISS-018 bloom needs HDR and its settings text; ISS-019 M-0049 overlay has no tests; ISS-020 indicator tests and the Back/Escape guard; ISS-021 CLI method list against the docs).
+- [~] 🟡 **Overlay, indicators, bloom and CLI: tests and docs** (ISS-018 bloom needs HDR and its settings text: done 2026-11-22 in `8a0148dc`; ISS-019 M-0049 overlay has no tests; ISS-020 indicator tests and the Back/Escape guard; ISS-021 CLI method list against the docs).
 - [ ] 🟡 **Exhaust smoke: use the trailer's own emitter where one is defined** (ISS-038; `weather/exhaust.rs:18`).
-- [ ] 🟡 **Test hygiene and structure: test fixtures out of the production library, a total-line budget, a duplication scan, the settings frame-time test made budgeted** (ISS-030, ISS-033, ISS-034, ISS-035).
+- [~] 🟡 **Test hygiene and structure: test fixtures out of the production library, a total-line budget, a duplication scan, the settings frame-time test made relative** (ISS-030: In progress 2026-11-22 on agent/settings-test-hygiene; ISS-033, ISS-034, ISS-035).
 - [ ] 🟡 **Agent rules into the repository (a CLAUDE.md or the Definition of Done)** (ISS-029; PRJ-20).
 
 #### M-0152–M-0159 — Phase 16: Feature parity with OMSI: bus operation (proposed 2026-11-18, [phase page](../src/roadmap/phase-16/README.md))
