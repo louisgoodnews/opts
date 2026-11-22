@@ -135,7 +135,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [~] 🟠 **Help controls table: add the missing live bindings and a reverse test over `action_keys::ACTIONS`** (ISS-015; in progress 2026-11-22 on `agent/feature-gap`; [M-0164](../src/roadmap/phase-17/M-0164.md)).
 - [ ] 🟠 **Lighting doc: correct `lighting-system.md` lines 428 and 444 and the mirror column to match `light_quality/ladder.rs`** (ISS-017; FEAT-07).
 - [ ] 🟠 **Battery-off path: script-rig test and the four HH109 `cockpit.osc` checks** (ISS-014; [M-0160](../src/roadmap/phase-17/M-0160.md)).
-- [ ] 🟠 **Door arming: the claim's source is not located; read the door scripts (prose only) and add a readback test that sets `pax_entry{n}_open`** (ISS-013; [issue file](issues/ISS-013-door-arming.md), milestone M-0101).
+- [~] 🟠 **Door arming: the claim's source is not located; In progress 2026-11-22 on agent/door-arming; read the door scripts (prose only) and add a readback test that sets `pax_entry{n}_open`** (ISS-013; [issue file](issues/ISS-013-door-arming.md), milestone M-0101).
 - [ ] 🟠 **Text X parser: bound the file-supplied counts as the binary reader does, add a huge-count test, and add fuzz targets for `.x`, `.o3d`, `.bus` and the map formats** (ISS-005, ISS-006; PRJ-04).
 - [ ] 🟠 **Choppy first-person driving: frame-time measurement, drive-state logging, heave and pitch interpolation tests; straightening collapse and the 70 m x-jump reproduced or closed** (ISS-039, ISS-040, ISS-041; yaw fixed by `3baee292`).
 - [ ] 🟠 **Records: a commit hash on every `[x]` line; `roadmap_audit` fails a `[x]` line without one; M-0124 reopened or its dynamic-mass item evidenced** (ISS-025, ISS-027).
