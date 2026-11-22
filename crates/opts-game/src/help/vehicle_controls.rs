@@ -4,16 +4,14 @@
 use bevy::prelude::*;
 use opts_bevy::action_keys::display;
 use opts_bevy::{KeyChord, MouseTrigger, PlayerVehicle};
-use opts_gui::l10n::L10nKey;
-use opts_gui::prelude::*;
 
 use crate::settings::GameSettings;
 use crate::settings_registry::SettingsRegistry;
 use crate::shell::keys;
 use crate::vehicle_keys::ACTIONS;
 
-mod widgets;
-use widgets::{chip, heading, note};
+pub mod widgets;
+use widgets::{chip, heading, key_row, note};
 
 /// The container the lists are built into; rebuilt when the settings or the vehicle change.
 #[derive(Component, Debug, Clone, Copy)]
@@ -63,21 +61,7 @@ fn action_rows(
             .flatten()
             .and_then(display)
             .unwrap_or_else(|| "none".to_owned());
-        p.spawn(Node {
-            column_gap: Val::Px(16.0),
-            align_items: AlignItems::Center,
-            ..default()
-        })
-        .with_children(|row| {
-            chip(row, &shown, 120.0);
-            row.spawn((
-                Text::new(a.label_key),
-                L10nKey(a.label_key),
-                TextColor::default(),
-                TypeStyleToken(TypeScale::BodyMedium),
-                ForegroundRole(ColorRole::OnSurfaceVariant),
-            ));
-        });
+        key_row(p, &shown, &[], a.label_key);
     }
 }
 
@@ -97,7 +81,7 @@ fn cockpit_spots(p: &mut ChildSpawnerCommands, names: &[String]) {
     })
     .with_children(|wrap| {
         for name in names {
-            chip(wrap, name, 0.0);
+            chip(wrap, name, Val::Auto, &[]);
         }
     });
 }

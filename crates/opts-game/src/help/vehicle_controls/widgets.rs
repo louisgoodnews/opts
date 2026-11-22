@@ -5,7 +5,9 @@ use bevy::prelude::*;
 use opts_gui::l10n::L10nKey;
 use opts_gui::prelude::*;
 
-pub(super) fn heading(parent: &mut ChildSpawnerCommands, key: &'static str) {
+use crate::help::controls::{ActionChip, KeyChip, KEY_CHIP_WIDTH};
+
+pub fn heading(parent: &mut ChildSpawnerCommands, key: &'static str) {
     parent.spawn((
         Text::new(key),
         L10nKey(key),
@@ -15,7 +17,7 @@ pub(super) fn heading(parent: &mut ChildSpawnerCommands, key: &'static str) {
     ));
 }
 
-pub(super) fn note(parent: &mut ChildSpawnerCommands, key: &'static str) {
+pub fn note(parent: &mut ChildSpawnerCommands, key: &'static str) {
     parent.spawn((
         Text::new(key),
         L10nKey(key),
@@ -25,23 +27,61 @@ pub(super) fn note(parent: &mut ChildSpawnerCommands, key: &'static str) {
     ));
 }
 
-pub(super) fn chip(parent: &mut ChildSpawnerCommands, text: &str, min_width: f32) {
+/// A key chip (`width` is [`KEY_CHIP_WIDTH`] in a key row, `Val::Auto` for a free-standing name).
+/// A key chip: `width` is [`super::super::controls::KEY_CHIP_WIDTH`] in a key row (one width for
+/// every row, ISS-055) and `Val::Auto` for a free-standing name. `ids` are the rebindable actions
+/// behind it (empty for keys that cannot move).
+pub fn chip(
+    parent: &mut ChildSpawnerCommands,
+    text: &str,
+    width: Val,
+    ids: &'static [&'static str],
+) {
     parent
         .spawn((
             Node {
-                min_width: Val::Px(min_width),
+                width,
                 padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
                 ..default()
             },
+            KeyChip,
             BackgroundRole(ColorRole::SurfaceContainerHighest),
             RadiusToken(RadiusLevel::Small),
         ))
         .with_children(|c| {
-            c.spawn((
+            let mut t = c.spawn((
                 Text::new(text),
                 TextColor::default(),
                 TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::OnSurface),
+            ));
+            if !ids.is_empty() {
+                t.insert(ActionChip(ids));
+            }
+        });
+}
+
+/// One row of a key table: the key chip, then the action it does (`action` is a message key).
+pub fn key_row(
+    parent: &mut ChildSpawnerCommands,
+    shown: &str,
+    ids: &'static [&'static str],
+    action: &'static str,
+) {
+    parent
+        .spawn(Node {
+            column_gap: Val::Px(16.0),
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|row| {
+            chip(row, shown, Val::Px(KEY_CHIP_WIDTH), ids);
+            row.spawn((
+                Text::new(action),
+                L10nKey(action),
+                TextColor::default(),
+                TypeStyleToken(TypeScale::BodyMedium),
+                ForegroundRole(ColorRole::OnSurfaceVariant),
             ));
         });
 }

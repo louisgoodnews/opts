@@ -29,6 +29,14 @@ pub struct Binding {
     pub ids: &'static [&'static str],
 }
 
+/// The width of every key chip of the Help table and the vehicle list (ISS-055): one width puts
+/// each row's description at the same x position, whatever the key text.
+pub const KEY_CHIP_WIDTH: f32 = 240.0;
+
+/// Marks a key chip of the table, so the layout can be checked (ISS-055).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct KeyChip;
+
 /// The chip of a rebindable row: its text follows the player's bindings.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct ActionChip(pub &'static [&'static str]);

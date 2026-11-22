@@ -83,6 +83,7 @@ fn all_texts(app: &mut App) -> Vec<String> {
         .collect()
 }
 
+mod chip_column;
 mod controls;
 mod overlay;
 mod page;
