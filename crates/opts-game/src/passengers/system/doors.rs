@@ -32,3 +32,6 @@ pub(super) fn read_doors(
             .collect(),
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -6,7 +6,7 @@
 | **Severity** | major (correctness) |
 | **Milestone** | [M-0101](../../src/roadmap/phase-4/M-0101.md) Doors, Passengers, Tickets and Cash (addendum: door arming) |
 | **Feature audit** | FEAT-03 in [feature-audit-2026-11-18](../../audit/feature-audit-2026-11-18.md) |
-| **Status** | open: no implementation yet |
+| **Status** | resolved 2026-11-22 on `agent/door-arming` (commit `9f38f95c`): arming is in the scripts (NLC, Bremen MAN); Rust reads the flags; readback test added |
 
 ## Problem
 
@@ -34,3 +34,10 @@ Reading `.osc` scripts is allowed for inferring logic and units, in prose only. 
 
 - The claim is either evidenced (script location in prose, readback test passing and failing when removed) or withdrawn on the board and in the register.
 - M-0101 states the result.
+
+## Outcome (2026-11-22)
+
+- **Claim source.** No doc, roadmap file, field report or code comment in the repository says the doors are pneumatically armed. The claim is in the board line and the feature audit (FEAT-03), which both take it from the brief. Nearby hits are not arming: `setvar_families.json` names a pneumatic door *type*, and the M-0027 and audio notes mention door pneumatics in sound.
+- **Scripts.** On the NLC (`MAN_NewLionsCity`) and the Bremen MAN (`HB76_MAN_LionsCity`), `script/door-3.osc` keeps a release state per door group, set by the driver's release switch and raised as an event. The pressure builds slowly before the door moves; the door's position above 0.9 sets `PAX_Entry<n>_Open` or `PAX_Exit<n>_Open`. The Bremen script also ties release to the brake tank pressure and, for electric doors, to the busbar voltage.
+- **Rust.** Reads only the `PAX_*_Open` flags (`passengers/system/doors.rs`). Arming is not reimplemented.
+- **Test.** `door_flags_decide_boarding` (`crates/opts-game/src/passengers/system/doors/tests.rs`) sets `pax_entry0_open` and checks boarding through open and closed entries. With the readback removed it fails (`left: 0`, `right: 1`); restored, it passes.
