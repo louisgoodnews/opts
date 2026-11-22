@@ -166,7 +166,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### Issue register 2026-11-18 (minor and structural; [register](../audit/issues-2026-11-18.md))
 - [ ] 🟠 **Tunnel zones: the tile loader feeds parsed splines; one real tunnel labelled** (ISS-012; [M-0115](../src/roadmap/phase-11/M-0115.md); [issue file](issues/ISS-012-tunnel-zones-empty-splines.md); waits for M-0164's merge).
-- [x] 🟠 **Snow on scenery: refresh loaded textures on a snow-flag change** (ISS-016; [M-0121](../src/roadmap/phase-12/M-0121.md); [issue file](issues/ISS-016-snow-load-order.md)) — done 2026-11-22 on agent/snow-refresh; derived copies are not refreshed (limit recorded).
+- [x] 🟠 **Snow on scenery: refresh loaded textures on a snow-flag change** (ISS-016; [M-0121](../src/roadmap/phase-12/M-0121.md); [issue file](issues/ISS-016-snow-load-order.md)) — done 2026-11-22 on agent/snow-refresh (commit 6395d448); derived copies are not refreshed (limit recorded).
 - [ ] 🟠 **Scale and boundary: a dated burn-down per engine crate, one adapter per format; extend the ratchet to `opts-game/src/in_game/omsi_world`** (ISS-031, ISS-032; PRJ-03, PRJ-05).
 - [ ] 🟡 **Control-server and file safety: symlink refusal in `check_write`, save-path component check, `expect` on the rail path** (ISS-007, ISS-008, ISS-009).
 - [ ] 🟡 **Dependencies: `cargo deny check advisories` when network is available; confirm font licence notices in the binary** (ISS-010).
