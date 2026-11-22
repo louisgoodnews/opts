@@ -14,7 +14,7 @@ use crate::passengers::rig::PassengerRig;
 
 const SEED: u64 = 7;
 
-fn paths() -> Paths {
+pub(super) fn paths() -> Paths {
     let p = |x: f32, y: f32| Vec3::new(x, y, 0.4);
     Paths {
         points: vec![
@@ -31,7 +31,7 @@ fn paths() -> Paths {
     }
 }
 
-fn cabin() -> Cabin {
+pub(super) fn cabin() -> Cabin {
     Cabin {
         places: vec![
             Place {

@@ -6,7 +6,7 @@
 | **Severity** | major (player) |
 | **Milestone** | [M-0152](../../src/roadmap/phase-16/M-0152.md) Free-drive boarding rule; builds on [M-0101](../../src/roadmap/phase-4/M-0101.md) |
 | **Feature audit** | FEAT-05 in [feature-audit-2026-11-18](../../audit/feature-audit-2026-11-18.md) |
-| **Status** | rule closed 2026-11-22 in commit 7e465ce7 on `agent/free-drive`: rule (a) in `admits` and an `admits`-level test. Boarding-path tests added 2026-11-22 on `agent/free-drive-rig` (commit d834b520). The in-game check at a timetabled stop is open. |
+| **Status** | rule closed 2026-11-22 in commit 7e465ce7 on `agent/free-drive`: rule (a) in `admits` and an `admits`-level test. Boarding-path tests added 2026-11-22 on `agent/free-drive-rig` (commit d834b520). Test of the whole `update_passengers` system with a free-drive bus added 2026-11-22 on `agent/passengers-system` (commit 7960b323). The in-game check at a timetabled stop is open. |
 
 ## Problem
 
@@ -33,7 +33,8 @@ A free drive (no trip) boards any waiting person whose destination the stop serv
 
 ## Done when
 
-- A free drive takes passengers at a stop that serves their destination, shown by a test that drives the boarding path (not only `admits`): `passengers::system::board::tests::a_free_drive_boards_an_unseen_passenger_whose_destination_the_stop_serves` drives `board_unseen`, and `a_free_drive_boards_a_walking_passenger_whose_destination_the_stop_serves` drives `walk_to_doors`. Both use a `bus = None` and in-code fixtures: no installed game data is needed, and nothing skips. A person whose destination the stop does not serve stays behind in both tests. The test is an ECS-free call of the two functions, not a run of `update_passengers` in the game.
+- A free drive takes passengers at a stop that serves their destination, shown by a test that drives the boarding path (not only `admits`): `passengers::system::board::tests::a_free_drive_boards_an_unseen_passenger_whose_destination_the_stop_serves` drives `board_unseen`, and `a_free_drive_boards_a_walking_passenger_whose_destination_the_stop_serves` drives `walk_to_doors`. Both use a `bus = None` and in-code fixtures: no installed game data is needed, and nothing skips. A person whose destination the stop does not serve stays behind in both tests. The two functions are driven without ECS. A third test, `passengers::system::board::system_tests::update_passengers_boards_a_free_drive_passenger_whose_destination_the_stop_serves`, runs the real `update_passengers` system through a Bevy `Schedule` with a `PlayerVehicle` bus (no route, so `bus = None`), a unit whose entry 0 is open through a `VehicleScripts` engine, and the same two waiting people. It shows the served person boards and the unserved one stays. It does not run the game: stop arrival (`arrive_at_stop`) does not run, because the test world has no bus stop markers, so the waiting people are set up by hand.
 - The tests fail when the free-drive branch is removed. Checked 2026-11-22: with `(Some(_), None) => false` both fail (assertions `the served person boards`, `only the served person boards`), and the branch restored passes.
+- Removal check for the `update_passengers` test (2026-11-22, `agent/passengers-system`): with `(Some(_), None) => false` it fails at `the served person boards through the open entry` (left 0, right 1); with the arm restored it passes.
 - Open: the in-game check (M-0152 acceptance 3, a free drive at a timetabled stop). The game was not run.
 - M-0152 and the board say what was built, with the commit hash.
