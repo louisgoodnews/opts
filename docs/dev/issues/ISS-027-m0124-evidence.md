@@ -5,7 +5,7 @@
 | **Issue** | ISS-027 (local register: [issues-2026-11-18](../../audit/issues-2026-11-18.md)) |
 | **Severity** | minor (records) |
 | **Milestone** | [M-0124](../../src/roadmap/phase-12/M-0124.md) Passenger Load Physics |
-| **Status** | in progress 2026-11-22 on `agent/records-hygiene`. M-0124 stays reopened, with its evidence stated item by item. The M-0101 half of the register row is not addressed here. |
+| **Status** | in progress 2026-11-22 (`agent/records-2`). M-0124 stays reopened, its evidence stated item by item; the M-0101 half is checked and not evidenced (acceptance 2 and 3). |
 
 ## Problem
 
@@ -28,3 +28,14 @@ Closure needs the two missing checks with their documented margins, green on mas
 
 - M-0124's acceleration and braking checks (criteria 2 and 3) run green on master with their margins, and the card, README, board and ROADMAP say closed in the same commit.
 - M-0101's criteria 2 and 3 are evidenced or reopened (separate work).
+
+## M-0101 half (2026-11-22, `agent/records-2`)
+
+The M-0101 card was read against the tests by their names and bodies; the tests were not run. The card now carries the full check ("Evidence check (ISS-027, 2026-11-22)"). Result:
+
+- Evidenced: door-gated boarding, `PAX_*_Req` in the sim and the scripts, alighting at stops, `[busstop]` stops, places beyond a cut and behind the joint, the `.otp` parser, the ticket callbacks, the free-drive boarding (M-0152).
+- Not evidenced: acceptance 2 (the HH109 change; `GivenTicket` has no test), acceptance 3 (`GetHumanCountOn*` is tested from fixture counts, not from placed passengers), the hips on the `[passpos]` point, places weighted by walking distance, `humans_count` by name, and "no passenger inside a closed door" as a state.
+
+M-0101 criteria 2 and 3 are therefore not evidenced, so this issue stays in progress. The M-0101 status and board line say so. The M-0124 card, its README row, its ROADMAP entry and the board line were compared and agree (reopened; ride height and steering tested; acceleration and braking margins not evidenced). Two stale sentences on the M-0124 card were corrected: M-0101 "not started" and steering "not built" (both contradicted the card's own status).
+
+Still open for closure: the M-0124 acceleration check (10 s distance, margin from the mass ratio) and braking check (margin, mass-ratio bound), and M-0101 acceptance 2 and 3 tests.
