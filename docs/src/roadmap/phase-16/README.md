@@ -14,7 +14,7 @@ Ranked by the parity gap rank (GAP number). Earlier rows first.
 
 | Order | Milestone | Gap | Size | Notes |
 | ---: | :--- | :--- | :--- | :--- |
-| 1 | [M-0152](M-0152.md) Free-drive boarding rule | GAP-01 | S | Rule decided 2026-11-22 (board anyone whose destination the stop serves); In progress 2026-11-22 on `agent/free-drive`. Issue ISS-036. |
+| 1 | [M-0152](M-0152.md) Free-drive boarding rule | GAP-01 | S | Rule decided 2026-11-22 (board anyone whose destination the stop serves); done 2026-11-22 on `agent/free-drive`. Issue ISS-036. |
 | 2 | [M-0157](M-0157.md) Breakdowns, failures and repair | GAP-03 | L | Owner decision first: whether breakdowns are wanted at all. |
 | 3 | [M-0156](M-0156.md) Cash desk and change | GAP-06 | M | Depends on the M-0101 money model. |
 | 4 | [M-0155](M-0155.md) Timetable circuits by day type and night | GAP-07 | M | Uses TTData from M-0099. |
@@ -25,7 +25,7 @@ Ranked by the parity gap rank (GAP number). Earlier rows first.
 
 ## Existing milestones this phase depends on
 
-- [M-0101](../phase-4/M-0101.md) Doors, Passengers, Tickets and Cash: first slice only (2026-10-21); cash desk and free-drive boarding open.
+- [M-0101](../phase-4/M-0101.md) Doors, Passengers, Tickets and Cash: first slice only (2026-10-21); cash desk open (free-drive boarding done, M-0152).
 - [M-0099](../phase-4/M-0099.md) Route, timetable and IBIS data layer (done).
 - [M-0102](../phase-4/M-0102.md) and [M-0140](../phase-4/M-0140.md) sound events and AI sounds (first slices).
 - [M-0118](../phase-11/M-0118.md) OMSI event system research (in progress).
@@ -43,8 +43,8 @@ Ranked by the parity gap rank (GAP number). Earlier rows first.
 
 *Goal: close the OMSI 2 bus-operation gaps in the order of player impact (boarding, failures, cash, timetable circuits, stops, stop sequence, voices, depot service). Status: proposed 2026-11-18 from the [OMSI parity matrix](../../../audit/omsi-parity-matrix-2026-11-18.md); no milestone of this phase has code yet. Documents: [phase page](README.md).*
 
-- [~] **🎫 Free-drive boarding rule** — [M-0152](M-0152.md) — rule decided 2026-11-22; In progress 2026-11-22 on `agent/free-drive`. (GAP-01, ISS-036)
-  - [~] Rule: a free drive boards anyone whose destination the stop serves. Implement it and test a bus with no timetable run.
+- [x] **🎫 Free-drive boarding rule** — [M-0152](M-0152.md) — rule decided 2026-11-22; done 2026-11-22 on `agent/free-drive`. (GAP-01, ISS-036)
+  - [x] Rule: a free drive boards anyone whose destination the stop serves; implemented, with an `admits` test for a bus with no timetable run.
 - [ ] **🔧 Breakdowns, failures and repair** — [M-0157](M-0157.md) — owner decision first (GAP-03)
   - [ ] Decision memo; if approved, one failure class with repair, off by default.
 - [ ] **💶 Cash desk and change** — [M-0156](M-0156.md) (GAP-06)

@@ -1,5 +1,6 @@
 //! Where a waiting passenger wants to go: the pair of the trip's line and its display text. A bus
-//! takes a passenger only when the pair of its trip is one the passenger holds.
+//! with a trip takes a passenger only when the pair of its trip is one the passenger holds; a free
+//! drive (no trip) takes any passenger whose destination the stop serves.
 //!
 //! The weights of a [`DestinationTable`] are timetable service counts (how often a trip is in a
 //! tour), not measured demand: no data in the map says who wants to go where.
@@ -81,12 +82,19 @@ pub fn pick(options: &[(Destination, u32)], point: u64) -> Option<&Destination> 
     None
 }
 
-/// Whether a bus whose trip is `bus` takes a passenger with destination `dest`: both must be known
-/// and equal. A passenger without a destination (no trip serves the stop) never boards, and a bus
-/// without a trip takes nobody.
+/// Whether a bus whose trip is `bus` takes a passenger with destination `dest`. A bus with a trip
+/// takes the passenger only when both destinations are known and equal. A free drive (`bus` is
+/// `None`, no trip) takes any passenger whose destination is known: a destination is drawn only
+/// from the trips that serve the stop the person waits at (see [`DestinationTable::draw`]), so
+/// the stop serves it. A passenger without a destination (no trip serves the stop) never boards.
 #[must_use]
 pub fn admits(dest: Option<&Destination>, bus: Option<&Destination>) -> bool {
-    matches!((dest, bus), (Some(d), Some(b)) if d == b)
+    match (dest, bus) {
+        (Some(d), Some(b)) => d == b,
+        // Free drive: the bus's line and destination are not matched (decided 2026-11-22).
+        (Some(_), None) => true,
+        (None, _) => false,
+    }
 }
 
 #[cfg(test)]

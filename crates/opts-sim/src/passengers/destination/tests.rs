@@ -25,11 +25,33 @@ fn the_same_line_with_another_text_does_not_board() {
 }
 
 #[test]
-fn a_passenger_without_destination_or_a_bus_without_trip_never_match() {
+fn a_passenger_without_destination_never_boards() {
     let a = dest("13N", "Zoo");
     assert!(!admits(None, Some(&a)));
-    assert!(!admits(Some(&a), None));
     assert!(!admits(None, None));
+}
+
+#[test]
+fn a_free_drive_boards_a_passenger_whose_destination_the_stop_serves() {
+    let mut t = DestinationTable::default();
+    t.add(7, dest("13N", "Zoo"), 1);
+    t.add(7, dest("X34", "Rathaus"), 1);
+    let mut rng = Rng::new(3);
+    let waiting = t.draw(7, &mut rng).expect("the stop serves a destination");
+    assert!(
+        admits(Some(&waiting), None),
+        "a free drive boards {waiting:?}"
+    );
+    assert!(admits(Some(&dest("X34", "Rathaus")), None));
+}
+
+#[test]
+fn a_free_drive_leaves_behind_a_passenger_at_a_stop_without_trips() {
+    let t = DestinationTable::default();
+    let mut rng = Rng::new(3);
+    let waiting = t.draw(9, &mut rng);
+    assert_eq!(waiting, None);
+    assert!(!admits(waiting.as_ref(), None));
 }
 
 #[test]

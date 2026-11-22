@@ -6,7 +6,7 @@
 | **Severity** | major (player) |
 | **Milestone** | [M-0152](../../src/roadmap/phase-16/M-0152.md) Free-drive boarding rule; builds on [M-0101](../../src/roadmap/phase-4/M-0101.md) |
 | **Feature audit** | FEAT-05 in [feature-audit-2026-11-18](../../audit/feature-audit-2026-11-18.md) |
-| **Status** | open: rule decided 2026-11-22, code not changed |
+| **Status** | closed 2026-11-22 on `agent/free-drive`: rule (a) in `admits`, a `bus = None` boarding test that fails with the branch removed, spec and cards updated. Commit hash in the register and on the board |
 
 ## Problem
 

@@ -35,7 +35,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0098 — Consist Script State: Per-Part Engines, Script Share and Control Cables](M-0098.md) — ✅ Done 2026-10-21
 - [M-0099 — Route, Timetable and IBIS Data Layer](M-0099.md) — 🟢 done 2026-10-19
 - [M-0100 — Script Textures: Canvas, Fonts and the `ST*` API](M-0100.md) — 🟡 Partly built; glyph text 2026-10-21; NG272 and HH109 destination boards show 2026-10-26
-- [M-0101 — Doors, Passengers, Tickets and Cash](M-0101.md) — 🟡 First slice 2026-10-21; free drive with no trip boards nobody (ISS-036, [M-0152](../phase-16/M-0152.md))
+- [M-0101 — Doors, Passengers, Tickets and Cash](M-0101.md) — 🟡 First slice 2026-10-21; free drive boarded nobody until 2026-11-22 (ISS-036, [M-0152](../phase-16/M-0152.md), done on `agent/free-drive`)
 - [M-0146 — Interior Rattling: the Road Shakes the Bus](M-0146.md) — ✅ Implemented 2026-10-26 (project lead's request): `A_Trans_Z`, `.surf` height maps and surface types under every wheel
 - [M-0141 — Vehicle Controls and Systems: the Driver's Workplace Works](M-0141.md) — 🟡 In progress (requested 2026-10-20; electrics, engine start, lights, doors, heating, dashboard controls; no earlier milestone owned it)
 - [M-0102 — Sound Events and Force Feedback](M-0102.md) — 🟡 First slice 2026-10-20 (the player vehicle's loops and one-shots from its sound configuration; announcements, mixer inputs, force feedback open)

@@ -405,7 +405,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).
 - [~] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [x] Document the passenger simulation model in `docs/src/simulation/passengers.md` (written 2026-10-21 with M-0101) — prerequisite for M-0050's stop/boarding items (critical review 2026-10-11 F-023).
-  - [~] Implement bus stop logic and passenger boarding/alighting — first slice [M-0101](phase-4/M-0101.md) 2026-10-21: `[busstop]` objects, boarding through the scripts' doors, tickets, articulated buses and trams; cash desk open; a free drive with no trip boards nobody, so the item is not complete (ISS-036, [M-0152](phase-16/M-0152.md)). *Requirement from rail operation (2026-10-12): a stop evaluates the leading head's direction of travel and door side, so a tram arriving B-head first is recognised without a mirrored second stop cube ([rail-vehicles §8–9](../simulation/rail-vehicles.md)).*
+  - [~] Implement bus stop logic and passenger boarding/alighting — first slice [M-0101](phase-4/M-0101.md) 2026-10-21: `[busstop]` objects, boarding through the scripts' doors, tickets, articulated buses and trams; cash desk open; a free drive boarded nobody until 2026-11-22 (ISS-036, [M-0152](phase-16/M-0152.md), done on `agent/free-drive`). *Requirement from rail operation (2026-10-12): a stop evaluates the leading head's direction of travel and door side, so a tram arriving B-head first is recognised without a mirrored second stop cube ([rail-vehicles §8–9](../simulation/rail-vehicles.md)).*
   - [~] Implement a basic routing algorithm (e.g., RAPTOR or Dijkstra via `petgraph`). *Vehicle routing over lanes exists (`LaneGraph::shortest_route`, used by scheduled AI and the route line on the map); passenger journey routing open.*
 
 ## 🔭 Phase 11: Advanced Systems, Realism & Continuous Improvement
@@ -500,8 +500,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## 🚌 Phase 16: Feature parity with OMSI: bus operation
 *Goal: close the OMSI 2 bus-operation gaps in the order of player impact (boarding, failures, cash, timetable circuits, stops, stop sequence, voices, depot service). Status: proposed 2026-11-18 from the [OMSI parity matrix](../../audit/omsi-parity-matrix-2026-11-18.md); no milestone of this phase has code yet. Documents: [phase page](phase-16/README.md).*
 
-- [~] **🎫 Free-drive boarding rule** — [M-0152](phase-16/M-0152.md) — rule decided 2026-11-22; In progress 2026-11-22 on `agent/free-drive`. (GAP-01, ISS-036)
-  - [~] Rule: a free drive boards anyone whose destination the stop serves. Implement it and test a bus with no timetable run.
+- [x] **🎫 Free-drive boarding rule** — [M-0152](phase-16/M-0152.md) — rule decided 2026-11-22; done 2026-11-22 on `agent/free-drive`. (GAP-01, ISS-036)
+  - [x] Rule: a free drive boards anyone whose destination the stop serves; implemented, with an `admits` test for a bus with no timetable run.
 - [ ] **🔧 Breakdowns, failures and repair** — [M-0157](phase-16/M-0157.md) — owner decision first (GAP-03)
   - [ ] Decision memo; if approved, one failure class with repair, off by default.
 - [ ] **💶 Cash desk and change** — [M-0156](phase-16/M-0156.md) (GAP-06)
