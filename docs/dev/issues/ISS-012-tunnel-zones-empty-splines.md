@@ -6,7 +6,7 @@
 | **Severity** | major (correctness) |
 | **Milestone** | [M-0115](../../src/roadmap/phase-11/M-0115.md) Tunnel Detection and Spatial Zones |
 | **Feature audit** | FEAT-06 in [feature-audit-2026-11-18](../../audit/feature-audit-2026-11-18.md) |
-| **Status** | open: waits for the merge of [M-0164](../../src/roadmap/phase-17/M-0164.md) |
+| **Status** | in progress 2026-11-22 on `agent/tunnel-zones` (M-0164 is on master, so the sequencing below is met) |
 
 ## Problem
 
