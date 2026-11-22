@@ -27,7 +27,7 @@ pub struct SplineCandidate<'a> {
     pub sli_file: &'a str,
     /// The graphical profiles: `x` across the spline (m), `y` height (m).
     pub profiles: &'a [Vec<Vec2>],
-    /// Ground-plane start of the spline (x east, y north).
+    /// Ground-plane start of the spline in the sampler's plane (x east, y = Bevy z = -north).
     pub start: Vec2,
     /// Ground-plane end of the spline.
     pub end: Vec2,

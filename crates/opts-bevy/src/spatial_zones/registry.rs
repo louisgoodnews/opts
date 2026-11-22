@@ -56,7 +56,7 @@ impl ZoneRegistry {
         &mut self,
         commands: &mut Commands,
         resident: &[TileKey],
-        zones_of: impl Fn(TileKey) -> Vec<SpatialZone>,
+        mut zones_of: impl FnMut(TileKey) -> Vec<SpatialZone>,
     ) -> (usize, usize) {
         let stale: Vec<TileKey> = self
             .tiles
