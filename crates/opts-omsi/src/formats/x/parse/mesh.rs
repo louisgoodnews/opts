@@ -18,7 +18,7 @@ pub(super) fn parse_mesh(
     reader.expect_open_brace()?;
 
     // Vertices
-    let n_vertices = reader.parse_u32()? as usize;
+    let n_vertices = reader.parse_count()?;
     let mut positions = Vec::with_capacity(n_vertices);
     for _ in 0..n_vertices {
         let x = reader.parse_f32()?;
@@ -28,10 +28,10 @@ pub(super) fn parse_mesh(
     }
 
     // Faces
-    let n_faces = reader.parse_u32()? as usize;
+    let n_faces = reader.parse_count()?;
     let mut raw_faces = Vec::with_capacity(n_faces);
     for _ in 0..n_faces {
-        let count = reader.parse_u32()? as usize;
+        let count = reader.parse_count()?;
         let mut face_indices = Vec::with_capacity(count);
         for _ in 0..count {
             face_indices.push(reader.parse_u32()?);
@@ -97,7 +97,7 @@ pub(super) fn parse_mesh(
 
 fn parse_normals(reader: &mut TokenReader) -> Result<Vec<Vec3>, XParseError> {
     reader.expect_open_brace()?;
-    let n_normals = reader.parse_u32()? as usize;
+    let n_normals = reader.parse_count()?;
     let mut normals = Vec::with_capacity(n_normals);
     for _ in 0..n_normals {
         let x = reader.parse_f32()?;
@@ -105,9 +105,9 @@ fn parse_normals(reader: &mut TokenReader) -> Result<Vec<Vec3>, XParseError> {
         let z = reader.parse_f32()?;
         normals.push(Vec3::new(x, y, z));
     }
-    let n_face_normals = reader.parse_u32()? as usize;
+    let n_face_normals = reader.parse_count()?;
     for _ in 0..n_face_normals {
-        let count = reader.parse_u32()? as usize;
+        let count = reader.parse_count()?;
         for _ in 0..count {
             reader.parse_u32()?;
         }
@@ -119,7 +119,7 @@ fn parse_normals(reader: &mut TokenReader) -> Result<Vec<Vec3>, XParseError> {
 
 fn parse_texture_coords(reader: &mut TokenReader) -> Result<Vec<Vec2>, XParseError> {
     reader.expect_open_brace()?;
-    let n_coords = reader.parse_u32()? as usize;
+    let n_coords = reader.parse_count()?;
     let mut uvs = Vec::with_capacity(n_coords);
     for _ in 0..n_coords {
         let u = reader.parse_f32()?;

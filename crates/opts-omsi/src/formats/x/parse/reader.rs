@@ -94,6 +94,23 @@ impl<'a> TokenReader<'a> {
         tok.to_u32()
     }
 
+    /// Reads a list count. Every list element occupies at least one token, so a count larger
+    /// than the tokens left cannot be satisfied: it is an error, not an allocation.
+    pub(super) fn parse_count(&mut self) -> Result<usize, XParseError> {
+        self.skip_separators();
+        let tok = self.next()?;
+        let count = tok.to_u32()? as usize;
+        let left = self.tokens.len() - self.pos;
+        if count > left {
+            return Err(XParseError::UnexpectedToken {
+                offset: tok.offset,
+                expected: format!("a count of at most {left} (the tokens left)"),
+                found: count.to_string(),
+            });
+        }
+        Ok(count)
+    }
+
     pub(super) fn skip_unknown_block(&mut self) -> Result<(), XParseError> {
         // Find opening brace first
         while let Some(tok) = self.peek() {
