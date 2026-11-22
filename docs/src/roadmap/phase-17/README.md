@@ -12,7 +12,7 @@ Ranked by the parity gap rank. Rows marked "existing" are owned by a milestone t
 | ---: | :--- | :--- | :--- | :--- |
 | 1 | GAP-02 | [M-0053](../phase-4/M-0053.md) Articulated vehicle completion (existing) | 🟡 in progress | Trailer-front seam unverified across angles; ISS-011, ISS-037. |
 | 2 | GAP-04 | [M-0115](../phase-11/M-0115.md) Tunnel detection and spatial zones (existing) | 🚧 in progress | Tile loader must feed splines (ISS-012). |
-| 3 | GAP-05 | [M-0160](M-0160.md) Battery-off path test | 📝 proposed | Cheap; ISS-014. |
+| 3 | GAP-05 | [M-0160](M-0160.md) Battery-off path test | 🟡 in progress | Cheap; ISS-014. |
 | 4 | GAP-09 | [M-0161](M-0161.md) Rail control scheme | 📝 proposed | First slice of [M-0141](../phase-4/M-0141.md) was road only. |
 | 5 | GAP-10 | [M-0162](M-0162.md) Overhead line and pantograph | 📝 proposed, research first | Large. |
 | 6 | GAP-11, GAP-13 | [M-0111](../phase-11/M-0111.md) AI traffic depth (existing) | 🚧 in progress | Bus-priority signals and AI reaction to the player. |
