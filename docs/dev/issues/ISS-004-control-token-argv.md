@@ -6,7 +6,7 @@
 | **Severity** | minor (safety) |
 | **Milestone** | [M-0043](../../src/roadmap/phase-5/M-0043.md) CLI Control Protocol & Hot Reload (owns [ADR-0006](../../src/adr/0006-control-protocol.md) and the [control protocol](../../src/architecture/control-protocol.md)) |
 | **Audit** | PRJ-15, safety 4 in [project-audit-2026-11-18](../../audit/project-audit-2026-11-18.md) |
-| **Status** | in progress (started 2026-11-22 on `agent/control-server-2`, from master `ecefa84b`) |
+| **Status** | done (2026-11-22; started on `agent/control-server-2` from `ecefa84b`, closed on `agent/control-server-3`) |
 
 ## Problem
 
@@ -22,10 +22,17 @@ The token is a plain argument: `--cli-token` in the game (`crates/opts-cli/src/a
 
 ## Outcome
 
-Spec first in `5a087e03` (section 7). The token comes from `OPTS_CLI_TOKEN` or a file (`--cli-token-file` for the game, `--token-file` for `opts-cli`); setting both is refused. `--cli-token` (game) and `--token` (`opts-cli`) are refused with a clear error. `opts-cli auth` takes no argument and sends the configured token. The shared helper is `crates/opts-cli/src/token.rs`. Not done: the token file's permissions are not checked (the audit asked for 0600).
+Spec first in `5a087e03` (section 7). The token comes from `OPTS_CLI_TOKEN` or a file (`--cli-token-file` for the game, `--token-file` for `opts-cli`); setting both is refused. `--cli-token` (game) and `--token` (`opts-cli`) are refused with a clear error. `opts-cli auth` takes no argument and sends the configured token. The shared helper is `crates/opts-cli/src/token.rs`.
+
+Closed 2026-11-22 on `agent/control-server-3`:
+- Token file permissions (`e1aa232f`): on Unix a file with `mode & 0o077 != 0` is refused with an error that names the mode and asks for 0600 (spec §7; before: "keep the file readable only by you", not checked). Applies to the game's `--cli-token-file` and the client's `--token-file` through `from_sources`.
+- Launchers (audit, no change needed): every script under `scripts/` that passes `--cli-port` sets the token source before it starts the game: `instancing-bench.sh`, `shadow-cull-bench.sh`, `visual-ab.sh` export `OPTS_CLI_TOKEN` (32 hex characters from `od`); `setvars-check.py` and `streaming-perf.py` set `OPTS_CLI_TOKEN` in the environment they pass to `Popen`. `capture-agent-demo.sh` only uses the client. `bash -n` on the three shell launchers and `python3 -m py_compile` on the two Python ones pass; none was run.
 
 Removal check (the `--cli-token` refusal in `args/defaults.rs` removed; file restored byte-identical):
 - `args::tests::the_old_cli_token_flag_is_refused_with_a_clear_error ... FAILED`
 - `test result: FAILED. 6 passed; 1 failed`
 
-Passing with the change: `cargo test -p opts-bevy --lib control::server` 15 passed, 0 failed (exit 0); `cargo test -p opts-cli --lib` 37 passed, 0 failed (exit 0). Logs: `opts-scratch/work/iss002-004/`.
+Removal check for the file permission check (the `refuse_shared_file` call in `read_token_file` removed; `git checkout` restored it):
+- `token::tests::a_0644_token_file_is_refused ... FAILED`; `test result: FAILED. 6 passed; 1 failed`
+
+Passing with the change: `cargo test -p opts-bevy --lib control::server` 16 passed, 0 failed (exit 0); `cargo test -p opts-cli --lib` 39 passed, 0 failed (exit 0); after the restore `token::tests` 7 passed (exit 0). Logs: `opts-scratch/work/iss002-004/`.

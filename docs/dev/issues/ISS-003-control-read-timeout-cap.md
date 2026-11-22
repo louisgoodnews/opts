@@ -6,7 +6,7 @@
 | **Severity** | major (safety) |
 | **Milestone** | [M-0043](../../src/roadmap/phase-5/M-0043.md) CLI Control Protocol & Hot Reload (owns [ADR-0006](../../src/adr/0006-control-protocol.md) and the [control protocol](../../src/architecture/control-protocol.md)) |
 | **Audit** | PRJ-07, safety 3 in [project-audit-2026-11-18](../../audit/project-audit-2026-11-18.md) |
-| **Status** | in progress (started 2026-11-22 on `agent/control-server-2`, from master `ecefa84b`) |
+| **Status** | done (2026-11-22; started on `agent/control-server-2` from `ecefa84b`, closed on `agent/control-server-3`) |
 
 ## Problem
 
@@ -22,10 +22,11 @@
 
 ## Outcome
 
-Spec first in `5a087e03` (section 1): a connection silent for 30 s is closed; at most 8 connections are served at once, a ninth gets one `1006 Busy` line and is closed. Code: `admission.rs` (cap, `Slots` guard, `refuse`); `connection.rs` takes the idle timeout as a parameter; `server.rs` listener uses both. The stop flag still waits for a blocked read to time out (at most 30 s); socket shutdown on stop is not done.
+Spec first in `5a087e03` (section 1): a connection silent for 30 s is closed; at most 8 connections are served at once, a ninth gets one `1006 Busy` line and is closed. Code: `admission.rs` (cap, `Slots` guard, `refuse`); `connection.rs` takes the idle timeout as a parameter; `server.rs` listener uses both. Closed 2026-11-22 on `agent/control-server-3`. Socket shutdown on stop (`08adaef4`): `admission.rs` keeps a clone of each admitted socket; stopping the server closes the listener and every open connection (the client reads end-of-file) and waits at most 2 s for the connection threads (spec §1, row Shutdown; before: no statement, the stop flag waited up to 30 s for a blocked read). Socket shutdown is the only open part of this issue, so the issue is done.
 
 Removal checks (each file restored byte-identical):
 - read timeout (`set_read_timeout` removed): `control::server::tests_admission::a_silent_client_is_dropped_after_the_read_timeout ... FAILED`; `test result: FAILED. 14 passed; 1 failed`
 - connection cap (cap check removed): `control::server::tests_admission::the_ninth_connection_is_refused_with_busy ... FAILED`; `test result: FAILED. 14 passed; 1 failed`
+- close on stop (`self.slots.close()` removed from `Drop for ServerHandle`): `control::server::tests_admission::stopping_the_server_closes_an_open_connection ... FAILED`; `test result: FAILED. 0 passed; 1 failed` (the client read timed out after 5 s instead of end-of-file)
 
-Passing with the change: `cargo test -p opts-bevy --lib control::server` 15 passed, 0 failed (exit 0); `cargo test -p opts-cli --lib` 37 passed, 0 failed (exit 0). Logs: `opts-scratch/work/iss002-004/`.
+Passing: `cargo test -p opts-bevy --lib control::server` 16 passed, 0 failed (exit 0); `cargo test -p opts-cli --lib` 39 passed, 0 failed (exit 0). Logs: `opts-scratch/work/iss002-004/`.
