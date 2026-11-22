@@ -6,7 +6,7 @@
 | **Severity** | major (correctness) |
 | **Milestone** | [M-0101](../../src/roadmap/phase-4/M-0101.md) Doors, Passengers, Tickets and Cash (addendum: door arming) |
 | **Feature audit** | FEAT-03 in [feature-audit-2026-11-18](../../audit/feature-audit-2026-11-18.md) |
-| **Status** | resolved 2026-11-22 on `agent/door-arming`: arming is in the scripts (NLC, Bremen MAN); Rust reads the flags; readback test added |
+| **Status** | resolved 2026-11-22 on `agent/door-arming` (commit `9f38f95c`): arming is in the scripts (NLC, Bremen MAN); Rust reads the flags; readback test added |
 
 ## Problem
 
