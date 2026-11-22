@@ -3,11 +3,17 @@
 use super::*;
 
 /// M-0088: whatever the facts cost, the page builds within a frame budget, shows "Calculating..."
-/// and fills in when the answer arrives. The provider takes 3 seconds in all; every frame must
-/// stay far below that (generous limit: CI machines are busy; the real budget is 33 ms).
+/// and fills in when the answer arrives. The provider takes 3 seconds in all.
+///
+/// Frame time is relative (ISS-030): the test measures idle frames of this same app while the
+/// facts are still pending (the median is the baseline), then asserts that the worst frame during
+/// fill-in is under the larger of ten times that baseline and the 33 ms real budget. A loaded
+/// machine slows both measurements, so the ratio holds; on a quiet machine the limit is 33 ms.
 #[test]
 fn the_content_page_builds_within_a_frame_and_fills_in_when_the_facts_arrive() {
-    const FRAME_LIMIT: Duration = Duration::from_millis(250);
+    const FRAME_BUDGET: Duration = Duration::from_millis(33);
+    const BASELINE_FRAMES: usize = 5;
+    const FACTOR: u32 = 10;
     let started = std::time::Instant::now();
     let (mut app, _, _) = page_app_with(
         "content-freeze",
@@ -35,6 +41,16 @@ fn the_content_page_builds_within_a_frame_and_fills_in_when_the_facts_arrive() {
         first.iter().all(|(_, k, _)| k.ends_with("-pending")),
         "placeholders first: {first:?}"
     );
+    let mut idle: Vec<Duration> = (0..BASELINE_FRAMES)
+        .map(|_| {
+            let t = std::time::Instant::now();
+            app.update();
+            t.elapsed()
+        })
+        .collect();
+    idle.sort();
+    let baseline = idle[BASELINE_FRAMES / 2];
+    let limit = (baseline * FACTOR).max(FRAME_BUDGET);
     let mut worst = Duration::ZERO;
     let deadline = std::time::Instant::now() + Duration::from_secs(20);
     loop {
@@ -56,8 +72,8 @@ fn the_content_page_builds_within_a_frame_and_fills_in_when_the_facts_arrive() {
         std::thread::sleep(Duration::from_millis(20));
     }
     assert!(
-        worst < FRAME_LIMIT,
-        "a frame took {worst:?} while the facts were gathered (limit {FRAME_LIMIT:?})"
+        worst < limit,
+        "a frame took {worst:?} while the facts were gathered (limit {limit:?}, idle baseline {baseline:?})"
     );
 }
 

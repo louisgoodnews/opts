@@ -172,7 +172,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Dependencies: `cargo deny check advisories` when network is available; confirm font licence notices in the binary** (ISS-010).
 - [~] 🟡 **Overlay, indicators, bloom and CLI: tests and docs** (ISS-018 bloom needs HDR and its settings text: done 2026-11-22 in `8a0148dc`; ISS-019 M-0049 overlay has no tests; ISS-020 indicator tests and the Back/Escape guard; ISS-021 CLI method list against the docs).
 - [ ] 🟡 **Exhaust smoke: use the trailer's own emitter where one is defined** (ISS-038; `weather/exhaust.rs:18`).
-- [~] 🟡 **Test hygiene and structure: test fixtures out of the production library, a total-line budget, a duplication scan, the settings frame-time test made relative** (ISS-030: In progress 2026-11-22 on agent/settings-test-hygiene; ISS-033, ISS-034, ISS-035).
+- [~] 🟡 **Test hygiene and structure: test fixtures out of the production library, a total-line budget, a duplication scan, the settings frame-time test made relative** (ISS-030: done 2026-11-22 on agent/settings-test-hygiene, the frame-time check is relative; ISS-033, ISS-034, ISS-035 open).
 - [ ] 🟡 **Agent rules into the repository (a CLAUDE.md or the Definition of Done)** (ISS-029; PRJ-20).
 
 #### M-0152–M-0159 — Phase 16: Feature parity with OMSI: bus operation (proposed 2026-11-18, [phase page](../src/roadmap/phase-16/README.md))
