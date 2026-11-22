@@ -1,6 +1,7 @@
 //! Tests of the start procedures on small stand-in scripts (the real vehicles' procedures are
 //! checked by `crates/opts-game/tests/vehicle_start.rs`).
 
+mod battery_off;
 mod degrees;
 mod families;
 mod mouse;
