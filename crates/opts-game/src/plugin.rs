@@ -77,6 +77,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(vehicle_sound::AiAudioPlugin)
             .add_plugins(player_sound::PlayerAudioPlugin)
             .add_plugins(opts_bevy::reflections::ReflectionsResearchPlugin)
+            .add_plugins(opts_bevy::model::SeasonTexturePlugin)
             .add_plugins(InGamePlugin);
 
         // Register global glass surface theme synchronization

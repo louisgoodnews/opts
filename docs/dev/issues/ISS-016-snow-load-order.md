@@ -6,7 +6,7 @@
 | **Severity** | major (correctness) |
 | **Milestone** | [M-0121](../../src/roadmap/phase-12/M-0121.md) Wetness and snow on vehicles and scenery |
 | **Feature audit** | FEAT-09 in [feature-audit-2026-11-18](../../audit/feature-audit-2026-11-18.md) |
-| **Status** | in progress (agent/snow-refresh, started 2026-11-22, from master b8a4b706) |
+| **Status** | done (agent/snow-refresh, 2026-11-22, from master b8a4b706; on-screen evidence open on M-0121) |
 
 ## Problem
 
@@ -29,7 +29,19 @@ Evidence (master b8a4b706):
 
 ## Outcome
 
-Pending. This section is filled in at completion.
+Approach: each texture the loader reads is recorded with its file under both cover states (`model/season_refresh.rs`, `ContentLoader::texture`). Each frame, `refresh_season_textures` compares the cover flag with the state each recorded image shows; on a change it decodes the other file and swaps it into the same image asset (`Assets::insert`), so every material that uses the handle follows without a rebuild. A missing variant keeps the image; a removed asset is dropped.
+
+Results (targeted, `cargo-lowmem.sh`, `CARGO_TARGET_DIR=opts-scratch/target-featuregap`, after `clean -p opts-bevy`):
+
+- `season` tests, with the refresh: `test result: ok. 6 passed; 0 failed; 629 filtered out` (`work/snow/season-run5.log`).
+- Removal check: the swap removed (the `images.insert` in `SeasonTextures::refresh`), `a_texture_loaded_before_the_cover_changes_shows_the_snow_file_after_the_change` FAILED with `assertion \`left == right\` failed` at `season_refresh.rs:188`, exit 101 (`work/snow/removal.log`).
+- Restored: the file was copied back from `work/snow/season_refresh.rs.good` (`cmp` equal), and `season` passes again, 6 passed (`work/snow/restore-pass.log`).
+
+Limit: derived copies are not refreshed. A texture made by `opaque_variant` (blended or alpha-stripped materials) or the composed transmap is a new image asset, not the file's decode, so it keeps the cover state it was made in until the object reloads. Vehicles and objects loaded before a change follow the swap only through the shared image asset.
+
+Not checked here: on-screen behaviour (the snow change in the running game). That evidence stays open on M-0121; the game was not run.
+
+Note on the test run: a shared target directory let another session's build overwrite the test binary. Runs before the `clean -p opts-bevy` used a stale binary without the refresh tests and are not used as evidence.
 
 ## Done when
 
