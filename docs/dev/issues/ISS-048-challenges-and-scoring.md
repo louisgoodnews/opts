@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-048. Research item RG-07 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | none yet: owner decision 2026-11-22: in scenario editor, no milestone yet (no scenario-editor milestone exists) |
-| **Status** | owner decision 2026-11-22: in scenario editor, no milestone yet |
+| **Milestone** | [M-0172](../../src/roadmap/phase-18/M-0172.md) Scenario Editor: Scenarios, Challenges and Scoring (proposed 2026-11-22) |
+| **Status** | milestone M-0172 proposed (owner decision 2026-11-22: challenges and scoring in a new scenario-editor milestone) |
 
 ## Problem
 

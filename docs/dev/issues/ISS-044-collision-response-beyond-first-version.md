@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-044. Research item RG-03 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | none new: extend the current collision work. The milestone that holds the first version is not named in the roadmap; owner to name it, then an addendum |
-| **Status** | owner decision 2026-11-22: extend the current collision work (no new milestone); holding milestone to be named |
+| **Milestone** | [M-0171](../../src/roadmap/phase-18/M-0171.md) Collision Response: Passengers, Police and Ambulance (proposed 2026-11-22) |
+| **Status** | milestone M-0171 proposed (owner decision 2026-11-22: a new milestone for collisions with extra behaviour, not an extension of the current collision work) |
 
 ## Problem
 

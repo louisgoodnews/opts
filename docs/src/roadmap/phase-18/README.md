@@ -12,14 +12,15 @@
 - [M-0168 Driver's desk hardware interface](M-0168.md) — 📝 proposed (RG-08, ISS-049)
 - [M-0169 Vehicle component swaps](M-0169.md) — 📝 proposed, kept separate from M-0135 (RG-11, ISS-052)
 - [M-0170 Stop-dependent fares](M-0170.md) — 📝 proposed, kept separate from M-0156 (RG-12, ISS-053)
+- [M-0171 Collision response: passengers, police and ambulance](M-0171.md) — 📝 proposed (RG-03, ISS-044)
+- [M-0172 Scenario editor: scenarios, challenges and scoring](M-0172.md) — 📝 proposed (RG-07, ISS-048)
+- [M-0173 Roaming emergency and service vehicles (global.cfg)](M-0173.md) — 📝 proposed (owner request, ISS-054)
 
 ## Decided without a milestone
 
-- **Collision responses beyond the first version (RG-03, ISS-044):** extend the current collision work. The milestone that holds the first version is not named in the roadmap yet, so no addendum is placed.
-- **Challenges and scoring (RG-07, ISS-048):** in the scenario editor. No scenario-editor milestone exists yet.
 - **Multiplayer and co-op dispatch (RG-05, ISS-046)** and **virtual reality (RG-09, ISS-050):** vision items, no milestone.
 
-Gamepad and wheel (RG-08) belong to [M-0035](../phase-7/M-0035.md), not to this phase.
+Collision response (RG-03) and challenges and scoring (RG-07) were given their own milestones on 2026-11-22 (M-0171, M-0172). The roaming emergency vehicles (ISS-054, owner request) are M-0173. Gamepad and wheel (RG-08) belong to [M-0035](../phase-7/M-0035.md), not to this phase.
 
 ## Checklist
 
@@ -33,3 +34,6 @@ Gamepad and wheel (RG-08) belong to [M-0035](../phase-7/M-0035.md), not to this 
 - [ ] **🕹️ Driver's desk hardware interface (RG-08)** — [M-0168](M-0168.md) (ISS-049), proposed; gamepad and wheel stay in [M-0035](../phase-7/M-0035.md)
 - [ ] **🔁 Vehicle component swaps (RG-11)** — [M-0169](M-0169.md) (ISS-052), proposed; separate from M-0135
 - [ ] **🎫 Stop-dependent fares (RG-12)** — [M-0170](M-0170.md) (ISS-053), proposed; separate from M-0156
+- [ ] **💥 Collision response: passengers, police and ambulance (RG-03)** — [M-0171](M-0171.md) (ISS-044), proposed
+- [ ] **🧭 Scenario editor: scenarios, challenges and scoring (RG-07)** — [M-0172](M-0172.md) (ISS-048), proposed
+- [ ] **🚓 Roaming emergency and service vehicles (global.cfg)** — [M-0173](M-0173.md) (ISS-054, owner request), proposed
