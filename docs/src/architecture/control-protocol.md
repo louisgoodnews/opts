@@ -14,7 +14,8 @@ schemas is the generated [Control Protocol Reference](../reference/control-proto
 | Transport | TCP |
 | Default bind | `127.0.0.1:44201` (only when `--cli-port <N>` is given) |
 | Ephemeral port | `--cli-port 0`: the OS picks a port; the address is logged at `INFO` as `control server listening addr=127.0.0.1:NNNNN` |
-| Non-loopback | refused unless `--cli-token <TOKEN>` is set (`--cli-bind 0.0.0.0` additionally required) |
+| Token | a token of at least 32 characters; an empty or shorter `--cli-token` is refused at start, on every bind |
+| Non-loopback | refused unless a valid `--cli-token` is set (`--cli-bind 0.0.0.0` additionally required) |
 | Framing | UTF-8 JSON, one message per line (`\n`-terminated), at most 1 MiB per line |
 | Concurrency | one thread per connection; any number of clients; requests of one connection are answered in order |
 
@@ -280,8 +281,14 @@ comparing versions.
 ## 7. Security model
 
 - Default is **off**. Without `--cli-port` no socket exists.
-- Loopback only. A non-loopback bind requires `--cli-token` and `--cli-bind`; the token is compared in
+- Loopback only by default. A non-loopback bind requires `--cli-token` and `--cli-bind`; the token is compared in
   constant time and required via `auth` before any other call.
+- **Token rules.** An empty token, or one shorter than **32 characters**, is refused when the server starts, on any
+  bind. Use a random token of that length.
+- **Auth throttle.** `auth` is not exempt from limits. Failed `auth` calls are counted per peer address and
+  across all peers. A peer with 5 failures in a row is refused `auth` for 60 s; all peers are refused `auth`
+  for 60 s after 50 failures within 60 s. A refused `auth` answers `1006 Busy` with the remaining wait in the
+  message. A successful `auth` clears the peer's count.
 - **Filesystem:** the server never accepts a command that writes outside the *reports directory* or
   directories passed with `--cli-allow-dir`. Reads (`scene.load_map`, `vehicle.set`, `watch.add`,
   `reload.asset`) must resolve (after canonicalisation, so `..` and symlinks are resolved) below the OMSI
