@@ -82,12 +82,34 @@ fn every_action_of_the_registry_has_a_row() {
     }
 }
 
+/// Every handler file the table names. Fixed here, not taken from the rows: a file whose only row
+/// is removed must still be checked, or its hard-wired keys go unlisted without a failure.
+const HANDLERS: &[&str] = &[
+    super::table::SIM,
+    super::table::RAIL_TRACK,
+    super::table::RAIL_CONTROLS,
+    super::table::CAB_SWITCH,
+    super::table::CAMERA,
+    super::table::VIRTUAL_MIRRORS,
+    super::table::EGO,
+    super::table::PAUSE,
+    super::table::SIM_PAUSE,
+    super::table::HELP,
+    super::table::THEME,
+    super::table::DEV,
+    super::table::MINIMAP,
+    super::table::FULLMAP,
+    super::table::DOOR_CAMERA,
+    super::table::SESSION,
+    super::table::QUICK_SAVE,
+    super::table::ZONE_OVERLAY,
+    super::table::LANE_OVERLAY,
+];
+
 #[test]
 fn every_key_a_listed_handler_reads_has_a_row() {
-    let mut sources: Vec<&str> = rows().map(|b| b.source).collect();
-    sources.sort_unstable();
-    sources.dedup();
-    for source in sources {
+    for source in HANDLERS {
+        let source: &str = source;
         let text = std::fs::read_to_string(root().join(source))
             .unwrap_or_else(|e| panic!("{source}: {e}"));
         let listed: Vec<String> = rows()
