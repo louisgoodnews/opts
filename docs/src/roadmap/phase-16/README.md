@@ -43,7 +43,7 @@ Ranked by the parity gap rank (GAP number). Earlier rows first.
 
 *Goal: close the OMSI 2 bus-operation gaps in the order of player impact (boarding, failures, cash, timetable circuits, stops, stop sequence, voices, depot service). Status: proposed 2026-11-18 from the [OMSI parity matrix](../../../audit/omsi-parity-matrix-2026-11-18.md); no milestone of this phase has code yet. Documents: [phase page](README.md).*
 
-- [x] **🎫 Free-drive boarding rule** — [M-0152](M-0152.md) — rule decided 2026-11-22; done 2026-11-22 on `agent/free-drive` (rule) and `agent/free-drive-rig` (boarding-path tests); in-game check open. (GAP-01, ISS-036)
+- [~] **🎫 Free-drive boarding rule** — [M-0152](M-0152.md) — rule decided 2026-11-22; done 2026-11-22 on `agent/free-drive` (rule) and `agent/free-drive-rig` (boarding-path tests); in-game check open. (GAP-01, ISS-036)
   - [x] Rule: a free drive boards anyone whose destination the stop serves; implemented, with an `admits` test for a bus with no timetable run.
 - [ ] **🔧 Breakdowns, failures and repair** — [M-0157](M-0157.md) — owner decision first (GAP-03)
   - [ ] Decision memo; if approved, one failure class with repair, off by default.
