@@ -5,7 +5,7 @@
 | **Issue** | ISS-055. Owner report 2026-11-22, with screenshots (dark theme, Hilfe > Steuerung). Category QoL |
 | **Severity** | minor |
 | **Milestone** | [M-0174](../../src/roadmap/phase-18/M-0174.md) UI alignment and spacing consistency (Help and Settings). Placed in the Phase 18 research backlog as a QoL item until the owner names a better phase |
-| **Status** | milestone M-0174 proposed (owner report 2026-11-22; not approved to start) |
+| **Status** | in progress: code fix committed (21aeec92, `agent/qol-fix`); owner on-screen check open. Milestone M-0174 is still proposed |
 
 ## Problem
 
@@ -34,5 +34,7 @@ Give the key column one sizing rule shared by all Help rows: a fixed chip width 
 
 ## Status of the checks
 
-- Screenshot path: not yet recorded. The owner's 2026-11-22 screenshots are not in the repository, and this change ran no game.
-- Fix: not started (no code in this change).
+- Fix (21aeec92): every key chip of the Help table and the vehicle list is `KEY_CHIP_WIDTH` (240 px) wide, in one shared key row (`help/vehicle_controls/widgets.rs`). Tests: `help::tests::chip_column` (2 tests). Removing the fixed width makes `every_key_row_has_the_same_description_offset` FAIL.
+- The width-fit test is an estimate (9 px per character), not a measurement. The widest default chip (`F7 / Shift+F7 / Ctrl+F7`) is covered by it.
+- Not verified: the 1920x1080 screenshot, the real text width of the chips, and the rebound (longer) key texts. No game was run. Screenshot path: not recorded.
+- Settings screen: not checked and not changed. Its key rows still need the same review.

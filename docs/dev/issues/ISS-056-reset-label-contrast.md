@@ -5,7 +5,7 @@
 | **Issue** | ISS-056. Owner report 2026-11-22, with screenshots (light theme, Einstellungen, Grafik page). Category QoL with an accessibility angle |
 | **Severity** | minor (the owner did not rate it; minor is proposed here and can be raised) |
 | **Milestone** | [M-0065](../../src/roadmap/phase-9/M-0065.md) Accessibility, Localisation and Validation (scope addendum 2026-11-22) |
-| **Status** | open; a scope addendum is recorded in M-0065. M-0065 keeps its status |
+| **Status** | in progress: fix ready in `agent/qol-fix` (not committed: the opts-gui crate budget would grow by about 84 lines). Owner on-screen check open. M-0065 keeps its status |
 
 ## Problem
 
@@ -27,6 +27,14 @@ The WCAG 2.2 audit in [M-0065](../../src/roadmap/phase-9/accessibility-audit.md)
 ## Fix direction
 
 Keep the disabled look, but do not let the scrim reduce the reset label below the audit's floor on either theme. Options, for the owner or the UI owner to choose: a dedicated disabled-text role that meets 4.5:1 on light and dark; or a disabled style that dims the container rather than the label. Extend the audit so that disabled labels of reset buttons are measured on both themes.
+
+## Fix and checks (agent/qol-fix)
+
+- Rules cited: text contrast 4.5:1 and 7:1 in high contrast ([design language](../../src/roadmap/phase-9/design-language.md), themes table and rules; [accessibility audit](../../src/roadmap/phase-9/accessibility-audit.md), rule `text_contrast`).
+- Measured with the scrim (old): the disabled label on the light theme is 1.84:1 against the Surface with the default accent (test `disabled_text_label_meets_the_text_minimum_on_every_theme`, removal check: FAILED, `Light: the disabled Reset label is 1.84:1 on the surface, needs 4.5:1`). A scrim alone cannot fix this: with a Primary label, the scrim would need to be almost transparent, so the disabled look would vanish.
+- Fix: a disabled text button draws its label in `OnSurfaceVariant` and no scrim covers it (`components/button/disabled.rs`, `sync_text_button_labels`, `scrim_drawn`). Computed ratios for `OnSurfaceVariant` on Surface (base palettes): Light 8.90:1, Dark 10.91:1, High contrast 16.83:1.
+- Not done: the audit does not measure disabled labels yet (the extension named in this issue), and the on-screen check is open. The disabled label is grey, not blue, so it still reads as disabled; the owner should confirm this on screen.
+- Blocker: the opts-gui crate budget (`docs/dev/crate-budget.txt`, 18409) is 84 lines lower than the change needs. The budget is not changed here. Owner decision needed: raise it, or approve a cut.
 
 ## Done when
 
