@@ -110,7 +110,10 @@ impl Plugin for ControlPlugin {
                     );
             }
             Err(e) => {
-                tracing::error!(target: "opts_bevy::control", "control server could not start: {e}")
+                // `--cli-port` asks for a server: a failed start ends the run (spec §1, ISS-002 outcome).
+                tracing::error!(target: "opts_bevy::control", "control server could not start: {e}");
+                eprintln!("opts: the control server could not start: {e}");
+                std::process::exit(2);
             }
         }
     }
