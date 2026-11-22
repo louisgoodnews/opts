@@ -540,7 +540,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Refresh loaded textures on a snow-flag change, or record the limit (ISS-016).
 - [ ] **🌡️ Cabin climate (GAP-17)** — [M-0163](docs/src/roadmap/phase-17/M-0163.md)
   - [ ] Heater state reaches `Cabinair_Temp`; confirmed on screen.
-- [ ] **⌨️ Help table complete (GAP-18)** — [M-0164](docs/src/roadmap/phase-17/M-0164.md) (ISS-015)
+- [~] **⌨️ Help table complete (GAP-18)** — [M-0164](docs/src/roadmap/phase-17/M-0164.md) (ISS-015)
   - [ ] Missing rows added; reverse test over every bound action.
 
 ---

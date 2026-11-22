@@ -131,11 +131,11 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 - [ ] 🔴 **Control server: refuse empty and short tokens and any non-loopback bind until auth is throttled, reads time out and connections are capped; token on loopback; token out of argv** (ISS-001 blocker, ISS-002, ISS-003, ISS-004; PRJ-02, PRJ-06, PRJ-07, PRJ-15).
 - [ ] 🔴 **Fails-on-parent rule: run `trailer_front_live.rs` on the parent of `3420545e` and record the failure; add the rule and a logged-skip rule to the Definition of Done** (ISS-022 blocker, ISS-023; PRJ-01, PRJ-08). Governance: a suite pass is not evidence for a fix.
-- [ ] 🟠 **Free-drive boarding rule and a `bus = None` boarding test** (ISS-036; [M-0152](../src/roadmap/phase-16/M-0152.md)) — owner decision first.
-- [ ] 🟠 **Help controls table: add the missing live bindings and a reverse test over `action_keys::ACTIONS`** (ISS-015; [M-0164](../src/roadmap/phase-17/M-0164.md)).
+- [~] 🟠 **Free-drive boarding rule and a `bus = None` boarding test** (ISS-036; [M-0152](../src/roadmap/phase-16/M-0152.md)) — rule decided 2026-11-22 (board anyone whose destination the stop serves); work item [ISS-036](issues/ISS-036-free-drive-boarding.md).
+- [~] 🟠 **Help controls table: add the missing live bindings and a reverse test over `action_keys::ACTIONS`** (ISS-015; in progress 2026-11-22 on `agent/feature-gap`; [M-0164](../src/roadmap/phase-17/M-0164.md)).
 - [ ] 🟠 **Lighting doc: correct `lighting-system.md` lines 428 and 444 and the mirror column to match `light_quality/ladder.rs`** (ISS-017; FEAT-07).
 - [ ] 🟠 **Battery-off path: script-rig test and the four HH109 `cockpit.osc` checks** (ISS-014; [M-0160](../src/roadmap/phase-17/M-0160.md)).
-- [ ] 🟠 **Door arming: the claim's source is not located; read the door scripts (prose only) and add a readback test that sets `pax_entry{n}_open`** (ISS-013).
+- [ ] 🟠 **Door arming: the claim's source is not located; read the door scripts (prose only) and add a readback test that sets `pax_entry{n}_open`** (ISS-013; [issue file](issues/ISS-013-door-arming.md), milestone M-0101).
 - [ ] 🟠 **Text X parser: bound the file-supplied counts as the binary reader does, add a huge-count test, and add fuzz targets for `.x`, `.o3d`, `.bus` and the map formats** (ISS-005, ISS-006; PRJ-04).
 - [ ] 🟠 **Choppy first-person driving: frame-time measurement, drive-state logging, heave and pitch interpolation tests; straightening collapse and the 70 m x-jump reproduced or closed** (ISS-039, ISS-040, ISS-041; yaw fixed by `3baee292`).
 - [ ] 🟠 **Records: a commit hash on every `[x]` line; `roadmap_audit` fails a `[x]` line without one; M-0124 reopened or its dynamic-mass item evidenced** (ISS-025, ISS-027).
@@ -165,7 +165,7 @@ _None._
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
 #### Issue register 2026-11-18 (minor and structural; [register](../audit/issues-2026-11-18.md))
-- [ ] 🟠 **Tunnel zones: the tile loader feeds parsed splines; one real tunnel labelled** (ISS-012; [M-0115](../src/roadmap/phase-11/M-0115.md)).
+- [ ] 🟠 **Tunnel zones: the tile loader feeds parsed splines; one real tunnel labelled** (ISS-012; [M-0115](../src/roadmap/phase-11/M-0115.md); [issue file](issues/ISS-012-tunnel-zones-empty-splines.md); waits for M-0164's merge).
 - [ ] 🟠 **Snow on scenery: refresh loaded textures on a snow-flag change, or record the limit on M-0121** (ISS-016).
 - [ ] 🟠 **Scale and boundary: a dated burn-down per engine crate, one adapter per format; extend the ratchet to `opts-game/src/in_game/omsi_world`** (ISS-031, ISS-032; PRJ-03, PRJ-05).
 - [ ] 🟡 **Control-server and file safety: symlink refusal in `check_write`, save-path component check, `expect` on the rail path** (ISS-007, ISS-008, ISS-009).
@@ -190,7 +190,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **M-0161 Rail control scheme** (GAP-09).
 - [ ] 🟡 **M-0162 Overhead line and pantograph input** (GAP-10), research first.
 - [ ] 🟡 **M-0163 Cabin climate: auxiliary heater and HVAC** (GAP-17).
-- [ ] 🟠 **M-0164 Help controls table complete and reverse-checked** (GAP-18, ISS-015).
+- [~] 🟠 **M-0164 Help controls table complete and reverse-checked** (GAP-18, ISS-015). In progress 2026-11-22 (`agent/feature-gap`): rows added for F3, Shift+F7, Ctrl+F7, Shift+F8, F11, Shift+F11, Esc (full map), ↑ and ↓; two reverse tests.
 
 #### Paused or partly done (moved here by the board audit 2026-10-25)
 - [~] 🟠 **AI road traffic: debug overlay, `traffic.*` control methods** (M-0049, code) — traffic runs in game; signal heads follow the junction programs (2026-10-12). Done since: traffic counts in the developer panel (F10, `e0393773`) and speed limits from rules; the depth work is M-0111. **Paused since 2026-10-17** (last M-0049 commit `c7ed22b0`); the lane and agent-id overlay is drawn since 2026-11-15 (`769812d8`, merged `3b20d597`); open: `traffic.dump`/`traffic.set_density`.

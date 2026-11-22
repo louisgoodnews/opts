@@ -2,7 +2,7 @@
 
 use bevy::prelude::KeyCode;
 
-use super::table::{bind, rebindable, RAIL_CONTROLS, RAIL_TRACK, SIM};
+use super::table::{bind, rebindable, CAB_SWITCH, RAIL_CONTROLS, RAIL_TRACK, SIM};
 use super::Group;
 use crate::shell::keys;
 
@@ -10,8 +10,13 @@ pub(super) const DRIVING_GROUP: Group = (
     keys::HELP_GROUP_DRIVING,
     &[
         bind(
-            "W / S",
-            &[KeyCode::KeyW, KeyCode::KeyS],
+            "W / S · ↑ / ↓",
+            &[
+                KeyCode::KeyW,
+                KeyCode::KeyS,
+                KeyCode::ArrowUp,
+                KeyCode::ArrowDown,
+            ],
             keys::HELP_KEY_THROTTLE,
             SIM,
         ),
@@ -74,6 +79,13 @@ pub(super) const RAIL_GROUP: Group = (
             &[KeyCode::KeyG],
             keys::HELP_KEY_RAIL_SWITCH,
             RAIL_TRACK,
+        ),
+        rebindable(
+            &["rail_switch_cab"],
+            "F3",
+            &[KeyCode::F3],
+            keys::HELP_KEY_RAIL_CAB,
+            CAB_SWITCH,
         ),
         rebindable(
             &[

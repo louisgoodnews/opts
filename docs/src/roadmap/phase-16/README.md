@@ -14,7 +14,7 @@ Ranked by the parity gap rank (GAP number). Earlier rows first.
 
 | Order | Milestone | Gap | Size | Notes |
 | ---: | :--- | :--- | :--- | :--- |
-| 1 | [M-0152](M-0152.md) Free-drive boarding rule | GAP-01 | S | Owner decision first (rule choice). Issue ISS-036. |
+| 1 | [M-0152](M-0152.md) Free-drive boarding rule | GAP-01 | S | Rule decided 2026-11-22 (board anyone whose destination the stop serves); code open. Issue ISS-036. |
 | 2 | [M-0157](M-0157.md) Breakdowns, failures and repair | GAP-03 | L | Owner decision first: whether breakdowns are wanted at all. |
 | 3 | [M-0156](M-0156.md) Cash desk and change | GAP-06 | M | Depends on the M-0101 money model. |
 | 4 | [M-0155](M-0155.md) Timetable circuits by day type and night | GAP-07 | M | Uses TTData from M-0099. |

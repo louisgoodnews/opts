@@ -58,6 +58,9 @@ pub(super) const SESSION: &str = "crates/opts-game/src/session_vehicles/mod.rs";
 pub(super) const QUICK_SAVE: &str = "crates/opts-game/src/save/quick.rs";
 pub(super) const ZONE_OVERLAY: &str =
     "crates/opts-game/src/in_game/omsi_world/spatial_zone_overlay.rs";
+pub(super) const CAB_SWITCH: &str = "crates/opts-bevy/src/cab_switch.rs";
+pub(super) const LANE_OVERLAY: &str =
+    "crates/opts-game/src/in_game/omsi_world/traffic/lane_overlay.rs";
 
 /// The single registry of the keyboard bindings that the Help page prints. The input systems keep
 /// reading keys directly (they are not driven by this table); the test in this module reads their

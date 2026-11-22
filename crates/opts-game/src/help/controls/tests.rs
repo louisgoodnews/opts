@@ -53,3 +53,65 @@ fn every_row_has_keys_and_a_shown_text_and_no_key_is_listed_twice() {
         }
     }
 }
+
+/// Keys a handler reads that the table does not list as keys of their own: the modifiers, which
+/// the rows name in their chips ("Shift + Space", "Alt"), and Backspace, which a drive uses for the
+/// vehicle and the UI uses for Back (open question FEAT-14 of the feature audit of 2026-11-18).
+const NOT_LISTED: &[&str] = &[
+    "ShiftLeft",
+    "ShiftRight",
+    "ControlLeft",
+    "ControlRight",
+    "AltLeft",
+    "AltRight",
+    "Backspace",
+];
+
+fn rows() -> impl Iterator<Item = &'static Binding> {
+    GROUPS.iter().flat_map(|(_, rows)| rows.iter())
+}
+
+#[test]
+fn every_action_of_the_registry_has_a_row() {
+    for def in opts_bevy::action_keys::ACTIONS {
+        assert!(
+            rows().any(|b| b.ids.contains(&def.id)),
+            "the action {} has no row in the controls table",
+            def.id
+        );
+    }
+}
+
+#[test]
+fn every_key_a_listed_handler_reads_has_a_row() {
+    let mut sources: Vec<&str> = rows().map(|b| b.source).collect();
+    sources.sort_unstable();
+    sources.dedup();
+    for source in sources {
+        let text = std::fs::read_to_string(root().join(source))
+            .unwrap_or_else(|e| panic!("{source}: {e}"));
+        let listed: Vec<String> = rows()
+            .filter(|b| b.source == source)
+            .flat_map(|b| b.keys.iter())
+            .map(|k| format!("{k:?}"))
+            .collect();
+        for key in key_names_read(&text) {
+            assert!(
+                NOT_LISTED.contains(&key.as_str()) || listed.contains(&key),
+                "{source} reads KeyCode::{key} but no row of the controls table lists it"
+            );
+        }
+    }
+}
+
+/// The names that follow each `KeyCode::` in `text`.
+fn key_names_read(text: &str) -> Vec<String> {
+    text.split("KeyCode::")
+        .skip(1)
+        .map(|rest| {
+            rest.chars()
+                .take_while(|c| c.is_ascii_alphanumeric())
+                .collect()
+        })
+        .collect()
+}

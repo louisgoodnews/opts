@@ -3,8 +3,8 @@
 use bevy::prelude::KeyCode;
 
 use super::table::{
-    bind, rebindable, CAMERA, DEV, DOOR_CAMERA, EGO, FULLMAP, HELP, MINIMAP, PAUSE, QUICK_SAVE,
-    SESSION, SIM_PAUSE, THEME, VIRTUAL_MIRRORS, ZONE_OVERLAY,
+    bind, rebindable, CAMERA, DEV, DOOR_CAMERA, EGO, FULLMAP, HELP, LANE_OVERLAY, MINIMAP, PAUSE,
+    QUICK_SAVE, SESSION, SIM_PAUSE, THEME, VIRTUAL_MIRRORS, ZONE_OVERLAY,
 };
 use super::Group;
 use crate::shell::keys;
@@ -44,8 +44,8 @@ pub(super) const MAP_GROUP: Group = (
     keys::HELP_GROUP_MAP,
     &[
         rebindable(
-            &["minimap_toggle"],
-            "F7",
+            &["minimap_toggle", "minimap_rotate", "minimap_speed_zoom"],
+            "F7 / Shift+F7 / Ctrl+F7",
             &[KeyCode::F7],
             keys::HELP_KEY_MINIMAP,
             MINIMAP,
@@ -64,6 +64,18 @@ pub(super) const MAP_GROUP: Group = (
             keys::HELP_KEY_FULLMAP,
             FULLMAP,
         ),
+        bind(
+            "Esc",
+            &[KeyCode::Escape],
+            keys::HELP_KEY_FULLMAP_ESC,
+            FULLMAP,
+        ),
+        bind(
+            "F11 / Shift+F11",
+            &[KeyCode::F11],
+            keys::HELP_KEY_LANES,
+            LANE_OVERLAY,
+        ),
         rebindable(
             &["door_camera"],
             "F4",
@@ -81,8 +93,8 @@ pub(super) const MENUS_GROUP: Group = (
         bind("P", &[KeyCode::KeyP], keys::HELP_KEY_SIM_PAUSE, SIM_PAUSE),
         bind("Alt", &[KeyCode::AltLeft], keys::HELP_KEY_VEHICLE_MENU, EGO),
         rebindable(
-            &["switch_vehicle"],
-            "F8",
+            &["switch_vehicle", "switch_vehicle_prev"],
+            "F8 / Shift+F8",
             &[KeyCode::F8],
             keys::HELP_KEY_SWITCH_VEHICLE,
             SESSION,

@@ -19,7 +19,7 @@ Ranked by the parity gap rank. Rows marked "existing" are owned by a milestone t
 | 7 | GAP-12 | [M-0050](../phase-4/M-0050.md) Pedestrians (existing) | 🟡 in progress | Crossings need the M-0111 signal model. |
 | 8 | GAP-15 | [M-0121](../phase-12/M-0121.md) Wetness and snow (existing) | 🟡 in progress | Snow flag load order (ISS-016). |
 | 9 | GAP-17 | [M-0163](M-0163.md) Cabin climate | 📝 proposed | Heater and HVAC reads. |
-| 10 | GAP-18 | [M-0164](M-0164.md) Help table complete and reverse-checked | 📝 proposed | ISS-015; cheap. |
+| 10 | GAP-18 | [M-0164](M-0164.md) Help table complete and reverse-checked | 🟡 in progress | ISS-015; cheap. |
 
 GAP-20 (editors) is planned under [M-0051](../phase-6/M-0051.md) and is not scheduled here.
 
@@ -47,5 +47,5 @@ GAP-20 (editors) is planned under [M-0051](../phase-6/M-0051.md) and is not sche
   - [ ] Refresh loaded textures on a snow-flag change, or record the limit (ISS-016).
 - [ ] **🌡️ Cabin climate (GAP-17)** — [M-0163](M-0163.md)
   - [ ] Heater state reaches `Cabinair_Temp`; confirmed on screen.
-- [ ] **⌨️ Help table complete (GAP-18)** — [M-0164](M-0164.md) (ISS-015)
+- [~] **⌨️ Help table complete (GAP-18)** — [M-0164](M-0164.md) (ISS-015)
   - [ ] Missing rows added; reverse test over every bound action.

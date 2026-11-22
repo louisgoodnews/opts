@@ -39,6 +39,10 @@ keys! {
     HELP_KEY_MINIMAP_ZOOM = "help-key-minimap-zoom",
     /// Message `help-key-fullmap`.
     HELP_KEY_FULLMAP = "help-key-fullmap",
+    /// Message `help-key-fullmap-esc`.
+    HELP_KEY_FULLMAP_ESC = "help-key-fullmap-esc",
+    /// Message `help-key-lanes`.
+    HELP_KEY_LANES = "help-key-lanes",
     /// Message `help-key-door-camera`.
     HELP_KEY_DOOR_CAMERA = "help-key-door-camera",
     /// Message `help-key-throttle`.
@@ -59,6 +63,8 @@ keys! {
     HELP_KEY_RAIL_ZERO = "help-key-rail-zero",
     /// Message `help-key-rail-switch`.
     HELP_KEY_RAIL_SWITCH = "help-key-rail-switch",
+    /// Message `help-key-rail-cab`.
+    HELP_KEY_RAIL_CAB = "help-key-rail-cab",
     /// Message `help-key-rail-lever`.
     HELP_KEY_RAIL_LEVER = "help-key-rail-lever",
     /// Message `help-key-camera`.

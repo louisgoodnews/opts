@@ -425,11 +425,11 @@ scenery clock (NightlightA) -> map-light pool (exclude lamps over the vehicle; i
 
 | Level | Name | What runs |
 | ---: | :--- | :--- |
-| 0 | **Full** | rays 16 steps (day: sun, night: moon if "night shafts" is on), cones 64 (cap 96), mirrors ≤ 2 every 2nd frame, bloom if on |
+| 0 | **Full** | rays 16 steps (day: sun, night: moon if "night shafts" is on), cones 64 (cap 96), mirrors ≤ 2 every 2nd frame, bloom off (bloom is a Custom setting only; the ladder never turns it on) |
 | 1 | **Fewer cones** | cones 48, then 24; far cones at 4 steps; mirrors every 2nd frame at 256×128 |
 | 2 | **Headlights only** | lanterns' cones off, vehicle headlight cones only (cap 16) |
 | 3 | **Cones off** | glows and point/spot lights only |
-| 4 | **Sun rays only** | 8 steps, no bloom, no mirrors |
+| 4 | **Sun rays only** | 8 steps, no bloom, one mirror picture every 4th frame |
 | 5 | **All volumetrics off** | `VolumetricLight`, `VolumetricFog` and the `FogVolume` removed (zero GPU cost, `render.rs:247-262`); HDR stays |
 
 **Quality mode (user decision, 2026-10-17: "give the user the choice and ability").** One setting `graphics.light_quality_mode` with two values:
@@ -441,7 +441,7 @@ Switching from Automatic to Custom keeps the level reached so far as the startin
 
 ### 9.1 Implemented: settings, ladder state and governor (2026-10-17, `agent/lighting-settings`)
 
-Rays, cones, light rooms, the sky cube map for glass and the mirror cameras are built (sections 6.6, 9.2, 9.3); bloom is not. What exists is everything they **read** and the controls that drive it.
+Rays, cones, light rooms, the sky cube map for glass and the mirror cameras are built (sections 6.6, 9.2, 9.3); bloom is built too (M-0122, 2026-11-16), but the ladder keeps it off in every row. What exists is everything they **read** and the controls that drive it.
 
 **State.** `opts_bevy::light_quality::LightQuality` is the resource the effects read: `mode` (`Automatic` or `Custom`), `level` (0-5), `shafts` (`Off`, `Low` 8, `Medium` 16, `High` 32, `Ultra` 64 steps), `night_shafts`, `lantern_cones`, `headlight_cones`, `cone_cap` (0-96), `cone_depth_fade`, `mirror_count` (0-2), `mirror_every` (1, 2 or 4), `glass_reflections`, `bloom`. Order of systems: input (settings) → governor → resolve, all in `LightQualitySet`; effects schedule `.after(LightQualitySet)`. HDR is not part of it.
 
@@ -453,8 +453,8 @@ Rays, cones, light rooms, the sky cube map for glass and the mirror cameras are 
 | 1 | Fewer cones | medium | on | on | on | 48 | on | 2, every 2nd | on | off |
 | 2 | Headlights only | medium | on | off | on | 16 | off | 2, every 2nd | on | off |
 | 3 | Cones off | medium | on | off | off | 0 | off | 2, every 2nd | on | off |
-| 4 | Sun rays only | low (8) | off | off | off | 0 | off | 0 | on | off |
-| 5 | All volumetrics off | off | off | off | off | 0 | off | 0 | on | off |
+| 4 | Sun rays only | low (8) | off | off | off | 0 | off | 1, every 4th frame | on | off |
+| 5 | All volumetrics off | off | off | off | off | 0 | off | 1, every 4th frame | on | off |
 
 Decisions: the "cones 48, then 24" of level 1 is **not** a sub-step; level 1 is 48 and the next rung goes straight to the 16 headlight cones (24 against 16 differs by about 0.1 ms in the table above). Depth fade (the prepass, +1.6-2.2 ms) goes at level 2, right after "fewer cones". Night rays go at level 4 (a moon ray costs about 2.4 times the day cost). Bloom is off by default and so in every row, which also satisfies "no bloom" at level 4. Glass reflections stay on (they cost nothing measurable). The "far cones at 4 steps" detail of level 1 belongs to the cone effect, which reads the level.
 
