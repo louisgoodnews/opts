@@ -172,8 +172,8 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Dependencies: `cargo deny check advisories` when network is available; confirm font licence notices in the binary** (ISS-010).
 - [~] 🟡 **Overlay, indicators, bloom and CLI: tests and docs** (ISS-018 bloom needs HDR and its settings text: done 2026-11-22 in `8a0148dc`; ISS-019 M-0049 overlay has no tests; ISS-020 indicator tests and the Back/Escape guard; ISS-021 CLI method list against the docs).
 - [ ] 🟡 **Exhaust smoke: use the trailer's own emitter where one is defined** (ISS-038; `weather/exhaust.rs:18`).
-- [~] 🟡 **ISS-034 total-line budget per crate** (checks pass 2026-11-22; `docs/dev/crate-budget.txt`, checked by `structure_audit.py`; commit hash to add in a follow-up; [work item](issues/ISS-034-total-line-budget.md)).
-- [~] 🟡 **ISS-035 duplication scan and unused-pub check** (measured 2026-11-22 with `scripts/dup_scan.py`; cleanup open for the owner; [work item](issues/ISS-035-duplication-and-unused-pub.md)).
+- [x] 🟡 **ISS-034 total-line budget per crate** (done 2026-11-22 in `1e376e19`; `docs/dev/crate-budget.txt`, checked by `structure_audit.py`; [work item](issues/ISS-034-total-line-budget.md)).
+- [x] 🟡 **ISS-035 duplication scan and unused-pub check** (done 2026-11-22 in `1e376e19`, measured with `scripts/dup_scan.py`; cleanup open for the owner; [work item](issues/ISS-035-duplication-and-unused-pub.md)).
 - [~] 🟡 **ISS-033 test support out of the production library and the two dead-code allows** (in progress 2026-11-22 on `agent/test-fixtures-2`: production build and `cargo test -p opts-game --lib` (757 passed) pass; both allows kept with a justification; gate-removal check open; [work item](issues/ISS-033-test-support-in-production.md)).
 - [ ] 🟡 **Agent rules into the repository (a CLAUDE.md or the Definition of Done)** (ISS-029; PRJ-20).
 

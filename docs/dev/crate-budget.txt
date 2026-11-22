@@ -2,9 +2,9 @@
 # Format: <crate> <lines of code>  # <reason>. A budget may only shrink; `check` fails when a crate grows
 # above its budget or has no entry. Edit by hand: `seed` does not change budgets.
 opts-benchmark 5607  # set 2026-11-22 to the current total
-opts-bevy 45877  # set 2026-11-22 to the current total
+opts-bevy 45975  # raised 2026-11-22 from 45877 to the total after the control-server, snow and bloom merges (owner decision)
 opts-catalogue 2066  # set 2026-11-22 to the current total
-opts-cli 3562  # set 2026-11-22 to the current total
+opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-core 4  # set 2026-11-22 to the current total
 opts-game 91320  # set 2026-11-22 to the current total
 opts-gui 18409  # set 2026-11-22 to the current total
