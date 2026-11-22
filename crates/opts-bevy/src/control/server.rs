@@ -48,11 +48,14 @@ pub struct ServerHandle {
     /// The bound address (useful with port 0).
     pub addr: SocketAddr,
     stop: Arc<AtomicBool>,
+    slots: Slots,
 }
 
 impl Drop for ServerHandle {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::SeqCst);
+        // Closes every open connection (ISS-003) before the listener is woken to exit.
+        self.slots.close();
         let _ = TcpStream::connect_timeout(&self.addr, Duration::from_millis(200));
     }
 }
@@ -89,16 +92,17 @@ pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<
     let flag = stop.clone();
     let token = config.token.clone();
     let throttle = Arc::new(AuthThrottle::default());
+    let slots = Slots::default();
+    let listener_slots = slots.clone();
     std::thread::Builder::new()
         .name("control-listener".into())
         .spawn(move || {
-            let slots = Slots::default();
             for stream in listener.incoming() {
                 if flag.load(Ordering::SeqCst) {
                     break;
                 }
                 let Ok(stream) = stream else { continue };
-                let Some(slot) = slots.take() else {
+                let Some(slot) = listener_slots.take(&stream) else {
                     refuse(stream);
                     continue;
                 };
@@ -122,7 +126,7 @@ pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<
                 }
             }
         })?;
-    Ok(ServerHandle { addr, stop })
+    Ok(ServerHandle { addr, stop, slots })
 }
 
 /// A sender-side handle kept for tests that need to inject without a socket.

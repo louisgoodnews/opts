@@ -18,6 +18,7 @@ schemas is the generated [Control Protocol Reference](../reference/control-proto
 | Non-loopback | `--cli-bind` with an address other than loopback (`0.0.0.0` for LAN) additionally needs the same token |
 | Read timeout | a connection that sends no complete line for **30 s** is closed |
 | Connection cap | at most **8** connections at once; a ninth gets one error line (`1006 Busy`, id `null`) and is closed |
+| Shutdown | when the server stops (the game exits), the listener is closed, every open connection is closed (the client's read returns end-of-file) and the connection threads are waited for at most **2 s** |
 | Framing | UTF-8 JSON, one message per line (`\n`-terminated), at most 1 MiB per line |
 | Concurrency | one thread per connection; any number of clients; requests of one connection are answered in order |
 

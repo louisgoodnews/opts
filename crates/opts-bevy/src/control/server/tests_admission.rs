@@ -1,6 +1,6 @@
-//! Tests of the idle read timeout and of the connection cap (ISS-003).
+//! Tests of the idle read timeout, the connection cap and the close on stop (ISS-003).
 
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
@@ -58,4 +58,34 @@ fn the_ninth_connection_is_refused_with_busy() {
     let reply: Value = serde_json::from_str(&line).expect("json");
     assert_eq!(reply["error"]["code"], serde_json::json!(code::BUSY));
     drop(held);
+}
+
+/// Polls `done` for up to five seconds.
+fn wait_for(done: impl Fn() -> bool) {
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while !done() && std::time::Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+}
+
+#[test]
+fn stopping_the_server_closes_an_open_connection() {
+    let (tx, _rx) = mpsc::sync_channel(QUEUE_CAPACITY);
+    let cfg = ServerConfig {
+        bind: "127.0.0.1".into(),
+        port: 0,
+        token: Some(TOKEN.into()),
+    };
+    let handle = start(&cfg, tx).expect("start");
+    let mut client = TcpStream::connect(handle.addr).expect("connect");
+    client
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("timeout");
+    wait_for(|| handle.slots.count() == 1);
+    assert_eq!(handle.slots.count(), 1, "the connection was not admitted");
+    drop(handle);
+    // End-of-file (0 bytes), not a timeout: the server closed the socket.
+    let mut buf = [0u8; 1];
+    let n = client.read(&mut buf).expect("end of file, not a timeout");
+    assert_eq!(n, 0);
 }
