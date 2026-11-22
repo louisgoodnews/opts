@@ -500,8 +500,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## 🚌 Phase 16: Feature parity with OMSI: bus operation
 *Goal: close the OMSI 2 bus-operation gaps in the order of player impact (boarding, failures, cash, timetable circuits, stops, stop sequence, voices, depot service). Status: proposed 2026-11-18 from the [OMSI parity matrix](docs/audit/omsi-parity-matrix-2026-11-18.md); no milestone of this phase has code yet. Documents: [phase page](docs/src/roadmap/phase-16/README.md).*
 
-- [ ] **🎫 Free-drive boarding rule** — [M-0152](docs/src/roadmap/phase-16/M-0152.md) — owner decision first (GAP-01, ISS-036)
-  - [ ] Choose the rule (a served-stop rule or a default trip), implement it, and test a bus with no timetable run.
+- [~] **🎫 Free-drive boarding rule** — [M-0152](docs/src/roadmap/phase-16/M-0152.md) — rule decided 2026-11-22; In progress 2026-11-22 on `agent/free-drive`. (GAP-01, ISS-036)
+  - [~] Rule: a free drive boards anyone whose destination the stop serves. Implement it and test a bus with no timetable run.
 - [ ] **🔧 Breakdowns, failures and repair** — [M-0157](docs/src/roadmap/phase-16/M-0157.md) — owner decision first (GAP-03)
   - [ ] Decision memo; if approved, one failure class with repair, off by default.
 - [ ] **💶 Cash desk and change** — [M-0156](docs/src/roadmap/phase-16/M-0156.md) (GAP-06)
