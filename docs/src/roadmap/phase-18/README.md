@@ -15,12 +15,13 @@
 - [M-0171 Collision response: passengers, police and ambulance](M-0171.md) — 📝 proposed (RG-03, ISS-044)
 - [M-0172 Scenario editor: scenarios, challenges and scoring](M-0172.md) — 📝 proposed (RG-07, ISS-048)
 - [M-0173 Roaming emergency and service vehicles (global.cfg)](M-0173.md) — 📝 proposed (owner request, ISS-054)
+- [M-0174 UI alignment and spacing consistency (Help and Settings)](M-0174.md) — 📝 proposed (QoL, owner report, ISS-055); placed here until the owner names a phase
 
 ## Decided without a milestone
 
 - **Multiplayer and co-op dispatch (RG-05, ISS-046)** and **virtual reality (RG-09, ISS-050):** vision items, no milestone.
 
-Collision response (RG-03) and challenges and scoring (RG-07) were given their own milestones on 2026-11-22 (M-0171, M-0172). The roaming emergency vehicles (ISS-054, owner request) are M-0173. Gamepad and wheel (RG-08) belong to [M-0035](../phase-7/M-0035.md), not to this phase.
+Collision response (RG-03) and challenges and scoring (RG-07) were given their own milestones on 2026-11-22 (M-0171, M-0172). The roaming emergency vehicles (ISS-054, owner request) are M-0173. The alignment of the Help and Settings rows (ISS-055, owner report 2026-11-22, QoL) is M-0174. Phase 18 is the research backlog; M-0174 is placed here only until the owner names a better phase. Gamepad and wheel (RG-08) belong to [M-0035](../phase-7/M-0035.md), not to this phase.
 
 ## Checklist
 
@@ -37,3 +38,4 @@ Collision response (RG-03) and challenges and scoring (RG-07) were given their o
 - [ ] **💥 Collision response: passengers, police and ambulance (RG-03)** — [M-0171](M-0171.md) (ISS-044), proposed
 - [ ] **🧭 Scenario editor: scenarios, challenges and scoring (RG-07)** — [M-0172](M-0172.md) (ISS-048), proposed
 - [ ] **🚓 Roaming emergency and service vehicles (global.cfg)** — [M-0173](M-0173.md) (ISS-054, owner request), proposed
+- [ ] **📐 UI alignment and spacing consistency, Help and Settings (QoL)** — [M-0174](M-0174.md) (ISS-055, owner report 2026-11-22), proposed; placed here until the owner names a phase
