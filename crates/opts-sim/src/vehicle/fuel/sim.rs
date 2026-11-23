@@ -3,6 +3,10 @@
 
 use super::{FuelKind, FuelMode, FuelState};
 
+/// Below this speed (metres per second, either direction) the vehicle counts as stopped, and only
+/// then can it be refuelled (M-0123).
+pub const STOPPED_BELOW_M_S: f32 = 0.5;
+
 impl crate::vehicle::VehicleSimulation {
     /// Gives the vehicle a fuel model of `kind` and `capacity` when it has none, and sets its
     /// consumption `mode`. A model that exists keeps its content (saves restore it).
@@ -12,8 +16,12 @@ impl crate::vehicle::VehicleSimulation {
             .mode = mode;
     }
 
-    /// The refuel action: fills the store. Returns `false` for a vehicle without a model.
+    /// The refuel action: fills the store. Refused (`false`, store unchanged) while the vehicle
+    /// moves faster than [`STOPPED_BELOW_M_S`], and for a vehicle without a model.
     pub fn refuel(&mut self) -> bool {
+        if self.chassis.forward_speed_m_s().abs() >= STOPPED_BELOW_M_S {
+            return false;
+        }
         match self.fuel.as_mut() {
             Some(fuel) => {
                 fuel.refill();

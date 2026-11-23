@@ -172,4 +172,6 @@ impl FuelState {
 mod sim;
 
 #[cfg(test)]
+mod stopped_tests;
+#[cfg(test)]
 mod tests;
