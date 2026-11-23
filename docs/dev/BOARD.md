@@ -163,7 +163,7 @@ _None._
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
 #### Issue register 2026-11-18 (minor and structural; [register](../audit/issues-2026-11-18.md))
-- [~] 🟠 **Tunnel zones: the tile loader feeds parsed splines** (ISS-012; feed done 2026-11-22 in `cd2ccceb` on master; [issue file](issues/ISS-012-tunnel-zones-empty-splines.md)). The real-data run on Berlin-Spandau (`4bcfe9e4`, on `agent/tunnel-real-data`, not on master) found 2 zones on the S49 covered track; open: 15 m vs the 10 m pieces, precision and recall, the on-screen overlay check, and the `sync_tile_zones` call site (untested). Stays in progress under [M-0115](../src/roadmap/phase-11/M-0115.md).
+- [~] 🟠 **Tunnel zones: the tile loader feeds parsed splines** (ISS-012; feed done 2026-11-22 in `cd2ccceb` on master; [issue file](issues/ISS-012-tunnel-zones-empty-splines.md)). The real-data run on Berlin-Spandau (`4bcfe9e4`, merged 2026-11-23 from `agent/tunnel-real-data`) found 2 zones on the S49 covered track; its removal check FAILED. Open: 15 m vs the 10 m pieces, precision and recall, the on-screen overlay check, and the `sync_tile_zones` call site (untested). Stays in progress under [M-0115](../src/roadmap/phase-11/M-0115.md).
 - [ ] 🟠 **Scale and boundary: a dated burn-down per engine crate, one adapter per format; extend the ratchet to `opts-game/src/in_game/omsi_world`** (ISS-031, ISS-032; PRJ-03, PRJ-05).
 - [ ] 🟡 **Control-server and file safety: symlink refusal in `check_write`, save-path component check, `expect` on the rail path** (ISS-007, ISS-008, ISS-009).
 - [ ] 🟡 **Dependencies: `cargo deny check advisories` when network is available; confirm font licence notices in the binary** (ISS-010).
