@@ -15,5 +15,7 @@ mod census;
 mod census_tram;
 #[path = "vehicle_start/controls_report.rs"]
 mod controls_report;
+#[path = "vehicle_start/hybrid.rs"]
+mod hybrid;
 #[path = "vehicle_start/starts.rs"]
 mod starts;
