@@ -29,6 +29,7 @@ opts-traffic = { workspace = true }
 opts-catalogue = { workspace = true }
 opts-logging = { workspace = true }
 opts-vdf = { workspace = true }
+opts-theme-files = { workspace = true }
 
 # Bevy Engine
 bevy = { workspace = true }

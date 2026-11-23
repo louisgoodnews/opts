@@ -5452,6 +5452,7 @@ dependencies = [
  "opts-l10n",
  "opts-logging",
  "opts-sim",
+ "opts-theme-files",
  "opts-traffic",
  "opts-vdf",
  "rfd",
@@ -5556,6 +5557,15 @@ dependencies = [
  "opts-core",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "opts-theme-files"
+version = "0.1.0"
+dependencies = [
+ "directories",
+ "opts-gui",
+ "tracing",
 ]
 
 [[package]]

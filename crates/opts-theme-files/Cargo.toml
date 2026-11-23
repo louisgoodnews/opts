@@ -1,0 +1,17 @@
+[package]
+name = "opts-theme-files"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "RON theme files in the configuration folder: discovery and loading through the contrast checker."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+directories = { workspace = true }
+opts-gui = { workspace = true, features = ["serde"] }
+tracing = { workspace = true }

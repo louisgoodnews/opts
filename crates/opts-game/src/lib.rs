@@ -65,7 +65,7 @@ pub mod shutdown;
 pub mod sound_logic;
 pub mod start_options;
 pub mod steam_library;
-pub mod theme_files;
+pub use opts_theme_files as theme_files;
 pub mod trip_start;
 pub mod ui_typography;
 pub mod vehicle_fuel_settings;
