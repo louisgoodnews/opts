@@ -31,7 +31,7 @@ GAP-20 (editors) is planned under [M-0051](../phase-6/M-0051.md) and is not sche
 
 - [ ] **🧩 Articulation seam (GAP-02)** — [M-0053](../phase-4/M-0053.md), in progress (existing)
   - [ ] Multi-angle, multi-trailer live seam test with a pivot-at-H assertion; pitch and roll (ISS-011, ISS-037).
-- [~] **🚇 Tunnel zones fed by the tile loader (GAP-04)** — [M-0115](../phase-11/M-0115.md), feed done 2026-11-22 (ISS-012); the real-data check and labelling stay open on M-0115
+- [~] **🚇 Tunnel zones fed by the tile loader (GAP-04)** — [M-0115](../phase-11/M-0115.md), feed done 2026-11-22 and call-site test 2026-11-23 (ISS-012); thresholds, labelled maps and the overlay check stay open on M-0115
   - [ ] Feed the parsed splines; label one real tunnel (ISS-012).
 - [ ] **🔌 Battery-off path test (GAP-05)** — [M-0160](M-0160.md) (ISS-014)
   - [ ] Script-rig test of the battery switch; the four HH109 `cockpit.osc` files checked and recorded.
