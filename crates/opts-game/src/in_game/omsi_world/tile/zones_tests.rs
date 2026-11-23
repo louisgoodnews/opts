@@ -12,7 +12,7 @@ use opts_core::formats::scenery::{SplineGraphicalProfile, SplineProfile, SplineP
 use super::tile_zones;
 
 /// A `[spline]` of 40 m heading east from `(10, 20)` in tile-local metres.
-fn east_spline(sli_file: &str, length_m: f32) -> MapSplineInstance {
+pub(super) fn east_spline(sli_file: &str, length_m: f32) -> MapSplineInstance {
     MapSplineInstance {
         flag: 0,
         sli_file: sli_file.to_owned(),

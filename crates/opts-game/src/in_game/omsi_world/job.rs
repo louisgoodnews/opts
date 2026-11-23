@@ -100,6 +100,10 @@ impl WorldLoadJob {
 mod load;
 mod resolve;
 mod setup;
+#[cfg(test)]
+mod test_support;
+#[cfg(test)]
+pub(in crate::in_game::omsi_world) use test_support::job_for_tests;
 
 pub use load::{begin_world_load, begin_world_load_at};
 pub use resolve::resolve_session_config;
