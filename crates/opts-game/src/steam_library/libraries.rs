@@ -3,9 +3,9 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use super::kv::*;
 use super::{DEFAULT_INSTALL_DIR, OMSI2_APP_ID};
 use crate::omsi_root::is_omsi_root;
+use opts_vdf::{parse, Kv};
 
 /// One Steam library: its folder and whether its `apps` list names OMSI 2.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -18,3 +18,4 @@ opts-sim 11508  # set 2026-11-22 to the current total
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 6300  # set 2026-11-22 to the current total
 opts-types 461  # set 2026-11-22 to the current total
+opts-vdf 152  # new 2026-11-23: the KeyValues parser split out of opts-game (docs/dev/crate-split-game.md)

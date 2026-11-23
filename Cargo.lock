@@ -5435,6 +5435,7 @@ dependencies = [
  "opts-logging",
  "opts-sim",
  "opts-traffic",
+ "opts-vdf",
  "rfd",
  "ron 0.8.1",
  "rusqlite",
@@ -5560,6 +5561,10 @@ version = "0.1.0"
 dependencies = [
  "glam",
 ]
+
+[[package]]
+name = "opts-vdf"
+version = "0.1.0"
 
 [[package]]
 name = "orbclient"

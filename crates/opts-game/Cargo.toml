@@ -27,6 +27,7 @@ opts-sim = { workspace = true }
 opts-traffic = { workspace = true }
 opts-catalogue = { workspace = true }
 opts-logging = { workspace = true }
+opts-vdf = { workspace = true }
 
 # Bevy Engine
 bevy = { workspace = true }

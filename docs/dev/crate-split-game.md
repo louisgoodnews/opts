@@ -46,9 +46,11 @@ suggested. The parser is one cohesive file and splitting it further would be arb
 
 ## Budgets after the move
 
-- `opts-game`: 91,319 - 112 + the new tests in `opts-game` (none) = about 91,207. The budget is
-  lowered to the measured total (it may only shrink).
-- `opts-vdf`: its own measured size (about 150 code lines with tests), new entry.
+- `opts-game`: measured 91,206 after the move (fell by 113). See the budget decision below.
+- Budget decision: the entry stays at 91,320. Lowering it to 91,206 would leave no room for the
+  tunnel branch's +84 (91,290), which is the purpose of this split. The lead decides whether to
+  lower it after the tunnel lands. The budget is not raised.
+- `opts-vdf`: measured 152 code lines after rustfmt (parser plus four tests), new budget entry `opts-vdf 152` set at the crate's own size on creation.
 
 ## Gates
 

@@ -34,6 +34,7 @@ members = [
     "crates/opts-model",
     "crates/opts-omsi",
     "crates/opts-types",
+    "crates/opts-vdf",
     "crates/opts-gui",
     "crates/opts-logging",
     "crates/opts-sim",
@@ -69,6 +70,7 @@ opts-l10n = { path = "crates/opts-l10n" }
 opts-model = { path = "crates/opts-model" }
 opts-omsi = { path = "crates/opts-omsi" }
 opts-types = { path = "crates/opts-types" }
+opts-vdf = { path = "crates/opts-vdf" }
 opts-gui = { path = "crates/opts-gui" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }

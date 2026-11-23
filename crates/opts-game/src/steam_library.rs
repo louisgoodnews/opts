@@ -11,12 +11,11 @@ pub const OMSI2_APP_ID: &str = "252530";
 /// The folder Steam uses for OMSI 2 when its manifest is missing.
 const DEFAULT_INSTALL_DIR: &str = "OMSI 2";
 
-mod kv;
 mod libraries;
 mod roots;
 
-pub use kv::{parse, Kv};
 pub use libraries::{find_omsi, install_dir, libraries, Library};
+pub use opts_vdf::{parse, Kv};
 pub use roots::steam_roots;
 
 #[cfg(test)]
