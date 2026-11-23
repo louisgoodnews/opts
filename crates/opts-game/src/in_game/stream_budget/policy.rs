@@ -18,6 +18,8 @@ pub const ENTER_TILE: f32 = 0.6;
 pub const LEAVE_TILE: f32 = 0.4;
 /// Tile steps of the tile regime that a tile is loaded ahead by (eviction hysteresis floor).
 pub const MIN_HYSTERESIS: i32 = 1;
+/// Tiles queued at once by the streamer (the nearest wanted ones).
+pub const REFILL: usize = 4;
 
 /// `streaming.mode`: the regime chosen by the speed, or one forced regime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

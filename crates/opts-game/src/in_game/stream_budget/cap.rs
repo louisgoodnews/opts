@@ -3,7 +3,8 @@
 
 use std::cmp::Reverse;
 
-use super::{chebyshev, TileKey};
+use super::policy::hysteresis;
+use super::{chebyshev, evictable, TileKey};
 
 /// Tiles allowed resident: the square of the radius plus three per look-ahead step (the strip
 /// of each step).
@@ -23,5 +24,17 @@ pub fn over_cap(resident: &[TileKey], centre: TileKey, cap: usize) -> Vec<TileKe
     let mut far: Vec<TileKey> = resident.to_vec();
     far.sort_by_key(|k| (Reverse(chebyshev(*k, centre)), *k));
     far.truncate(resident.len() - cap);
+    far
+}
+
+/// Resident tiles to unload for a ring of `radius` around `centre` with `ahead` look-ahead steps:
+/// beyond the radius plus the plan's hysteresis, then the farthest while over the resident cap.
+/// Shared by the streamer and the deterministic baseline (M-0114), so both follow one policy.
+#[must_use]
+pub fn evict_keys(resident: &[TileKey], centre: TileKey, radius: i32, ahead: i32) -> Vec<TileKey> {
+    let mut far = evictable(resident.iter().copied(), centre, radius, hysteresis(ahead));
+    let mut left = resident.to_vec();
+    left.retain(|k| !far.contains(k));
+    far.extend(over_cap(&left, centre, resident_cap(radius, ahead)));
     far
 }

@@ -25,7 +25,7 @@ mod hybrid_tests;
 #[cfg(test)]
 mod tests;
 
-pub use cap::{over_cap, resident_cap};
+pub use cap::{evict_keys, over_cap, resident_cap};
 pub use frame::FrameBudget;
 pub use motion::Motion;
 pub use spread::Spread;

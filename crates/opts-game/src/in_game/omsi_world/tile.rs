@@ -36,9 +36,6 @@ type ObjParts<'a> = (
 /// Flat width from which a spline without lanes (paved area, apron) carries vehicles (m).
 pub(super) const SURFACE_MIN_WIDTH_M: f32 = 3.5;
 
-/// Tiles queued at once by the streamer (the nearest wanted ones).
-const REFILL: usize = 4;
-
 mod streaming;
 pub use streaming::{advance_tile_loading, load_next_tile, stream_world_tiles, TileRoot};
 mod zones;
