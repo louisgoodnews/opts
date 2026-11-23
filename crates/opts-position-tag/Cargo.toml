@@ -1,0 +1,14 @@
+[package]
+name = "opts-position-tag"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Process-wide player position text for log messages (tile, local and world coordinates)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

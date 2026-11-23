@@ -2,7 +2,7 @@
 # Format: <crate> <lines of code>  # <reason>. A budget may only shrink; `check` fails when a crate grows
 # above its budget or has no entry. Edit by hand: `seed` does not change budgets.
 opts-benchmark 5607  # set 2026-11-22 to the current total
-opts-bevy 45975  # raised 2026-11-22 from 45877 to the total after the control-server, snow and bloom merges (owner decision)
+opts-bevy 45956  # lowered 2026-11-23 from 45975: position_tag moved out to opts-position-tag (M-0122, ISS-018)
 opts-catalogue 2066  # set 2026-11-22 to the current total
 opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-core 4  # set 2026-11-22 to the current total
@@ -14,6 +14,7 @@ opts-l10n 2743  # set 2026-11-22 to the current total
 opts-logging 1288  # set 2026-11-22 to the current total
 opts-model 107  # set 2026-11-22 to the current total
 opts-omsi 18200  # set 2026-11-22 to the current total
+opts-position-tag 26  # new 2026-11-23: the player position log tag moved out of opts-bevy (M-0122, ISS-018)
 opts-sim 11508  # set 2026-11-22 to the current total
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 6300  # set 2026-11-22 to the current total
