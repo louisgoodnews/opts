@@ -2,6 +2,8 @@
 
 use super::*;
 
+const TEST_TOKEN: &str = "test-token-with-at-least-32-characters";
+
 mod spawn;
 use spawn::{spawn_controls, spawn_list};
 
@@ -48,6 +50,7 @@ pub(super) fn fixture() -> Fixture {
     let mut app = layout_app();
     app.add_plugins(ControlPlugin::new(ControlConfig {
         port: Some(0),
+        token: Some(TEST_TOKEN.to_string()),
         ..ControlConfig::default()
     }));
     let chord = Chord::default();
@@ -84,7 +87,7 @@ pub(super) fn with_client<R: Send + 'static>(
         let mut c = Client::new(ClientConfig {
             host: "127.0.0.1".into(),
             port,
-            token: None,
+            token: Some(TEST_TOKEN.to_string()),
             timeout: Duration::from_secs(10),
         });
         // A failed expectation must end the pumping loop too, or the test would hang.

@@ -16,6 +16,8 @@ use opts_cli::client::{Client, ClientConfig, ClientError};
 use opts_cli::protocol::code;
 use serde_json::{json, Value};
 
+const TEST_TOKEN: &str = "test-token-with-at-least-32-characters";
+
 #[derive(Resource, Default, Clone)]
 struct KeyLog(Arc<Mutex<Vec<bool>>>);
 
@@ -34,7 +36,8 @@ fn app(token: Option<&str>) -> (App, u16) {
     }));
     // Captures go to a throw-away directory, never the user's.
     app.insert_resource(opts_bevy::capture::CaptureState::new(Some(
-        std::env::temp_dir().join(format!("opts_control_test_{}", std::process::id())),
+        std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+            .join(format!("opts_control_test_{}", std::process::id())),
     )));
     app.update();
     let port = app.world().resource::<ControlAddr>().0.port();
@@ -75,9 +78,9 @@ fn rpc_code(e: ClientError) -> i64 {
 
 #[test]
 fn meta_commands_answer() {
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     let (ping, version, caps, help) = with_client(&mut app, move || {
-        let mut c = client(port, None);
+        let mut c = client(port, Some(TEST_TOKEN));
         (
             c.call("ping", Value::Null).expect("ping"),
             c.call("version", Value::Null).expect("version"),
@@ -97,9 +100,9 @@ fn meta_commands_answer() {
 
 #[test]
 fn errors_use_the_documented_codes() {
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     let codes = with_client(&mut app, move || {
-        let mut c = client(port, None);
+        let mut c = client(port, Some(TEST_TOKEN));
         vec![
             rpc_code(c.call("no.such.method", Value::Null).expect_err("unknown")),
             rpc_code(

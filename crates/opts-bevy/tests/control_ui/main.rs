@@ -16,11 +16,14 @@ use opts_gui::ui_id::UiId;
 use opts_gui::OptsGuiPlugin;
 use serde_json::{json, Value};
 
+const TEST_TOKEN: &str = "test-token-with-at-least-32-characters";
+
 fn app() -> (App, u16, Arc<AtomicUsize>) {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::input::InputPlugin, OptsGuiPlugin));
     app.add_plugins(ControlPlugin::new(ControlConfig {
         port: Some(0),
+        token: Some(TEST_TOKEN.to_string()),
         ..ControlConfig::default()
     }));
     let clicks = Arc::new(AtomicUsize::new(0));
@@ -68,7 +71,7 @@ fn with_client<R: Send + 'static>(
         let mut c = Client::new(ClientConfig {
             host: "127.0.0.1".into(),
             port,
-            token: None,
+            token: Some(TEST_TOKEN.to_string()),
             timeout: Duration::from_secs(10),
         });
         *slot.lock().expect("slot") = Some(f(&mut c));

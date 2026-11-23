@@ -21,6 +21,8 @@ use opts_cli::protocol::code;
 use serde_json::{json, Value};
 
 /// Size of the synthetic frames, per app (tests run in parallel).
+const TEST_TOKEN: &str = "test-token-with-at-least-32-characters";
+
 #[derive(Resource, Clone, Copy)]
 struct TestFrame(u32, u32);
 
@@ -79,6 +81,7 @@ fn app(root: &Path, request: fn(&mut World, FrameSink) -> Result<(), CaptureErro
     app.add_plugins((MinimalPlugins, bevy::input::InputPlugin));
     app.add_plugins(ControlPlugin::new(ControlConfig {
         port: Some(0),
+        token: Some(TEST_TOKEN.to_string()),
         ..ControlConfig::default()
     }));
     app.insert_resource(CaptureState::new(Some(root.to_path_buf())));
@@ -100,7 +103,7 @@ fn run<R: Send + 'static>(
         let mut c = Client::new(ClientConfig {
             host: "127.0.0.1".into(),
             port,
-            token: None,
+            token: Some(TEST_TOKEN.to_string()),
             timeout: Duration::from_secs(30),
         });
         let r = f(&mut c);

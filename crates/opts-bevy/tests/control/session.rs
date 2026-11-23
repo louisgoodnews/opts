@@ -4,9 +4,9 @@ use super::*;
 
 #[test]
 fn pause_step_and_time_scale() {
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     let (paused, stepped, scale) = with_client(&mut app, move || {
-        let mut c = client(port, None);
+        let mut c = client(port, Some(TEST_TOKEN));
         c.call("sim.pause", Value::Null).expect("pause");
         let paused = c.call("sim.get", Value::Null).expect("get")["paused"].clone();
         let stepped = c.call("sim.step", json!({"frames": 3})).expect("step");
@@ -26,7 +26,7 @@ fn pause_step_and_time_scale() {
 
 #[test]
 fn batch_runs_in_order_and_reports_each_result() {
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     let results = with_client(&mut app, move || {
         let cmds = vec![
             ("sim.pause".to_string(), Value::Null),
@@ -34,7 +34,9 @@ fn batch_runs_in_order_and_reports_each_result() {
             ("nope".to_string(), Value::Null),
             ("sim.get".to_string(), Value::Null),
         ];
-        client(port, None).batch(&cmds, false).expect("batch")
+        client(port, Some(TEST_TOKEN))
+            .batch(&cmds, false)
+            .expect("batch")
     });
     assert_eq!(results.len(), 4);
     assert!(results[1].is_ok());
@@ -47,27 +49,29 @@ fn batch_runs_in_order_and_reports_each_result() {
 
 #[test]
 fn stop_on_error_ends_the_batch_early() {
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     let results = with_client(&mut app, move || {
         let cmds = vec![
             ("nope".to_string(), Value::Null),
             ("ping".to_string(), Value::Null),
         ];
-        client(port, None).batch(&cmds, true).expect("batch")
+        client(port, Some(TEST_TOKEN))
+            .batch(&cmds, true)
+            .expect("batch")
     });
     assert_eq!(results.len(), 1);
 }
 
 #[test]
 fn tokens_are_enforced() {
-    let (mut app, port) = app(Some("s3cret"));
+    let (mut app, port) = app(Some(TEST_TOKEN));
     let (denied, allowed) = with_client(&mut app, move || {
         let denied = rpc_code(
             client(port, None)
                 .call("ping", Value::Null)
                 .expect_err("denied"),
         );
-        let allowed = client(port, Some("s3cret"))
+        let allowed = client(port, Some(TEST_TOKEN))
             .call("ping", Value::Null)
             .is_ok();
         (denied, allowed)

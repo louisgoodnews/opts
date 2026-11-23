@@ -6,7 +6,7 @@ fn client(port: u16) -> Client {
     Client::new(ClientConfig {
         host: "127.0.0.1".into(),
         port,
-        token: None,
+        token: Some(TEST_TOKEN.to_string()),
         timeout: Duration::from_secs(10),
     })
 }

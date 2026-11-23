@@ -16,6 +16,8 @@ use opts_cli::client::{Client, ClientConfig, ClientError};
 use opts_cli::protocol::code;
 use serde_json::{json, Value};
 
+const TEST_TOKEN: &str = "test-token-with-at-least-32-characters";
+
 #[derive(Resource, Default)]
 struct Seen {
     validated: Vec<(PathBuf, ReloadKind)>,
@@ -54,6 +56,7 @@ fn app_watching(dir: &std::path::Path, control: bool) -> App {
         app.add_plugins(bevy::input::InputPlugin);
         app.add_plugins(ControlPlugin::new(ControlConfig {
             port: Some(0),
+            token: Some(TEST_TOKEN.to_string()),
             allow_dirs: vec![dir.to_path_buf()],
             ..ControlConfig::default()
         }));

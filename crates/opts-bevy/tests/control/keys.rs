@@ -4,9 +4,9 @@ use super::*;
 
 #[test]
 fn injected_keys_press_then_release() {
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     with_client(&mut app, move || {
-        client(port, None)
+        client(port, Some(TEST_TOKEN))
             .call("input.key", json!({"key": "W", "duration_ms": 120}))
             .expect("key")
     });

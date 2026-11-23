@@ -4,7 +4,7 @@ use super::*;
 
 #[test]
 fn malformed_lines_get_protocol_errors() {
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     let reply = with_client(&mut app, move || {
         let mut s = TcpStream::connect(("127.0.0.1", port)).expect("connect");
         writeln!(s, "{{nope").expect("write");
@@ -21,10 +21,10 @@ fn log_tail_returns_recent_events() {
     let _ = tracing::subscriber::set_global_default(
         tracing_subscriber::registry().with(opts_logging::layer::ring::RingLayer),
     );
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     tracing::info!(target: "control_test", "hello from the test");
     let lines = with_client(&mut app, move || {
-        client(port, None)
+        client(port, Some(TEST_TOKEN))
             .call(
                 "log.filter",
                 json!({"contains": "hello from the test", "n": 5}),
@@ -46,11 +46,11 @@ fn note_exit(mut events: MessageReader<bevy::app::AppExit>, mut seen: ResMut<Exi
 
 #[test]
 fn shutdown_requests_app_exit() {
-    let (mut app, port) = app(None);
+    let (mut app, port) = app(Some(TEST_TOKEN));
     app.init_resource::<ExitSeen>()
         .add_systems(Update, note_exit);
     with_client(&mut app, move || {
-        client(port, None)
+        client(port, Some(TEST_TOKEN))
             .call("shutdown", Value::Null)
             .expect("shutdown")
     });
