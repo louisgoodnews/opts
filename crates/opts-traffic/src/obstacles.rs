@@ -12,7 +12,7 @@ use glam::DVec2;
 
 use crate::agent::{Agent, AgentId, TrafficWorld, LANE_CHANGE_DURATION_S};
 use crate::graph::LaneId;
-use crate::idm::IdmParams;
+use opts_car_following::IdmParams;
 
 /// Half the width of a typical AI vehicle (m): a lane is blocked when its centre line comes closer
 /// to the footprint's axis than half the obstacle's width plus this.

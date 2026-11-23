@@ -10,7 +10,7 @@ impl TrafficWorld {
     fn strategic_options(
         &self,
         lane: LaneId,
-        class: crate::idm::VehicleClass,
+        class: opts_car_following::VehicleClass,
         group: usize,
     ) -> Vec<(LaneId, LaneId, Side)> {
         let Some(own) = self.graph.lane(lane) else {
@@ -59,7 +59,7 @@ impl TrafficWorld {
     fn pick_next(
         &mut self,
         lane: LaneId,
-        class: crate::idm::VehicleClass,
+        class: opts_car_following::VehicleClass,
         group: usize,
         strategic: bool,
     ) -> Option<(LaneId, Option<Strategic>)> {

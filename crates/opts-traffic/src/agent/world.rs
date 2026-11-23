@@ -62,7 +62,7 @@ impl TrafficWorld {
             time: 0.0,
             clock_base: 0.0,
             signals: HashMap::new(),
-            open_road_speed: crate::idm::OPEN_ROAD_SPEED,
+            open_road_speed: opts_car_following::OPEN_ROAD_SPEED,
             obstacles: Vec::new(),
             last_phantoms: 0,
             stats: TrafficStats::default(),

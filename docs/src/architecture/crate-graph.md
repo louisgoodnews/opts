@@ -38,6 +38,7 @@ graph TD
     subgraph L2 ["Layer 2 — Simulation & Engine Presentation Bridges"]
         opts_sim["opts-sim<br/>• Vehicle physics & kinematics<br/>• Drivetrain, suspension, steering<br/>• Script VM bytecode interpreter<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_traffic["opts-traffic<br/>• Lane graph & car following<br/>• Conflict zones, right of way<br/>• Zero Bevy"]:::bridge
+        opts_car_following["opts-car-following<br/>• Intelligent Driver Model<br/>• Vehicle classes & driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_catalogue["opts-catalogue<br/>• Installation scan into a catalogue<br/>• Map & vehicle lists"]:::bridge
         opts_gui["opts-gui<br/>• Material Design 3 tokens<br/>• Reusable UI widgets<br/>• Glassmorphism layout<br/>• Bevy UI integration"]:::bridge
         opts_bevy["opts-bevy<br/>• 3D mesh loaders & materials<br/>• Coordinate system mapping<br/>• ECS VehicleController bridge<br/>• Scenery object spawning"]:::bridge
@@ -86,6 +87,7 @@ graph TD
     opts_tools --> opts_core
     opts_tools --> opts_hardware
     opts_tools --> opts_l10n
+    opts_traffic --> opts_car_following
     opts_traffic --> opts_core
 ```
 
@@ -106,7 +108,8 @@ graph TD
 | **`opts-importer`** | L1 | Turns legacy OMSI content into the native model; the only crate that knows both | `opts-model`, `opts-omsi` | *None yet* | Pure Rust |
 | **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core` | `opts-benchmark`, `opts-bevy`, `opts-game` | Pure Rust |
-| **`opts-traffic`** | L2 | AI road traffic: lane graph, car following, conflict zones, right of way | `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-traffic`** | L2 | AI road traffic: lane graph, conflict zones, right of way, agents and lane changes | `opts-car-following`, `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-benchmark`, `opts-game` | Pure Rust |
 | **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game` | Bevy UI |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
@@ -124,7 +127,7 @@ graph TD
 1. **`opts-omsi` Zero-Engine & Zero-IO Invariant, and the legacy/native boundary ([ADR-0014](../adr/0014-data-model-separation.md)):**
    - Must never depend on `bevy`, `wgpu`, or windowing crates, and never on `opts-model`.
    - Must never perform synchronous file I/O (`std::fs::File`, `std::io::Read`). All parsers operate strictly on in-memory slices (`&str`, `&[u8]`).
-   - It is a **leaf adapter**: `opts-bevy`, `opts-sim`, `opts-traffic`, `opts-gui` and `opts-catalogue` must not depend on it (directly or through the `opts-core` facade) in new code. The uses that remain are counted by `scripts/omsi_uses.py` against `docs/dev/omsi-uses-known.txt`; the count may only fall. `opts-game` is the composition root and may wire the OMSI source through `opts-importer`.
+   - It is a **leaf adapter**: `opts-bevy`, `opts-sim`, `opts-traffic`, `opts-car-following`, `opts-gui` and `opts-catalogue` must not depend on it (directly or through the `opts-core` facade) in new code. The uses that remain are counted by `scripts/omsi_uses.py` against `docs/dev/omsi-uses-known.txt`; the count may only fall. `opts-game` is the composition root and may wire the OMSI source through `opts-importer`.
    - `opts-model` and `opts-omsi` share only `opts-types` and never import each other; `opts-importer` is the only crate that depends on both.
 2. **`opts-sim` Zero-Engine & Zero-IO Invariant:**
    - Must never depend on `bevy` or rendering crates.

@@ -140,7 +140,7 @@ impl IdmParams {
     }
 
     /// Acceleration for speed `v`, a free-road speed cap `v_cap` (the lane speed, curve and
-    /// look-ahead limits; [`crate::TrafficWorld`] computes it) and an
+    /// look-ahead limits; `TrafficWorld` in `opts-traffic` computes it) and an
     /// optional obstacle `(net gap, speed)` ahead. A standing obstacle such as a stop line has
     /// speed `0`.
     #[must_use]

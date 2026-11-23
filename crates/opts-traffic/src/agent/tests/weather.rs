@@ -1,8 +1,8 @@
 //! Weather in the traffic world (M-0117): grip and fog as the drivers feel them.
 
 use super::*;
-use crate::idm::IdmParams;
 use crate::weather::grip_adjusted;
+use opts_car_following::IdmParams;
 
 /// Mean speed (m/s) of a lone car over the second minute on a straight road with `grip`.
 fn mean_speed_after_a_minute(grip: f64) -> f64 {

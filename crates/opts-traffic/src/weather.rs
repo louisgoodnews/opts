@@ -6,7 +6,7 @@
 //! section 10): the grip scales every acceleration and speed limit of the driver, and the
 //! headway grows with `1 / √grip` and with the fog distance beyond [`VISIBILITY_REF_M`].
 
-use crate::idm::IdmParams;
+use opts_car_following::IdmParams;
 
 /// Lowest grip factor used in the rules; below it the road counts as this grip (no division by
 /// zero, and a stopped car on ice still gets a finite law).

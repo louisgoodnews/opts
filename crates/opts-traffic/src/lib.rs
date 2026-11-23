@@ -31,7 +31,6 @@ pub mod conflict;
 pub mod density;
 pub mod geometry;
 pub mod graph;
-pub mod idm;
 pub mod lanechange;
 pub mod neighbours;
 pub mod obstacles;
@@ -58,8 +57,10 @@ pub use graph::{
 pub use idm::{IdmParams, VehicleClass};
 pub use neighbours::{Neighbour, Side};
 pub use obstacles::Obstacle;
+/// The car-following law lives in `opts-car-following`; this alias keeps `opts_traffic::idm` working.
+pub use opts_car_following as idm;
 pub use rightofway::{precedence, Precedence};
 pub use rng::Rng;
 pub use signals::{Aspect, SignalKey, SignalProgram};
 pub use source::{segments_from_tile, signals_from_tile, tile_origin, PathSource};
-pub use traits::{Calibration, VehicleKind, VehicleTraits};
+pub use traits::{Calibration, IdmFromTraits, VehicleKind, VehicleTraits};

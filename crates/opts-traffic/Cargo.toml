@@ -14,6 +14,7 @@ workspace = true
 [dependencies]
 # Internal
 opts-core = { workspace = true }
+opts-car-following = { workspace = true }
 
 # Math
 glam = { workspace = true }

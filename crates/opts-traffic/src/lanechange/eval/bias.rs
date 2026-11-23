@@ -12,7 +12,7 @@ impl TrafficWorld {
         a_now: f64,
     ) -> f64 {
         let (ml, n, mandatory) = (t.lane, t.n, t.mandatory);
-        let heavy = a.params.class != crate::idm::VehicleClass::Car;
+        let heavy = a.params.class != opts_car_following::VehicleClass::Car;
         let mut bias = match n.side {
             Side::Right if a_after >= a_now - 0.1 => {
                 KEEP_RIGHT_BONUS + if heavy { HEAVY_KEEP_RIGHT_BONUS } else { 0.0 }
@@ -20,7 +20,8 @@ impl TrafficWorld {
             Side::Right => 0.0,
             Side::Left => -LEFT_PENALTY,
         };
-        if a.params.class == crate::idm::VehicleClass::Truck && ml.rules.trucks != lane.rules.trucks
+        if a.params.class == opts_car_following::VehicleClass::Truck
+            && ml.rules.trucks != lane.rules.trucks
         {
             bias += if ml.rules.trucks {
                 TRUCK_LANE_BONUS

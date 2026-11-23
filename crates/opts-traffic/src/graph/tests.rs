@@ -58,7 +58,7 @@ fn directions_expand_to_directed_lanes() {
 #[test]
 fn vehicle_type_rules_are_a_whitelist() {
     // Project lead 2026-10-19: a type rule means only those types are allowed.
-    use crate::idm::VehicleClass::{Bus, Car, Truck};
+    use opts_car_following::VehicleClass::{Bus, Car, Truck};
     let none = LaneRules::default();
     assert!([Car, Truck, Bus].iter().all(|c| none.allows(*c)));
     let bus_lane = LaneRules { bus: true, ..none };
