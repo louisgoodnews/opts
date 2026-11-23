@@ -19,6 +19,14 @@ use opts_sim::vehicle::ground::GroundSample;
 use opts_sim::vehicle::inputs::GearPosition;
 use opts_sim::vehicle::trailer_front::joint_transform;
 
+/// The angle between two rotations, from the relative rotation: `Quat::angle_between` takes
+/// `acos` of a dot product that rounds to 1 for near-equal rotations, so a 1e-7 rounding error
+/// reads as about 1e-3 rad.
+fn angle(a: Quat, b: Quat) -> f32 {
+    let rel = a.inverse() * b;
+    2.0 * rel.xyz().length().atan2(rel.w.abs())
+}
+
 const HITCH: DVec3 = DVec3::new(0.0, -4.4, 0.4);
 const STEERS: [f32; 6] = [0.2, 0.4, 0.6, -0.2, -0.4, -0.6];
 const THROTTLES: [f32; 2] = [0.3, 0.5];
@@ -127,11 +135,7 @@ fn live_trailer_front_joint_turns_with_the_coupled_trailer_across_the_sweep() {
                 );
                 if ground == (0.0, 0.0) {
                     let yaw = Quat::from_rotation_y(alpha as f32);
-                    assert!(
-                        tf.rotation.angle_between(yaw) < 1e-3,
-                        "{case}: {:?}",
-                        tf.rotation
-                    );
+                    assert!(angle(tf.rotation, yaw) < 1e-3, "{case}: {:?}", tf.rotation);
                 }
                 let expected = joint_model_transform(joint_transform(
                     HITCH,
@@ -140,7 +144,7 @@ fn live_trailer_front_joint_turns_with_the_coupled_trailer_across_the_sweep() {
                     f64::from(gamma).to_radians(),
                 ));
                 let (rot, trans) = (
-                    tf.rotation.angle_between(expected.rotation),
+                    angle(tf.rotation, expected.rotation),
                     tf.translation.distance(expected.translation),
                 );
                 assert!(
