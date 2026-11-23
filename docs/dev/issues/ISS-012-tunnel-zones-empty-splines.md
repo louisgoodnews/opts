@@ -102,8 +102,16 @@ Start only after [M-0164](../../src/roadmap/phase-17/M-0164.md) (Help table, bra
 Done-when status:
 
 - `zones.query` returns sections for a real tunnel in play: not met (no game run in this check).
-- A test fails when the feed is removed: met for `tile_zones` input (FAILED above). Not met for the loader call site in `sync_tile_zones`.
+- A test fails when the feed is removed: met for `tile_zones` input (FAILED above). Met for the loader call site too (2026-11-23, below).
 - Thresholds checked against one labelled tunnel, result on M-0115: met in part (the comparison is in the labels file and M-0115 card); the label is by profile, not by eye.
 
 Still open: the thresholds (15 m and the 10 m pieces), precision and recall on the labelled set of the other two maps, the
-on-screen overlay check, and a test that covers the `sync_tile_zones` feed.
+on-screen overlay check, and the `sync_tile_zones` feed test (done 2026-11-23, below).
+
+## Call-site test (2026-11-23, `agent/tunnel-2`)
+
+- `tile/zones_system_tests.rs` runs `sync_tile_zones` (the system) in a Bevy app with a real `WorldLoadJob` (`job::test_support::job_for_tests`) whose tile (0, 0) is resident and holds a covered spline. A 40 m spline gives one zone in `ZoneRegistry`; a 10 m spline gives none. The `.sli` roof is written under the test binary's folder, not /tmp.
+- Removal check: the feed in `sync_tile_zones` replaced by an empty spline list. `sync_tile_zones_gives_the_covered_spline_zone_to_the_registry ... FAILED` (`left: 0`, `right: 1`, `zones_system_tests.rs:56`). Restored byte-identical; the test passes again. Logs: `opts-scratch/work/removal-check.out`, `tunnel2-removed.log`, `tunnel2-restored.log`.
+- Real-data test re-run the same day (`OMSI_PATH` set): 329 tiles, 2 covered-spline zones, ok.
+- Thresholds: unchanged. The 15 m decision is on M-0115 (keep; the 10 m pieces are not shown to be roofed in game).
+- Still open: the labelled second and third maps, precision and recall, the on-screen check.

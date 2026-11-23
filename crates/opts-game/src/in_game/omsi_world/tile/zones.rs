@@ -118,3 +118,7 @@ mod tests;
 #[cfg(test)]
 #[path = "zones_data_tests.rs"]
 mod data_tests;
+
+#[cfg(test)]
+#[path = "zones_system_tests.rs"]
+mod system_tests;
