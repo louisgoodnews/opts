@@ -1,7 +1,7 @@
 //! From what a vehicle file says to how the car-following model drives it.
 //!
 //! [`VehicleTraits`] holds plain numbers (the host reads them from the vehicle's files, see
-//! `opts_core::formats::vehicles::AiProfile`); [`IdmParams::from_traits`] maps them to
+//! `opts_core::formats::vehicles::AiProfile`); [`IdmFromTraits::from_traits`] maps them to
 //! [`IdmParams`] with the constants of a [`Calibration`]. The crate stays free of files and
 //! Bevy. Design and open questions: `docs/src/architecture/ai-vehicle-config.md`.
 //!
@@ -10,7 +10,7 @@
 //! `Brakeforce = Brake · AI_F_brems_max`); how OMSI's engine-side driver uses them is not
 //! measured ❓, so every number that is a *behaviour* choice lives in [`Calibration`].
 
-use crate::idm::{IdmParams, VehicleClass};
+use opts_car_following::{IdmParams, VehicleClass};
 
 /// Kind of AI vehicle (`[ai_veh_type]`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -143,7 +143,15 @@ fn clamp(v: f64, (lo, hi): (f64, f64)) -> f64 {
     v.clamp(lo, hi)
 }
 
-impl IdmParams {
+/// The mapping from traits to [`IdmParams`]. A trait, because the impl must live in this crate:
+/// `VehicleTraits` and `Calibration` are defined here, while `IdmParams` is in `opts-car-following`.
+pub trait IdmFromTraits: Sized {
+    /// The driving parameters of the vehicle described by `traits` (see the impl for the mapping).
+    #[must_use]
+    fn from_traits(traits: &VehicleTraits, cal: &Calibration, roll: f64) -> Self;
+}
+
+impl IdmFromTraits for IdmParams {
     /// The driving parameters of the vehicle described by `traits`.
     ///
     /// `roll` is a uniform draw in `[0, 1)` that picks this vehicle's place in its rowdy range
@@ -151,8 +159,7 @@ impl IdmParams {
     /// not give keep the defaults of the vehicle's class ([`IdmParams::default`] for cars,
     /// [`IdmParams::heavy`] otherwise). Speed limits are not part of the parameters: the driver
     /// applies its [`IdmParams::speed_factor`] to the limit of each lane it drives on.
-    #[must_use]
-    pub fn from_traits(traits: &VehicleTraits, cal: &Calibration, roll: f64) -> Self {
+    fn from_traits(traits: &VehicleTraits, cal: &Calibration, roll: f64) -> Self {
         let class = traits.class();
         let heavy = class != VehicleClass::Car;
         let mut p = if heavy {

@@ -8,8 +8,8 @@
 
 use glam::DVec2;
 use opts_traffic::{
-    AgentId, Calibration, ConnectParams, IdmParams, LaneGraph, LaneKind, LaneSegment, TrafficWorld,
-    VehicleKind, VehicleTraits,
+    AgentId, Calibration, ConnectParams, IdmFromTraits, IdmParams, LaneGraph, LaneKind,
+    LaneSegment, TrafficWorld, VehicleKind, VehicleTraits,
 };
 
 const STEP: f64 = 0.05;

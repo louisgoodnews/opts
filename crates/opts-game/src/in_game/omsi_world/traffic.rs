@@ -4,7 +4,7 @@
 //! ([`opts_traffic::segments_from_tile`]) and join geometrically; vehicles are drawn from the map's
 //! `ailists.cfg` (every group that `unsched_vehgroups.txt` lets take part) and driven by the
 //! Intelligent Driver Model with parameters derived from each vehicle's own files
-//! ([`opts_traffic::IdmParams::from_traits`]). The vehicle models are placed on the lane (no
+//! ([`opts_traffic::IdmFromTraits::from_traits`]). The vehicle models are placed on the lane (no
 //! scripts or physics); coupled vehicles pull their trailing units behind them
 //! (`traffic_chain.rs`). Plan and limits: `docs/src/architecture/ai-traffic.md`,
 //! `docs/src/architecture/ai-vehicle-config.md`.

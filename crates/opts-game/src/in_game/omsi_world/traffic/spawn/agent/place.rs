@@ -1,6 +1,7 @@
 //! The steps of placing one AI vehicle once its agent exists.
 
 use super::*;
+use opts_traffic::IdmFromTraits;
 
 /// The spawned agent: where it stands and what it was made from.
 pub(super) struct Placed<'a> {

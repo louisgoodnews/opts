@@ -30,8 +30,8 @@ impl LaneRules {
     /// types may use the lane; `no_cars` additionally keeps cars off. Applies to AI vehicles
     /// only — the player's vehicle is never stopped by a rule.
     #[must_use]
-    pub fn allows(&self, class: crate::idm::VehicleClass) -> bool {
-        use crate::idm::VehicleClass::{Bus, Car, Truck};
+    pub fn allows(&self, class: opts_car_following::VehicleClass) -> bool {
+        use opts_car_following::VehicleClass::{Bus, Car, Truck};
         if class == Car && self.no_cars {
             return false;
         }

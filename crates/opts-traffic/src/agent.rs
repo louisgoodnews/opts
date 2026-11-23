@@ -16,11 +16,11 @@ use std::collections::{HashMap, VecDeque};
 use glam::DVec2;
 
 use crate::graph::{LaneGraph, LaneId, SpawnError};
-use crate::idm::IdmParams;
 use crate::neighbours::Side;
 use crate::rightofway::{precedence, Precedence};
 use crate::rng::Rng;
 use crate::signals::{Aspect, SignalKey, SignalProgram};
+use opts_car_following::IdmParams;
 
 mod stops;
 pub use stops::{StopPoint, ARRIVED_SPEED, ARRIVE_WITHIN_M};

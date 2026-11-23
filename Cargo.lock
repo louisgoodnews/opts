@@ -5387,6 +5387,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-car-following"
+version = "0.1.0"
+
+[[package]]
 name = "opts-catalogue"
 version = "0.1.0"
 dependencies = [
@@ -5550,6 +5554,7 @@ name = "opts-traffic"
 version = "0.1.0"
 dependencies = [
  "glam",
+ "opts-car-following",
  "opts-core",
  "thiserror 1.0.69",
 ]
