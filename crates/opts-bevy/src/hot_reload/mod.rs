@@ -7,7 +7,8 @@
 //! cannot remove working content.
 
 pub mod cache;
-pub mod debounce;
+/// The file-event debouncer, now the `opts-debounce` crate (same paths).
+pub use opts_debounce as debounce;
 pub mod events;
 pub mod validate;
 pub mod watcher;

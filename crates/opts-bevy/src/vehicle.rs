@@ -137,9 +137,11 @@ impl BusVehicle {
     }
 }
 
+mod exhaust;
 mod lights;
 mod spawn;
 
+pub use exhaust::{exhaust_outlet, ExhaustOutlet};
 use lights::*;
 pub use spawn::*;
 

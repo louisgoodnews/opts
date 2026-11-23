@@ -1,0 +1,14 @@
+[package]
+name = "opts-debounce"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Trailing debounce of file-change events: a path is released once quiet for a window, or at a cap."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

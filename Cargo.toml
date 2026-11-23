@@ -27,6 +27,7 @@ members = [
     "crates/opts-catalogue",
     "crates/opts-cli",
     "crates/opts-core",
+    "crates/opts-debounce",
     "crates/opts-game",
     "crates/opts-hardware",
     "crates/opts-importer",
@@ -35,6 +36,7 @@ members = [
     "crates/opts-omsi",
     "crates/opts-types",
     "crates/opts-vdf",
+    "crates/opts-wav",
     "crates/opts-gui",
     "crates/opts-logging",
     "crates/opts-sim",
@@ -63,6 +65,7 @@ opts-bevy = { path = "crates/opts-bevy" }
 opts-catalogue = { path = "crates/opts-catalogue" }
 opts-cli = { path = "crates/opts-cli", default-features = false }
 opts-core = { path = "crates/opts-core" }
+opts-debounce = { path = "crates/opts-debounce" }
 opts-game = { path = "crates/opts-game" }
 opts-hardware = { path = "crates/opts-hardware" }
 opts-importer = { path = "crates/opts-importer" }
@@ -71,6 +74,7 @@ opts-model = { path = "crates/opts-model" }
 opts-omsi = { path = "crates/opts-omsi" }
 opts-types = { path = "crates/opts-types" }
 opts-vdf = { path = "crates/opts-vdf" }
+opts-wav = { path = "crates/opts-wav" }
 opts-gui = { path = "crates/opts-gui" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }

@@ -5370,6 +5370,7 @@ dependencies = [
  "notify 6.1.1",
  "opts-cli",
  "opts-core",
+ "opts-debounce",
  "opts-gui",
  "opts-logging",
  "opts-sim",
@@ -5415,6 +5416,10 @@ dependencies = [
  "opts-l10n",
  "opts-omsi",
 ]
+
+[[package]]
+name = "opts-debounce"
+version = "0.1.0"
 
 [[package]]
 name = "opts-game"
@@ -5518,6 +5523,7 @@ dependencies = [
  "glam",
  "image",
  "opts-types",
+ "opts-wav",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -5564,6 +5570,10 @@ dependencies = [
 
 [[package]]
 name = "opts-vdf"
+version = "0.1.0"
+
+[[package]]
+name = "opts-wav"
 version = "0.1.0"
 
 [[package]]

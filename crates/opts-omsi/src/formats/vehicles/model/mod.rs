@@ -17,7 +17,7 @@ pub use anim::parse_newanim;
 pub use ast::{
     AnimAction, AnimType, BumpMap, CtcScheme, CtcTexture, EnvMap, FreeTex, InteriorLight, LightMap,
     MaterialModifier, MeshBone, MeshVisibility, ModelAnim, ModelConfig, ModelLod, ModelMaterial,
-    ModelMesh, ScriptTexture, Spotlight, TextTexture, TextureChange, ViewpointFlags,
+    ModelMesh, ScriptTexture, SmokeEmitter, Spotlight, TextTexture, TextureChange, ViewpointFlags,
 };
 pub use error::ModelParseError;
 pub use parse::parse_model;

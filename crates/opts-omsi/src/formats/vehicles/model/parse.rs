@@ -63,6 +63,7 @@ mod global;
 mod light;
 mod material;
 mod mesh;
+mod smoke;
 mod state;
 
 use state::ModelParserState;

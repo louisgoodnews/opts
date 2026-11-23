@@ -55,25 +55,13 @@ pub fn spawn_vehicle_model(
         ))
         .id();
 
-    // 1. Spawn primary LOD meshes
-    if let Some(lod0) = model.lods.first() {
-        for (i, mesh_def) in lod0.meshes.iter().enumerate() {
-            if let Some(mesh_handle) = mesh_handles.get(i) {
-                let mat_handle = material_handles.get(i).cloned().unwrap_or_default();
-
-                let child = commands
-                    .spawn((
-                        Mesh3d(mesh_handle.clone()),
-                        MeshMaterial3d(mat_handle),
-                        Transform::IDENTITY,
-                    ))
-                    .insert(Name::new(format!("Mesh_{i}_{}", mesh_def.path)))
-                    .id();
-
-                commands.entity(parent).add_children(&[child]);
-            }
-        }
+    // The exhaust outlet, when the model defines an exhaust emitter (else the game's fallback).
+    if let Some(outlet) = exhaust_outlet(model) {
+        commands.entity(parent).insert(ExhaustOutlet(outlet));
     }
+
+    // 1. Spawn primary LOD meshes
+    spawn_primary_meshes(commands, parent, model, mesh_handles, material_handles);
 
     // 2. Spawn interior lights
     for (i, light) in model.interior_lights.iter().enumerate() {
@@ -114,4 +102,34 @@ pub fn spawn_vehicle_model(
     );
 
     parent
+}
+
+/// Spawns the meshes of the primary LOD group as children of `parent`, one per mesh slot that has
+/// both a mesh and a material handle (the material falls back to the default).
+fn spawn_primary_meshes(
+    commands: &mut Commands,
+    parent: Entity,
+    model: &ModelConfig,
+    mesh_handles: &[Handle<Mesh>],
+    material_handles: &[Handle<StandardMaterial>],
+) {
+    let Some(lod0) = model.lods.first() else {
+        return;
+    };
+    for (i, mesh_def) in lod0.meshes.iter().enumerate() {
+        if let Some(mesh_handle) = mesh_handles.get(i) {
+            let mat_handle = material_handles.get(i).cloned().unwrap_or_default();
+
+            let child = commands
+                .spawn((
+                    Mesh3d(mesh_handle.clone()),
+                    MeshMaterial3d(mat_handle),
+                    Transform::IDENTITY,
+                ))
+                .insert(Name::new(format!("Mesh_{i}_{}", mesh_def.path)))
+                .id();
+
+            commands.entity(parent).add_children(&[child]);
+        }
+    }
 }
