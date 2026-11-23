@@ -127,7 +127,7 @@ O4 and O9 break the "nothing is dropped" principle (D6 in the [bus script integr
 | `{trigger:…}` blocks | 5,705 | 51,703 | about 3,800 names are derived from keys or mouse; 2 are also raised by a script; about 1,900 are residual (categories overlap slightly, so the parts do not add up exactly) |
 | keys (`[entry]`) | 129 | — | `automatic_d`, `bus_doorfront0`, `view_set_driver`, `ibis_eingabe` |
 
-The corpus-wide list of 2,194 raised names is **not embedded** in this page (its size would exceed what a reference page should carry). It is reproducible with the census rules of section 2. Its absence is a known gap against acceptance criterion 1 of M-0118 (the reference vehicles are complete; see section 6.2).
+The corpus-wide list of 2,194 raised names is **not embedded** in this page (its size would exceed what a reference page should carry). It is reproducible with the census rules of section 2 (`scripts/omsi_event_census.py`). Its absence is a known gap against acceptance criterion 1 of M-0118 (the reference vehicles are complete; see section 6.2).
 
 ### 6.2 Reference vehicles
 
