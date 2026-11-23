@@ -3,7 +3,7 @@
 # above its budget or has no entry. Edit by hand: `seed` does not change budgets.
 opts-benchmark 5607  # set 2026-11-22 to the current total
 opts-car-following 162  # set 2026-11-23 at its size after the split from opts-traffic (docs/dev/crate-split-traffic.md)
-opts-bevy 45931  # lowered 2026-11-23 to the total after the hot-reload debouncer and position tag moved out (opts-debounce, opts-position-tag) (M-0117, ISS-038)
+opts-bevy 45905  # lowered 2026-11-23 to the total after the hot-reload debouncer and position tag moved out (opts-debounce, opts-position-tag) (M-0117, ISS-038)
 opts-catalogue 2066  # set 2026-11-22 to the current total
 opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-collision 211  # set 2026-11-23 at its size after the split from opts-sim (ISS-034 budget room)

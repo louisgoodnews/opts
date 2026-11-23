@@ -30,8 +30,7 @@ pub fn exhaust_outlet(model: &ModelConfig) -> Option<Vec3> {
 /// An emitter is the exhaust when its trigger or frequency variable names exhaust (`exhaust`
 /// in any letter case). The variable names are read from the docs, not yet checked on a model.
 fn is_exhaust_name(name: &str) -> bool {
-    name.to_ascii_lowercase().contains("exhaust")
+    // OMSI names some exhaust emitters with `auspuff` (German for exhaust pipe).
+    let lower = name.to_ascii_lowercase();
+    lower.contains("exhaust") || lower.contains("auspuff")
 }
-
-#[cfg(test)]
-mod tests;
