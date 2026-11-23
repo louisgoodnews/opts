@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Status** | 🟡 First version (2026-10-12): static objects, AI vehicles, ground steps for road vehicles |
-| **Code** | `opts_sim::collision` (boxes, response, grid), `opts-game` `in_game/omsi_world/collision.rs` |
+| **Code** | `opts_collision` (boxes, response, grid), `opts-game` `in_game/omsi_world/collision.rs` |
 
 ## Model
 
@@ -20,7 +20,7 @@ Fixed step after the physics, before the articulation: up to four passes push th
 
 ## Implementation strategy for the open features
 
-Ordered by value over effort; each step is one commit with a test on the pure `opts_sim::collision` layer where possible.
+Ordered by value over effort; each step is one commit with a test on the pure `opts_collision` layer where possible.
 
 1. **AI traffic sees the player.** Register the player's `PlayerBox` (all parts of the chain) as a dynamic obstacle in the traffic crate's neighbour query (`opts-traffic`: the agents already look ahead for other agents; add a "foreign body" list filled each fixed step from `CollisionIndex`/`PlayerBox`). Agents then brake for the player like for a leading agent (distance along their lane within the lookahead, lateral overlap with the lane corridor). Player contact does not push agents; a hit stops the agent (kinematic) for a few seconds. Acceptance: a bus parked across a lane stops the following AI vehicle instead of driving through it.
 2. **Contact events and `coll_energy`.** `player_collisions` emits `CollisionEvent { other, point, normal, energy }` (energy = 0.5·m·v_n², v_n is the removed normal velocity component). The bridge writes `coll_energy` and raises the script trigger `collision` (the scripts of the 21C already define `{trigger:collision}`). Damage reads the same event: a per-vehicle `Damage` component (sum of energy over a threshold) for the later `[malfunction]`/dent features; no mesh deformation.

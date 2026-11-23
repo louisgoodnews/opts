@@ -10,7 +10,6 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod collision;
 pub mod exhaust;
 pub mod passengers;
 pub mod pedestrian;

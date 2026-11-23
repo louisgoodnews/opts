@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use opts_bevy::ArticulatedSegment;
-use opts_sim::collision::{respond, Obb};
+use opts_collision::{respond, Obb};
 
 use super::super::BodyBox;
 use super::{FRICTION, RESTITUTION};

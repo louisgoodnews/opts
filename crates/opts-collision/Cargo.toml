@@ -1,0 +1,15 @@
+[package]
+name = "opts-collision"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Planar oriented-box collision: separating-axis contact, velocity response and a spatial grid."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+glam = { workspace = true }

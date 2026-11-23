@@ -1,7 +1,7 @@
 //! Oriented boxes of the player's parts and of an AI vehicle, in the OMSI frame.
 
 use bevy::prelude::*;
-use opts_sim::collision::Obb;
+use opts_collision::Obb;
 
 use super::body::{BodyBox, PlayerBox};
 

@@ -10,7 +10,7 @@ use opts_core::formats::scenery::BaseSurface;
 use super::super::ground_height::GroundIndex;
 use super::super::WorldLoadJob;
 use super::index::CollisionIndex;
-use opts_sim::collision::Obb;
+use opts_collision::Obb;
 
 /// Registers the collision meshes of a placed object (called while its tile is built).
 pub(in super::super) fn register_object(

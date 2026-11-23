@@ -5409,6 +5409,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-collision"
+version = "0.1.0"
+dependencies = [
+ "glam",
+]
+
+[[package]]
 name = "opts-core"
 version = "0.1.0"
 dependencies = [
@@ -5428,6 +5435,7 @@ dependencies = [
  "opts-bevy",
  "opts-catalogue",
  "opts-cli",
+ "opts-collision",
  "opts-core",
  "opts-gui",
  "opts-hardware",

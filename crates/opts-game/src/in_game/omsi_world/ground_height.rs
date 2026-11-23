@@ -7,9 +7,9 @@
 use bevy::prelude::*;
 use opts_bevy::scenery::spline_pose;
 use opts_bevy::TileTerrain;
+use opts_collision::{ColliderGrid, Obb};
 use opts_core::formats::map::{MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::SplineProfile;
-use opts_sim::collision::{ColliderGrid, Obb};
 use std::collections::HashMap;
 
 /// Spacing of the road centre-line samples (m).

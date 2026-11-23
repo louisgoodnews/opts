@@ -26,6 +26,7 @@ members = [
     "crates/opts-bevy",
     "crates/opts-catalogue",
     "crates/opts-cli",
+    "crates/opts-collision",
     "crates/opts-core",
     "crates/opts-game",
     "crates/opts-hardware",
@@ -61,6 +62,7 @@ opts-benchmark = { path = "crates/opts-benchmark" }
 opts-bevy = { path = "crates/opts-bevy" }
 opts-catalogue = { path = "crates/opts-catalogue" }
 opts-cli = { path = "crates/opts-cli", default-features = false }
+opts-collision = { path = "crates/opts-collision" }
 opts-core = { path = "crates/opts-core" }
 opts-game = { path = "crates/opts-game" }
 opts-hardware = { path = "crates/opts-hardware" }

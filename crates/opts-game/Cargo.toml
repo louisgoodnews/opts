@@ -24,6 +24,7 @@ opts-hardware = { workspace = true }
 rfd = { workspace = true }
 opts-gui = { workspace = true, features = ["serde"] }
 opts-sim = { workspace = true }
+opts-collision = { workspace = true }
 opts-traffic = { workspace = true }
 opts-catalogue = { workspace = true }
 opts-logging = { workspace = true }

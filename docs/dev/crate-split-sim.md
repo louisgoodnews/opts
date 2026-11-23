@@ -32,14 +32,14 @@ The chosen set is the collision module: 211 code lines, 176 above the 35-line mi
 ## Budget decision
 
 - `opts-collision` gets an entry at its measured size (211, the total of its `src/`).
-- `opts-sim` moves from 11508 to 11297 by the code moved out. The task brief says to lower the entry when the total falls, but then the fuel-rule work (+35) would total 11332 and not fit. The task's goal is that the fuel work fits the existing budget, and the precedent (`27372ee1`, opts-vdf: "opts-game budget kept") keeps the budget as room. So the `opts-sim` budget stays at 11508 and the 211 freed lines are room for the fuel work (11,297 + 35 = 11,332, 176 below the budget).
+- `opts-sim` moves from 11508 to 11296 by the code moved out (211 lines, plus one `pub mod` line). The task brief says to lower the entry when the total falls, but then the fuel-rule work (+35) would total 11331 and not fit. The task's goal is that the fuel work fits the existing budget, and the precedent (`27372ee1`, opts-vdf: "opts-game budget kept") keeps the budget as room. So the `opts-sim` budget stays at 11508 and the 211 freed lines are room for the fuel work (11,296 + 35 = 11,331, 177 below the budget).
 - `opts-game` is unchanged: its line count does not change with import paths, and its budget is not touched.
 
 ## Steps
 
-1. Plan (this file) and the crate-graph page is not yet changed: commit the plan alone.
+1. Commit this plan alone.
 2. `git mv` the collision module into `crates/opts-collision/src/` (`collision.rs` to `lib.rs`, `collision/grid.rs` to `grid.rs`, `collision/tests.rs` to `tests.rs`); add `crates/opts-collision/Cargo.toml`; add the workspace member and the `[workspace.dependencies]` entry; remove `pub mod collision;` from `opts-sim`'s `lib.rs`.
 3. Update `opts-game`: `Cargo.toml` dependency and every `opts_sim::collision` path; update the two docs pages that name `opts_sim::collision` (`docs/src/simulation/collisions.md`, `docs/src/architecture/ai-traffic.md`).
-4. Budgets: add `opts-collision 211` to `docs/dev/crate-budget.txt`; `opts-sim` stays 11508 (above).
+4. Budgets: add `opts-collision 211` to `docs/dev/crate-budget.txt`; `opts-sim` stays 11508 (above); measured 11296 after the move.
 5. Crate graph: add the `opts-collision` row and diagram node to `docs/src/architecture/crate-graph.md`; `opts-game` gains the dependency; `scripts/crate_graph.py --check` must pass.
 6. Verify: `structure_audit.py check`, `omsi_uses.py --check`, `crate_graph.py --check`, the roadmap audit and link checks; `cargo build --workspace`; `cargo test -p opts-sim --lib`; `cargo test -p opts-collision`.
