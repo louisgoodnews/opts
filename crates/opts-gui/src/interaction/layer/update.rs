@@ -3,6 +3,7 @@
 use bevy::input_focus::InputFocusVisible;
 use bevy::prelude::*;
 
+use crate::components::button::{scrim_drawn, M3Button};
 use crate::interaction::state::{
     Disabled, ErrorState, Focused, Hovered, Pressed, UiState, DISABLED_CONTENT,
 };
@@ -43,6 +44,7 @@ type ControlItem<'a> = (
     &'a Node,
     Option<&'a FocusProxy>,
     Option<&'a ForcedState>,
+    Option<&'a M3Button>,
 );
 
 /// Applies the state layer tint, the disabled scrim and the border radius to the helper nodes.
@@ -66,6 +68,7 @@ pub fn update_state_layers(
         control_node,
         proxy,
         forced,
+        m3,
     ) in &controls
     {
         let proxied = proxy.is_some_and(|p| focus_holders.contains(p.0));
@@ -83,7 +86,7 @@ pub fn update_state_layers(
             .map(|r| r.0)
             .unwrap_or_else(|| bg_role.map_or(ColorRole::OnSurface, |b| on_color(b.0)));
         let tint = theme.scheme.get(tint_role).with_alpha(state.layer_alpha());
-        let scrim = if disabled {
+        let scrim = if scrim_drawn(m3.map(|m| m.variant), disabled) {
             theme
                 .scheme
                 .get(ColorRole::Surface)

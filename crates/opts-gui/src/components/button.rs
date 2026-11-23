@@ -1,12 +1,14 @@
 //! Material Design 3 Button widget with variant styling and click actions.
 
 mod builder;
+mod disabled;
 mod spawn;
 mod style;
 mod systems;
 
 pub use builder::ButtonBuilder;
-pub use systems::button_click_system;
+pub use disabled::{scrim_drawn, text_label_role};
+pub use systems::{button_click_system, sync_text_button_labels};
 
 use bevy::prelude::*;
 use std::sync::Arc;
@@ -57,7 +59,7 @@ impl Plugin for ButtonPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<ButtonClicked>()
             .add_message::<Activated>();
-        app.add_systems(Update, button_click_system);
+        app.add_systems(Update, (button_click_system, sync_text_button_labels));
     }
 }
 

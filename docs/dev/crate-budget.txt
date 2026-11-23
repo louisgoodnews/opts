@@ -7,7 +7,7 @@ opts-catalogue 2066  # set 2026-11-22 to the current total
 opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-core 4  # set 2026-11-22 to the current total
 opts-game 91320  # set 2026-11-22 to the current total
-opts-gui 18409  # set 2026-11-22 to the current total
+opts-gui 18493  # raised 2026-11-23 from 18409 to the total after the ISS-056 disabled-label contrast fix (owner decision)
 opts-hardware 2642  # set 2026-11-22 to the current total
 opts-importer 60  # set 2026-11-22 to the current total
 opts-l10n 2743  # set 2026-11-22 to the current total

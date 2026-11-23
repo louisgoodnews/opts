@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 
+use super::disabled::text_label_role;
 use super::{ButtonBuilder, ButtonVariant};
 use crate::theme::{color::ColorRole, elevation::ElevationLevel};
 
@@ -30,7 +31,7 @@ impl ButtonBuilder {
             ),
             ButtonVariant::Text => (
                 ColorRole::Surface,
-                ColorRole::Primary,
+                text_label_role(self.is_disabled),
                 ElevationLevel::Level0,
             ),
             ButtonVariant::Icon => (
