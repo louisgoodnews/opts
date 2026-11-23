@@ -6,6 +6,7 @@ use crate::formats::vehicles::model::error::ModelParseError;
 
 use super::global::handle_global_directive;
 use super::light::{parse_interior_light, parse_spotlight};
+use super::smoke::parse_smoke;
 use super::state::ModelParserState;
 
 impl ModelParserState {
@@ -63,6 +64,7 @@ impl ModelParserState {
                 }
             }
             "light_enh" | "light_enh_2" => self.handle_light_enh(block),
+            "smoke" => self.config.smokes.push(parse_smoke(block)?),
             "tex_detail_factor" | "ctc" | "ctctexture" | "texttexture" | "texttexture_enh"
             | "scripttexture" => {
                 handle_global_directive(&mut self.config, block)?;

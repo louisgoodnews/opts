@@ -26,6 +26,8 @@ pub struct ModelConfig {
     /// group they follow (recorded in `after_mesh`/`lod_threshold`, the mesh index counted within
     /// its LOD group). Same layout as in a `.sco` ([`crate::formats::scenery::ScoLight`]).
     pub lights: Vec<crate::formats::scenery::ScoLight>,
+    /// Particle emitters (`[smoke]`) in declaration order; the mesh they follow is not recorded.
+    pub smokes: Vec<SmokeEmitter>,
     /// Blocks that were not understood (malformed light effects), with the reason.
     pub warnings: Vec<String>,
     /// Global unrecognized keywords.

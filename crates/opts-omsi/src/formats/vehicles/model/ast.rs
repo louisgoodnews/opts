@@ -5,6 +5,7 @@ mod config;
 mod light;
 mod material;
 mod mesh;
+mod smoke;
 mod texture;
 mod viewpoint;
 
@@ -15,5 +16,6 @@ pub use material::{
     BumpMap, EnvMap, FreeTex, LightMap, MaterialModifier, ModelMaterial, TextureChange,
 };
 pub use mesh::{MeshBone, MeshVisibility, ModelLod, ModelMesh};
+pub use smoke::SmokeEmitter;
 pub use texture::{CtcScheme, CtcTexture, ScriptTexture, TextTexture};
 pub use viewpoint::ViewpointFlags;

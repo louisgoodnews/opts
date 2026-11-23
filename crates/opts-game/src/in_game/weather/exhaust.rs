@@ -2,12 +2,13 @@
 //! emitted at the rate of [`opts_sim::exhaust::puff_rate_per_s`] (air temperature and throttle),
 //! at most `graphics.exhaust_particles` alive at once, and off with `graphics.exhaust = off`.
 //!
-//! The anchor is a fallback until the outlet is read from the vehicle data: 1 m above the ground
-//! and [`REAR_OFFSET_M`] behind the vehicle's origin. Each puff rises and widens on its own
+//! The anchor is the vehicle model's exhaust `[smoke]` emitter ([`ExhaustOutlet`]) when it defines
+//! one; otherwise the fallback, 1 m above the ground and [`REAR_OFFSET_M`] behind the origin. Each puff rises and widens on its own
 //! straight path and is removed after [`opts_sim::exhaust::PUFF_LIFETIME_S`].
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
+use opts_bevy::vehicle::ExhaustOutlet;
 use opts_bevy::{PlayerVehicle, SessionEnvironment, VehicleController};
 use opts_sim::exhaust::{puff_rate_per_s, puffs_to_spawn, PUFF_LIFETIME_S};
 
@@ -38,9 +39,19 @@ pub struct ExhaustState {
     assets: Option<(Handle<Mesh>, Handle<StandardMaterial>)>,
 }
 
+/// The exhaust outlet of a vehicle at `vehicle`: the model's own outlet `data` when it defines
+/// one, else the fallback.
+#[must_use]
+pub fn outlet_of(vehicle: &GlobalTransform, data: Option<&ExhaustOutlet>) -> Vec3 {
+    match data {
+        Some(ExhaustOutlet(local)) => vehicle.transform_point(*local),
+        None => fallback_outlet_of(vehicle),
+    }
+}
+
 /// The fallback outlet of a vehicle at `vehicle`: behind it and above the ground.
 #[must_use]
-pub fn outlet_of(vehicle: &GlobalTransform) -> Vec3 {
+pub fn fallback_outlet_of(vehicle: &GlobalTransform) -> Vec3 {
     let t = vehicle.compute_transform();
     t.translation - t.forward() * REAR_OFFSET_M + Vec3::Y * OUTLET_HEIGHT_M
 }
@@ -71,7 +82,10 @@ pub fn update_exhaust(
     inputs: ExhaustInputs,
     mut state: ResMut<ExhaustState>,
     mut assets: ExhaustAssets,
-    vehicles: Query<(&GlobalTransform, &VehicleController), With<PlayerVehicle>>,
+    vehicles: Query<
+        (&GlobalTransform, &VehicleController, Option<&ExhaustOutlet>),
+        With<PlayerVehicle>,
+    >,
     mut puffs: Query<(Entity, &mut Puff, &mut Transform)>,
     mut commands: Commands,
 ) {
@@ -80,7 +94,7 @@ pub fn update_exhaust(
     if !exhaust_on_of(&inputs.settings) {
         return;
     }
-    let Ok((outlet, controller)) = vehicles.single() else {
+    let Ok((vehicle, controller, data)) = vehicles.single() else {
         return;
     };
     let rate = puff_rate_per_s(
@@ -102,7 +116,7 @@ pub fn update_exhaust(
         .assets
         .get_or_insert_with(|| puff_assets(&mut assets.meshes, &mut assets.materials))
         .clone();
-    let origin = outlet_of(outlet);
+    let origin = outlet_of(vehicle, data);
     for _ in 0..count {
         commands.spawn((
             Puff {
@@ -153,3 +167,6 @@ fn puff_assets(
     });
     (mesh, material)
 }
+
+#[cfg(test)]
+mod tests;

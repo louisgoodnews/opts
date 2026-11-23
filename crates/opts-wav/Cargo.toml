@@ -1,0 +1,14 @@
+[package]
+name = "opts-wav"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "RIFF/WAVE sound decoder (PCM 8/16/24 bit and float 32 bit) to interleaved f32 samples."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
