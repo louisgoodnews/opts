@@ -9,7 +9,7 @@ opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-serv
 opts-collision 211  # set 2026-11-23 at its size after the split from opts-sim (ISS-034 budget room)
 opts-core 4  # set 2026-11-22 to the current total
 opts-debounce 86  # new 2026-11-23: the hot-reload file-event debouncer split out of opts-bevy (docs/dev/crate-split-weather.md)
-opts-game 91196  # lowered 2026-11-23 to the total after the theme loader moved to opts-theme-files (docs/dev/crate-split-theme.md)
+opts-game 90903  # lowered 2026-11-23 from 91196 after the Steam library and OMSI root moved to opts-steam (docs/dev/crate-split-steam.md); 90903 leaves room for the tunnel branch (+84)
 opts-gui 18493  # raised 2026-11-23 from 18409 to the total after the ISS-056 disabled-label contrast fix (owner decision)
 opts-hardware 2642  # set 2026-11-22 to the current total
 opts-importer 60  # set 2026-11-22 to the current total
@@ -22,6 +22,7 @@ opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 6142  # lowered 2026-11-23 from 6300: the IDM car-following law moved to opts-car-following (ISS-034 split plan)
 opts-types 461  # set 2026-11-22 to the current total
 opts-theme-files 59  # new 2026-11-23: the RON theme file loader split out of opts-game (docs/dev/crate-split-theme.md)
+opts-steam 378  # new 2026-11-23: Steam library and OMSI root discovery split out of opts-game (docs/dev/crate-split-steam.md)
 opts-vdf 152  # new 2026-11-23: the KeyValues parser split out of opts-game (docs/dev/crate-split-game.md)
 opts-wav 207  # new 2026-11-23: the RIFF/WAVE decoder split out of opts-omsi (docs/dev/crate-split-weather.md)
 opts-position-tag 26  # new 2026-11-23: the player position log tag moved out of opts-bevy (M-0122, ISS-018)

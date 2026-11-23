@@ -40,6 +40,7 @@ members = [
     "crates/opts-types",
     "crates/opts-vdf",
     "crates/opts-theme-files",
+    "crates/opts-steam",
     "crates/opts-wav",
     "crates/opts-gui",
     "crates/opts-logging",
@@ -82,6 +83,7 @@ opts-position-tag = { path = "crates/opts-position-tag" }
 opts-types = { path = "crates/opts-types" }
 opts-vdf = { path = "crates/opts-vdf" }
 opts-theme-files = { path = "crates/opts-theme-files" }
+opts-steam = { path = "crates/opts-steam" }
 opts-wav = { path = "crates/opts-wav" }
 opts-gui = { path = "crates/opts-gui" }
 opts-logging = { path = "crates/opts-logging" }

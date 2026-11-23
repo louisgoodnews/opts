@@ -1,0 +1,15 @@
+[package]
+name = "opts-steam"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Steam library and OMSI 2 install discovery: reads libraryfolders.vdf and app manifests."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-vdf = { workspace = true }

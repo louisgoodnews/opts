@@ -2,7 +2,7 @@
 //!
 //! Search order (`docs/src/architecture/application-startup.md`): `--omsi-path` (or the root of
 //! `--map-path`), `$OMSI_PATH`, the path remembered in the settings. Steam's library configuration
-//! ([`crate::steam_library`]) is read once, by the startup check ([`crate::omsi_setup`]), which
+//! ([`crate::steam_library`]) is read once, by the startup check (`omsi_setup` in opts-game), which
 //! remembers what it finds; when nothing is found the startup dialog asks the user.
 
 use std::path::{Path, PathBuf};

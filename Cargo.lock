@@ -5452,9 +5452,9 @@ dependencies = [
  "opts-l10n",
  "opts-logging",
  "opts-sim",
+ "opts-steam",
  "opts-theme-files",
  "opts-traffic",
- "opts-vdf",
  "rfd",
  "ron 0.8.1",
  "rusqlite",
@@ -5557,6 +5557,13 @@ dependencies = [
  "opts-core",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "opts-steam"
+version = "0.1.0"
+dependencies = [
+ "opts-vdf",
 ]
 
 [[package]]
