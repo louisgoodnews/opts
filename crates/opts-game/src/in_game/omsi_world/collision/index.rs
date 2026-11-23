@@ -1,7 +1,7 @@
 //! The static collider index: the boxes of the resident tiles, in a grid of cells.
 
 use bevy::prelude::*;
-use opts_sim::collision::{ColliderGrid, Obb};
+use opts_collision::{ColliderGrid, Obb};
 
 /// Cell size of the static index (m).
 const CELL_M: f32 = 16.0;

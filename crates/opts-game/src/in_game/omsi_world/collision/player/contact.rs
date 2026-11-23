@@ -2,7 +2,7 @@
 //! static boxes and the AI vehicles, and the steps in the ground around a footprint.
 
 use bevy::prelude::*;
-use opts_sim::collision::Obb;
+use opts_collision::Obb;
 
 use super::super::super::ground_height::GroundIndex;
 use super::super::CollisionIndex;

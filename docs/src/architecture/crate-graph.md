@@ -20,6 +20,7 @@ graph TD
         opts_logging["opts-logging<br/>• Non-blocking tracing writers<br/>• Subsystem file routing<br/>• Panic hook & crash telemetry"]:::foundation
         opts_cli["opts-cli<br/>• Control-protocol types<br/>• Command-line client<br/>• Zero Bevy"]:::foundation
         opts_hardware["opts-hardware<br/>• Privacy-respecting hardware probe<br/>• Default recommendations<br/>• No network, no identifiers"]:::foundation
+        opts_collision["opts-collision<br/>• Oriented-box contact (separating axes)<br/>• Velocity response & spatial grid<br/>• Zero Bevy · Zero File I/O"]:::foundation
     end
 
     %% Layer 1: Domain Core & Parsers
@@ -67,6 +68,7 @@ graph TD
     opts_game --> opts_bevy
     opts_game --> opts_catalogue
     opts_game --> opts_cli
+    opts_game --> opts_collision
     opts_game --> opts_core
     opts_game --> opts_gui
     opts_game --> opts_hardware
@@ -95,6 +97,7 @@ graph TD
 | :--- | :---: | :--- | :--- | :--- | :---: |
 | **`opts-logging`** | L0 | Structured diagnostics, subsystem log files, rotation, panic hook | *None* | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-cli`** | L0 | Control-protocol types and the command-line client that remote-controls a running game | *None* | `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-collision`** | L0 | Planar oriented-box collision: separating-axis contact, velocity response and a spatial grid | *None* | `opts-game` | Pure Rust |
 | **`opts-types`** | L1 | Shared geometry and tile-grid maths both the legacy readers and the native model need ([ADR-0014](../adr/0014-data-model-separation.md)) | *None* | `opts-model`, `opts-omsi` | Pure Rust |
 | **`opts-l10n`** | L1 | Localisation without the engine: Fluent-subset parser, language packs, checks, JSON interchange | *None* | `opts-core`, `opts-game`, `opts-gui`, `opts-tools` | Pure Rust |
 | **`opts-omsi`** | L1 | The legacy OMSI readers (`.bus`, `.sco`, `.sli`, `.map`, `.o3d`, `.x`, ...) and the OMSI-shaped data they fill: a leaf adapter | `opts-types` | `opts-core`, `opts-importer` | Pure Rust |
@@ -108,7 +111,7 @@ graph TD
 | **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game` | Bevy UI |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-gui`, `opts-logging`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-game` | Bevy Engine |
-| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-core`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-sim`, `opts-traffic`, `opts-vdf` | `opts`, `opts-benchmark` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-sim`, `opts-traffic`, `opts-vdf` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |
 | **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core`, `opts-hardware`, `opts-l10n` | *None (executable root)* | CLI Tooling |
 | **`opts-benchmark`** | L3 | Scenery object load verification harness ([spec](scenery-benchmark.md)): an off-screen worker that rebuilds objects through the loader and a supervisor | `opts-bevy`, `opts-catalogue`, `opts-core`, `opts-game`, `opts-sim` | *None (executable root)* | Bevy |

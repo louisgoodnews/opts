@@ -18,11 +18,11 @@ use std::time::Duration;
 
 use bevy::{prelude::*, time::TimeUpdateStrategy};
 use opts_bevy::{PlayerVehicle, VehicleController};
+use opts_collision::Obb;
 use opts_core::formats::map::MapTerrain;
 use opts_game::in_game::omsi_world::{
     follow_ground, player_collisions, CollisionIndex, GroundIndex, PlayerBox,
 };
-use opts_sim::collision::Obb;
 
 const FIXED_HZ: f64 = 64.0;
 const SECONDS: f64 = 60.0;

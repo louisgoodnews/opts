@@ -2,7 +2,7 @@
 //! vehicles, and with steps in the ground (walls, embankments, platform edges).
 //!
 //! * **Objects.** Every placed `.sco` with `[collision_mesh]` registers the bounding box of that
-//!   mesh as an oriented box (`opts_sim::collision`) in [`CollisionIndex`] when its tile loads and
+//!   mesh as an oriented box (`opts_collision`) in [`CollisionIndex`] when its tile loads and
 //!   leaves with the tile. A box whose top is no higher than a step above the vehicle's wheels
 //!   (kerb, road plate) is driven over, one above the vehicle is passed under.
 //! * **AI vehicles.** The box of an AI vehicle is measured from its meshes once and follows it;

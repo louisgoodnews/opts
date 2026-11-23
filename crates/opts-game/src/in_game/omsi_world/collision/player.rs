@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use opts_bevy::ArticulatedSegment;
-use opts_sim::collision::Obb;
+use opts_collision::Obb;
 
 use super::super::ground_height::GroundIndex;
 use super::super::traffic::TrafficVehicle;
