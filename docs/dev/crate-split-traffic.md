@@ -1,6 +1,6 @@
 # Crate split: opts-traffic to opts-car-following
 
-Status: planned 2026-11-23 on `agent/split-traffic` (from master `192780bc`). Budget context: ISS-034
+Status: done 2026-11-23 on `agent/split-traffic` (from master `192780bc`; built, clippy and tests green). Budget context: ISS-034
 (`docs/dev/crate-budget.txt`). The budget is not raised.
 
 ## Why
@@ -41,8 +41,16 @@ that clears 70 lines is the IDM car-following law, and it is taken whole with it
    - The intra-doc link `[crate::TrafficWorld]` in the moved file becomes plain code text, because the
      new crate cannot link to `opts-traffic`.
 4. Workspace: member and `workspace.dependencies` entry for `opts-car-following`.
-5. Budgets: `opts-car-following 162` added; `opts-traffic` lowered from 6300 to 6138. No other
-   entry changes.
+5. Budgets: `opts-car-following 162` added; `opts-traffic` lowered from 6300 to 6142 (measured). No
+   other entry changes.
+   - Measured after the move: `opts-traffic` is **6142** (the 6138 above was the estimate). The
+     +4 lines come from the deviation below. The total still falls by 158 against 6300, so the +70
+     of the AI-traffic work fits (6142 + 70 = 6212 <= 6300).
+   - Deviation found in the build: `impl IdmParams { fn from_traits }` in `traits.rs` is an inherent
+     impl on a type from another crate (E0116). It becomes `pub trait IdmFromTraits` in `traits.rs`
+     with `impl IdmFromTraits for IdmParams`, re-exported from `opts_traffic`. The callers that use
+     the method get the trait in scope: `opts-game` `spawn/agent/place.rs` (one import) and the
+     integration test `tests/vehicle_traits.rs`; the `opts-game` doc link is updated.
 6. OMSI boundary: `scripts/omsi_uses.py` adds `opts-car-following` to its engine list with 0 uses,
    so the new crate is held to the same no-OMSI rule. The known file gets its line.
 7. Crate graph: the page `docs/src/architecture/crate-graph.md` gets a table row and a Mermaid node
