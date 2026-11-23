@@ -71,6 +71,17 @@ fn blank_transmap_value_does_not_swallow_the_next_text() {
     );
 }
 
+/// A `[smoke]` block with fewer than the six position and direction values is a warning on the
+/// model; it does not reject the model (the GN92 trailer's short emitter, ISS-038).
+#[test]
+fn a_short_smoke_block_is_a_warning_and_the_model_still_parses() {
+    let text = "[mesh]\nGN92\\x.o3d\n\n[smoke]\n-1.16\n-3.5\n0.46\n-1\n";
+    let model = ModelConfig::parse(text).expect("parses");
+    assert!(model.smokes.is_empty());
+    assert_eq!(model.warnings.len(), 1, "{:?}", model.warnings);
+    assert!(model.warnings[0].contains("smoke"), "{:?}", model.warnings);
+}
+
 #[test]
 fn light_effects_of_a_vehicle_model_parse_with_their_lod_and_mesh() {
     // An AI car as on Berlin-Spandau: a dipped-beam corona bound to `AI_Light` after the body

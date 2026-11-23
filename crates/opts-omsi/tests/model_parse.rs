@@ -10,5 +10,7 @@ const SAMPLE_BUS_MODEL: &str = include_str!("model_parse/sample_bus.cfg");
 mod errors;
 #[path = "model_parse/keywords.rs"]
 mod keywords;
+#[path = "model_parse/smoke.rs"]
+mod smoke;
 #[path = "model_parse/structure.rs"]
 mod structure;

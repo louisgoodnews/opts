@@ -16,7 +16,7 @@ opts-importer 60  # set 2026-11-22 to the current total
 opts-l10n 2743  # set 2026-11-22 to the current total
 opts-logging 1288  # set 2026-11-22 to the current total
 opts-model 107  # set 2026-11-22 to the current total
-opts-omsi 18067  # lowered 2026-11-23 from 18200 to the total after the WAV decoder moved to opts-wav (M-0117, ISS-038)
+opts-omsi 18066  # lowered 2026-11-23 from 18200 to the total after the WAV decoder moved to opts-wav (M-0117, ISS-038)
 opts-sim 11331  # set 2026-11-22 to the current total
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 6142  # lowered 2026-11-23 from 6300: the IDM car-following law moved to opts-car-following (ISS-034 split plan)

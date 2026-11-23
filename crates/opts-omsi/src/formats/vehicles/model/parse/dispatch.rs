@@ -64,7 +64,11 @@ impl ModelParserState {
                 }
             }
             "light_enh" | "light_enh_2" => self.handle_light_enh(block),
-            "smoke" => self.config.smokes.push(parse_smoke(block)?),
+            "smoke" => match parse_smoke(block) {
+                Ok(smoke) => self.config.smokes.push(smoke),
+                // A short or malformed emitter is a warning, not a rejected model (ISS-038 follow-up).
+                Err(e) => self.config.warnings.push(e.to_string()),
+            },
             "tex_detail_factor" | "ctc" | "ctctexture" | "texttexture" | "texttexture_enh"
             | "scripttexture" => {
                 handle_global_directive(&mut self.config, block)?;
