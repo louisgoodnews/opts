@@ -5451,6 +5451,7 @@ dependencies = [
  "opts-hardware",
  "opts-l10n",
  "opts-logging",
+ "opts-map-advice",
  "opts-sim",
  "opts-steam",
  "opts-theme-files",
@@ -5519,6 +5520,10 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
 ]
+
+[[package]]
+name = "opts-map-advice"
+version = "0.1.0"
 
 [[package]]
 name = "opts-model"

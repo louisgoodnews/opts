@@ -2,6 +2,7 @@
 
 use super::super::super::consist_plan::PlannedPart;
 use super::*;
+use opts_bevy::vehicle::{exhaust_outlet, ExhaustOutlet};
 
 mod model;
 use model::{load_model, rear_axle_y, set_job_textures};
@@ -75,6 +76,9 @@ pub(super) fn spawn_follower(
         ))
         .id();
     st.chain.push(seg);
+    if let Some(outlet) = exhaust_outlet(&model) {
+        commands.entity(seg).insert(ExhaustOutlet(outlet));
+    }
     attach_unit_extras(job, commands, (root, seg), st, part);
     let (count, verts) = attach_meshes(
         job,

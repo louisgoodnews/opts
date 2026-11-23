@@ -18,6 +18,7 @@ graph TD
     %% Layer 0: Foundations
     subgraph L0 ["Layer 0 — Foundations & Diagnostics"]
         opts_debounce["opts-debounce<br/>• Trailing debounce of file-change events<br/>• No dependencies · Zero Bevy"]:::foundation
+        opts_map_advice["opts-map-advice<br/>• Map load profile and advice heuristics<br/>• No dependencies · Zero Bevy"]:::foundation
         opts_logging["opts-logging<br/>• Non-blocking tracing writers<br/>• Subsystem file routing<br/>• Panic hook & crash telemetry"]:::foundation
         opts_cli["opts-cli<br/>• Control-protocol types<br/>• Command-line client<br/>• Zero Bevy"]:::foundation
         opts_hardware["opts-hardware<br/>• Privacy-respecting hardware probe<br/>• Default recommendations<br/>• No network, no identifiers"]:::foundation
@@ -63,8 +64,8 @@ graph TD
     opts_benchmark --> opts_game
     opts_benchmark --> opts_sim
     opts_bevy --> opts_cli
-    opts_bevy --> opts_debounce
     opts_bevy --> opts_core
+    opts_bevy --> opts_debounce
     opts_bevy --> opts_gui
     opts_bevy -.->|diagnostics| opts_logging
     opts_bevy --> opts_position_tag
@@ -82,19 +83,20 @@ graph TD
     opts_game --> opts_hardware
     opts_game --> opts_l10n
     opts_game -.->|diagnostics| opts_logging
+    opts_game --> opts_map_advice
     opts_game --> opts_sim
-    opts_game --> opts_traffic
-    opts_game --> opts_theme_files
     opts_game --> opts_steam
-    opts_steam --> opts_vdf
+    opts_game --> opts_theme_files
+    opts_game --> opts_traffic
     opts_gui --> opts_l10n
-    opts_theme_files --> opts_gui
     opts_importer --> opts_model
     opts_importer --> opts_omsi
     opts_model --> opts_types
     opts_omsi --> opts_types
     opts_omsi --> opts_wav
     opts_sim --> opts_core
+    opts_steam --> opts_vdf
+    opts_theme_files --> opts_gui
     opts_tools --> opts_core
     opts_tools --> opts_hardware
     opts_tools --> opts_l10n
@@ -128,9 +130,10 @@ graph TD
 | **`opts-theme-files`** | L2 | RON theme files in the configuration folder: discovery and loading through the contrast checker of `opts-gui` (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-theme.md)) | `opts-gui` | `opts-game` | Pure Rust (external: `directories`) |
 | **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game`, `opts-theme-files` | Bevy UI |
 | **`opts-debounce`** | L0 | Trailing debounce of file-change events for the hot-reload watcher (split out of `opts-bevy`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-bevy` | Pure Rust |
+| **`opts-map-advice`** | L0 | Map load profile and the heuristic advice engine: pure thresholds, no engine dependency (split out of `opts-game`, [plan](../../dev/crate-split-advice.md)) | *None* | `opts-game` | Pure Rust |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-game` | Bevy Engine |
-| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |
 | **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core`, `opts-hardware`, `opts-l10n` | *None (executable root)* | CLI Tooling |
 | **`opts-benchmark`** | L3 | Scenery object load verification harness ([spec](scenery-benchmark.md)): an off-screen worker that rebuilds objects through the loader and a supervisor | `opts-bevy`, `opts-catalogue`, `opts-core`, `opts-game`, `opts-sim` | *None (executable root)* | Bevy |

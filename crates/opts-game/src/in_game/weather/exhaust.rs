@@ -9,16 +9,15 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_bevy::vehicle::ExhaustOutlet;
-use opts_bevy::{PlayerVehicle, SessionEnvironment, VehicleController};
+use opts_bevy::{ArticulatedChain, PlayerVehicle, SessionEnvironment, VehicleController};
 use opts_sim::exhaust::{puff_rate_per_s, puffs_to_spawn, PUFF_LIFETIME_S};
 
 use crate::settings::GameSettings;
 use crate::settings_registry::lighting::{exhaust_cap_of, exhaust_on_of};
 
-/// Fallback distance (m) of the exhaust outlet behind the vehicle's origin.
-pub const REAR_OFFSET_M: f32 = 5.5;
-/// Fallback height (m) of the exhaust outlet above the vehicle's origin.
-pub const OUTLET_HEIGHT_M: f32 = 1.0;
+mod outlet;
+pub use outlet::{chain_outlet, fallback_outlet_of, outlet_of, OUTLET_HEIGHT_M, REAR_OFFSET_M};
+
 /// Edge length (m) of a puff at birth; it grows to twice this over its life.
 const PUFF_SIZE_M: f32 = 0.35;
 /// Velocity (m/s) of a puff: up and back, slightly to the side of the fall of the air.
@@ -39,35 +38,20 @@ pub struct ExhaustState {
     assets: Option<(Handle<Mesh>, Handle<StandardMaterial>)>,
 }
 
-/// The exhaust outlet of a vehicle at `vehicle`: the model's own outlet `data` when it defines
-/// one, else the fallback.
-#[must_use]
-pub fn outlet_of(vehicle: &GlobalTransform, data: Option<&ExhaustOutlet>) -> Vec3 {
-    match data {
-        Some(ExhaustOutlet(local)) => vehicle.transform_point(*local),
-        None => fallback_outlet_of(vehicle),
-    }
-}
-
-/// The fallback outlet of a vehicle at `vehicle`: behind it and above the ground.
-#[must_use]
-pub fn fallback_outlet_of(vehicle: &GlobalTransform) -> Vec3 {
-    let t = vehicle.compute_transform();
-    t.translation - t.forward() * REAR_OFFSET_M + Vec3::Y * OUTLET_HEIGHT_M
-}
-
 /// Where a puff of age `age` is: it rises and drifts back with the wind direction `drift`.
 #[must_use]
 pub fn puff_position(puff: &Puff) -> Vec3 {
     puff.origin + puff.drift * puff.age
 }
 
-/// The read-only inputs of the exhaust: the frame time, the settings and the session weather.
+/// The read-only inputs of the exhaust: the frame time, the settings, the session weather and the
+/// player's articulated chain.
 #[derive(SystemParam)]
-pub struct ExhaustInputs<'w> {
+pub struct ExhaustInputs<'w, 's> {
     time: Res<'w, Time>,
     settings: Res<'w, GameSettings>,
     env: Res<'w, SessionEnvironment>,
+    chains: Query<'w, 's, &'static ArticulatedChain, With<PlayerVehicle>>,
 }
 
 /// The mesh and material stores the puffs are built from.
@@ -86,6 +70,7 @@ pub fn update_exhaust(
         (&GlobalTransform, &VehicleController, Option<&ExhaustOutlet>),
         With<PlayerVehicle>,
     >,
+    units: Query<(&GlobalTransform, Option<&ExhaustOutlet>)>,
     mut puffs: Query<(Entity, &mut Puff, &mut Transform)>,
     mut commands: Commands,
 ) {
@@ -116,7 +101,12 @@ pub fn update_exhaust(
         .assets
         .get_or_insert_with(|| puff_assets(&mut assets.meshes, &mut assets.materials))
         .clone();
-    let origin = outlet_of(vehicle, data);
+    let chain = inputs.chains.single().ok();
+    let trailers = chain
+        .into_iter()
+        .flat_map(|c| c.segments.iter())
+        .filter_map(|&s| units.get(s).ok());
+    let origin = chain_outlet(vehicle, data, trailers);
     for _ in 0..count {
         commands.spawn((
             Puff {

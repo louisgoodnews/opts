@@ -44,6 +44,7 @@ members = [
     "crates/opts-wav",
     "crates/opts-gui",
     "crates/opts-logging",
+    "crates/opts-map-advice",
     "crates/opts-sim",
     "crates/opts-tools",
     "crates/opts-traffic",
@@ -86,6 +87,7 @@ opts-theme-files = { path = "crates/opts-theme-files" }
 opts-steam = { path = "crates/opts-steam" }
 opts-wav = { path = "crates/opts-wav" }
 opts-gui = { path = "crates/opts-gui" }
+opts-map-advice = { path = "crates/opts-map-advice" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }
 opts-tools = { path = "crates/opts-tools" }

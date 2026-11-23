@@ -5,7 +5,7 @@
 //! * [`store`]: the files under `<data dir>/profiles/`, the fallback chain, the metrics file.
 //! * [`advice`]: [`advice::MapLoadProfile`] and the heuristic engine.
 
-pub mod advice;
+pub use opts_map_advice as advice;
 pub mod modal;
 pub mod profile;
 pub mod service;
