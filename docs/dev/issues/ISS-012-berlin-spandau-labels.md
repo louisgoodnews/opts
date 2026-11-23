@@ -38,8 +38,41 @@ Labelled "no" because the profile has no run of points at 3.5 m or more spanning
 The grenzmauer profile is the nearest case to the 3.5 m height threshold, and it is a wall: the width test is what
 rejects it. This is the only tall non-tunnel profile near the height threshold on this map.
 
+## Second and third maps (Gladbeck, Bad Hügelsdorf 2020), 2026-11-23
+
+Source: the candidate lists of 2026-11-17 (`opts-scratch/detector2/cand2-*.tsv`, the rule of `ceiling.rs` at
+`agent/detector`), recounted on 2026-11-23. Label convention: a placement is `covered` when its `.sli` profile carries
+a roof run (at least 3.5 m high, at least 2 m across), the profile measurement and not the rule's length test.
+The heights and widths of these profiles were not re-read on 2026-11-23 (see the Notes on M-0115); the label rests on
+the 2026-11-17 measurement.
+
+| Map | Profile | Placements | Lengths (m) | Covered by profile | Rule: zone |
+| :--- | :--- | ---: | :--- | ---: | ---: |
+| Gladbeck | `ADDON_Gladbeck_NF6D\MS_Tunnel_Boden_Dach.sli` | 4 | 105, 10, 10, 10 | 4 | 1 (105 m) |
+| Bad Hügelsdorf 2020 | `ADDON_Bad_Huegelsdorf\str_6m_Tunnel.sli`, `Tunnel_1.sli` | 4 | 55, 70, 55, 100 | 4 | 4 |
+
+Gladbeck also has 1,304 overhead-wire placements (`Meterspur_normal_OL_*`). They are excluded by name, not by roof, so
+they are not in the labelled set; their length range is 0 to 164 m.
+
+## Precision and recall on the three maps (profile labels)
+
+| Set | Roofed placements | Rule finds | Recall (count) | Covered length (m) | Rule length (m) | Recall (length) |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Berlin-Spandau | 4 | 2 | 50 % | 120 | 100 | 83 % |
+| Gladbeck | 4 | 1 | 25 % | 135 | 105 | 78 % |
+| Bad Hügelsdorf 2020 | 4 | 4 | 100 % | 280 | 280 | 100 % |
+| All three | 12 | 7 | 58 % | 535 | 485 | 91 % |
+
+* The five missed placements are all 10 m long (two on Spandau, three on Gladbeck, 50 m in total). A 10 m minimum would
+  catch all five on this set.
+* Precision on this set is 7 of 7, but the test is weak: no roofed non-tunnel placement (bridge, canopy, station roof)
+  exists among the non-wire candidates of these maps, so there is no false zone that the length rule could remove or keep.
+* The M-0115 acceptance criterion is at least 95 % recall of tunnel-covered length. The 15 m rule gives 91 % on this set.
+
 ## Open for the labelled set
 
 * These labels come from the profile measurement. An eye check in the game (on-screen) is still open.
-* Precision and recall need the labelled set from the other two maps (M-0115 acceptance criteria).
+* The two 10 m placements on Spandau and the three on Gladbeck are not checked in game.
+* No labelled roofed negative exists on these maps. Lowering the minimum needs a precision test on a map that has
+  bridges, canopies or station roofs.
 * Labels for the tall negatives above are by profile shape, not verified by placement.
