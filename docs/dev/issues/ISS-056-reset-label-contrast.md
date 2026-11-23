@@ -5,7 +5,7 @@
 | **Issue** | ISS-056. Owner report 2026-11-22, with screenshots (light theme, Einstellungen, Grafik page). Category QoL with an accessibility angle |
 | **Severity** | minor (the owner did not rate it; minor is proposed here and can be raised) |
 | **Milestone** | [M-0065](../../src/roadmap/phase-9/M-0065.md) Accessibility, Localisation and Validation (scope addendum 2026-11-22) |
-| **Status** | in progress: fix ready in `agent/qol-fix` (not committed: the opts-gui crate budget would grow by about 84 lines). Owner on-screen check open. M-0065 keeps its status |
+| **Status** | in progress: fix committed in `d3fd638e` on master (2026-11-23; the opts-gui budget raised to its total, owner decision). Owner on-screen check open. M-0065 keeps its status |
 
 ## Problem
 

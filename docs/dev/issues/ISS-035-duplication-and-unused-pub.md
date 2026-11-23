@@ -6,7 +6,7 @@
 | **Severity** | minor (code quality) |
 | **Milestone** | [M-0040](../../src/roadmap/phase-5/M-0040.md) Code-quality debt |
 | **Audit** | Project audit 2026-11-18, architecture 8 |
-| **Status** | measured 2026-11-22 on `agent/test-fixtures-2`: the scan and the unused-pub check exist and are tested (`scripts/dup_scan.py`, `scripts/test_dup_scan.py`). No code was removed. The cleanup is open and waits for the owner's plan (below). |
+| **Status** | done 2026-11-22 (`1e376e19`, on master): the scan and the unused-pub check exist and are tested (`scripts/dup_scan.py`, `scripts/test_dup_scan.py`). No code was removed. The cleanup is open and waits for the owner's plan (below). |
 
 ## Problem
 

@@ -5,7 +5,7 @@
 | **Issue** | ISS-055. Owner report 2026-11-22, with screenshots (dark theme, Hilfe > Steuerung). Category QoL |
 | **Severity** | minor |
 | **Milestone** | [M-0174](../../src/roadmap/phase-18/M-0174.md) UI alignment and spacing consistency (Help and Settings). Placed in the Phase 18 research backlog as a QoL item until the owner names a better phase |
-| **Status** | in progress: code fix committed (21aeec92, `agent/qol-fix`); owner on-screen check open. Milestone M-0174 is still proposed |
+| **Status** | in progress: code fix committed (21aeec92, on master 2026-11-23); owner on-screen check open. Milestone M-0174 is still proposed |
 
 ## Problem
 
