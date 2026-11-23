@@ -29,6 +29,10 @@ Closure needs the two missing checks with their documented margins, green on mas
 - M-0124's acceleration and braking checks (criteria 2 and 3) run green on master with their margins, and the card, README, board and ROADMAP say closed in the same commit.
 - M-0101's criteria 2 and 3 are evidenced or reopened (separate work).
 
+## M-0124 acceleration and braking (2026-11-23, `agent/m0124-mass`)
+
+`opts-sim/tests/passenger_mass_margins.rs` (5 tests, green): the first step from rest against the expected a0 from the mass, drivetrain and rolling resistance (within 1 %); 10 s distance against a reference integrator (within 1 %; loaded 65.61 m against empty 89.44 m); the steady decel after the brake has built up, per axle, against the expected value (within 2 %); the 50 km/h stop (loaded 17.08 m, empty 13.77 m; ratio 1.24, within the mass ratio 1.55); the setting-off bus equal to the curb bus. Removal check (passenger term dropped from the longitudinal mass): 4 of 5 new tests fail. The criteria 2 and 3 margins (minimum extra distance, tolerance) are still an owner decision, so the item stays reopened; see the card's note of 2026-11-23.
+
 ## M-0101 half (2026-11-22, `agent/records-2`)
 
 The M-0101 card was read against the tests by their names and bodies; the tests were not run. The card now carries the full check ("Evidence check (ISS-027, 2026-11-22)"). Result:
