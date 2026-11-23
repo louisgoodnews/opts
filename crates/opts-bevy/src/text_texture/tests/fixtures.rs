@@ -1,4 +1,4 @@
-//! Fixtures of the text tests: a demo font, the spec of a text, and a printer font.
+//! Fixtures of the text tests: a demo font, the spec of a text.
 
 use super::*;
 
@@ -60,44 +60,4 @@ pub(super) fn alpha_row(buf: &[u8], w: u32, y: u32) -> Vec<u8> {
     (0..w)
         .map(|x| buf[((y * w + x) * 4 + 3) as usize])
         .collect()
-}
-
-/// A printer font: a black 4×2 colour bitmap and a 4×6 alpha bitmap holding the glyphs. The
-/// space's cell (rows 2 and 3) is empty; `B` lies in rows 4 and 5, below the colour bitmap.
-pub(super) fn printer_font() -> (OftFont, FontBitmaps) {
-    let mut chars = std::collections::HashMap::new();
-    chars.insert(
-        ' ',
-        OftChar {
-            x_start: 0,
-            x_end: 4,
-            y_top: 2,
-        },
-    );
-    chars.insert(
-        'B',
-        OftChar {
-            x_start: 0,
-            x_end: 4,
-            y_top: 4,
-        },
-    );
-    let font = OftFont {
-        name: "Printer".into(),
-        bitmap: String::new(),
-        alpha: String::new(),
-        line_height: 2,
-        gap: 0,
-        chars,
-    };
-    let mut alpha = vec![0u8; 24];
-    alpha[16..24].fill(255);
-    let bmp = FontBitmaps {
-        width: 4,
-        height: 2,
-        colour: vec![[0, 0, 0]; 8],
-        alpha_size: (4, 6),
-        alpha,
-    };
-    (font, bmp)
 }
