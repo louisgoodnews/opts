@@ -3,13 +3,13 @@
 # above its budget or has no entry. Edit by hand: `seed` does not change budgets.
 opts-benchmark 5607  # set 2026-11-22 to the current total
 opts-car-following 162  # set 2026-11-23 at its size after the split from opts-traffic (docs/dev/crate-split-traffic.md)
-opts-bevy 45952  # lowered 2026-11-23 from 45975 to the total after the hot-reload debouncer moved to opts-debounce (M-0117, ISS-038)
+opts-bevy 45931  # lowered 2026-11-23 to the total after the hot-reload debouncer and position tag moved out (opts-debounce, opts-position-tag) (M-0117, ISS-038)
 opts-catalogue 2066  # set 2026-11-22 to the current total
 opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-collision 211  # set 2026-11-23 at its size after the split from opts-sim (ISS-034 budget room)
 opts-core 4  # set 2026-11-22 to the current total
 opts-debounce 86  # new 2026-11-23: the hot-reload file-event debouncer split out of opts-bevy (docs/dev/crate-split-weather.md)
-opts-game 91320  # set 2026-11-22 to the current total
+opts-game 91278  # set 2026-11-22 to the current total
 opts-gui 18493  # raised 2026-11-23 from 18409 to the total after the ISS-056 disabled-label contrast fix (owner decision)
 opts-hardware 2642  # set 2026-11-22 to the current total
 opts-importer 60  # set 2026-11-22 to the current total
@@ -17,7 +17,7 @@ opts-l10n 2743  # set 2026-11-22 to the current total
 opts-logging 1288  # set 2026-11-22 to the current total
 opts-model 107  # set 2026-11-22 to the current total
 opts-omsi 18067  # lowered 2026-11-23 from 18200 to the total after the WAV decoder moved to opts-wav (M-0117, ISS-038)
-opts-sim 11508  # set 2026-11-22 to the current total
+opts-sim 11331  # set 2026-11-22 to the current total
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 6142  # lowered 2026-11-23 from 6300: the IDM car-following law moved to opts-car-following (ISS-034 split plan)
 opts-types 461  # set 2026-11-22 to the current total
