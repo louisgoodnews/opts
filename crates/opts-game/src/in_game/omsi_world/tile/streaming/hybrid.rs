@@ -4,9 +4,9 @@
 use super::super::*;
 use crate::in_game::stream_budget::order::near_first_for;
 use crate::in_game::stream_budget::policy::{
-    effective_blend, heading_weight, hysteresis, latch, lookahead, Regime, StreamStatus,
+    effective_blend, heading_weight, latch, lookahead, Regime, StreamStatus, REFILL,
 };
-use crate::in_game::stream_budget::{over_cap, resident_cap, Motion};
+use crate::in_game::stream_budget::{evict_keys, Motion};
 use crate::in_game::tile_loading::TileMode;
 
 /// What persists between frames for the plan: the motion estimate and the regime label.
@@ -62,15 +62,7 @@ pub fn evictions(job: &WorldLoadJob, centre: (i32, i32), plan: &Plan) -> Vec<(i3
         return Vec::new();
     };
     let resident: Vec<(i32, i32)> = job.resident.keys().copied().collect();
-    let mut far = crate::in_game::stream_budget::evictable(
-        resident.iter().copied(),
-        centre,
-        r,
-        hysteresis(plan.ahead),
-    );
-    let left: Vec<(i32, i32)> = resident.into_iter().filter(|k| !far.contains(k)).collect();
-    far.extend(over_cap(&left, centre, resident_cap(r, plan.ahead)));
-    far
+    evict_keys(&resident, centre, r, plan.ahead)
 }
 
 /// Queues the next tiles: in radius mode the ring and the look-ahead, nearest by the heading
