@@ -5373,6 +5373,7 @@ dependencies = [
  "opts-debounce",
  "opts-gui",
  "opts-logging",
+ "opts-position-tag",
  "opts-sim",
  "opts-traffic",
  "rav1e",
@@ -5541,6 +5542,10 @@ dependencies = [
  "thiserror 1.0.69",
  "tracing",
 ]
+
+[[package]]
+name = "opts-position-tag"
+version = "0.1.0"
 
 [[package]]
 name = "opts-sim"

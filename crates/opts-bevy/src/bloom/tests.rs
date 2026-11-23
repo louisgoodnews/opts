@@ -40,6 +40,16 @@ fn the_strength_levels_rise_and_off_is_zero() {
     assert!(steps.windows(2).all(|w| w[0] < w[1]), "{steps:?}");
 }
 
+/// The documented strengths. Only Natural (0.06) is a design value; Low (0.03) and High (0.10)
+/// are not measured on screen yet (ISS-018), so this pins them as written, not as proven.
+#[test]
+fn the_documented_strengths_are_pinned() {
+    assert_eq!(intensity_of(BloomLevel::Off), 0.0);
+    assert_eq!(intensity_of(BloomLevel::Low), 0.03);
+    assert_eq!(intensity_of(BloomLevel::Natural), 0.06);
+    assert_eq!(intensity_of(BloomLevel::High), 0.10);
+}
+
 #[test]
 fn the_sync_adds_updates_and_removes_bloom_on_the_main_camera() {
     let mut app = app(on(BloomLevel::Natural));

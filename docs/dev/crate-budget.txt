@@ -23,3 +23,4 @@ opts-traffic 6142  # lowered 2026-11-23 from 6300: the IDM car-following law mov
 opts-types 461  # set 2026-11-22 to the current total
 opts-vdf 152  # new 2026-11-23: the KeyValues parser split out of opts-game (docs/dev/crate-split-game.md)
 opts-wav 207  # new 2026-11-23: the RIFF/WAVE decoder split out of opts-omsi (docs/dev/crate-split-weather.md)
+opts-position-tag 26  # new 2026-11-23: the player position log tag moved out of opts-bevy (M-0122, ISS-018)

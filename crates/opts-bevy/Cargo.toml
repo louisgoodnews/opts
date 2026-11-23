@@ -20,6 +20,7 @@ opts-gui = { workspace = true }
 opts-cli = { workspace = true }
 opts-logging = { workspace = true }
 opts-debounce = { workspace = true }
+opts-position-tag = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }

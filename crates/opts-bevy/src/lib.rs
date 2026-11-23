@@ -52,7 +52,7 @@ pub mod moon_material;
 pub mod mouse_driving;
 pub mod overlays;
 pub mod plugin;
-pub mod position_tag;
+pub use opts_position_tag as position_tag;
 pub mod rail_controls;
 pub mod reflections;
 pub mod render_stats;

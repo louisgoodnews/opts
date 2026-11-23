@@ -31,6 +31,7 @@ graph TD
         opts_omsi["opts-omsi<br/>• OMSI text format parsers (.sco, .sli, .bus, .cfg)<br/>• Binary mesh parsers (.o3d, .x)<br/>• Map tiles, paths, transit graph models<br/>• Leaf adapter · Zero Bevy · Zero File I/O"]:::domain
         opts_wav["opts-wav<br/>• RIFF/WAVE decoder (PCM 8/16/24, float 32)<br/>• Samples to interleaved f32<br/>• No dependencies · Zero Bevy"]:::domain
         opts_vdf["opts-vdf<br/>• Valve KeyValues (VDF) parser<br/>• Steam library and app manifest text<br/>• No dependencies · Zero Bevy"]:::domain
+        opts_position_tag["opts-position-tag<br/>• Player position text for log messages<br/>• Process-wide tile and world coordinates<br/>• No dependencies · Zero Bevy"]:::domain
         opts_model["opts-model<br/>• Native content model & TOML form<br/>• ContentSource trait<br/>• No OMSI knowledge"]:::domain
         opts_importer["opts-importer<br/>• opts-omsi to opts-model<br/>• The only crate that knows both"]:::domain
         opts_core["opts-core (temporary facade)<br/>• Re-exports opts-omsi and opts-l10n at the old paths<br/>• Removed when the last consumer is migrated"]:::domain
@@ -64,6 +65,7 @@ graph TD
     opts_bevy --> opts_core
     opts_bevy --> opts_gui
     opts_bevy -.->|diagnostics| opts_logging
+    opts_bevy --> opts_position_tag
     opts_bevy --> opts_sim
     opts_bevy --> opts_traffic
     opts_catalogue --> opts_core
@@ -109,6 +111,7 @@ graph TD
 | **`opts-omsi`** | L1 | The legacy OMSI readers (`.bus`, `.sco`, `.sli`, `.map`, `.o3d`, `.x`, ...) and the OMSI-shaped data they fill: a leaf adapter | `opts-types`, `opts-wav` | `opts-core`, `opts-importer` | Pure Rust |
 | **`opts-wav`** | L1 | RIFF/WAVE sound decoder (PCM 8/16/24 bit, IEEE float 32 bit) to interleaved `f32` samples (split out of `opts-omsi`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-omsi` | Pure Rust |
 | **`opts-vdf`** | L1 | Valve KeyValues (VDF) text parser for Steam library and app manifest files (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-game.md)) | *None* | `opts-game` | Pure Rust |
+| **`opts-position-tag`** | L1 | Player position text for log messages (tile, local and world coordinates; split out of `opts-bevy`, M-0122) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-model`** | L1 | The native content model and its TOML form (stubs: `VehicleDefinition`, `ContentSource`) | `opts-types` | `opts-importer` | Pure Rust |
 | **`opts-importer`** | L1 | Turns legacy OMSI content into the native model; the only crate that knows both | `opts-model`, `opts-omsi` | *None yet* | Pure Rust |
 | **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
@@ -119,7 +122,7 @@ graph TD
 | **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game` | Bevy UI |
 | **`opts-debounce`** | L0 | Trailing debounce of file-change events for the hot-reload watcher (split out of `opts-bevy`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
-| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-game` | Bevy Engine |
+| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-sim`, `opts-traffic`, `opts-vdf` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |
 | **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core`, `opts-hardware`, `opts-l10n` | *None (executable root)* | CLI Tooling |

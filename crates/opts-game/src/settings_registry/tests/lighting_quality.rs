@@ -27,6 +27,7 @@ fn quality(app: &App) -> LightQuality {
     *app.world().resource::<LightQuality>()
 }
 
+mod bloom;
 mod gate;
 mod keys;
 mod modes;
