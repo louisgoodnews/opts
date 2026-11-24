@@ -17,7 +17,7 @@ opts-importer 60  # set 2026-11-22 to the current total
 opts-l10n 2743  # set 2026-11-22 to the current total
 opts-logging 1288  # set 2026-11-22 to the current total
 opts-model 107  # set 2026-11-22 to the current total
-opts-omsi 18030  # lowered 2026-11-23 from 18200 to the total after the WAV decoder moved to opts-wav (M-0117, ISS-038)
+opts-omsi 14740  # lowered 2026-11-24 from 18030 to the total after the text readers moved to opts-omsi-text (docs/dev/crate-split-omsi.md, step 1)
 opts-sim 11331  # set 2026-11-22 to the current total
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 6142  # lowered 2026-11-23 from 6300: the IDM car-following law moved to opts-car-following (ISS-034 split plan)
@@ -28,3 +28,4 @@ opts-steam 378  # new 2026-11-23: Steam library and OMSI root discovery split ou
 opts-vdf 152  # new 2026-11-23: the KeyValues parser split out of opts-game (docs/dev/crate-split-game.md)
 opts-wav 207  # new 2026-11-23: the RIFF/WAVE decoder split out of opts-omsi (docs/dev/crate-split-weather.md)
 opts-position-tag 26  # new 2026-11-23: the player position log tag moved out of opts-bevy (M-0122, ISS-018)
+opts-omsi-text 3307  # new 2026-11-24: the OMSI text readers and keyword-block scanner split out of opts-omsi (docs/dev/crate-split-omsi.md)

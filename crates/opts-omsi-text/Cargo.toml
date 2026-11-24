@@ -1,0 +1,16 @@
+[package]
+name = "opts-omsi-text"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OMSI 2 text readers (.cfg, .cti, .oft, .org, timetables, weather, sound lists): the keyword-block scanner and the text-only parsers."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+glam = { workspace = true }
+thiserror = { workspace = true }

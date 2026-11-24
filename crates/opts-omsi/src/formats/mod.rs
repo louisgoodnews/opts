@@ -1,31 +1,31 @@
 //! Format parser implementations for OMSI file formats.
 
 pub mod chrono;
-pub mod constfile;
-pub mod cti;
-pub mod engine_config;
-pub mod envir;
+pub use opts_omsi_text::formats::constfile;
+pub use opts_omsi_text::formats::cti;
+pub use opts_omsi_text::formats::engine_config;
+pub use opts_omsi_text::formats::envir;
 /// Depot (`.hof`) file parser and operational data models.
 pub mod hof {
     pub use crate::formats::vehicles::hof::*;
 }
-pub mod humans;
+pub use opts_omsi_text::formats::humans;
 pub mod map;
-pub mod money;
+pub use opts_omsi_text::formats::money;
 pub mod o3d;
-pub mod oft;
-pub mod org;
+pub use opts_omsi_text::formats::oft;
+pub use opts_omsi_text::formats::org;
 pub mod scenery;
-pub mod sound;
-pub mod text;
-pub mod ticketpack;
-pub mod timetable;
+pub use opts_omsi_text::formats::sound;
+pub use opts_omsi_text::formats::text;
+pub use opts_omsi_text::formats::ticketpack;
+pub use opts_omsi_text::formats::timetable;
 pub mod trains;
-pub mod varlist;
+pub use opts_omsi_text::formats::varlist;
 pub mod vehicles;
+pub use opts_omsi_text::formats::weather;
 /// `.wav` sound decoder, now the `opts-wav` crate (same paths).
 pub use opts_wav as wav;
-pub mod weather;
 pub mod x;
 pub use vehicles::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
 

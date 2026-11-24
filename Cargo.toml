@@ -37,6 +37,7 @@ members = [
     "crates/opts-l10n",
     "crates/opts-model",
     "crates/opts-omsi",
+    "crates/opts-omsi-text",
     "crates/opts-position-tag",
     "crates/opts-types",
     "crates/opts-vdf",
@@ -81,6 +82,7 @@ opts-importer = { path = "crates/opts-importer" }
 opts-l10n = { path = "crates/opts-l10n" }
 opts-model = { path = "crates/opts-model" }
 opts-omsi = { path = "crates/opts-omsi" }
+opts-omsi-text = { path = "crates/opts-omsi-text" }
 opts-position-tag = { path = "crates/opts-position-tag" }
 opts-types = { path = "crates/opts-types" }
 opts-vdf = { path = "crates/opts-vdf" }
