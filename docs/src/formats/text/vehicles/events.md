@@ -17,7 +17,7 @@
 1. OMSI has **two directions**: **triggers** go into a script (`{trigger:name}`), **events** come out of it (`(T.L.name)`, `(T.F.name)`, `(T.S.name)`). Sounds and announcements are the consumers of events; keys, mouse hot-spots and the engine are the sources of triggers. ✅ (census, code) 📚 ([`.osc`](osc.md), [`osc-guide`](osc-guide.md))
 2. Triggers and events share one **name table** in the VM, matched case-insensitively. A trigger and an event of the same name therefore carry the same identifier. ✅ code (`crates/opts-sim/src/script/run.rs` `trigger`, `names.events`) 📚 ([`osc-guide`](osc-guide.md))
 3. **Events never run triggers in OPTS today.** `(T.L.name)` only queues an event. Whether OMSI runs a same-named `{trigger:name}` is ❓ (Q-OSC-007; 2 names in the corpus overlap, so the question matters little for the measured data).
-4. The corpus uses **2,194 distinct `(T.L.…)` names** in 64,669 call sites, **15 `(T.F.…)` payload names** in 709 sites and **one `(T.S.…)` name** in 6 sites (✅ census). No event name is built at run time: the census found 0 non-literal event names.
+4. The corpus uses **2,194 distinct `(T.L.…)` names** in 64,669 call sites, **15 `(T.F.…)` payload names** in 709 sites and **one `(T.S.…)` name** in 6 sites (✅ census). The 2026-11-16 scratch census found no event name built at run time (0 non-literal names). The committed script, re-run on 2026-11-24, does not reproduce that: it finds 1,043 hyphenated accessors it cannot classify as literal (38 distinct names); see section 6.4.
 5. **98.1 %** of the 73,521 `sound.cfg` `[trigger]` entries name an event that some script of the corpus raises as `(T.L)` (✅ census, all vehicles and add-ons; `(T.F)` payload events are not counted here). The earlier research report measured 90.3 % over the player buses only (📚 [report §4.5](../../../meta/bus-script-integration-2026-10-14.md)); the difference is scope, not a correction.
 6. **About 1,900 trigger names have no visible binding**: no script raises them, no key in `keyboard.cfg` or `gamectrler.cfg` names them, no mouse hot-spot in the scanned models carries them, and no sound binds them. Of these, the names OPTS already treats as engine-raised are `ai_scheduled_settarget`, `collision`, `malfunction_reset`, `malfunction_gettime`, `veh_tank` and `veh_wash` (📚 [OSC runtime](../../../architecture/osc-runtime.md), [OSC guide](osc-guide.md)). Their **raise rule is unverified** (❓, see section 7).
 7. **Ordering is partly known**: triggers run as their own top-level runs between steps, in the order the host fires them; a same-named trigger block runs in file order; events are delivered after the step that raised them, in raise order. **Priority does not exist** in the data or in OPTS code, and OMSI's own priority rule is unknown (❓).
@@ -29,7 +29,7 @@
 | Step | What | Evidence |
 | :--- | :--- | :--- |
 | Corpus | `Vehicles/` and `Addons/` of the installed OMSI 2 (4,918 `.osc`, 1,853 `model*.cfg`, 1,035 `sound*.cfg`), plus `Inputs/keyboard.cfg`, `gamectrler.cfg`, `keyboard_reset.cfg` | ✅ census |
-| Event call sites | Literal `(T.L.name)`, `(T.F.name)`, `(T.S.name)` matched case-insensitively; any accessor whose name is not a literal (contains `$`, a bracket, a space or is empty) would be counted as dynamic | ✅ census (0 dynamic) |
+| Event call sites | Literal `(T.L.name)`, `(T.F.name)`, `(T.S.name)` matched case-insensitively; any accessor whose name is not a literal (contains `$`, a bracket, a space or is empty) would be counted as dynamic | ✅ census 2026-11-16 (0 dynamic); committed script 2026-11-24 counts 1,043 non-literal, all hyphenated (section 6.4) |
 | Trigger blocks | `{trigger:name}` blocks in every `.osc` (51,703 blocks, 5,705 distinct names) | ✅ census |
 | Sound triggers | the line after `[trigger]` in every `sound*.cfg` (73,521 entries) | ✅ census |
 | Keys | the line after `[entry]` in `keyboard.cfg`, `gamectrler.cfg`, `keyboard_reset.cfg`: 129 distinct names | ✅ census (same count as [report §4.6](../../../meta/bus-script-integration-2026-10-14.md)) |
@@ -152,6 +152,48 @@ Names that a reference vehicle binds in `sound.cfg` but never raises as `(T.L)`:
 These are the mapping questions for [M-0102](../../../roadmap/phase-4/M-0102.md). They are probably raised by the engine (❓, the same way as the ticket-sale names), which is what experiment EV-1 tests.
 
 ---
+
+### 6.4 Re-run of the committed census script on the installed data (2026-11-24)
+
+**Command** (run on the installed OMSI 2 data root, output to a scratch file outside the repository; counts only, no names printed): `python3 scripts/omsi_event_census.py "<OMSI 2 install>/" --out <scratch>/census.md`. Exit status 0; the run finished.
+
+| Source (script output) | Count |
+| :--- | ---: |
+| files scanned | 7,809 |
+| `(T.L)` sites (literal) | 63,005 |
+| `(T.F)` sites | 657 |
+| `(T.S)` sites | 6 |
+| non-literal event accessors | 1,043 |
+| sound trigger entries | 73,521 |
+| key entries (distinct) | 129 |
+| mouse trigger entries (distinct) | 2,919 |
+
+| Classification (section 3.2) | Count |
+| :--- | ---: |
+| raised names `(T.L)` | 2,150 |
+| of which bound by a sound trigger | 1,528 |
+| of which without sound binding | 622 |
+| payload names (`T.F` or `T.S`) | 15 |
+| sound names never raised as `(T.L)` | 108 |
+| trigger-block names (distinct) | 5,633 |
+| residual names (engine-raised candidates) | 1,900 |
+| residual block sites | 8,693 |
+
+**Comparison with the 2026-11-16 scratch census (sections 3.2 and 6.1).** Files scanned (7,809 = 4,918 + 1,853 + 1,035 + 3) and sound entries (73,521), keys (129) and mouse names (2,919) agree. The event counts do not:
+
+| Figure | 2026-11-16 | 2026-11-24 (committed script) |
+| :--- | ---: | ---: |
+| `(T.L)` sites | 64,669 | 63,005 |
+| `(T.L)` distinct names | 2,194 | 2,150 |
+| `(T.F)` sites | 709 | 657 |
+| non-literal accessors | 0 | 1,043 |
+| distinct trigger-block names | 5,705 | 5,633 |
+| sound names never raised | 78 | 108 |
+| residual names | 1,905 | 1,900 |
+
+Findings. (a) The 1,043 non-literal accessors are all hyphenated names (38 distinct). The script's literal rule (`[a-z0-9_]+`) excludes hyphens, and the scratch census probably did not; that explains the zero-dynamic result and is a rule choice, not a data fact. Only 5 of the 38 are bound by a sound trigger, and none has a hyphen-free twin among the literal names. (b) Literal sites are 1,664 lower than in the scratch census, of which 1,043 are the hyphenated ones; the remaining 621 are not explained, because the scratch census rules are not recorded in the repository. (c) The 98.1 % sound-match figure of section 1 is from the scratch census and has not been recomputed. The residual, sound-never-raised and classification counts in section 3.2 and in the M-0118 card are therefore to be read with these differences; the counts above are the committed script's output and should be the reference.
+
+**Acceptance criterion 1 (corpus-wide list).** The run gives 2,150 distinct raised names (plus 15 payload names and 108 sound-only names) under the script's rules. The list is not embedded in this page. The page's own attestation allows identifiers only, so an embedded list would be permissible in form, but it would add about 2,150 game identifiers to the repository, which the owner's instruction for this run excludes; the owner should decide whether such a list may be committed. Until then criterion 1 stays open for the corpus part; the reference vehicles (section 6.2) remain complete.
 
 ## 7. Open questions and experiment proposals
 
@@ -867,6 +909,7 @@ Columns: class as in section 3.2; **NG272**, **SD200**, **HH109** give the flags
 ## Provenance
 
 - Corpus census of `Vehicles/`, `Addons/` and `Inputs/` of the installed OMSI 2 (read-only, text files as data), 2026-11-16; rules in section 2.
+- Committed script `scripts/omsi_event_census.py` run on the installed data, 2026-11-24 (branch `agent/m0118-census`); counts in section 6.4.
 - Code facts: `crates/opts-sim/src/script/mod.rs` (`ScriptEvent`), `crates/opts-sim/src/script/compiler/bytecode.rs` (`EventKind`), `crates/opts-sim/src/script/run.rs` (`trigger`), `crates/opts-bevy/src/vehicle_script/system.rs`, `crates/opts-bevy/src/vehicle_triggers.rs`, `crates/opts-bevy/src/vehicle_triggers/keys.rs`, `crates/opts-game/src/player_sound/triggers.rs`, `crates/opts-game/src/vehicle_sound/events.rs` (2026-11-16, branch `agent/m0118`).
 - Documented facts are cited to existing OPTS pages (section 3 and 5 of this page).
 
