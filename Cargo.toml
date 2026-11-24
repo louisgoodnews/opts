@@ -41,6 +41,7 @@ members = [
     "crates/opts-omsi-binary",
     "crates/opts-omsi-vehicles",
     "crates/opts-omsi-map",
+    "crates/opts-omsi-scenery",
     "crates/opts-position-tag",
     "crates/opts-types",
     "crates/opts-vdf",
@@ -89,6 +90,7 @@ opts-omsi-text = { path = "crates/opts-omsi-text" }
 opts-omsi-binary = { path = "crates/opts-omsi-binary" }
 opts-omsi-vehicles = { path = "crates/opts-omsi-vehicles" }
 opts-omsi-map = { path = "crates/opts-omsi-map" }
+opts-omsi-scenery = { path = "crates/opts-omsi-scenery" }
 opts-position-tag = { path = "crates/opts-position-tag" }
 opts-types = { path = "crates/opts-types" }
 opts-vdf = { path = "crates/opts-vdf" }

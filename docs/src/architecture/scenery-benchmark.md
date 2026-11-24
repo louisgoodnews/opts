@@ -40,7 +40,7 @@ The benchmark checks **self-consistency**: OPTS's renderer against OPTS's own re
 
 **Scenery scripts do not run in OPTS today.** The VM (`opts_sim::script::ScriptEngine`, `crates/opts-sim/src/script/mod.rs:39`) is wired only to vehicles (`crates/opts-bevy/src/vehicle_script.rs`, `vehicle_anim.rs`, `vehicle_lights.rs`). Nothing reads `SceneryObject::scripts` at spawn time. M-0026 is "complete for vehicles" only, and M-0049 says "signal heads are not animated yet (scenery scripts do not run)" (`docs/src/roadmap/phase-4/M-0049.md:54`). Also:
 - The host sets only `Timegap` and `GetTime` (`script/mod.rs:203-204`). `Time`, `Day`, `DayOfYear` and the weather read 0, so clock scripts and the season switch (`visibleflag_sommerhalbjahr.osc`) cannot work yet, even for vehicles.
-- `ScoAnimation` is untyped (`crates/opts-omsi/src/formats/scenery/sco.rs:100`); the vehicle animation system needs a typed `ModelAnim`.
+- `ScoAnimation` is untyped (`crates/opts-omsi-scenery/src/formats/scenery/sco.rs:100`); the vehicle animation system needs a typed `ModelAnim`.
 - The scenery predefined variables (`TrafficLightPhase`, `Switch`, `NightlightA`, `Refresh_Strings`, …) are listed in `docs/src/formats/text/vehicles/predefined-variables.md:242-252`.
 
 *(Historical, before 2026-10-12.)* The script-effect check ([Phase C](#script-effect-check)) was specified first and reported `S-NOT-RUN` for every scripted object until the scenery-script runtime ([scenery-runtime.md](scenery-runtime.md)) existed ([Q-SB-11](#open-questions)).

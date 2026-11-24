@@ -64,7 +64,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-004 — Monolithic Parser and Massive Function in `sco.rs`
 - **Severity:** 🟠 Major
 - **Dimension:** Quality
-- **Location:** [`crates/opts-omsi/src/formats/scenery/sco.rs:1-1061`](../../../crates/opts-omsi/src/formats/scenery/sco.rs#L1-L1061)
+- **Location:** [`crates/opts-omsi-scenery/src/formats/scenery/sco.rs:1-1061`](../../../crates/opts-omsi-scenery/src/formats/scenery/sco.rs#L1-L1061)
 - **Description:** `sco.rs` is 1,061 lines long (violating the project's 500-line recommended file limit), and its central parsing function `from_text` spans 546 contiguous lines (severely violating the 80-line function length guideline in `docs/src/contributing/standards.md`).
 - **Evidence:** Lines 220–766 of `sco.rs` form a single procedural `match` block handling scenery object tags without modular helper dispatch.
 - **Impact:** High cognitive load, elevated risk of regression when adding scenery keywords, poor test isolation, and degraded maintainability.
@@ -75,7 +75,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Dimension:** Quality
 - **Location:**
   - [`crates/opts-omsi-vehicles/src/formats/vehicles/bus.rs:77-270`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/bus.rs#L77-L270) (193 lines)
-  - [`crates/opts-omsi/src/formats/scenery/sli.rs:188-372`](../../../crates/opts-omsi/src/formats/scenery/sli.rs#L188-L372) (184 lines)
+  - [`crates/opts-omsi-scenery/src/formats/scenery/sli.rs:188-372`](../../../crates/opts-omsi-scenery/src/formats/scenery/sli.rs#L188-L372) (184 lines)
   - [`crates/opts-omsi-map/src/formats/map/global.rs:77-253`](../../../crates/opts-omsi-map/src/formats/map/global.rs#L77-L253) (176 lines)
   - [`crates/opts-omsi-map/src/formats/map/tile.rs:160-328`](../../../crates/opts-omsi-map/src/formats/map/tile.rs#L160-L328) (168 lines)
   - [`crates/opts-omsi-vehicles/src/formats/vehicles/model/parse.rs:114-254`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/model/parse.rs#L114-L254) (140 lines)

@@ -39,7 +39,7 @@ Files above a size, counted two ways. The Phase 999 README counts **total** line
 
 | Function | code | lines |
 | :--- | ---: | ---: |
-| `crates/opts-omsi/src/formats/scenery/sco.rs` `from_text` | 629 | 456-1101 |
+| `crates/opts-omsi-scenery/src/formats/scenery/sco.rs` `from_text` | 629 | 456-1101 |
 | `crates/opts-bevy/src/host_callbacks.rs` `vehicle_callbacks_with_context` | 415 | 48-558 |
 | `crates/opts-bevy/examples/script_rig.rs` `main` | 374 | 645-1023 |
 | `crates/opts-game/src/in_game/omsi_world/traffic.rs` `spawn_traffic` | 351 | 511-881 |
@@ -74,7 +74,7 @@ Files above a size, counted two ways. The Phase 999 README counts **total** line
 | `crates/opts-cli/src/commands.rs` | 1498 | 1572 | 44 | 30 | 108 | **over** |
 | `crates/opts-game/src/in_game/omsi_world/vehicle.rs` | 1497 | 1728 | 158 | 73 | 195 | **over** |
 | `crates/opts-bevy/src/weather.rs` | 1285 | 1642 | 248 | 109 | 571 | **over** |
-| `crates/opts-omsi/src/formats/scenery/sco.rs` | 1098 | 1414 | 254 | 62 | 116 | **over** |
+| `crates/opts-omsi-scenery/src/formats/scenery/sco.rs` | 1098 | 1414 | 254 | 62 | 116 | **over** |
 | `crates/opts-gui/src/components/combobox.rs` | 1082 | 1237 | 68 | 87 | 383 | **over** |
 | `crates/opts-bevy/examples/lighting_bench.rs` | 1070 | 1173 | 58 | 45 | 0 | **over** |
 | `crates/opts-game/tests/control_protocol.rs` | 1061 | 1185 | 63 | 61 | 0 | **over** |
@@ -111,7 +111,7 @@ Files above a size, counted two ways. The Phase 999 README counts **total** line
 | `crates/opts-bevy/src/host_callbacks.rs` | 633 | 850 | 115 | 102 | 191 | **over** |
 | `crates/opts-game/src/settings_registry/tests.rs` | 601 | 641 | 10 | 30 | 0 | **over** |
 | `crates/opts-bevy/src/light_cones/tests.rs` | 597 | 680 | 40 | 43 | 0 | **over** |
-| `crates/opts-omsi/src/formats/scenery/sli.rs` | 586 | 796 | 156 | 54 | 154 | **over** |
+| `crates/opts-omsi-scenery/src/formats/scenery/sli.rs` | 586 | 796 | 156 | 54 | 154 | **over** |
 | `crates/opts-game/src/settings_screen/page.rs` | 577 | 637 | 39 | 21 | 0 | **over** |
 | `crates/opts-game/src/settings_screen/rows.rs` | 574 | 620 | 29 | 17 | 0 | **over** |
 | `crates/opts-game/tests/loading_tests.rs` | 571 | 621 | 19 | 31 | 0 | **over** |
@@ -151,7 +151,7 @@ Files above a size, counted two ways. The Phase 999 README counts **total** line
 | `crates/opts-omsi/src/formats/x/parse.rs` | 442 | 506 | 23 | 41 | 0 |  |
 | `crates/opts-game/src/new_game_screen/systems.rs` | 441 | 483 | 24 | 18 | 0 |  |
 | `crates/opts-game/src/map_profiles/modal.rs` | 440 | 477 | 17 | 20 | 0 |  |
-| `crates/opts-omsi/src/formats/trains/tests.rs` | 429 | 482 | 8 | 45 | 0 |  |
+| `crates/opts-omsi-scenery/src/formats/trains/tests.rs` | 429 | 482 | 8 | 45 | 0 |  |
 | `crates/opts-bevy/src/texture.rs` | 425 | 548 | 82 | 41 | 0 |  |
 | `crates/opts-game/src/in_game/omsi_world/pedestrians.rs` | 425 | 483 | 38 | 20 | 11 |  |
 | `crates/opts-game/src/pause/mod.rs` | 425 | 497 | 46 | 26 | 0 |  |
@@ -172,7 +172,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 
 | Function | code | lines | concern | limit |
 | :--- | ---: | ---: | ---: | ---: |
-| `crates/opts-omsi/src/formats/scenery/sco.rs` `from_text` | 629 | 456-1101 | from | **over 80** |
+| `crates/opts-omsi-scenery/src/formats/scenery/sco.rs` `from_text` | 629 | 456-1101 | from | **over 80** |
 | `crates/opts-bevy/src/host_callbacks.rs` `vehicle_callbacks_with_context` | 415 | 48-558 | vehicle | **over 80** |
 | `crates/opts-bevy/examples/script_rig.rs` `main` | 374 | 645-1023 | main | **over 80** |
 | `crates/opts-game/src/in_game/omsi_world/traffic.rs` `spawn_traffic` | 351 | 511-881 | spawn | **over 80** |
@@ -203,7 +203,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-game/src/settings_screen/rows.rs` `spawn_control` | 188 | 327-516 | spawn | **over 80** |
 | `crates/opts-traffic/src/lanechange.rs` `evaluate` | 186 | 176-370 | evaluate | **over 80** |
 | `crates/opts-game/src/hud/viewpoint.rs` `spawn_panel` | 183 | 131-313 | spawn | **over 80** |
-| `crates/opts-omsi/src/formats/scenery/sli.rs` `from_text` | 179 | 357-541 | from | **over 80** |
+| `crates/opts-omsi-scenery/src/formats/scenery/sli.rs` `from_text` | 179 | 357-541 | from | **over 80** |
 | `crates/opts-omsi-map/src/formats/map/global.rs` `from_text` | 174 | 123-304 | from | **over 80** |
 | `crates/opts-omsi/examples/crossing_audit.rs` `main` | 173 | 24-199 | main | **over 80** |
 | `crates/opts-gui/src/components/combobox.rs` `populate_combobox_children` | 169 | 260-434 | populate | **over 80** |
@@ -458,7 +458,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-game/src/shell/banner.rs` `spawn_banner` | 72 | 133-204 | spawn | over 60 |
 | `crates/opts-logging/tests/routing_test.rs` `test_subsystem_routing_isolation` | 72 | 8-100 | test | over 60 |
 | `crates/opts-omsi/src/formats/money/mod.rs` `parse` | 72 | 47-123 | parse | over 60 |
-| `crates/opts-omsi/src/formats/scenery/sli.rs` `ground_surface` | 72 | 248-321 | ground | over 60 |
+| `crates/opts-omsi-scenery/src/formats/scenery/sli.rs` `ground_surface` | 72 | 248-321 | ground | over 60 |
 | `crates/opts-omsi/tests/model_parse.rs` `test_parse_sample_bus_model` | 72 | 183-270 | test | over 60 |
 | `crates/opts-game/src/in_game/omsi_world/vehicle.rs` `bind_skins` | 71 | 556-630 | bind | over 60 |
 | `crates/opts-omsi/src/setvars.rs` `entry` | 71 | 186-256 | entry | over 60 |
@@ -566,7 +566,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-game/src/save/ui/dialogs.rs` `open_error` | 61 | 186-246 | open | over 60 |
 | `crates/opts-hardware/tests/no_network.rs` `no_network_dependencies` | 61 | 76-138 | no | over 60 |
 | `crates/opts-omsi/src/formats/o3d/vertex.rs` `parse_vertex_chunk` | 61 | 42-111 | parse | over 60 |
-| `crates/opts-omsi/src/formats/trains/zug.rs` `from_zug` | 61 | 58-118 | from | over 60 |
+| `crates/opts-omsi-scenery/src/formats/trains/zug.rs` `from_zug` | 61 | 58-118 | from | over 60 |
 | `crates/opts-sim/src/script/compiler.rs` `header` | 61 | 338-398 | header | over 60 |
 | `crates/opts-tools/src/l10n.rs` `new_cmd` | 61 | 375-435 | new | over 60 |
 

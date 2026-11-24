@@ -107,7 +107,7 @@ The pure-core boundary still holds: `opts-core`, `opts-sim`, `opts-traffic`, `op
 **Location:**
 - `crates/opts-traffic/src/agent.rs` (1,369 lines)
 - `crates/opts-omsi/src/formats/o3d/descramble.rs` (1,345)
-- `crates/opts-omsi/src/formats/scenery/sco.rs` (1,243; `from_text` 625)
+- `crates/opts-omsi-scenery/src/formats/scenery/sco.rs` (1,243; `from_text` 625)
 - `crates/opts-catalogue/src/lib.rs` (1,070)
 - `crates/opts-game/src/in_game/omsi_world/vehicle.rs` (863)
 - `crates/opts-game/src/in_game/omsi_world/traffic.rs` (782; `spawn_traffic` 215)

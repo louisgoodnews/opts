@@ -1,0 +1,22 @@
+[package]
+name = "opts-omsi-scenery"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OMSI 2 scenery readers (.sco objects, .sli splines, crossings) and the train consist reader (.zug)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+glam = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+opts-omsi-text = { workspace = true }
+opts-omsi-binary = { workspace = true }
+opts-omsi-vehicles = { workspace = true }

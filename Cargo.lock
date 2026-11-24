@@ -5550,17 +5550,12 @@ name = "opts-omsi"
 version = "0.1.0"
 dependencies = [
  "glam",
- "image",
  "opts-omsi-binary",
  "opts-omsi-map",
+ "opts-omsi-scenery",
  "opts-omsi-text",
  "opts-omsi-vehicles",
- "opts-types",
  "opts-wav",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
 ]
 
 [[package]]
@@ -5581,6 +5576,20 @@ dependencies = [
  "opts-omsi-text",
  "opts-types",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opts-omsi-scenery"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "opts-omsi-binary",
+ "opts-omsi-text",
+ "opts-omsi-vehicles",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
 ]
 
 [[package]]

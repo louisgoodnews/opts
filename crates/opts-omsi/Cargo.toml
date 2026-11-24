@@ -12,15 +12,10 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-opts-types = { workspace = true }
 opts-omsi-binary = { workspace = true }
 opts-omsi-map = { workspace = true }
+opts-omsi-scenery = { workspace = true }
 opts-omsi-vehicles = { workspace = true }
 opts-omsi-text = { workspace = true }
 opts-wav = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
 glam = { workspace = true }
-image = { workspace = true }
-thiserror = { workspace = true }
-tracing = { workspace = true }
