@@ -5551,11 +5551,22 @@ version = "0.1.0"
 dependencies = [
  "glam",
  "image",
+ "opts-omsi-binary",
  "opts-omsi-text",
  "opts-types",
  "opts-wav",
  "serde",
  "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
+name = "opts-omsi-binary"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "opts-omsi-text",
  "thiserror 1.0.69",
  "tracing",
 ]

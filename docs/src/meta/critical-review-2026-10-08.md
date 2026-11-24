@@ -25,7 +25,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-001 — Bare `.unwrap()` in DirectX `.x` Parser
 - **Severity:** 🟡 Moderate
 - **Dimension:** Correctness
-- **Location:** [`crates/opts-omsi/src/formats/x/parse.rs:388`](../../../crates/opts-omsi/src/formats/x/parse.rs#L388)
+- **Location:** [`crates/opts-omsi/src/formats/x/parse.rs:388`](../../../crates/opts-omsi-binary/src/formats/x/parse.rs#L388)
 - **Description:** A bare `.unwrap()` is invoked on the result of `parse_face_indices` within `parse_mesh`, bypassing the crate's `Result<_, ParseError>` error-handling contract.
 - **Evidence:**
   ```rust,ignore
