@@ -83,17 +83,27 @@ A moved item referred to by a doc link across crates keeps its path through the 
 
 ## Budgets
 
-| Crate | Entry | Note |
-| :--- | ---: | :--- |
-| `opts-omsi-text` | 3,290 | new, at its measured size (after step 1 the figure is re-measured) |
-| `opts-omsi-binary` | 3,130 | new |
-| `opts-omsi-vehicles` | 4,314 | new |
-| `opts-omsi-map` | 4,133 | new |
-| `opts-omsi-scenery` | 3,132 | new |
-| `opts-omsi` | 31 at the end | lowered to its measured total after each step (never raised) |
+Measured after the split (`structure_audit.py check`, code lines in each `src/`). The plan's
+estimates are in the table above; the measured figures are the authority and are the budget entries
+in `docs/dev/crate-budget.txt`:
 
-The measured numbers in the step commits and in the budget file are the authority; the table above
-is the plan's estimate.
+| Crate | Measured | Budget entry |
+| :--- | ---: | ---: |
+| `opts-omsi-text` | 3,307 | 3,307 (new) |
+| `opts-omsi-binary` | 3,136 | 3,136 (new) |
+| `opts-omsi-vehicles` | 4,323 | 4,323 (new) |
+| `opts-omsi-map` | 4,139 | 4,139 (new) |
+| `opts-omsi-scenery` | 3,140 | 3,140 (new) |
+| `opts-omsi` (facade) | 31 | 31 (lowered from 18,030) |
+
+Sum of the new crates 18,045 (the crates keep their own `lib.rs` and module doorways, so the
+total is slightly above the 18,030 before the split). Largest crate: `opts-omsi-vehicles` at 4,323,
+under the 6,000 limit. No budget was raised.
+
+Deviations from the plan above: `opts-omsi` drops the dependencies its re-exports no longer use
+(`opts-types`, `serde`, `serde_json`, `image`, `thiserror`, `tracing`); `opts-omsi-vehicles` owns
+`data/setvar_families.json` (the include path is unchanged inside the crate); `opts-omsi-map` keeps
+`terrain.rs` and `water.rs` (they use `MapParseError`, see the cycle note above).
 
 ## Crate graph page
 
@@ -103,12 +113,12 @@ the five crates and `opts-wav`).
 
 ## Steps
 
-1. This plan (committed first).
-2. `opts-omsi-text` (base: everything depends on it).
-3. `opts-omsi-binary` (`o3d`, `x`).
-4. `opts-omsi-vehicles` (`vehicles`, `setvars`, the `light` reader moved out of `scenery`).
-5. `opts-omsi-map` (`map`, `chrono`).
-6. `opts-omsi-scenery` (`scenery` without `light`, `trains`); the facade keeps only re-exports.
+0. This plan (committed first).
+1. `opts-omsi-text` (base: everything depends on it). Commit `224367df`.
+2. `opts-omsi-binary` (`o3d`, `x`). Commit `a3e4a998`.
+3. `opts-omsi-vehicles` (`vehicles`, `setvars`, the `light` reader moved out of `scenery`). Commit `1a8a6991`.
+4. `opts-omsi-map` (`map`, `chrono`). Commit `f98234fc`.
+5. `opts-omsi-scenery` (`scenery` without `light`, `trains`); the facade keeps only re-exports. Commit `d1b4a151`.
 
 Each step: the workspace compiles; `cargo-seq.sh test --workspace --no-fail-fast` passes;
 `scripts/crate_graph.py --check`, `scripts/structure_audit.py check` and
