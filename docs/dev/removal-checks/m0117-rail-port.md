@@ -39,7 +39,7 @@ tests (`ok. 4 passed; 0 failed`).
 ## Other checks run on the port
 
 - Workspace test (`cargo-seq.sh test --workspace --no-fail-fast`, cold per-worktree target):
-  3002 passed, 0 failed, 8 ignored, across 189 test binaries. The new crate's 8 unit tests
+  3002 passed, 0 failed, 8 ignored, across 190 test binaries. The new crate's 8 unit tests
   (nearest-N, fade, player always, outlet) pass.
 - Budgets, measured with `scripts/structure_audit.py` (`crate_table`):
   `opts-game` 90,578 (budget 90,578, lowered from 90,604); `opts-exhaust` 333 (budget 333, not raised).
