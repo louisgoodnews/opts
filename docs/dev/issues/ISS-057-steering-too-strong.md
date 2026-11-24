@@ -1,4 +1,4 @@
-# ISS-057: Steering is too strong
+# ISS-057: Steering sensitivity is too strong
 
 | Field | Value |
 | :--- | :--- |
@@ -9,7 +9,7 @@
 
 ## Problem
 
-Steering responds too strongly: a small steering input turns the vehicle more than expected.
+Steering sensitivity is too strong: a small steering input turns the vehicle more than expected.
 Reported by the project lead; no reproduction, speed, vehicle or steering input recorded yet.
 
 ## Where to look (not diagnosed)
