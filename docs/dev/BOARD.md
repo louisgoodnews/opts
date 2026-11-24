@@ -158,7 +158,6 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 _Work that cannot proceed until a dependency is resolved._
 
-- [ ] 🟠 **Passenger load margins: criteria 2 and 3** (M-0124) — blocked on owner decisions. Measured: loaded bus covers 23.8 m (26.6 %) less in 10 s, and stops 3.3 m (24 %) longer from 50 km/h. Owner must set the minimum extra distance and stop, and say whether the 19 % softer loaded braking at 100 km/h is intended.
 
 > 📝 Every Blocked item must name its blocking dependency explicitly.
 > If the blocker is another item on this board, it must be linked by
@@ -841,3 +840,5 @@ The agent should check these during P-001 audits:
   - ISS-015 / M-0164 removal checks for two reverse tests and a chip-vs-chord test, which found the developer-panel chip mismatch (`8eb1e024`).
   - M-0118 census re-run on the installed data (`9a19640c`); the corpus list still needs an owner decision.
   - Still open: owner decisions (M-0124 margins, loaded-braking intent, whether the corpus list may be committed); on-screen checks; large features listed in docs/priority-list.md.
+- `2026-11-24` — Owner decisions recorded and implemented (`37f080db`, on master): M-0124 criterion 2 needs at least 25 % less distance in 10 s (measured 26.6 %), and the 15 % tolerance is measured against the mass-ratio prediction m_empty/m_loaded (measured deviation 13.4 %); criterion 3 needs at least 20 % longer stop from 50 km/h (measured 24 %), with a stored empty-bus baseline; the loaded braking at 100 km/h being about 19 % softer is intended and pinned by a test. Passenger load stays reopened for criterion 4's rear-axle clause (M-0073).
+- `2026-11-24` — OMSI event identifier list committed (`a3fedc80`): 8,279 identifiers in `docs/src/formats/text/vehicles/event-identifiers.txt`; M-0118 criterion 1 met for the list. Criterion 3 and the Phase C review stay open.
