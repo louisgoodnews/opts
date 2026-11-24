@@ -1,7 +1,7 @@
 # Priority list
 
 Status: 2026-11-24, after the merges of `agent/m0123-feedback`, `agent/gui-keyboard-flaky` and
-`agent/m0122-run` on master (`438d4d2c`). The board ([BOARD.md](dev/BOARD.md)) keeps the detail;
+`agent/m0122-run` on master (`438d4d2c`), and the board sync (`41e44e8a`). The board ([BOARD.md](dev/BOARD.md)) keeps the detail;
 this page is the order in which the open work should be taken.
 
 ## 1. Owner decisions (nothing can move until these are made)
