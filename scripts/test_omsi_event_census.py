@@ -73,6 +73,29 @@ class ClassifyTest(unittest.TestCase):
             self.assertNotIn(name, text)
         self.assertIn("| raised names (T.L) | 2 |", text)
 
+    def test_identifiers_are_sorted_distinct_and_pattern_checked(self):
+        c = self.census()
+        c["blocks"].append("bad name")  # space: left out and counted
+        c["mouse"].append("quo'te")  # quote: left out and counted
+        kept, left_out = ec.identifiers(c)
+        self.assertEqual(kept, sorted(set(kept)))
+        for name in kept:
+            self.assertRegex(name, r"^[a-z0-9_]+$")
+        for name in ("ev_a", "ev_b", "ev_c", "ev_f", "snd", "key_x", "mesh_m", "loose"):
+            self.assertIn(name, kept)
+        self.assertNotIn("bad name", kept)
+        self.assertEqual(left_out, 2)
+
+    def test_default_output_is_counts_only_and_names_are_opt_in(self):
+        # Default path: render() prints the count tables only. The identifier list exists only
+        # behind --names-out, so every default line is a "| label | number |" row.
+        c = self.census()
+        text = ec.render(c, ec.classify(c))
+        for line in text.splitlines():
+            if line.startswith("|") and ":---" not in line and "| Count" not in line \
+                    and "| Classification" not in line:
+                self.assertRegex(line, r"^\| [^|]+ \| [\d,]+ \|$")
+
 
 if __name__ == "__main__":
     unittest.main()

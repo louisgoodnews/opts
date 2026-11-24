@@ -8,7 +8,13 @@ classification counts of events.md section 3.2. Only counts are printed, never a
 script text. Files are read as bytes (latin-1), so no encoding can stop the scan. Nothing is
 written unless `--out FILE` is given, and the output path must lie outside the repository.
 
-Usage: python3 scripts/omsi_event_census.py <data-root> [--out FILE]
+Opt-in identifier list: `--names-out FILE` writes the sorted, distinct identifiers of every name
+category (raised, payload, sound, key, mouse and trigger-block names), one per line, and only
+names that match `[a-z0-9_]+`; the count of names left out by that rule goes to stderr. The
+default run and `--out` never print or write names. Owner decision (2026-11-24): this list may be
+committed as `docs/src/formats/text/vehicles/event-identifiers.txt`.
+
+Usage: python3 scripts/omsi_event_census.py <data-root> [--out FILE] [--names-out FILE]
 """
 import argparse
 import re
@@ -104,6 +110,15 @@ def classify(c: dict) -> list[tuple[str, int]]:
     ]
 
 
+def identifiers(c: dict) -> tuple[list[str], int]:
+    """Sorted distinct identifiers of every name category, and the count of names left out
+    because they do not match the identifier pattern."""
+    names = set(c["L"]) | set(c["F"]) | set(c["S"]) | set(c["sound"]) | set(c["keys"])
+    names |= set(c["mouse"]) | set(c["blocks"])
+    kept = sorted(n for n in names if LITERAL.match(n))
+    return kept, len(names) - len(kept)
+
+
 def render(c: dict, rows: list[tuple[str, int]]) -> str:
     sources = [
         ("files scanned", c["files"]),
@@ -126,6 +141,8 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("data_root", type=Path)
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--names-out", type=Path,
+                    help="opt-in: write the sorted identifier list (one per line) to this file")
     args = ap.parse_args(argv)
     if not args.data_root.is_dir():
         print("data root not found", file=sys.stderr)
@@ -134,6 +151,11 @@ def main(argv: list[str]) -> int:
     text = render(c, classify(c))
     if args.out:
         args.out.write_text(text, encoding="utf-8")
+    if args.names_out:
+        kept, left_out = identifiers(c)
+        args.names_out.write_text("".join(n + "\n" for n in kept), encoding="utf-8")
+        print(f"identifiers written: {len(kept)} (left out by the pattern: {left_out})",
+              file=sys.stderr)
     print(text, end="")
     return 0
 
