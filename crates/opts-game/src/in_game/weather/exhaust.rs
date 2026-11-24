@@ -6,14 +6,13 @@
 //! one; otherwise the fallback, 1 m above the ground and [`REAR_OFFSET_M`] behind the origin. Each puff rises and widens on its own
 //! straight path and is removed after [`opts_sim::exhaust::PUFF_LIFETIME_S`].
 
-use bevy::ecs::system::SystemParam;
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use opts_bevy::vehicle::ExhaustOutlet;
 use opts_bevy::{ArticulatedChain, PlayerVehicle, SessionEnvironment, VehicleController};
 use opts_sim::exhaust::{puff_rate_per_s, puffs_to_spawn, PUFF_LIFETIME_S};
 
-use crate::settings::GameSettings;
 use crate::settings_registry::lighting::{exhaust_cap_of, exhaust_on_of};
+use crate::{in_game::omsi_world::VehicleComposition, settings::GameSettings};
 
 mod outlet;
 pub use outlet::{chain_outlet, fallback_outlet_of, outlet_of, OUTLET_HEIGHT_M, REAR_OFFSET_M};
@@ -52,6 +51,7 @@ pub struct ExhaustInputs<'w, 's> {
     settings: Res<'w, GameSettings>,
     env: Res<'w, SessionEnvironment>,
     chains: Query<'w, 's, &'static ArticulatedChain, With<PlayerVehicle>>,
+    rails: Query<'w, 's, &'static VehicleComposition, With<PlayerVehicle>>,
 }
 
 /// The mesh and material stores the puffs are built from.
@@ -59,6 +59,13 @@ pub struct ExhaustInputs<'w, 's> {
 pub struct ExhaustAssets<'w> {
     meshes: ResMut<'w, Assets<Mesh>>,
     materials: ResMut<'w, Assets<StandardMaterial>>,
+}
+
+/// The units behind the vehicle, front to rear: its articulated chain's segments, else a rail
+/// consist's followers (ISS-038). [`chain_outlet`] then takes the rear-most that has an emitter.
+pub fn behind(chain: Option<&ArticulatedChain>, rail: Option<&VehicleComposition>) -> Vec<Entity> {
+    let f = rail.map(|r| r.followers.iter().map(|p| p.entity).collect());
+    chain.map_or(f.unwrap_or_default(), |c| c.segments.clone())
 }
 
 /// Ages, moves and removes the puffs, then emits the new ones of the player's vehicle.
@@ -101,12 +108,8 @@ pub fn update_exhaust(
         .assets
         .get_or_insert_with(|| puff_assets(&mut assets.meshes, &mut assets.materials))
         .clone();
-    let chain = inputs.chains.single().ok();
-    let trailers = chain
-        .into_iter()
-        .flat_map(|c| c.segments.iter())
-        .filter_map(|&s| units.get(s).ok());
-    let origin = chain_outlet(vehicle, data, trailers);
+    let ids = behind(inputs.chains.single().ok(), inputs.rails.single().ok());
+    let origin = chain_outlet(vehicle, data, ids.iter().filter_map(|&s| units.get(s).ok()));
     for _ in 0..count {
         commands.spawn((
             Puff {
