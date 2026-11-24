@@ -41,3 +41,16 @@ The barrier animations at the Berlin Spandau scene (Btfh Indira-Gandhi-Strasse) 
 - Not seen: the other three arms; swing axis, snap or stall; the exact close and open times (only the 1.6 s bracket above).
 - Cause: not determined from this run. Open question: the closed state was caught only at single samples (18.2 s and 71.9 s), so its hold time is unknown; a finer sample (0.2 s) across 18 to 21 s and 70 to 76 s, with the camera on arms 43 and 45, is needed to tell a snap from a swing and a stall from a short hold.
 - Screenshots: `/home/louisgoodnews/nvme2n1/Dokumente/opts-scratch/work/iss059-observe2/shots/` (`pose_check.png`, `obs_000.png` to `obs_047.png`); contact sheet of the arm region `/home/louisgoodnews/nvme2n1/Dokumente/opts-scratch/work/iss059-observe2/arm_seq.png`.
+
+### Fine sampling of arm 43 (2026-11-24, same branch, no code change)
+
+- Run: game started 19:26:05, exited 19:27:31 (second attempt; the first fine run had no sim time, not used). Same map, bus and traffic settings as above. Camera at the same position, yaw 31.1, pitch -11, aimed at arm 43. Screenshots every about 0.105 s of sim time from sim 5.5 s to 77 s (608 frames, JPEG, sim time from the screenshot metadata).
+- Opening: horizontal (closed) at 18.97 s (frame 100), starting to lift at 19.11 s, near vertical at 19.26 s. About 0.3 s for roughly 90 degrees; the arm pivots at its base post, rising to a standing position. No gradual swing was seen in the frames.
+- Closed hold before that opening: closed at every frame from the earliest frame (17.6 s) to 18.97 s.
+- Closing: not captured. The arm is horizontal at 69.55 s (first frame of the second window), so the closing lies in the span 21 to 69.5 s, which a train covers in the coarse run.
+- Second opening: horizontal at 74.48 s (frame 583), starting at 74.59 s, near vertical at 74.69 s. About 0.2 s.
+- Closed hold before the second opening: at least 4.9 s (from 69.55 s to 74.48 s).
+- Period between the two openings: about 55.4 s (19.1 s to 74.5 s), matching the 55 s game-clock cycle.
+- Correction to the coarse readings above: the arm at 73.5 s is horizontal (not partly lowered); the 1.6 s sampling misread it.
+- Cause: not determined. The raise is fast (about 0.2 to 0.3 s) with no gradual swing, which fits a snap or a step in the animation rather than a slow swing; the closing transition is not seen, and arms 44, 45 and 46 are not observed.
+- Screenshots: `/home/louisgoodnews/nvme2n1/Dokumente/opts-scratch/work/iss059-fine1/shots_fine/` (fine_0000.jpg to fine_0607.jpg); montages `w1_open.png` and `w2_close.png` in the same folder's parent.
