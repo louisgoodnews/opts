@@ -1,7 +1,8 @@
-//! Unit tests for `super` (`exhaust.rs`): the outlet is the model's own when it defines one, the
+//! Unit tests for `super` (`lib.rs`): the outlet is the model's own when it defines one, the
 //! fallback behind and above the vehicle only when it does not.
 
 use super::*;
+use opts_bevy::vehicle::ExhaustOutlet;
 
 /// A vehicle at `(10, 0, 0)` facing along the Bevy `-Z` axis (identity rotation).
 fn vehicle() -> GlobalTransform {

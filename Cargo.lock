@@ -5434,6 +5434,15 @@ name = "opts-debounce"
 version = "0.1.0"
 
 [[package]]
+name = "opts-exhaust"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-bevy",
+ "opts-sim",
+]
+
+[[package]]
 name = "opts-game"
 version = "0.1.0"
 dependencies = [
@@ -5447,6 +5456,7 @@ dependencies = [
  "opts-cli",
  "opts-collision",
  "opts-core",
+ "opts-exhaust",
  "opts-gui",
  "opts-hardware",
  "opts-l10n",

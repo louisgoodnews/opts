@@ -10,7 +10,7 @@ opts-collision 211  # set 2026-11-23 at its size after the split from opts-sim (
 opts-core 4  # set 2026-11-22 to the current total
 opts-debounce 86  # new 2026-11-23: the hot-reload file-event debouncer split out of opts-bevy (docs/dev/crate-split-weather.md)
 opts-map-advice 121  # new 2026-11-23: the map load profile and advice engine split out of opts-game (docs/dev/crate-split-advice.md)
-opts-game 90800  # lowered 2026-11-24 to the measured total after the vehicle.fuel tests moved to crates/opts-game/tests (M-0123 refused member)
+opts-game 90604  # lowered 2026-11-24 to the measured total after the exhaust module moved to opts-exhaust (M-0117 nearest-N, docs/dev/crate-split-exhaust.md)
 opts-gui 18492  # raised 2026-11-23 from 18409 to the total after the ISS-056 disabled-label contrast fix (owner decision)
 opts-hardware 2642  # set 2026-11-22 to the current total
 opts-importer 60  # set 2026-11-22 to the current total
@@ -23,6 +23,7 @@ opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 6142  # lowered 2026-11-23 from 6300: the IDM car-following law moved to opts-car-following (ISS-034 split plan)
 opts-types 461  # set 2026-11-22 to the current total
 opts-theme-files 59  # new 2026-11-23: the RON theme file loader split out of opts-game (docs/dev/crate-split-theme.md)
+opts-exhaust 333  # new 2026-11-24: the exhaust plume module moved out of opts-game (M-0117 nearest-N, docs/dev/crate-split-exhaust.md)
 opts-steam 378  # new 2026-11-23: Steam library and OMSI root discovery split out of opts-game (docs/dev/crate-split-steam.md)
 opts-vdf 152  # new 2026-11-23: the KeyValues parser split out of opts-game (docs/dev/crate-split-game.md)
 opts-wav 207  # new 2026-11-23: the RIFF/WAVE decoder split out of opts-omsi (docs/dev/crate-split-weather.md)

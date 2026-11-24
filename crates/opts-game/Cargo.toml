@@ -31,6 +31,7 @@ opts-logging = { workspace = true }
 opts-steam = { workspace = true }
 opts-map-advice = { workspace = true }
 opts-theme-files = { workspace = true }
+opts-exhaust = { workspace = true }
 
 # Bevy Engine
 bevy = { workspace = true }

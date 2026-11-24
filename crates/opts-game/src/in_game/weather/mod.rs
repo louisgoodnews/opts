@@ -8,9 +8,11 @@ use bevy::prelude::*;
 use opts_bevy::{EnvironmentSet, WeatherCatalogue, WeatherEffects};
 
 use crate::app_state::AppState;
+use crate::settings::GameSettings;
+use crate::settings_registry::lighting::{exhaust_cap_of, exhaust_on_of};
 
 pub mod clouds;
-pub mod exhaust;
+pub use opts_exhaust as exhaust;
 pub mod fog;
 pub mod grip;
 pub mod precip;
@@ -60,6 +62,13 @@ pub fn refresh_weather_catalogue(
     }
 }
 
+/// Copies the exhaust settings into the exhaust crate each frame (they are read from the settings
+/// registry, which lives in the game).
+fn sync_exhaust_settings(settings: Res<GameSettings>, mut out: ResMut<exhaust::ExhaustSettings>) {
+    out.on = exhaust_on_of(&settings);
+    out.cap = exhaust_cap_of(&settings);
+}
+
 /// Registers the weather effects of a drive.
 #[derive(Default)]
 pub struct WeatherPlugin;
@@ -74,7 +83,12 @@ impl Plugin for WeatherPlugin {
             .init_resource::<precip::PrecipState>()
             .init_resource::<puddles::PuddleState>()
             .init_resource::<exhaust::ExhaustState>()
+            .init_resource::<exhaust::ExhaustSettings>()
             .add_systems(Update, refresh_weather_catalogue.before(EnvironmentSet))
+            .add_systems(
+                Update,
+                sync_exhaust_settings.before(exhaust::update_exhaust),
+            )
             .add_systems(Update, exhaust::update_exhaust.after(EnvironmentSet))
             .add_systems(
                 Update,

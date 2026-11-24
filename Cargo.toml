@@ -30,6 +30,7 @@ members = [
     "crates/opts-collision",
     "crates/opts-core",
     "crates/opts-debounce",
+    "crates/opts-exhaust",
     "crates/opts-game",
     "crates/opts-hardware",
     "crates/opts-importer",
@@ -86,6 +87,7 @@ opts-vdf = { path = "crates/opts-vdf" }
 opts-theme-files = { path = "crates/opts-theme-files" }
 opts-steam = { path = "crates/opts-steam" }
 opts-wav = { path = "crates/opts-wav" }
+opts-exhaust = { path = "crates/opts-exhaust" }
 opts-gui = { path = "crates/opts-gui" }
 opts-map-advice = { path = "crates/opts-map-advice" }
 opts-logging = { path = "crates/opts-logging" }

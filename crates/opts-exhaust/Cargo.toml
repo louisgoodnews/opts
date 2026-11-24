@@ -1,0 +1,17 @@
+[package]
+name = "opts-exhaust"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Engine exhaust plumes of the vehicles nearest the camera (M-0117): puff emission, outlets and the distance fade."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-bevy = { workspace = true }
+opts-sim = { workspace = true }
+bevy = { workspace = true }
