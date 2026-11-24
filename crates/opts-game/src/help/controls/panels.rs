@@ -123,7 +123,7 @@ pub(super) const MENUS_GROUP: Group = (
         ),
         rebindable(
             &["developer_panel", "developer_panel_detail"],
-            "F10",
+            "F10 / Shift+F10",
             &[KeyCode::F10],
             keys::HELP_KEY_DEV,
             DEV,

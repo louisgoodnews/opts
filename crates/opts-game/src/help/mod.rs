@@ -5,7 +5,7 @@
 //! unchanged.
 
 mod about;
-mod controls;
+pub mod controls;
 mod overlay;
 mod page;
 mod params;
