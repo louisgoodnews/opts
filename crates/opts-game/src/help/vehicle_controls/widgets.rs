@@ -41,6 +41,8 @@ pub fn chip(
         .spawn((
             Node {
                 width,
+                // A chip keeps its width when its row is too narrow: the description shrinks instead.
+                flex_shrink: 0.0,
                 padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
                 ..default()
             },
@@ -51,6 +53,8 @@ pub fn chip(
         .with_children(|c| {
             let mut t = c.spawn((
                 Text::new(text),
+                // One line: a long label overflows the chip instead of wrapping inside it.
+                TextLayout::new(Justify::Left, LineBreak::NoWrap),
                 TextColor::default(),
                 TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::OnSurface),

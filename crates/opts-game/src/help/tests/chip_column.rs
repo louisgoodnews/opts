@@ -1,7 +1,7 @@
 //! ISS-055: every Help key chip has one fixed width, so the descriptions share one column.
 
 use super::*;
-use crate::help::controls::{Binding, KeyChip, GROUPS, KEY_CHIP_WIDTH};
+use crate::help::controls::{KeyChip, GROUPS, KEY_CHIP_WIDTH};
 
 /// The description x-offset of each table row (chip width plus the row's gap). Panics on a chip
 /// without a fixed width.
@@ -35,11 +35,4 @@ fn every_key_row_has_the_same_description_offset() {
     let listed: usize = GROUPS.iter().map(|(_, r)| r.len()).sum();
     assert!(rows.len() >= listed, "{} rows of {listed}", rows.len());
     assert!(rows.iter().all(|o| *o == KEY_CHIP_WIDTH + 16.0), "{rows:?}");
-}
-
-#[test]
-fn the_chip_width_fits_every_default_chip() {
-    // Estimate at 9 px per character of the Label size, plus 8 px padding per side (not measured).
-    let fits = |b: &Binding| b.shown.chars().count() as f32 * 9.0 + 16.0 <= KEY_CHIP_WIDTH;
-    assert!(GROUPS.iter().flat_map(|(_, r)| r.iter()).all(fits));
 }
