@@ -1,6 +1,6 @@
 //! Format parser implementations for OMSI file formats.
 
-pub mod chrono;
+pub use opts_omsi_map::formats::chrono;
 pub use opts_omsi_text::formats::constfile;
 pub use opts_omsi_text::formats::cti;
 pub use opts_omsi_text::formats::engine_config;
@@ -9,9 +9,9 @@ pub use opts_omsi_text::formats::envir;
 pub mod hof {
     pub use crate::formats::vehicles::hof::*;
 }
-pub use opts_omsi_text::formats::humans;
-pub mod map;
 pub use opts_omsi_binary::formats::o3d;
+pub use opts_omsi_map::formats::map;
+pub use opts_omsi_text::formats::humans;
 pub use opts_omsi_text::formats::money;
 pub use opts_omsi_text::formats::oft;
 pub use opts_omsi_text::formats::org;

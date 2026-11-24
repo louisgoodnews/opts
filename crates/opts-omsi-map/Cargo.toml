@@ -1,0 +1,18 @@
+[package]
+name = "opts-omsi-map"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OMSI 2 map readers and writers (global.cfg, tile_*.map, .terrain, .water, OSN, chrono): the map manifest, tiles and terrain grids."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+glam = { workspace = true }
+thiserror = { workspace = true }
+opts-types = { workspace = true }
+opts-omsi-text = { workspace = true }

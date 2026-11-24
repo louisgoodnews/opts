@@ -5552,6 +5552,7 @@ dependencies = [
  "glam",
  "image",
  "opts-omsi-binary",
+ "opts-omsi-map",
  "opts-omsi-text",
  "opts-omsi-vehicles",
  "opts-types",
@@ -5570,6 +5571,16 @@ dependencies = [
  "opts-omsi-text",
  "thiserror 1.0.69",
  "tracing",
+]
+
+[[package]]
+name = "opts-omsi-map"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "opts-omsi-text",
+ "opts-types",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

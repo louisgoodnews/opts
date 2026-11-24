@@ -32,6 +32,7 @@ graph TD
         opts_omsi["opts-omsi<br/>• OMSI text format parsers (.sco, .sli, .bus, .cfg)<br/>• Binary mesh parsers (.o3d, .x)<br/>• Map tiles, paths, transit graph models<br/>• Leaf adapter · Zero Bevy · Zero File I/O"]:::domain
         opts_omsi_binary["opts-omsi-binary<br/>• OMSI binary mesh readers: .o3d and .x<br/>• Parsers over byte slices<br/>• No Bevy · Zero File I/O"]:::domain
         opts_omsi_vehicles["opts-omsi-vehicles<br/>• OMSI vehicle readers: .bus, model.cfg, paths.cfg, .hof<br/>• Setvar catalogue and light reader<br/>• No Bevy · Zero File I/O"]:::domain
+        opts_omsi_map["opts-omsi-map<br/>• OMSI map readers: global.cfg, tiles, terrain, water<br/>• Chronology overlay and map writers<br/>• No Bevy · Zero File I/O"]:::domain
         opts_omsi_text["opts-omsi-text<br/>• OMSI text readers: keyword blocks, .cfg, .cti, .oft, .org<br/>• Timetables, weather, sound lists<br/>• No Bevy · Zero File I/O"]:::domain
         opts_wav["opts-wav<br/>• RIFF/WAVE decoder (PCM 8/16/24, float 32)<br/>• Samples to interleaved f32<br/>• No dependencies · Zero Bevy"]:::domain
         opts_vdf["opts-vdf<br/>• Valve KeyValues (VDF) parser<br/>• Steam library and app manifest text<br/>• No dependencies · Zero Bevy"]:::domain
@@ -100,11 +101,14 @@ graph TD
     opts_importer --> opts_omsi
     opts_model --> opts_types
     opts_omsi --> opts_omsi_binary
+    opts_omsi --> opts_omsi_map
     opts_omsi --> opts_omsi_text
     opts_omsi --> opts_omsi_vehicles
     opts_omsi --> opts_types
     opts_omsi --> opts_wav
     opts_omsi_binary --> opts_omsi_text
+    opts_omsi_map --> opts_omsi_text
+    opts_omsi_map --> opts_types
     opts_omsi_vehicles --> opts_omsi_text
     opts_sim --> opts_core
     opts_steam --> opts_vdf
@@ -125,12 +129,13 @@ graph TD
 | **`opts-logging`** | L0 | Structured diagnostics, subsystem log files, rotation, panic hook | *None* | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-cli`** | L0 | Control-protocol types and the command-line client that remote-controls a running game | *None* | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-collision`** | L0 | Planar oriented-box collision: separating-axis contact, velocity response and a spatial grid | *None* | `opts-game` | Pure Rust |
-| **`opts-types`** | L1 | Shared geometry and tile-grid maths both the legacy readers and the native model need ([ADR-0014](../adr/0014-data-model-separation.md)) | *None* | `opts-model`, `opts-omsi` | Pure Rust |
+| **`opts-types`** | L1 | Shared geometry and tile-grid maths both the legacy readers and the native model need ([ADR-0014](../adr/0014-data-model-separation.md)) | *None* | `opts-model`, `opts-omsi`, `opts-omsi-map` | Pure Rust |
 | **`opts-l10n`** | L1 | Localisation without the engine: Fluent-subset parser, language packs, checks, JSON interchange | *None* | `opts-core`, `opts-game`, `opts-gui`, `opts-tools` | Pure Rust |
-| **`opts-omsi`** | L1 | The legacy OMSI readers (`.bus`, `.sco`, `.sli`, `.map`, `.o3d`, `.x`, ...) and the OMSI-shaped data they fill: a leaf adapter | `opts-omsi-binary`, `opts-omsi-text`, `opts-omsi-vehicles`, `opts-types`, `opts-wav` | `opts-core`, `opts-importer` | Pure Rust |
+| **`opts-omsi`** | L1 | The legacy OMSI readers (`.bus`, `.sco`, `.sli`, `.map`, `.o3d`, `.x`, ...) and the OMSI-shaped data they fill: a leaf adapter | `opts-omsi-binary`, `opts-omsi-map`, `opts-omsi-text`, `opts-omsi-vehicles`, `opts-types`, `opts-wav` | `opts-core`, `opts-importer` | Pure Rust |
 | **`opts-omsi-binary`** | L1 | OMSI binary mesh readers (`.o3d`, `.x`) split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-text` | `opts-omsi` | Pure Rust |
 | **`opts-omsi-vehicles`** | L1 | OMSI vehicle readers (`.bus`, `model.cfg`, `paths.cfg`, `.hof`, script textures), the setvar catalogue and the `.sco` light reader, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-text` | `opts-omsi` | Pure Rust |
-| **`opts-omsi-text`** | L1 | OMSI text readers: the keyword-block scanner and the text-only parsers (`.cfg`, `.cti`, `.oft`, `.org`, timetables, weather, sound lists) split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | *None* | `opts-omsi`, `opts-omsi-binary`, `opts-omsi-vehicles` | Pure Rust |
+| **`opts-omsi-map`** | L1 | OMSI map readers and writers (`global.cfg`, `tile_*.map`, `.map.terrain`, `.water`, OSN times) and the `chrono` overlay, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-text`, `opts-types` | `opts-omsi` | Pure Rust |
+| **`opts-omsi-text`** | L1 | OMSI text readers: the keyword-block scanner and the text-only parsers (`.cfg`, `.cti`, `.oft`, `.org`, timetables, weather, sound lists) split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | *None* | `opts-omsi`, `opts-omsi-binary`, `opts-omsi-map`, `opts-omsi-vehicles` | Pure Rust |
 | **`opts-wav`** | L1 | RIFF/WAVE sound decoder (PCM 8/16/24 bit, IEEE float 32 bit) to interleaved `f32` samples (split out of `opts-omsi`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-omsi` | Pure Rust |
 | **`opts-vdf`** | L1 | Valve KeyValues (VDF) text parser for Steam library and app manifest files (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-game.md)) | *None* | `opts-steam` | Pure Rust |
 | **`opts-steam`** | L1 | Steam library and OMSI 2 install discovery: reads `libraryfolders.vdf` and the app manifests through `opts-vdf` (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-steam.md)) | `opts-vdf` | `opts-game` | Pure Rust |

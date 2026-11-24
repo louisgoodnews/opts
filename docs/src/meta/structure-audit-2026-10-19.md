@@ -89,7 +89,7 @@ Files above a size, counted two ways. The Phase 999 README counts **total** line
 | `crates/opts-game/src/settings_screen/tests.rs` | 911 | 995 | 36 | 48 | 0 | **over** |
 | `crates/opts-game/src/in_game/omsi_world/rail.rs` | 844 | 996 | 96 | 56 | 28 | **over** |
 | `crates/opts-game/src/control_drive.rs` | 831 | 904 | 27 | 46 | 36 | **over** |
-| `crates/opts-omsi/src/formats/map/tile.rs` | 814 | 1094 | 224 | 56 | 160 | **over** |
+| `crates/opts-omsi-map/src/formats/map/tile.rs` | 814 | 1094 | 224 | 56 | 160 | **over** |
 | `crates/opts-bevy/src/environment.rs` | 790 | 1014 | 137 | 87 | 311 | **over** |
 | `crates/opts-game/src/in_game/omsi_world/job.rs` | 777 | 935 | 91 | 67 | 14 | **over** |
 | `crates/opts-game/src/settings_registry/builtin.rs` | 774 | 811 | 13 | 24 | 0 | **over** |
@@ -99,7 +99,7 @@ Files above a size, counted two ways. The Phase 999 README counts **total** line
 | `crates/opts-game/src/in_game/loading_ui.rs` | 727 | 789 | 35 | 27 | 0 | **over** |
 | `crates/opts-tools/src/l10n.rs` | 697 | 758 | 29 | 32 | 125 | **over** |
 | `crates/opts-bevy/src/mesh.rs` | 690 | 865 | 118 | 57 | 137 | **over** |
-| `crates/opts-omsi/src/formats/chrono/entry.rs` | 690 | 836 | 88 | 58 | 185 | **over** |
+| `crates/opts-omsi-map/src/formats/chrono/entry.rs` | 690 | 836 | 88 | 58 | 185 | **over** |
 | `crates/opts-l10n/src/fluent.rs` | 680 | 777 | 61 | 36 | 72 | **over** |
 | `crates/opts-omsi/src/formats/vehicles/bus.rs` | 670 | 912 | 193 | 49 | 112 | **over** |
 | `crates/opts-gui/src/testing/rules.rs` | 665 | 765 | 71 | 29 | 0 | **over** |
@@ -107,7 +107,7 @@ Files above a size, counted two ways. The Phase 999 README counts **total** line
 | `crates/opts-bevy/src/mirrors.rs` | 657 | 821 | 126 | 38 | 0 | **over** |
 | `crates/opts-catalogue/src/extract.rs` | 655 | 747 | 58 | 34 | 118 | **over** |
 | `crates/opts-traffic/src/graph.rs` | 655 | 824 | 119 | 50 | 213 | **over** |
-| `crates/opts-omsi/src/formats/chrono/overlay.rs` | 634 | 729 | 64 | 31 | 163 | **over** |
+| `crates/opts-omsi-map/src/formats/chrono/overlay.rs` | 634 | 729 | 64 | 31 | 163 | **over** |
 | `crates/opts-bevy/src/host_callbacks.rs` | 633 | 850 | 115 | 102 | 191 | **over** |
 | `crates/opts-game/src/settings_registry/tests.rs` | 601 | 641 | 10 | 30 | 0 | **over** |
 | `crates/opts-bevy/src/light_cones/tests.rs` | 597 | 680 | 40 | 43 | 0 | **over** |
@@ -180,7 +180,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-bevy/src/model.rs` `o3d_parts_core` | 318 | 454-798 | o3d | **over 80** |
 | `crates/opts-game/src/in_game/omsi_world/tile.rs` `spawn_object_inner` | 307 | 262-591 | spawn | **over 80** |
 | `crates/opts-omsi/examples/setvar_census.rs` `main` | 306 | 120-438 | main | **over 80** |
-| `crates/opts-omsi/src/formats/map/tile.rs` `from_text` | 299 | 373-695 | from | **over 80** |
+| `crates/opts-omsi-map/src/formats/map/tile.rs` `from_text` | 299 | 373-695 | from | **over 80** |
 | `crates/opts-bevy/examples/lighting_bench.rs` `apply` | 291 | 787-1089 | apply | **over 80** |
 | `crates/opts-game/src/in_game/omsi_world/vehicle.rs` `load_segment_meshes_for` | 280 | 92-400 | load | **over 80** |
 | `crates/opts-game/src/in_game/vehicle_menu.rs` `menu_actions` | 267 | 342-612 | menu | **over 80** |
@@ -204,7 +204,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-traffic/src/lanechange.rs` `evaluate` | 186 | 176-370 | evaluate | **over 80** |
 | `crates/opts-game/src/hud/viewpoint.rs` `spawn_panel` | 183 | 131-313 | spawn | **over 80** |
 | `crates/opts-omsi/src/formats/scenery/sli.rs` `from_text` | 179 | 357-541 | from | **over 80** |
-| `crates/opts-omsi/src/formats/map/global.rs` `from_text` | 174 | 123-304 | from | **over 80** |
+| `crates/opts-omsi-map/src/formats/map/global.rs` `from_text` | 174 | 123-304 | from | **over 80** |
 | `crates/opts-omsi/examples/crossing_audit.rs` `main` | 173 | 24-199 | main | **over 80** |
 | `crates/opts-gui/src/components/combobox.rs` `populate_combobox_children` | 169 | 260-434 | populate | **over 80** |
 | `crates/opts-bevy/examples/load_bus.rs` `setup_scene` | 168 | 67-386 | setup | **over 80** |
@@ -224,7 +224,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-omsi/examples/consist_census.rs` `main` | 146 | 54-207 | main | **over 80** |
 | `crates/opts-omsi/examples/spline_audit.rs` `main` | 146 | 64-211 | main | **over 80** |
 | `crates/opts-game/src/in_game/formation_menu/actions.rs` `formation_actions` | 145 | 136-280 | formation | **over 80** |
-| `crates/opts-omsi/src/formats/chrono/overlay.rs` `from_text` | 145 | 111-259 | from | **over 80** |
+| `crates/opts-omsi-map/src/formats/chrono/overlay.rs` `from_text` | 145 | 111-259 | from | **over 80** |
 | `crates/opts-game/src/in_game/omsi_world/respawn.rs` `handle_vehicle_requests` | 144 | 181-327 | handle | **over 80** |
 | `crates/opts-bevy/src/scenery_runtime/maplights.rs` `map_light_pool_system` | 143 | 169-313 | map | **over 80** |
 | `crates/opts-game/src/hud/build.rs` `spawn_hud` | 143 | 34-185 | spawn | **over 80** |
@@ -411,9 +411,9 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-game/src/home/view.rs` `spawn_recents` | 77 | 291-367 | spawn | over 60 |
 | `crates/opts-gui/src/components/radio.rs` `spawn` | 77 | 102-187 | spawn | over 60 |
 | `crates/opts-gui/src/components/radio.rs` `spawn_child` | 77 | 190-275 | spawn | over 60 |
-| `crates/opts-omsi/src/formats/chrono/entry.rs` `walk` | 77 | 558-634 | walk | over 60 |
-| `crates/opts-omsi/src/formats/chrono/entry.rs` `scan_plan_data_files_and_switch` | 77 | 751-828 | scan | over 60 |
-| `crates/opts-omsi/src/formats/chrono/overlay.rs` `apply_overlay` | 77 | 278-355 | apply | over 60 |
+| `crates/opts-omsi-map/src/formats/chrono/entry.rs` `walk` | 77 | 558-634 | walk | over 60 |
+| `crates/opts-omsi-map/src/formats/chrono/entry.rs` `scan_plan_data_files_and_switch` | 77 | 751-828 | scan | over 60 |
+| `crates/opts-omsi-map/src/formats/chrono/overlay.rs` `apply_overlay` | 77 | 278-355 | apply | over 60 |
 | `crates/opts-omsi/src/formats/x/lexer.rs` `tokenize` | 77 | 88-181 | tokenize | over 60 |
 | `crates/opts-types/src/grid.rs` `a_synthetic_mercator_grid_is_selected_and_its_seams_close` | 77 | 474-553 | a | over 60 |
 | `crates/opts-bevy/examples/lighting_bench.rs` `main` | 76 | 253-329 | main | over 60 |
@@ -467,7 +467,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-catalogue/src/scan.rs` `walk` | 70 | 93-165 | walk | over 60 |
 | `crates/opts-game/src/control_trace.rs` `parse_filters` | 70 | 143-212 | parse | over 60 |
 | `crates/opts-game/src/new_game_screen/mod.rs` `build` | 70 | 63-135 | build | over 60 |
-| `crates/opts-omsi/src/formats/chrono/overlay.rs` `edit` | 70 | 371-440 | edit | over 60 |
+| `crates/opts-omsi-map/src/formats/chrono/overlay.rs` `edit` | 70 | 371-440 | edit | over 60 |
 | `crates/opts-benchmark/src/scenery/script_judge.rs` `consistency` | 69 | 307-376 | consistency | over 60 |
 | `crates/opts-benchmark/src/scenery/worker.rs` `new` | 69 | 80-151 | new | over 60 |
 | `crates/opts-bevy/src/scenery_runtime/effects.rs` `apply` | 69 | 158-227 | apply | over 60 |
@@ -527,7 +527,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-game/src/map_profiles/modal.rs` `actions` | 64 | 388-451 | actions | over 60 |
 | `crates/opts-game/tests/language_packs.rs` `the_control_methods_list_set_reload_and_report` | 64 | 266-337 | the | over 60 |
 | `crates/opts-gui/src/patterns/master_detail_view.rs` `render` | 64 | 71-136 | render | over 60 |
-| `crates/opts-omsi/src/formats/chrono/overlay.rs` `remove_dead` | 64 | 471-534 | remove | over 60 |
+| `crates/opts-omsi-map/src/formats/chrono/overlay.rs` `remove_dead` | 64 | 471-534 | remove | over 60 |
 | `crates/opts-omsi/src/formats/text.rs` `decode_bytes` | 64 | 15-86 | decode | over 60 |
 | `crates/opts-sim/src/vehicle/spec.rs` `from_manifest` | 64 | 119-191 | from | over 60 |
 | `crates/opts-benchmark/src/scenery/verdict.rs` `geometry_rules` | 63 | 185-252 | geometry | over 60 |
@@ -551,7 +551,7 @@ The *concern* is the first word of the function's name: a quick way to see what 
 | `crates/opts-game/src/shell/mod.rs` `build` | 62 | 85-150 | build | over 60 |
 | `crates/opts-game/tests/control_protocol.rs` `triggers_raise_script_events_with_aliases_holds_and_gates` | 62 | 463-529 | triggers | over 60 |
 | `crates/opts-gui/src/testing/rules.rs` `keyboard_traversal` | 62 | 574-638 | keyboard | over 60 |
-| `crates/opts-omsi/src/formats/map/terrain.rs` `parse` | 62 | 32-97 | parse | over 60 |
+| `crates/opts-omsi-map/src/formats/map/terrain.rs` `parse` | 62 | 32-97 | parse | over 60 |
 | `crates/opts-omsi/tests/ai_lists_corpus.rs` `every_ai_list_of_the_install_parses` | 62 | 26-89 | every | over 60 |
 | `crates/opts-tools/src/main.rs` `image_metrics` | 62 | 105-166 | image | over 60 |
 | `crates/opts-bevy/src/glass.rs` `sync_glass` | 61 | 353-415 | sync | over 60 |

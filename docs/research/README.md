@@ -38,7 +38,7 @@ These files answer those questions as proposals for the owner.
 | Fact | Evidence |
 | :--- | :--- |
 | No editor crate exists (`opts-edit`, `opts-editor` are specified only) | `crates/` listing; [architecture](../src/editor/architecture.md) |
-| Map writers exist for `global.cfg` and tile `[object]` records only | `crates/opts-omsi/src/formats/map/write/manifest.rs`, `write/tile.rs` |
+| Map writers exist for `global.cfg` and tile `[object]` records only | `crates/opts-omsi-map/src/formats/map/write/manifest.rs`, `write/tile.rs` |
 | No timetable writer exists; timetables are read for the route layer | `crates/opts-bevy/src/route.rs`, `host_callbacks/route_callbacks/timetable.rs`; [M-0099](../src/roadmap/phase-4/M-0099.md) done |
 | No `opts-script_engine` crate; the VM lives in `opts-sim` | `crates/` listing; [M-0092](../src/roadmap/phase-6/M-0092.md) not started |
 | Hot reload does not cover `.osc` files | [ADR-0007](../src/adr/0007-hot-reload.md) scope; no `osc` hit in `crates/opts-bevy/src/hot_reload` |

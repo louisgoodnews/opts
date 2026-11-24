@@ -28,7 +28,7 @@ Limits: the scan is textual. The `//` cut is naive, test code and examples are i
   - 32 and 31 lines: `crates/opts-gui/src/components/radio/child.rs:51` = `radio/spawn.rs:51`, and `checkbox/child.rs:48` = `checkbox/spawn.rs:48`. The two component families appear to repeat the same child-spawn code (read by name; not yet compared line by line).
   - 26 lines: `crates/opts-bevy/src/material.rs:67` = `material.rs:124` (within one file)
 - OMSI reading (`opts-omsi`): 43 of the runs involve `opts-omsi`. The largest:
-  - 25 lines: `crates/opts-omsi/src/formats/map/global/parse/scalars.rs:5` = `formats/map/tile/scan.rs:95`
+  - 25 lines: `crates/opts-omsi-map/src/formats/map/global/parse/scalars.rs:5` = `formats/map/tile/scan.rs:95`
   - 22 lines: `crates/opts-omsi/src/formats/vehicles/hof/parse/entries.rs:24` = `entries.rs:61` (within one file)
   - 17 lines: `crates/opts-omsi/src/formats/ticketpack/model.rs:5` = `crates/opts-sim/src/passengers/spec.rs:77`
   - 15 and 13 lines: the error enums of `money/error.rs:14` = `vehicles/error.rs:38`, and `map/error.rs:49` = `scenery/error.rs:41`

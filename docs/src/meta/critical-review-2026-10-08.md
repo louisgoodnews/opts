@@ -76,8 +76,8 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Location:**
   - [`crates/opts-omsi-vehicles/src/formats/vehicles/bus.rs:77-270`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/bus.rs#L77-L270) (193 lines)
   - [`crates/opts-omsi/src/formats/scenery/sli.rs:188-372`](../../../crates/opts-omsi/src/formats/scenery/sli.rs#L188-L372) (184 lines)
-  - [`crates/opts-omsi/src/formats/map/global.rs:77-253`](../../../crates/opts-omsi/src/formats/map/global.rs#L77-L253) (176 lines)
-  - [`crates/opts-omsi/src/formats/map/tile.rs:160-328`](../../../crates/opts-omsi/src/formats/map/tile.rs#L160-L328) (168 lines)
+  - [`crates/opts-omsi-map/src/formats/map/global.rs:77-253`](../../../crates/opts-omsi-map/src/formats/map/global.rs#L77-L253) (176 lines)
+  - [`crates/opts-omsi-map/src/formats/map/tile.rs:160-328`](../../../crates/opts-omsi-map/src/formats/map/tile.rs#L160-L328) (168 lines)
   - [`crates/opts-omsi-vehicles/src/formats/vehicles/model/parse.rs:114-254`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/model/parse.rs#L114-L254) (140 lines)
   - [`crates/opts-omsi-vehicles/src/formats/vehicles/paths.rs:59-194`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/paths.rs#L59-L194) (135 lines)
 - **Description:** Multiple parsing functions across `opts-core` exceed the 80-line clean-code threshold, implementing large inline loops and state accumulators.

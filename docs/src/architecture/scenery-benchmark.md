@@ -24,7 +24,7 @@ The benchmark checks **self-consistency**: OPTS's renderer against OPTS's own re
 - A tile without `tile_X_Y.map.terrain` loads with a warning, and object `z` is absolute (`tile_ground.rs:105-107`). No ground mesh is built, so the background is empty.
 - `.sco`, `.sli` and mesh paths resolve against the OMSI root with case-insensitive lookup (`crates/opts-bevy/src/install.rs:153-179`); map files resolve against the map folder. **A map folder outside the OMSI root works** when the root is given explicitly. Verified 2026-10-11: a generated folder in a temp directory with `global.cfg`, `tile_0_0.map`, an entry anchor `Sceneryobjects\Generic\entrypoint_bus.sco` (it is `[onlyeditor]`, so it is not rendered) and one object loaded with `opts-game --autostart --map-path <tmp> --omsi-path <root>`. **No overlay root is needed**, and the installation is never written to.
 - `opts-core` has **no writers** for `global.cfg` or tile `.map` files: `formats/map/{global,tile,terrain}.rs` only parse. The benchmark writes the text itself (see [Map generation](#map-generation)).
-- Tile size falls back to 300 m when fewer than 5 cross-tile spline pairs exist (`crates/opts-omsi/src/formats/map/pitch.rs:13,37`), which is always the case here.
+- Tile size falls back to 300 m when fewer than 5 cross-tile spline pairs exist (`crates/opts-omsi-map/src/formats/map/pitch.rs:13,37`), which is always the case here.
 - The text scanner drops blank lines (`crates/opts-omsi/src/formats/text.rs:125-151`), so an empty string variable shifts the ones after it. Generated tiles never write empty strings.
 
 ### Object spawning (question B)
