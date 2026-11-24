@@ -13,6 +13,16 @@ const AVERAGE_KG: f32 = 75.0;
 /// People in the loaded bus (the rated capacity is not in the files, see the card's audit).
 const LOADED_PEOPLE: usize = 80;
 const G: f32 = 9.81;
+/// M-0124 criterion 3 (owner decision 2026-11-24): the loaded stop from 50 km/h is at least this
+/// much longer than the empty stop.
+const MIN_LONGER_STOP_FRACTION: f32 = 0.20;
+/// Recorded baseline (owner decision 2026-11-24): the empty bus's stop from 50 km/h, measured on
+/// 2026-11-24 with the brake parameters of `BRAKE_FACTOR`, the axles' rated force and
+/// `ROAD_FRICTION` (no passengers, the setting off). The empty stop must stay within 1 % of it.
+const EMPTY_STOP_50_KMH_BASELINE_M: f32 = 13.7742;
+/// Intended behaviour (owner decision 2026-11-24): at 100 km/h the loaded bus brakes about 19 %
+/// softer than the empty bus, because its rear axle is held at the tyre limit, not the brake cap.
+const LOADED_SOFTER_FRACTION: f32 = 0.19;
 
 fn bus(people: usize) -> VehicleSimulation {
     let mut sim = VehicleSimulation::new_standard_bus(CURB_KG, 5.85);
@@ -103,7 +113,7 @@ fn a_loaded_bus_stops_longer_from_fifty_but_by_less_than_its_mass_ratio() {
     let (d_l, t_l) = stop(&mut loaded);
     let mass_ratio = expected_mass(LOADED_PEOPLE) / expected_mass(0);
     eprintln!(
-        "50 km/h stop: empty {d_e:.2} m in {t_e:.2} s; loaded {d_l:.2} m in {t_l:.2} s; ratio {:.4}; mass ratio {mass_ratio:.4}",
+        "50 km/h stop: empty {d_e:.4} m in {t_e:.2} s; loaded {d_l:.4} m in {t_l:.2} s; ratio {:.4}; mass ratio {mass_ratio:.4}",
         d_l / d_e
     );
     assert!(d_l > d_e, "loaded {d_l:.2} m, empty {d_e:.2} m");
@@ -111,6 +121,45 @@ fn a_loaded_bus_stops_longer_from_fifty_but_by_less_than_its_mass_ratio() {
         d_l <= mass_ratio * d_e,
         "ratio {:.4} above the mass ratio {mass_ratio:.4}",
         d_l / d_e
+    );
+    // Criterion 3 thresholds (owner decision 2026-11-24).
+    let longer = d_l / d_e - 1.0;
+    assert!(
+        longer >= MIN_LONGER_STOP_FRACTION,
+        "loaded stop {:.1} % longer, threshold {:.0} %",
+        100.0 * longer,
+        100.0 * MIN_LONGER_STOP_FRACTION
+    );
+    // Recorded empty baseline (within 1 %).
+    assert!(
+        (d_e - EMPTY_STOP_50_KMH_BASELINE_M).abs() <= 0.01 * EMPTY_STOP_50_KMH_BASELINE_M,
+        "empty stop {d_e:.4} m vs recorded baseline {EMPTY_STOP_50_KMH_BASELINE_M} m"
+    );
+}
+
+#[test]
+fn the_loaded_bus_brakes_softer_at_100_kmh_because_its_rear_axle_is_tyre_limited() {
+    // Intended (owner decision 2026-11-24, card note): the loaded rear axle is held at its tyre
+    // limit mu * load_rear, below its brake cap, so the loaded bus decelerates about 19 % less
+    // than the empty one. Pinned so that a change to this behaviour is a visible decision.
+    let mut empty = bus(0);
+    let mut loaded = bus(LOADED_PEOPLE);
+    let (dt_e, loads_e, v0_e, v1_e) = decel_from(&mut empty, 100.0);
+    let (dt_l, loads_l, v0_l, v1_l) = decel_from(&mut loaded, 100.0);
+    let decel_e = (v0_e - v1_e) / dt_e;
+    let decel_l = (v0_l - v1_l) / dt_l;
+    let cap_rear = BRAKE_FACTOR * empty.axles[1].config.max_force_n;
+    let rear_force_l = loaded.road_friction * loads_l[1];
+    eprintln!(
+        "100 km/h: empty decel {decel_e:.4} m/s2 (rear load {:.0} N), loaded decel {decel_l:.4} m/s2 (rear load {:.0} N, rear tyre limit {rear_force_l:.0} N, rear cap {cap_rear:.0} N)",
+        loads_e[1], loads_l[1]
+    );
+    // The loaded rear axle is tyre-limited: below its cap, and at mu times its load.
+    assert!(rear_force_l < cap_rear, "loaded rear axle reaches its cap");
+    let softer = 1.0 - decel_l / decel_e;
+    assert!(
+        (softer - LOADED_SOFTER_FRACTION).abs() <= 0.01,
+        "loaded decel {softer:.4} softer than empty, pinned {LOADED_SOFTER_FRACTION}"
     );
 }
 

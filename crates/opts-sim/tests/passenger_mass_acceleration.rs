@@ -12,6 +12,12 @@ const AVERAGE_KG: f32 = 75.0;
 /// People in the loaded bus (the rated capacity is not in the files, see the card's audit).
 const LOADED_PEOPLE: usize = 80;
 const G: f32 = 9.81;
+/// M-0124 criterion 2 (owner decision 2026-11-24): the loaded bus covers at least this fraction
+/// less ground than the empty bus in 10 s at full throttle.
+const MIN_LESS_DISTANCE_FRACTION: f32 = 0.25;
+/// M-0124 criterion 2 (owner decision 2026-11-24): tolerance of the loaded/empty distance ratio
+/// against the mass-ratio prediction.
+const MASS_RATIO_TOLERANCE: f32 = 0.15;
 
 fn bus(people: usize) -> VehicleSimulation {
     let mut sim = VehicleSimulation::new_standard_bus(CURB_KG, 5.85);
@@ -121,4 +127,28 @@ fn a_loaded_bus_covers_less_ground_in_ten_seconds_as_the_mass_model_gives() {
     );
     assert!((v_e - rv_e).abs() <= 0.01 * rv_e && (v_l - rv_l).abs() <= 0.01 * rv_l);
     assert!(d_l < d_e, "loaded {d_l:.2} m, empty {d_e:.2} m");
+
+    // Owner-set thresholds (2026-11-24): the loaded bus covers at least 25 % less ground in 10 s,
+    // and its distance ratio matches the mass-ratio prediction within 15 %. At a constant force
+    // over a fixed time the distance scales with 1/m, so the predicted ratio is m_empty / m_loaded.
+    let shorter = 1.0 - d_l / d_e;
+    assert!(
+        shorter >= MIN_LESS_DISTANCE_FRACTION,
+        "loaded covers {:.1} % less ground, threshold {:.0} %",
+        100.0 * shorter,
+        100.0 * MIN_LESS_DISTANCE_FRACTION
+    );
+    let predicted_ratio = expected_mass(0) / expected_mass(LOADED_PEOPLE);
+    let ratio = d_l / d_e;
+    let deviation = (ratio / predicted_ratio - 1.0).abs();
+    eprintln!(
+        "criterion 2: distance ratio {ratio:.4}, mass-ratio prediction {predicted_ratio:.4}, deviation {:.2} %",
+        100.0 * deviation
+    );
+    assert!(
+        deviation <= MASS_RATIO_TOLERANCE,
+        "distance ratio {ratio:.4} vs prediction {predicted_ratio:.4}: deviation {:.1} %, tolerance {:.0} %",
+        100.0 * deviation,
+        100.0 * MASS_RATIO_TOLERANCE
+    );
 }
