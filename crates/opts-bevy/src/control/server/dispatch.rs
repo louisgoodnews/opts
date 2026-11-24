@@ -79,7 +79,7 @@ pub(super) fn handle_single(
         return id.map(|_| r);
     }
     let reply_id = id.clone().unwrap_or(Value::Null);
-    if let Some(e) = gate(&req, token, authed, limiter) {
+    if let Some(e) = gate(&req, authed, limiter, caller) {
         return id.map(|_| Response::err(reply_id, e));
     }
     match submit(req, tx) {
@@ -126,7 +126,7 @@ pub(super) fn handle_batch(
             } else {
                 Slot::Silent
             });
-        } else if let Some(e) = gate(&req, token, authed, limiter) {
+        } else if let Some(e) = gate(&req, authed, limiter, caller) {
             slots.push(if id.is_some() {
                 Slot::Done(Response::err(reply_id, e))
             } else {

@@ -19,20 +19,19 @@ pub(super) fn constant_time_eq(a: &str, b: &str) -> bool {
 
 pub(super) fn gate(
     req: &Request,
-    token: Option<&str>,
     authed: &mut bool,
     limiter: &mut Limiter,
+    caller: Caller<'_>,
 ) -> Option<RpcError> {
     if req.method == "auth" {
         return None;
     }
     if !*authed {
-        return Some(RpcError::new(
-            code::UNAUTHORIZED,
-            "send `auth` with the token first",
-        ));
+        #[rustfmt::skip]
+        tracing::debug!(target: "opts_bevy::control", method = %req.method, peer = %caller.addr, code = code::UNAUTHORIZED, "request refused: not authenticated");
+        let e = RpcError::new(code::UNAUTHORIZED, "send `auth` with the token first");
+        return Some(e);
     }
-    let _ = token;
     if limiter.allow() {
         None
     } else {
