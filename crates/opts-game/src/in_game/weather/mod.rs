@@ -5,9 +5,10 @@
 //! `opts_bevy::weather`. Design and budget: `docs/src/architecture/weather.md`.
 
 use bevy::prelude::*;
-use opts_bevy::{EnvironmentSet, WeatherCatalogue, WeatherEffects};
+use opts_bevy::{ArticulatedChain, EnvironmentSet, WeatherCatalogue, WeatherEffects};
 
 use crate::app_state::AppState;
+use crate::in_game::omsi_world::VehicleComposition;
 use crate::settings::GameSettings;
 use crate::settings_registry::lighting::{exhaust_cap_of, exhaust_on_of};
 
@@ -62,11 +63,43 @@ pub fn refresh_weather_catalogue(
     }
 }
 
+/// The vehicles with an articulated chain or a rail consist, with each one's chain and consist.
+type RearVehicles<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        Option<&'static ArticulatedChain>,
+        Option<&'static VehicleComposition>,
+    ),
+    Or<(With<ArticulatedChain>, With<VehicleComposition>)>,
+>;
+
 /// Copies the exhaust settings into the exhaust crate each frame (they are read from the settings
-/// registry, which lives in the game).
-fn sync_exhaust_settings(settings: Res<GameSettings>, mut out: ResMut<exhaust::ExhaustSettings>) {
+/// registry, which lives in the game), and the units behind each vehicle with a chain or a consist.
+fn sync_exhaust(
+    settings: Res<GameSettings>,
+    mut out: ResMut<exhaust::ExhaustSettings>,
+    mut rear: ResMut<exhaust::RearUnits>,
+    vehicles: RearVehicles,
+) {
     out.on = exhaust_on_of(&settings);
     out.cap = exhaust_cap_of(&settings);
+    rear.0 = vehicles
+        .iter()
+        .map(|(e, chain, rail)| (e, behind(chain, rail)))
+        .collect();
+}
+
+/// The units behind a vehicle, front to rear: its articulated chain's segments, else a rail
+/// consist's followers (ISS-038). The exhaust crate takes the rear-most of them with an emitter.
+#[must_use]
+pub fn behind(chain: Option<&ArticulatedChain>, rail: Option<&VehicleComposition>) -> Vec<Entity> {
+    match (chain, rail) {
+        (Some(chain), _) => chain.segments.clone(),
+        (None, Some(rail)) => rail.followers.iter().map(|p| p.entity).collect(),
+        (None, None) => Vec::new(),
+    }
 }
 
 /// Registers the weather effects of a drive.
@@ -84,11 +117,9 @@ impl Plugin for WeatherPlugin {
             .init_resource::<puddles::PuddleState>()
             .init_resource::<exhaust::ExhaustState>()
             .init_resource::<exhaust::ExhaustSettings>()
+            .init_resource::<exhaust::RearUnits>()
             .add_systems(Update, refresh_weather_catalogue.before(EnvironmentSet))
-            .add_systems(
-                Update,
-                sync_exhaust_settings.before(exhaust::update_exhaust),
-            )
+            .add_systems(Update, sync_exhaust.before(exhaust::update_exhaust))
             .add_systems(Update, exhaust::update_exhaust.after(EnvironmentSet))
             .add_systems(
                 Update,

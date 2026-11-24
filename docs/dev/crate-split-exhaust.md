@@ -28,9 +28,19 @@ Measured: `opts-game` 90,797 before, 90,604 after the move and the bridge system
   stays in the game).
 - `opts_game::in_game::weather::exhaust` is re-exported as `pub use opts_exhaust as exhaust;`, so the
   paths used by the weather plugin keep working.
+- The rail rule (ISS-038, master `6fb458e7`) stays in opts-game, because `VehicleComposition` lives
+  there. `sync_exhaust` (in `in_game/weather/mod.rs`) fills the `RearUnits` resource each frame with
+  the units behind each vehicle that has a chain or a consist: `behind(chain, rail)` gives the chain's
+  segments, else the rail followers, front to rear. `opts-exhaust` takes the rear-most unit with an
+  emitter from that list (`select::emitters`, `outlet::chain_outlet`). It no longer reads
+  `ArticulatedChain` itself.
+- The rail-port budget room came from moving two inline unit tests to integration tests (they do not
+  count): `rail/composition.rs` to `crates/opts-game/tests/vehicle_composition.rs`, and
+  `in_game/weather/grip.rs` to `crates/opts-game/tests/road_grip.rs`.
 
 ## Gates
 
-- `scripts/structure_audit.py check`: no regressions; `opts-game` 90,604 within 90,604.
+- `scripts/structure_audit.py check`: no regressions; `opts-game` 90,578 within 90,578 (after the rail
+  port); `opts-exhaust` 333 within 333.
 - `scripts/crate_graph.py --check`: 28 crates, 0 differences (row, node and edges added).
 - `cargo test -p opts-exhaust`: 8 tests (3 nearest, 5 outlet).

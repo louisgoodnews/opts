@@ -56,6 +56,12 @@ impl Default for ExhaustSettings {
     }
 }
 
+/// The units behind each vehicle, front to rear, by its entity (its articulated chain's segments,
+/// else a rail consist's followers; ISS-038). The game fills it each frame; the outlet is the
+/// rear-most of them that has an emitter.
+#[derive(Resource, Default)]
+pub struct RearUnits(pub HashMap<Entity, Vec<Entity>>);
+
 /// Where a puff of age `age` is: it rises and drifts back with the wind direction `drift`.
 #[must_use]
 pub fn puff_position(puff: &Puff) -> Vec3 {

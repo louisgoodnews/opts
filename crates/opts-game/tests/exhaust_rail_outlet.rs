@@ -7,7 +7,8 @@ use bevy::ecs::world::World;
 use bevy::prelude::*;
 use opts_bevy::vehicle::ExhaustOutlet;
 use opts_game::in_game::omsi_world::{Part, VehicleComposition};
-use opts_game::in_game::weather::exhaust::{behind, chain_outlet, fallback_outlet_of, outlet_of};
+use opts_game::in_game::weather::behind;
+use opts_game::in_game::weather::exhaust::{chain_outlet, fallback_outlet_of, outlet_of};
 
 type Units = HashMap<Entity, (GlobalTransform, Option<ExhaustOutlet>)>;
 

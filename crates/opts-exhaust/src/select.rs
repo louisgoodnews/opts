@@ -3,11 +3,12 @@
 
 use bevy::prelude::*;
 use opts_bevy::vehicle::ExhaustOutlet;
-use opts_bevy::{ArticulatedChain, ArticulatedSegment, PlayerVehicle, VehicleController};
+use opts_bevy::{ArticulatedSegment, PlayerVehicle, VehicleController};
 use opts_sim::exhaust::puff_rate_per_s;
 
 use crate::nearest::{fade_of, nearest, AI_LOAD, NEAREST_N};
 use crate::outlet::chain_outlet;
+use crate::RearUnits;
 
 /// A vehicle that can put out puffs: the player's, or one with an outlet. Trailer segments are not
 /// vehicles of their own (their consist's root emits for them).
@@ -41,7 +42,7 @@ pub(crate) fn emitters(
     eye: Vec3,
     temp_c: f32,
     vehicles: &Vehicles,
-    chains: &Query<&ArticulatedChain>,
+    rear: &RearUnits,
     units: &Query<(&GlobalTransform, Option<&ExhaustOutlet>)>,
 ) -> Vec<Emitter> {
     let mut player = None;
@@ -59,15 +60,10 @@ pub(crate) fn emitters(
         .filter_map(|(entity, distance)| {
             let (_, tf, data, controller, _) = vehicles.get(entity).ok()?;
             let load = controller.map_or(AI_LOAD, |c| c.inputs().throttle());
-            let trailers = chains
-                .get(entity)
-                .ok()
-                .into_iter()
-                .flat_map(|c| c.segments.iter())
-                .filter_map(|&s| units.get(s).ok());
+            let behind = rear.0.get(&entity).into_iter().flatten();
             Some(Emitter {
                 entity,
-                outlet: chain_outlet(tf, data, trailers),
+                outlet: chain_outlet(tf, data, behind.filter_map(|&s| units.get(s).ok())),
                 rate: puff_rate_per_s(temp_c, load) * fade_of(distance),
             })
         })

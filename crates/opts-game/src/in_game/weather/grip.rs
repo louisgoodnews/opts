@@ -66,30 +66,3 @@ pub fn drive_road_grip(
         controller.sim.road_friction = next_road_friction(mu, wetness.0, snow_road, dt);
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use opts_sim::surface_grip::{MU_SNOW, MU_WET};
-
-    #[test]
-    fn the_target_follows_wetness_and_snow_on_the_road() {
-        assert_eq!(grip_target(0.0, 0.0), ROAD_FRICTION);
-        assert!((grip_target(1.0, 0.0) - MU_WET).abs() < 1e-6);
-        assert!((grip_target(1.0, 1.0) - MU_SNOW).abs() < 1e-6);
-    }
-
-    #[test]
-    fn the_friction_follows_a_change_without_a_step() {
-        let dt = 1.0 / 60.0;
-        let mut mu = ROAD_FRICTION;
-        let mut largest = 0.0_f32;
-        for _ in 0..(2.0 / dt) as usize {
-            let next = next_road_friction(mu, 1.0, 1.0, dt);
-            largest = largest.max((next - mu).abs());
-            mu = next;
-        }
-        assert!((mu - MU_SNOW).abs() < 1e-3, "{mu} after 2 s");
-        assert!(largest <= surface_grip::MAX_RATE_PER_S * dt + 1e-6);
-    }
-}

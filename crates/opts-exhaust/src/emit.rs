@@ -4,21 +4,23 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use opts_bevy::vehicle::ExhaustOutlet;
-use opts_bevy::{ArticulatedChain, MainCamera, SessionEnvironment};
+use opts_bevy::{MainCamera, SessionEnvironment};
 use opts_sim::exhaust::{puffs_to_spawn, PUFF_LIFETIME_S};
 
 use crate::select::{emitters, Vehicles};
-use crate::{puff_position, ExhaustSettings, ExhaustState, Puff, DRIFT_M_PER_S, PUFF_SIZE_M};
+use crate::{
+    puff_position, ExhaustSettings, ExhaustState, Puff, RearUnits, DRIFT_M_PER_S, PUFF_SIZE_M,
+};
 
 /// The read-only inputs of the exhaust: the frame time, the settings, the session weather, the
-/// camera and the articulated chains of the vehicles.
+/// camera and the units behind each vehicle.
 #[derive(SystemParam)]
 pub struct ExhaustInputs<'w, 's> {
     time: Res<'w, Time>,
     settings: Res<'w, ExhaustSettings>,
     env: Res<'w, SessionEnvironment>,
     cameras: Query<'w, 's, &'static GlobalTransform, With<MainCamera>>,
-    chains: Query<'w, 's, &'static ArticulatedChain>,
+    rear: Res<'w, RearUnits>,
 }
 
 /// The mesh and material stores the puffs are built from.
@@ -51,7 +53,7 @@ pub fn update_exhaust(
         camera.translation(),
         temp_c,
         &vehicles,
-        &inputs.chains,
+        &inputs.rear,
         &units,
     );
     state
