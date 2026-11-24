@@ -74,6 +74,14 @@ A work item may enter the **Done** column only when:
 8. Commit follows the `<type>(<scope>): <desc> (M-NNNN)` convention.
 9. If the work touched a format spec, the spec is updated with any
    new facts and its Open Questions table reflects resolved items.
+10. A fix has a test that **fails on the parent commit** of the fix
+    (ISS-022). The failure is recorded in the commit body or the work
+    item, with the assertion text. A green suite that does not reach the
+    fixed code is not evidence for the fix.
+11. A skipped gate or test (for example a pre-commit hook skipped with
+    `--no-verify` or a docs-only bypass) is logged in the commit body with
+    its reason, and the gates it skipped are run and recorded by hand
+    (ISS-023). Commits under `crates/` run the tests by default.
 
 ---
 
