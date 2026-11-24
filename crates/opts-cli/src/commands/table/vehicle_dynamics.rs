@@ -19,8 +19,8 @@ pub(super) const PART: &[CommandSpec] = &[
         "level:f? refuel:b?",
     )
     .since("1.32")
-    .result("`{model, kind, capacity, content, level, mode, low, torque_factor}` (`{model: false}` without a fuel model)")
-    .doc("`level` is the share of the capacity (0 to 1, `-32602` outside it); `refuel: true` fills the store first. `mode` is the setting *Fuel and battery* (`off`, `realistic`, `accelerated`), `low` the low-level warning, `torque_factor` the share of the drive torque kept (0 for an empty diesel tank). `capacity` and `kind` are the model's assumptions (`docs/src/simulation/fuel-battery.md`), not OMSI values. `1001` without a player vehicle.")
+    .result("`{model, kind, capacity, content, level, mode, low, torque_factor}` (`{model: false}` without a fuel model), and `refused` (boolean) when `refuel` is sent")
+    .doc("`level` is the share of the capacity (0 to 1, `-32602` outside it); `refuel: true` fills the store first, unless the vehicle moves faster than 0.5 m/s (either direction) or has no model: then `refused` is `true` and the store is unchanged (`refused` is `false` after a refill; it is absent without `refuel`; since 1.37). `mode` is the setting *Fuel and battery* (`off`, `realistic`, `accelerated`), `low` the low-level warning, `torque_factor` the share of the drive torque kept (0 for an empty diesel tank). `capacity` and `kind` are the model's assumptions (`docs/src/simulation/fuel-battery.md`), not OMSI values. `1001` without a player vehicle.")
     .debug(),
     c(
         "profiles.list",

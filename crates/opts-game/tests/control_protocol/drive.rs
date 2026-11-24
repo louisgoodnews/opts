@@ -60,6 +60,8 @@ fn drive_controls_reach_the_vehicle_through_the_input_system() {
     assert!(controls["controls"].as_array().unwrap().len() >= 5);
 }
 
+mod fuel;
+
 mod gates;
 
 mod odometer;

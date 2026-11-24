@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.36.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.37.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -1060,9 +1060,9 @@ What the player's vehicle states about its dynamics (mass, centre of gravity, in
 
 The fuel or battery charge of the player's vehicle; with `level` set it, with `refuel` fill it.
 
-**Result:** `{model, kind, capacity, content, level, mode, low, torque_factor}` (`{model: false}` without a fuel model)
+**Result:** `{model, kind, capacity, content, level, mode, low, torque_factor}` (`{model: false}` without a fuel model), and `refused` (boolean) when `refuel` is sent
 
-`level` is the share of the capacity (0 to 1, `-32602` outside it); `refuel: true` fills the store first. `mode` is the setting *Fuel and battery* (`off`, `realistic`, `accelerated`), `low` the low-level warning, `torque_factor` the share of the drive torque kept (0 for an empty diesel tank). `capacity` and `kind` are the model's assumptions (`docs/src/simulation/fuel-battery.md`), not OMSI values. `1001` without a player vehicle.
+`level` is the share of the capacity (0 to 1, `-32602` outside it); `refuel: true` fills the store first, unless the vehicle moves faster than 0.5 m/s (either direction) or has no model: then `refused` is `true` and the store is unchanged (`refused` is `false` after a refill; it is absent without `refuel`; since 1.37). `mode` is the setting *Fuel and battery* (`off`, `realistic`, `accelerated`), `low` the low-level warning, `torque_factor` the share of the drive torque kept (0 for an empty diesel tank). `capacity` and `kind` are the model's assumptions (`docs/src/simulation/fuel-battery.md`), not OMSI values. `1001` without a player vehicle.
 
 ### `profiles.list`
 

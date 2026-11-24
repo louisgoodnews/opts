@@ -3,14 +3,14 @@
 # above its budget or has no entry. Edit by hand: `seed` does not change budgets.
 opts-benchmark 5607  # set 2026-11-22 to the current total
 opts-car-following 162  # set 2026-11-23 at its size after the split from opts-traffic (docs/dev/crate-split-traffic.md)
-opts-bevy 45905  # lowered 2026-11-23 to the total after the hot-reload debouncer and position tag moved out (opts-debounce, opts-position-tag) (M-0117, ISS-038)
+opts-bevy 45831  # lowered 2026-11-24 to the measured total after the refusal toast and the action-key tests moved out (M-0123)
 opts-catalogue 2066  # set 2026-11-22 to the current total
 opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-collision 211  # set 2026-11-23 at its size after the split from opts-sim (ISS-034 budget room)
 opts-core 4  # set 2026-11-22 to the current total
 opts-debounce 86  # new 2026-11-23: the hot-reload file-event debouncer split out of opts-bevy (docs/dev/crate-split-weather.md)
 opts-map-advice 121  # new 2026-11-23: the map load profile and advice engine split out of opts-game (docs/dev/crate-split-advice.md)
-opts-game 90838  # lowered 2026-11-23 from 90903 to the total after the map advice engine moved to opts-map-advice (docs/dev/crate-split-advice.md); the trailer exhaust outlet (ISS-038) added its lines and the split paid for them
+opts-game 90800  # lowered 2026-11-24 to the measured total after the vehicle.fuel tests moved to crates/opts-game/tests (M-0123 refused member)
 opts-gui 18492  # raised 2026-11-23 from 18409 to the total after the ISS-056 disabled-label contrast fix (owner decision)
 opts-hardware 2642  # set 2026-11-22 to the current total
 opts-importer 60  # set 2026-11-22 to the current total

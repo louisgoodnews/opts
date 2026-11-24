@@ -105,3 +105,4 @@ hud-rail-forward = FWD
 hud-rail-reverse = REV
 hud-hint-controls-rail = { $up } / { $down } Lever  -  { $zero } Lever to zero  -  { $forward } / { $reverse } Direction  -  { $switch } Points  -  1-5 Camera  -  Esc Pause  -  { $help } Help
 hud-hint-controls-rail-compact = { $up } / { $down } Lever  -  { $zero } Zero  -  { $forward } / { $reverse } Direction  -  Esc Pause
+hud-refuel-refused = Refuel refused: stop the vehicle first (below 0.5 m/s).

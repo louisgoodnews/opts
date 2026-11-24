@@ -1,6 +1,9 @@
-//! Unit tests for `super` (`action_keys.rs`).
+//! The built-in keyboard actions (M-0142): defaults, modifiers, rebinding, and the refuel key (M-0123).
+//! Moved from `src/action_keys/tests.rs` to keep the crate within its code budget.
 
-use super::*;
+use bevy::prelude::*;
+use opts_bevy::action_keys::*;
+use opts_bevy::vehicle_triggers::KeyChord;
 
 #[test]
 fn defaults_parse_and_are_unique() {

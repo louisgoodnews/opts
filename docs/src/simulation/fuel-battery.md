@@ -40,7 +40,7 @@ The milestone's ❓ items stay open: the unit of the scripts' `engine_tank_conte
 
 ## 3. Control protocol
 
-`vehicle.fuel` (debug) answers the player's vehicle's model: `{model, kind, capacity, content, level, mode, low, torque_factor}`, or `{model: false}`. With `level` (0 to 1) it sets the charge, with `refuel: true` it fills the store first. A level outside 0 to 1 is `-32602`; `1001` without a player vehicle.
+`vehicle.fuel` (debug) answers the player's vehicle's model: `{model, kind, capacity, content, level, mode, low, torque_factor}`, or `{model: false}`. With `level` (0 to 1) it sets the charge, with `refuel: true` it fills the store first, unless the refuel is refused (`refused: true`, see below). A level outside 0 to 1 is `-32602`; `1001` without a player vehicle.
 
 ## 4. Save
 
@@ -50,6 +50,6 @@ The `fuel` section (version 1, `Vehicles` stage, after the vehicles exist) holds
 
 - **HUD readout, on-screen check open.** Built (`hud/fuel_hud.rs`, `update/fuel.rs`): the widget `fuel` shows the level in percent and `fuel-low` shows `LOW` or `OK` (a word, not only a colour) at or below 10 %, in the bottom-left instrument row of the bus, articulated bus and trolleybus profiles. The widget `fuel-bar` draws the level as a bar gauge (track and fill, alarm colour at the low level) after the readout in the same row. All are hidden when the setting is *Off* (no readout). A person still has to look at them on screen.
 - **VM variable: value fed, authority open.** `tank_percent` is a host input (`HostInputs::tank_percent`, row in the input table, `shared`): the level times 100, or 100 for a vehicle without a model. Like the throttle, a script that writes `tank_percent` keeps its own value and the host leaves it alone; the stock scripts write it from `engine_tank_content` (`engine_GN.osc:275`), so for them the host value is not used. Which owner each vehicle family should have needs the audit first.
-- **Refuel action: key, on the road and rail vehicles.** The action `refuel` (`controls.drive.refuel`, default **F12**) fills the store on press. It is not limited to a stop; a stopped-only rule is not applied.
+- **Refuel action: key, on the road and rail vehicles.** The action `refuel` (`controls.drive.refuel`, default **F12**) fills the store on press when the vehicle is stopped: below 0.5 m/s in either direction (exactly 0.5 counts as moving). A press while it moves is refused, the store stays as it is and a toast says so. The protocol says the same: `vehicle.fuel` with `refuel: true` answers `refused: true` in that case (`refused: false` after a refill, absent without `refuel`; protocol 1.37.0).
 - **Stations.** Refuelling at `[petrolstation]` objects is a stretch decision for a follow-up milestone.
 - **Audit.** The table of which vehicles use `engine_tank_content`, `tank_percent`, `veh_tank` and which electric vehicles expose a charge.

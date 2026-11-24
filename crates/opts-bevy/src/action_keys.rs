@@ -125,6 +125,3 @@ pub fn resolve<'a>(keys: &'a Option<Res<ActionKeys>>) -> &'a ActionKeys {
         None => DEFAULTS.get_or_init(ActionKeys::default),
     }
 }
-
-#[cfg(test)]
-mod tests;

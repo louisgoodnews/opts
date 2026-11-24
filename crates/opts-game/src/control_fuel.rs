@@ -1,6 +1,6 @@
 //! Control protocol of the fuel and battery (M-0123): `vehicle.fuel` answers the player's vehicle's
 //! fuel model. With `level` (0 to 1) it sets the charge, with `refuel: true` it fills the store.
-//! Both serve tests and tools; no key or menu action calls it yet (see M-0123).
+//! Both serve tests and tools. With `refuel: true` the answer gains `refused` (M-0123).
 
 use bevy::prelude::*;
 use opts_bevy::control::state::{ControlRegistry, Outcome};
@@ -59,16 +59,21 @@ fn requested_level(params: &Value) -> Result<Option<f32>, RpcError> {
     }
 }
 
-/// Applies the request to the simulation; `Err` for a bad request.
-fn apply_request(sim: &mut VehicleSimulation, params: &Value) -> Result<(), RpcError> {
+/// Applies the request to the simulation and answers with the fuel model. `Err` for a bad request.
+/// With `refuel: true` the answer gains `refused`: the refuel was refused (the vehicle moves, or it
+/// has no model; M-0123). Without `refuel` the answer is unchanged.
+fn apply_request(sim: &mut VehicleSimulation, params: &Value) -> Result<Value, RpcError> {
     let level = requested_level(params)?;
-    if params.get("refuel").and_then(Value::as_bool) == Some(true) {
-        sim.refuel();
-    }
+    let refused =
+        (params.get("refuel").and_then(Value::as_bool) == Some(true)).then(|| !sim.refuel());
     if let (Some(level), Some(f)) = (level, sim.fuel.as_mut()) {
         f.set_level(level);
     }
-    Ok(())
+    let mut answer = describe(sim);
+    if let (Some(refused), Some(map)) = (refused, answer.as_object_mut()) {
+        map.insert("refused".into(), json!(refused));
+    }
+    Ok(answer)
 }
 
 fn fuel(world: &mut World, params: &Value) -> Outcome {
@@ -79,55 +84,8 @@ fn fuel(world: &mut World, params: &Value) -> Outcome {
             "there is no player vehicle (start a drive first)",
         ));
     };
-    if let Err(e) = apply_request(&mut controller.sim, params) {
-        return Outcome::err(e);
-    }
-    Outcome::ok(describe(&controller.sim))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use opts_sim::vehicle::fuel::FuelMode;
-
-    fn sim_with_fuel() -> VehicleSimulation {
-        let mut sim = VehicleSimulation::new_standard_bus(11_500.0, 5.85);
-        sim.ensure_fuel(FuelKind::Diesel, 250.0, FuelMode::Realistic);
-        sim
-    }
-
-    #[test]
-    fn a_vehicle_without_a_model_says_so() {
-        let sim = VehicleSimulation::new_standard_bus(11_500.0, 5.85);
-        assert_eq!(describe(&sim), json!({ "model": false }));
-    }
-
-    #[test]
-    fn the_level_is_set_and_reported() {
-        let mut sim = sim_with_fuel();
-        apply_request(&mut sim, &json!({ "level": 0.25 })).unwrap();
-        let d = describe(&sim);
-        assert!((d["level"].as_f64().unwrap() - 0.25).abs() < 1e-6);
-        assert_eq!(d["mode"], "realistic");
-        assert_eq!(d["low"], false);
-        apply_request(&mut sim, &json!({ "level": 0.05 })).unwrap();
-        assert_eq!(describe(&sim)["low"], true);
-    }
-
-    #[test]
-    fn refuel_fills_the_store_and_a_bad_level_is_refused() {
-        let mut sim = sim_with_fuel();
-        apply_request(&mut sim, &json!({ "level": 0.0 })).unwrap();
-        apply_request(&mut sim, &json!({ "refuel": true })).unwrap();
-        assert_eq!(sim.fuel_level(), Some(1.0));
-        assert!(apply_request(&mut sim, &json!({ "level": 1.5 })).is_err());
-        assert!(apply_request(&mut sim, &json!({ "level": "half" })).is_err());
-    }
-
-    #[test]
-    fn an_empty_request_changes_nothing() {
-        let mut sim = sim_with_fuel();
-        apply_request(&mut sim, &json!({})).unwrap();
-        assert_eq!(sim.fuel_level(), Some(1.0));
+    match apply_request(&mut controller.sim, params) {
+        Ok(answer) => Outcome::ok(answer),
+        Err(e) => Outcome::err(e),
     }
 }

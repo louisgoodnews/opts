@@ -1,6 +1,8 @@
 //! Keyboard driver input ingestion for the player's vehicle.
 
 use bevy::prelude::*;
+use opts_gui::components::toast::ToastBuilder;
+use opts_gui::l10n::Localization;
 use opts_sim::vehicle::inputs::GearPosition;
 
 use super::controller::{PlayerVehicle, VehicleController, VehicleInputConfig};
@@ -19,6 +21,8 @@ pub fn vehicle_input_system(
     time: Res<Time>,
     mut remote: ResMut<crate::vehicle_remote::RemoteControls>,
     mut query: Query<PlayerInput, With<PlayerVehicle>>,
+    mut commands: Commands,
+    loc: Option<Res<Localization>>,
 ) {
     let dt = time.delta_secs();
     if dt <= 0.0 {
@@ -30,8 +34,15 @@ pub fn vehicle_input_system(
     for (mut controller, config_opt, rail) in &mut query {
         let config = config_opt.unwrap_or(&default_config);
         // The refuel action (M-0123) fills the vehicle's fuel model; a rail vehicle has one too.
-        if crate::action_keys::resolve(&action_keys).just_pressed(&keyboard, "refuel") {
-            controller.sim.refuel();
+        // A refused refuel (the vehicle moves) says so in a toast (M-0123).
+        if crate::action_keys::resolve(&action_keys).just_pressed(&keyboard, "refuel")
+            && !controller.sim.refuel()
+        {
+            let text = loc
+                .as_deref()
+                .and_then(|l| l.format("hud-refuel-refused", &[]))
+                .unwrap_or_else(|| "Refuel refused: stop the vehicle first.".to_owned());
+            ToastBuilder::new(text).spawn(&mut commands);
         }
         let inputs = controller.inputs_mut();
         // A rail vehicle has a power lever and a direction selector, no pedals, no parking brake

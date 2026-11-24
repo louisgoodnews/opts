@@ -105,3 +105,4 @@ hud-rail-forward = VOR
 hud-rail-reverse = RÜCK
 hud-hint-controls-rail = { $up } / { $down } Fahrhebel  -  { $zero } Hebel auf Null  -  { $forward } / { $reverse } Richtung  -  { $switch } Weiche  -  1-5 Kamera  -  Esc Pause  -  { $help } Hilfe
 hud-hint-controls-rail-compact = { $up } / { $down } Hebel  -  { $zero } Null  -  { $forward } / { $reverse } Richtung  -  Esc Pause
+hud-refuel-refused = Tanken abgelehnt: Fahrzeug zuerst anhalten (unter 0,5 m/s).
