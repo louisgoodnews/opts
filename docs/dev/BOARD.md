@@ -794,7 +794,7 @@ The agent should check these during P-001 audits:
 - `2026-11-23` — Board sync (`agent/board-sync`, docs only), against master `d3fd638e`:
   - Control server ISS-001 and ISS-003, ISS-004 done on master (`0c6f1fbb`, `5f9aab3f`, `08adaef4`, `e1aa232f`, `f513166d`); ISS-002 stays in progress (browser check open).
   - Text X counts bounded and truncation tests (`0e7efdb5`); cargo-fuzz targets still open.
-  - Tunnel tile feed (`cd2ccceb`) on master; real-data run on `agent/tunnel-real-data` (`4bcfe9e4`), not merged; M-0115 stays in progress.
+  - Tunnel tile feed (`cd2ccceb`) on master; real-data run on `agent/tunnel-real-data` (`4bcfe9e4`; that branch was merged later, on 2026-11-23, as `e2a7d9bb`); M-0115 stays in progress.
   - Battery-off rig test (`9e29cfb9`); the four HH109 cockpit scripts are unbalanced (owner action). The M-0123 card never named `cp_batterietrennschalter_off`.
   - Free-drive boarding rule and tests (`7e465ce7`, `d834b520`, `7960b323`); the in-game check at a timetabled stop is open.
   - Door arming readback (`9f38f95c`), snow refresh (`6395d448`), bloom test (`8a0148dc`) on master.
