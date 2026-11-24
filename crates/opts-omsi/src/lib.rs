@@ -65,4 +65,4 @@
 #![deny(unsafe_code)]
 
 pub mod formats;
-pub mod setvars;
+pub use opts_omsi_vehicles::setvars;

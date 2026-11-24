@@ -1,0 +1,20 @@
+[package]
+name = "opts-omsi-vehicles"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OMSI 2 vehicle readers (.bus, model.cfg, paths.cfg, .hof, script textures) and the vehicle setvar catalogue."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+glam = { workspace = true }
+image = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+opts-omsi-text = { workspace = true }

@@ -74,12 +74,12 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Severity:** 🟡 Moderate
 - **Dimension:** Quality
 - **Location:**
-  - [`crates/opts-omsi/src/formats/vehicles/bus.rs:77-270`](../../../crates/opts-omsi/src/formats/vehicles/bus.rs#L77-L270) (193 lines)
+  - [`crates/opts-omsi-vehicles/src/formats/vehicles/bus.rs:77-270`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/bus.rs#L77-L270) (193 lines)
   - [`crates/opts-omsi/src/formats/scenery/sli.rs:188-372`](../../../crates/opts-omsi/src/formats/scenery/sli.rs#L188-L372) (184 lines)
   - [`crates/opts-omsi/src/formats/map/global.rs:77-253`](../../../crates/opts-omsi/src/formats/map/global.rs#L77-L253) (176 lines)
   - [`crates/opts-omsi/src/formats/map/tile.rs:160-328`](../../../crates/opts-omsi/src/formats/map/tile.rs#L160-L328) (168 lines)
-  - [`crates/opts-omsi/src/formats/vehicles/model/parse.rs:114-254`](../../../crates/opts-omsi/src/formats/vehicles/model/parse.rs#L114-L254) (140 lines)
-  - [`crates/opts-omsi/src/formats/vehicles/paths.rs:59-194`](../../../crates/opts-omsi/src/formats/vehicles/paths.rs#L59-L194) (135 lines)
+  - [`crates/opts-omsi-vehicles/src/formats/vehicles/model/parse.rs:114-254`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/model/parse.rs#L114-L254) (140 lines)
+  - [`crates/opts-omsi-vehicles/src/formats/vehicles/paths.rs:59-194`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/paths.rs#L59-L194) (135 lines)
 - **Description:** Multiple parsing functions across `opts-core` exceed the 80-line clean-code threshold, implementing large inline loops and state accumulators.
 - **Evidence:** `grep -n "fn from_text"` and `fn parse_` reveal consecutive blocks over 130 lines in all enumerated files.
 - **Impact:** Difficult readability, repetitive token iteration boilerplate, and non-uniform parsing architecture across different OMSI format implementations.
@@ -89,7 +89,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Severity:** 🟡 Moderate
 - **Dimension:** Quality
 - **Location:**
-  - [`crates/opts-omsi/src/formats/vehicles/bus.rs`](../../../crates/opts-omsi/src/formats/vehicles/bus.rs) (583 lines)
+  - [`crates/opts-omsi-vehicles/src/formats/vehicles/bus.rs`](../../../crates/opts-omsi-vehicles/src/formats/vehicles/bus.rs) (583 lines)
   - [`crates/opts-omsi/tests/world_parse.rs`](../../../crates/opts-omsi/tests/world_parse.rs) (689 lines)
 - **Description:** Both files exceed the 500-line guideline established in project contributing standards.
 - **Evidence:** Line counts: `bus.rs` = 583 lines, `world_parse.rs` = 689 lines.

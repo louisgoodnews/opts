@@ -2,7 +2,7 @@
 
 pub mod crossing;
 pub mod error;
-pub mod light;
+pub use opts_omsi_vehicles::formats::scenery::light;
 pub mod sco;
 pub mod sli;
 

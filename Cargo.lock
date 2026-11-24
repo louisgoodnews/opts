@@ -5553,6 +5553,7 @@ dependencies = [
  "image",
  "opts-omsi-binary",
  "opts-omsi-text",
+ "opts-omsi-vehicles",
  "opts-types",
  "opts-wav",
  "serde",
@@ -5576,6 +5577,18 @@ name = "opts-omsi-text"
 version = "0.1.0"
 dependencies = [
  "glam",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opts-omsi-vehicles"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "image",
+ "opts-omsi-text",
+ "serde",
+ "serde_json",
  "thiserror 1.0.69",
 ]
 

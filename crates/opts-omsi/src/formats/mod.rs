@@ -21,10 +21,10 @@ pub use opts_omsi_text::formats::text;
 pub use opts_omsi_text::formats::ticketpack;
 pub use opts_omsi_text::formats::timetable;
 pub mod trains;
-pub use opts_omsi_text::formats::varlist;
-pub mod vehicles;
 pub use opts_omsi_binary::formats::x;
+pub use opts_omsi_text::formats::varlist;
 pub use opts_omsi_text::formats::weather;
+pub use opts_omsi_vehicles::formats::vehicles;
 /// `.wav` sound decoder, now the `opts-wav` crate (same paths).
 pub use opts_wav as wav;
 pub use vehicles::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
