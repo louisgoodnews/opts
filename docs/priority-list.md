@@ -8,7 +8,7 @@ this page is the order in which the open work should be taken.
 
 | # | Decision | Options | Recommendation | Source |
 | :-- | :--- | :--- | :--- | :--- |
-| 1 | Tunnel threshold, 15 m or 10 m (ISS-012, M-0115) | keep 15 m; lower to 10 m now; change the 95 % recall criterion | keep 15 m until a map with bridges, canopies or station roofs is labelled | [labelled set](dev/issues/ISS-012-berlin-spandau-labels.md) |
+| 1 | ~~Tunnel threshold~~ decided 2026-11-24: keep 15 m; the 95 % recall criterion stays open | (decided) | see M-0115 Notes | [decision](src/roadmap/phase-11/M-0115.md) |
 | 2 | Loaded-bus minimum margins (M-0124 criteria 2 and 3) | minimum extra distance in 10 s (measured 23.8 m, 26.6 %); minimum extra stop from 50 km/h (measured 3.3 m, 24 %); store an empty-bus baseline or not | set the minimums, then the tests can pass or fail | [margin tests](src/roadmap/phase-12/M-0124.md) |
 | 3 | Is loaded braking 19 % softer than empty at 100 km/h intended (rear axle tyre limit)? | yes, intended; no, fix the brake model (M-0073) | decide with the mass model owner | M-0124 Notes |
 

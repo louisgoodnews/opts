@@ -121,3 +121,7 @@ on-screen overlay check, and the `sync_tile_zones` feed test (done 2026-11-23, b
 - Labels by profile (roof run, the 2026-11-17 candidate lists), table in `ISS-012-berlin-spandau-labels.md`. Recall of the 15 m rule: 7 of 12 roofed placements, 91 % of their length (acceptance 95 %). All five misses are 10 m placements. Precision 7 of 7, but no roofed non-tunnel placement exists on these maps to test against.
 - Threshold: unchanged. Recommendation for the owner (decision open): a 10 m minimum fits this set, but lowering needs a precision test on bridges, canopies or station roofs from another map.
 - Not done: the in-game check; the heights were not re-read in this run (the scratch probe was queued behind the shared build lock and stopped).
+
+## Decision (2026-11-24)
+
+Decision 2026-11-24 (owner decision, taken by the lead on the owner's instruction): keep the 15 m minimum length (constant unchanged). Recall on the labelled set is 58 % by count and 91 % by length (criterion 95 %), so the criterion stays open and is not waived. The known misses are covered sections of 10 m, which the rule does not detect. Precision is not measured (no roofed non-tunnel placement is labelled). Reopen when a labelled map with bridges, canopies or station roofs exists, or if a threshold change is proposed; the change then needs a new labelled comparison.
