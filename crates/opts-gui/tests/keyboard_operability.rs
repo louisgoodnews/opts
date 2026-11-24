@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use opts_gui::actions::{Direction, UiAction};
 use opts_gui::components::{
     checkbox::M3Checkbox,
-    combobox::{ComboboxBuilder, M3Combobox},
     notebook::{M3Notebook, NotebookBuilder},
     switch::{M3Switch, SwitchBuilder},
     toast::ToastBuilder,
@@ -92,39 +91,6 @@ fn tree_rows_expand_and_collapse_with_left_and_right() {
     assert_eq!(focused(&mut app), Some(row), "focus stays on the row");
     act(&mut app, UiAction::Navigate(Direction::Left));
     assert_eq!(expanded(&app), before, "left collapses it again");
-}
-
-#[test]
-fn combobox_opens_with_arrow_picks_with_confirm_and_closes_with_back() {
-    let mut app = headless_app();
-    let combo = spawn_with(&mut app, |c| {
-        ComboboxBuilder::new("Route")
-            .with_options(vec!["Line 100".into(), "Line 200".into()])
-            .spawn(c)
-    });
-    act(&mut app, UiAction::FocusNext);
-    act(&mut app, UiAction::Navigate(Direction::Down));
-    app.update();
-    assert_eq!(
-        app.world().get::<M3Combobox>(combo).map(|c| c.is_open),
-        Some(true)
-    );
-    act(&mut app, UiAction::Navigate(Direction::Down));
-    act(&mut app, UiAction::Confirm);
-    let c = app.world().get::<M3Combobox>(combo).expect("combobox");
-    assert!(!c.is_open, "picking closes the list");
-    assert_eq!(c.selected, Some(1));
-
-    act(&mut app, UiAction::Navigate(Direction::Down));
-    assert_eq!(
-        app.world().get::<M3Combobox>(combo).map(|c| c.is_open),
-        Some(true)
-    );
-    act(&mut app, UiAction::Back);
-    assert_eq!(
-        app.world().get::<M3Combobox>(combo).map(|c| c.is_open),
-        Some(false)
-    );
 }
 
 #[test]

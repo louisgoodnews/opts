@@ -7,8 +7,6 @@
 use bevy::input_focus::{tab_navigation::TabIndex, InputFocus};
 use bevy::prelude::*;
 
-use crate::actions::ActionInput;
-
 mod handler;
 mod sync;
 
@@ -84,7 +82,7 @@ pub fn build(app: &mut App) {
             sync_input_focus,
         )
             .chain()
-            .after(ActionInput),
+            .after(crate::interaction::activation::ActivationSet),
     );
 }
 

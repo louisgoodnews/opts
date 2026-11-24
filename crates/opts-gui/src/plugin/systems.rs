@@ -26,7 +26,7 @@ use crate::{
         toplevel::toplevel_close_system,
         treeview::{treeview_arrow_system, treeview_click_system, treeview_sync_system},
     },
-    interaction::activation::ActivationSet,
+    interaction::{activation::ActivationSet, focus::focus_event_handler_system},
 };
 
 pub(super) fn register_form_systems(app: &mut App) {
@@ -71,7 +71,7 @@ pub(super) fn register_widget_systems(app: &mut App) {
             notebook_focus_selects_system,
             notebook_sync_system,
         )
-            .after(ActivationSet),
+            .after(focus_event_handler_system),
     );
     app.add_systems(
         Update,
