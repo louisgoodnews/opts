@@ -95,3 +95,40 @@ pub fn mutate(sample: &[u8], rng: &mut XorShift) -> Vec<u8> {
     }
     out
 }
+
+/// Little-endian words that stand for counts and sizes at the edges: `u32` and `u16` extremes,
+/// the 65,536 wrap of a version 1 `.o3d` count, and the `+inf` and NaN float patterns.
+const WINDOW_U32: [u32; 7] = [
+    0xFFFF_FFFF,
+    0x8000_0000,
+    0x0001_0000,
+    0x7FFF_FFFF,
+    4_000_000_000,
+    0x7F80_0000,
+    0x7FC0_0000,
+];
+const WINDOW_U16: [u16; 4] = [0xFFFF, 0x8000, 0x0100, 0x0200];
+
+/// For a binary sample: every `u32` and `u16` window of the sample overwritten by each edge word.
+/// This is the binary counterpart of the digit-run replacement, since counts there are fixed-width
+/// fields rather than digit runs.
+pub fn windows(sample: &[u8]) -> Vec<Vec<u8>> {
+    let mut out = Vec::new();
+    for offset in 0..sample.len() {
+        for word in WINDOW_U32 {
+            if offset + 4 <= sample.len() {
+                let mut input = sample.to_vec();
+                input[offset..offset + 4].copy_from_slice(&word.to_le_bytes());
+                out.push(input);
+            }
+        }
+        for word in WINDOW_U16 {
+            if offset + 2 <= sample.len() {
+                let mut input = sample.to_vec();
+                input[offset..offset + 2].copy_from_slice(&word.to_le_bytes());
+                out.push(input);
+            }
+        }
+    }
+    out
+}

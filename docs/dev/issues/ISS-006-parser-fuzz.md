@@ -23,3 +23,10 @@ There is no `fuzz/` directory and no proptest, quickcheck or arbitrary dependenc
 - Truncation tests in `crates/opts-omsi/tests/truncation_parsers.rs` (4 of 4 pass, `txb-trunc-final.log`): every prefix of an in-code sample of text `.x` (`parse_x`), `.bus` (`BusManifest::parse_bytes`), `.sli` (`SplineProfile::parse`) and `.hof` (`HofFile::parse_bytes`) returns without panic; each full sample parses. No game file is read.
 - Removal check for the truncation tests was not run; the tests were run only in their passing form. The earlier X-format panics in `txb-x.log` do not reproduce on the current code.
 - Still open: the cargo-fuzz targets for `.x`, `.o3d`, `.bus` and the map formats. No `fuzz/` directory or toolchain exists; cargo-fuzz is not installed.
+
+## Fuzz-style tests (branch `agent/iss006-port`)
+
+- `crates/opts-omsi/tests/fuzz_parsers.rs` now covers seven readers: the text readers `.x`, `.bus`, `.sli`, `.hof` and the map tile (`MapTile::parse`, `.map`), and the binary readers `.o3d` (`o3d::parse`) and the map terrain (`MapTerrain::parse`, `.map.terrain`). Every sample is built in code; no game file is read.
+- Binary readers take fixed-width window replacement (every `u32` and `u16` window overwritten by an edge word) instead of digit-run replacement.
+- Finding (not a panic): `o3d/material.rs` reserved `Vec::with_capacity(material_count)` from the file's `u16` count before reading any record. A count of 65,535 in a 245-byte file requested about 4.7 MB, above the input-length bound. The capacity is now capped by the bytes that remain (`remaining / MATERIAL_FIXED_BYTES`); parsing results are unchanged.
+- Removal check: `iss006-fuzz.md`.

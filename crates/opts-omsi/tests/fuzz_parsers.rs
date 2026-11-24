@@ -1,10 +1,12 @@
-//! Deterministic fuzz-style tests for the untrusted text `.x`, `.bus`, `.sli` and `.hof` readers
-//! (ISS-006, with the count bound of ISS-005).
+//! Deterministic fuzz-style tests for the untrusted readers of `.x`, `.bus`, `.sli` and `.hof`
+//! (text), the map tile and terrain (`.map`, `.map.terrain`) and `.o3d` (binary) (ISS-006, with
+//! the count bound of ISS-005).
 //!
 //! No external crate: a fixed-seed xorshift64 (`fuzz_parsers/mutate.rs`) drives every mutation, so
 //! each run sees the same inputs. Each reader is fed (a) every prefix of a small valid sample,
-//! (b) every digit run of the sample replaced by a huge, negative or malformed number, and
-//! (c) seeded random byte and token mutations. Every input must return `Ok` or `Err` without
+//! (b) every digit run of a text sample replaced by a huge, negative or malformed number, or for a
+//! binary sample every `u32`/`u16` window replaced by an edge word (counts are fixed-width there),
+//! and (c) seeded random byte and token mutations. Every input must return `Ok` or `Err` without
 //! panicking, and no single allocation may exceed a bound derived from the input length. That
 //! bound is the ISS-005 rule in observable form: a file-supplied count must not allocate beyond
 //! the bytes it came from.
@@ -25,8 +27,11 @@ mod samples;
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::Mutex;
 
-use mutate::{digit_spans, mutate, with_number_replaced, XorShift, NUMBERS};
-use readers::{Reader, BUS_READER, HOF_READER, SLI_READER, X_READER};
+use mutate::{digit_spans, mutate, windows, with_number_replaced, XorShift, NUMBERS};
+use readers::{
+    Reader, BUS_READER, HOF_READER, MAP_TILE_READER, O3D_READER, SLI_READER, TERRAIN_READER,
+    X_READER,
+};
 
 #[global_allocator]
 static GLOBAL: alloc::PeakAlloc = alloc::PeakAlloc;
@@ -68,9 +73,9 @@ fn check(reader: &Reader, input: &[u8], context: &str) {
 
 fn fuzz_reader(reader: &Reader, seed: u64) {
     let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
-    let sample = reader.sample.as_bytes();
+    let sample = (reader.sample)();
     assert!(
-        (reader.parse)(sample),
+        (reader.parse)(&sample),
         "{}: the full sample must parse",
         reader.name
     );
@@ -79,20 +84,26 @@ fn fuzz_reader(reader: &Reader, seed: u64) {
         check(reader, &sample[..end], &format!("prefix of length {end}"));
     }
 
-    for (index, span) in digit_spans(sample).into_iter().enumerate() {
-        for replacement in NUMBERS {
-            let input = with_number_replaced(sample, span, replacement);
-            check(
-                reader,
-                &input,
-                &format!("digit run {index} replaced by {replacement:?}"),
-            );
+    if reader.binary {
+        for (index, input) in windows(&sample).iter().enumerate() {
+            check(reader, input, &format!("window replacement {index}"));
+        }
+    } else {
+        for (index, span) in digit_spans(&sample).into_iter().enumerate() {
+            for replacement in NUMBERS {
+                let input = with_number_replaced(&sample, span, replacement);
+                check(
+                    reader,
+                    &input,
+                    &format!("digit run {index} replaced by {replacement:?}"),
+                );
+            }
         }
     }
 
     let mut rng = XorShift::new(seed);
     for iteration in 0..ITERATIONS {
-        let input = mutate(sample, &mut rng);
+        let input = mutate(&sample, &mut rng);
         check(reader, &input, &format!("random mutation {iteration}"));
     }
 }
@@ -115,4 +126,19 @@ fn sli_survives_prefixes_and_mutations() {
 #[test]
 fn hof_survives_prefixes_and_mutations() {
     fuzz_reader(&HOF_READER, 0x27D4_EB2F_1656_67C5);
+}
+
+#[test]
+fn map_tile_survives_prefixes_and_mutations() {
+    fuzz_reader(&MAP_TILE_READER, 0x94D0_49BB_1331_11EB);
+}
+
+#[test]
+fn o3d_survives_prefixes_windows_and_mutations_within_the_count_bound() {
+    fuzz_reader(&O3D_READER, 0xBF58_476D_1CE4_E5B9);
+}
+
+#[test]
+fn map_terrain_survives_prefixes_windows_and_mutations() {
+    fuzz_reader(&TERRAIN_READER, 0x2545_F491_4F6C_DD1D);
 }

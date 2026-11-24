@@ -55,7 +55,13 @@ pub fn parse_material_chunk(reader: &mut Cursor<&[u8]>) -> Result<Vec<Material>>
     })?;
     let material_count = u16::from_le_bytes(count_buf) as usize;
 
-    let mut materials = Vec::with_capacity(material_count);
+    // The declared count is not trusted for allocation: each record takes at least
+    // MATERIAL_FIXED_BYTES bytes, so the capacity is capped by the bytes that remain.
+    let remaining = reader
+        .get_ref()
+        .len()
+        .saturating_sub(reader.position() as usize);
+    let mut materials = Vec::with_capacity(material_count.min(remaining / MATERIAL_FIXED_BYTES));
 
     for _ in 0..material_count {
         let start_pos = reader.position() as usize;
@@ -69,25 +75,25 @@ pub fn parse_material_chunk(reader: &mut Cursor<&[u8]>) -> Result<Vec<Material>>
         })?;
 
         let diffuse = [
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 0)),
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 4)),
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 8)),
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 12)),
+            f32::from_le_bytes(fixed_buf[0..4].try_into().unwrap()),
+            f32::from_le_bytes(fixed_buf[4..8].try_into().unwrap()),
+            f32::from_le_bytes(fixed_buf[8..12].try_into().unwrap()),
+            f32::from_le_bytes(fixed_buf[12..16].try_into().unwrap()),
         ];
 
         let specular = [
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 16)),
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 20)),
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 24)),
+            f32::from_le_bytes(fixed_buf[16..20].try_into().unwrap()),
+            f32::from_le_bytes(fixed_buf[20..24].try_into().unwrap()),
+            f32::from_le_bytes(fixed_buf[24..28].try_into().unwrap()),
         ];
 
         let emissive = [
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 28)),
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 32)),
-            f32::from_le_bytes(read_slice_4(&fixed_buf, 36)),
+            f32::from_le_bytes(fixed_buf[28..32].try_into().unwrap()),
+            f32::from_le_bytes(fixed_buf[32..36].try_into().unwrap()),
+            f32::from_le_bytes(fixed_buf[36..40].try_into().unwrap()),
         ];
 
-        let power = f32::from_le_bytes(read_slice_4(&fixed_buf, 40));
+        let power = f32::from_le_bytes(fixed_buf[40..44].try_into().unwrap());
 
         let len_pos = reader.position() as usize;
         let mut name_len_buf = [0u8; 1];
@@ -129,12 +135,6 @@ pub fn parse_material_chunk(reader: &mut Cursor<&[u8]>) -> Result<Vec<Material>>
     }
 
     Ok(materials)
-}
-
-fn read_slice_4(buf: &[u8], offset: usize) -> [u8; 4] {
-    let mut arr = [0u8; 4];
-    arr.copy_from_slice(&buf[offset..offset + 4]);
-    arr
 }
 
 #[cfg(test)]
