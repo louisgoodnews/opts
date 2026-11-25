@@ -46,7 +46,7 @@ pub fn theme_toggle_system(
         tracing::info!(?mode, "Toggling application theme");
         settings.theme_mode = mode;
         settings.high_contrast = false;
-        crate::settings::save_in_background(&settings);
+        opts_settings_io::save_in_background(&settings);
     }
 }
 

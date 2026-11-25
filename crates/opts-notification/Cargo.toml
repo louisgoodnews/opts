@@ -1,0 +1,19 @@
+[package]
+name = "opts-notification"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Notification service: toasts, errors with their durable place and the refused-navigation toast (split out of opts-game, ISS-068 remainder)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-gui = { workspace = true }
+opts-shell-keys = { workspace = true }
+opts-shell-nav = { workspace = true }
+tracing = { workspace = true }

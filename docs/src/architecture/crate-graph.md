@@ -94,6 +94,8 @@ graph TD
         opts_shell_calendar["opts-shell-calendar<br/>• Date and time steppers and choice chips<br/>• Bevy UI over opts-bevy and opts-gui"]:::app
         opts_shell_dialog["opts-shell-dialog<br/>• Confirmation dialogs and their answer systems<br/>• Bevy UI over opts-gui"]:::app
         opts_shell_nav["opts-shell-nav<br/>• Screen registry, rail frame, back stack and Esc<br/>• Banners and the shell content area<br/>• Bevy UI over opts-bevy, opts-gui and opts-game-state"]:::app
+        opts_notification["opts-notification<br/>• Toasts, and errors with their durable place<br/>• Refused-navigation toast system<br/>• Bevy UI over opts-gui, opts-shell-nav and opts-shell-keys"]:::app
+        opts_settings_io["opts-settings-io<br/>• settings.toml and settings.db file I/O<br/>• Background settings writer (one thread, newest copy per file)<br/>• Free functions over opts-game-state types"]:::app
         opts_pause_report["opts-pause-report<br/>• Report dialog state for the pause menu<br/>• Bevy state over opts-bevy"]:::app
         opts_hud_widgets["opts-hud-widgets<br/>• HUD widget slots, vehicle kinds and descriptors<br/>• Built-in widget registry<br/>• Bevy CameraMode via opts-bevy"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
@@ -148,6 +150,10 @@ graph TD
     opts_shell_nav --> opts_gui
     opts_shell_nav --> opts_shell_icons
     opts_shell_nav --> opts_shell_keys
+    opts_notification --> opts_gui
+    opts_notification --> opts_shell_keys
+    opts_notification --> opts_shell_nav
+    opts_settings_io --> opts_game_state
     opts_game --> opts_bevy
     opts_game --> opts_game_state
     opts_game_state --> opts_bevy
@@ -176,6 +182,8 @@ graph TD
     opts_game --> opts_shell_dialog
     opts_game --> opts_shell_icons
     opts_game --> opts_shell_nav
+    opts_game --> opts_notification
+    opts_game --> opts_settings_io
     opts_game --> opts_minimap_zoom_canvas
     opts_game --> opts_save_error
     opts_game --> opts_shell_keys
@@ -311,6 +319,8 @@ graph TD
 | **`opts-shell-calendar`** | L3 | Date and time steppers, their arithmetic and the frame of a choice chip (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy`, `opts-gui` | `opts-game` | Bevy UI |
 | **`opts-shell-dialog`** | L3 | Confirmation dialogs: the spec, the card and the answer systems (split out of `opts-game`, ISS-068 stage 1) | `opts-gui` | `opts-game` | Bevy UI |
 | **`opts-shell-nav`** | L3 | Shell navigation: the screen registry, the rail frame, the back stack, Esc and banners (split out of `opts-game`, ISS-068 stage 2) | `opts-bevy`, `opts-game-state`, `opts-gui`, `opts-shell-icons`, `opts-shell-keys` | `opts-game` | Bevy UI |
+| **`opts-notification`** | L3 | Notification service: toasts, errors with their durable place, and the refused-navigation toast (split out of `opts-game`'s `shell/notify`, ISS-068 remainder) | `opts-gui`, `opts-shell-keys`, `opts-shell-nav` (external: `bevy`, `tracing`) | `opts-game` | Bevy UI |
+| **`opts-settings-io`** | L3 | Settings file I/O: `settings.toml`, `settings.db` and the background writer (split out of `opts-game`'s `settings`, ISS-068 remainder) | `opts-game-state` (external: `directories`, `rusqlite`, `toml`, `tracing`) | `opts-game` | Pure Rust |
 | **`opts-pause-report`** | L3 | Report dialog state helper for the pause menu (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-pause-report`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-shell-icons`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-hud-widgets`** | L3 | HUD widget vocabulary: slots, vehicle kinds, widget descriptors and the built-in registry (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | `opts-bevy` (external: `serde`) | `opts-game` | Bevy Engine |

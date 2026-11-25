@@ -1,0 +1,19 @@
+[package]
+name = "opts-settings-io"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Settings file I/O: settings.toml, settings.db and the background writer (split out of opts-game, ISS-068 remainder)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-game-state = { workspace = true }
+directories = { workspace = true }
+rusqlite = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }

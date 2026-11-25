@@ -1,22 +1,13 @@
-//! Persistent user configuration: file I/O for [`GameSettings`].
+//! Persistent user configuration.
 //!
 //! The settings type, its defaults, the session overlay and the baseline live in the
-//! `opts-game-state` crate and are re-exported here. This module keeps the loading of
-//! `settings.toml` and `settings.db`, the saves and the background writer. They are free
-//! functions, because an inherent `impl` block cannot be written in another crate.
-//!
-//! # Storage Architecture
-//! - **`settings.toml`**: Immutable baseline reference. Read on startup, never overwritten by application logic.
-//! - **`settings.db`**: Authoritative SQLite database storing the active user preferences.
+//! `opts-game-state` crate and are re-exported here. The file I/O (`settings.toml`,
+//! `settings.db`, the saves and the background writer) is the crate `opts-settings-io`
+//! (ISS-068 remainder), re-exported here at the old paths.
 
 pub use opts_game_state::settings::{Baseline, GameSettings};
 
-mod load;
-
-mod persistence;
-
-pub use load::*;
-pub use persistence::*;
+pub use opts_settings_io::*;
 
 #[cfg(test)]
 mod tests;
