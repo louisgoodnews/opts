@@ -92,6 +92,10 @@ pub struct FuelState {
     pub content: f32,
     /// The consumption choice of the player.
     pub mode: FuelMode,
+    /// Whether the vehicle's scripts own the charge (ISS-042): the host mirrors their state of
+    /// charge and the model does not drain it again. A file without the field reads `false`.
+    #[serde(default)]
+    pub script_owned: bool,
 }
 
 impl FuelState {
@@ -104,6 +108,7 @@ impl FuelState {
             capacity,
             content: capacity,
             mode: FuelMode::default(),
+            script_owned: false,
         }
     }
 
@@ -146,9 +151,10 @@ impl FuelState {
         (idle + (full - idle) * load) / 3600.0 * self.mode.multiplier()
     }
 
-    /// Depletes the store for `dt` seconds at the given throttle. `Off` changes nothing.
+    /// Depletes the store for `dt` seconds at the given throttle. `Off` changes nothing, and so
+    /// does a charge the scripts own (they drain it themselves, see [`Self::follow_charge`]).
     pub fn step(&mut self, throttle: f32, dt: f32) {
-        if self.mode == FuelMode::Off || dt <= 0.0 {
+        if self.mode == FuelMode::Off || self.script_owned || dt <= 0.0 {
             return;
         }
         self.content = (self.content - self.rate_per_s(throttle) * dt).max(0.0);
@@ -169,7 +175,10 @@ impl FuelState {
     }
 }
 
+mod charge;
 mod sim;
+
+pub use charge::{ELECTRIC_CAPACITY_CONST, ELECTRIC_CHARGE_VAR};
 
 #[cfg(test)]
 mod stopped_tests;

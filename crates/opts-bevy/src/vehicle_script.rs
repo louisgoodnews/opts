@@ -14,7 +14,9 @@ use opts_sim::script::ScriptEngine;
 use crate::vehicle_sim::VehicleController;
 use crate::PlayerVehicle;
 
+mod charge;
 mod drive;
+pub use charge::*;
 pub use drive::*;
 
 /// How far from the player's vehicle the scripts of other vehicles run (m): the player's own
@@ -65,6 +67,8 @@ pub struct VehicleScripts {
     /// The input table resolved against the engine: what the host feeds, and which names the
     /// scripts own (the host leaves those alone, so a pedal the script writes stays).
     pub plan: FeedPlan,
+    /// Where the scripts keep the electric state of charge (ISS-042); `None` for a diesel vehicle.
+    pub charge: Option<ElectricCharge>,
     /// Events the scripts raised since the last [`Self::take_raised`] (lower case names, oldest
     /// first; `(T.L.name)`, `(T.F.name)`, `(T.S.name)` alike): the sound layer plays the
     /// `[trigger]`s of the vehicle's sound configuration for them.
@@ -81,10 +85,12 @@ impl VehicleScripts {
     #[must_use]
     pub fn new(mut engine: ScriptEngine) -> Self {
         let plan = FeedPlan::new(&mut engine);
+        let charge = ElectricCharge::resolve(&mut engine);
         Self {
             engine: Mutex::new(engine),
             initialised: false,
             plan,
+            charge,
             raised: Vec::new(),
         }
     }
@@ -131,6 +137,8 @@ impl Plugin for VehicleScriptPlugin {
                         .before(vehicle_script_system),
                     crate::route::route_clock_system.before(vehicle_script_system),
                     vehicle_script_system.after(crate::vehicle_sim::vehicle_physics_step_system),
+                    // The scripts' state of charge is mirrored into the fuel model after their step.
+                    electric_charge_system.after(vehicle_script_system),
                 ),
             );
     }
