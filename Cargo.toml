@@ -31,8 +31,12 @@ members = [
     "crates/opts-core",
     "crates/opts-debounce",
     "crates/opts-exhaust",
+    "crates/opts-fleet-number",
     "crates/opts-game",
     "crates/opts-hardware",
+    "crates/opts-mesh-dir",
+    "crates/opts-road-surf",
+    "crates/opts-world-session",
     "crates/opts-importer",
     "crates/opts-l10n",
     "crates/opts-model",
@@ -98,6 +102,10 @@ opts-theme-files = { path = "crates/opts-theme-files" }
 opts-steam = { path = "crates/opts-steam" }
 opts-wav = { path = "crates/opts-wav" }
 opts-exhaust = { path = "crates/opts-exhaust" }
+opts-fleet-number = { path = "crates/opts-fleet-number" }
+opts-mesh-dir = { path = "crates/opts-mesh-dir" }
+opts-road-surf = { path = "crates/opts-road-surf" }
+opts-world-session = { path = "crates/opts-world-session" }
 opts-gui = { path = "crates/opts-gui" }
 opts-map-advice = { path = "crates/opts-map-advice" }
 opts-logging = { path = "crates/opts-logging" }

@@ -1,0 +1,17 @@
+[package]
+name = "opts-mesh-dir"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The base folder of a vehicle's mesh paths: the config folder or the vehicle's model folder, whichever resolves more meshes (split out of opts-game's omsi_world)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-bevy = { workspace = true }
+opts-core = { workspace = true }
+tracing = { workspace = true }

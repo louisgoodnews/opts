@@ -1,0 +1,16 @@
+[package]
+name = "opts-road-surf"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Fine road-texture unevenness: the .surf height maps, texture strips and the synthetic roughness per surface type (split out of opts-game's omsi_world)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-core = { workspace = true }
+image = { workspace = true }

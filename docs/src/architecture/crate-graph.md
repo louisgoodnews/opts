@@ -53,11 +53,15 @@ graph TD
         opts_gui["opts-gui<br/>• Material Design 3 tokens<br/>• Reusable UI widgets<br/>• Glassmorphism layout<br/>• Bevy UI integration"]:::bridge
         opts_theme_files["opts-theme-files<br/>• RON theme files in the config folder<br/>• Discovery and contrast-checked loading<br/>• No Bevy"]:::bridge
         opts_bevy["opts-bevy<br/>• 3D mesh loaders & materials<br/>• Coordinate system mapping<br/>• ECS VehicleController bridge<br/>• Scenery object spawning"]:::bridge
+        opts_road_surf["opts-road-surf<br/>• Road-texture unevenness: .surf height maps and texture strips<br/>• Synthetic roughness per surface type<br/>• No Bevy"]:::bridge
     end
 
     %% Layer 3: Application Executables & Tools
     subgraph L3 ["Layer 3 — Application Executables & Tooling"]
         opts_exhaust["opts-exhaust<br/>• Exhaust plumes of the vehicles nearest the camera<br/>• Puff emission, outlets, distance fade<br/>• Bevy systems over opts-bevy and opts-sim"]:::app
+        opts_fleet_number["opts-fleet-number<br/>• Vehicle fleet number from the .org registration list<br/>• Bevy systems over opts-bevy types"]:::app
+        opts_mesh_dir["opts-mesh-dir<br/>• Base folder of a vehicle's mesh paths<br/>• Config folder or model folder, by resolved meshes"]:::app
+        opts_world_session["opts-world-session<br/>• Resolved content paths and the menu request for a world session"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
         opts_benchmark["opts-benchmark (Binary)<br/>• Scenery load verification<br/>• Off-screen worker & supervisor"]:::app
         opts_tools["opts-tools (Binary: opts)<br/>• CLI asset inspector<br/>• Mesh & texture converter<br/>• Dependency & format validator"]:::app
@@ -80,23 +84,33 @@ graph TD
     opts_catalogue --> opts_core
     opts_core --> opts_l10n
     opts_core --> opts_omsi
+    opts_fleet_number --> opts_core
+    opts_mesh_dir --> opts_core
+    opts_road_surf --> opts_core
     opts_exhaust --> opts_bevy
     opts_exhaust --> opts_sim
+    opts_mesh_dir --> opts_bevy
+    opts_world_session --> opts_bevy
     opts_game --> opts_bevy
     opts_game --> opts_catalogue
     opts_game --> opts_cli
     opts_game --> opts_collision
     opts_game --> opts_core
+    opts_fleet_number --> opts_bevy
     opts_game --> opts_exhaust
+    opts_game --> opts_fleet_number
     opts_game --> opts_gui
     opts_game --> opts_hardware
     opts_game --> opts_l10n
     opts_game -.->|diagnostics| opts_logging
     opts_game --> opts_map_advice
+    opts_game --> opts_mesh_dir
+    opts_game --> opts_road_surf
     opts_game --> opts_sim
     opts_game --> opts_steam
     opts_game --> opts_theme_files
     opts_game --> opts_traffic
+    opts_game --> opts_world_session
     opts_gui --> opts_l10n
     opts_importer --> opts_model
     opts_importer --> opts_omsi
@@ -147,19 +161,23 @@ graph TD
 | **`opts-position-tag`** | L1 | Player position text for log messages (tile, local and world coordinates; split out of `opts-bevy`, M-0122) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-model`** | L1 | The native content model and its TOML form (stubs: `VehicleDefinition`, `ContentSource`) | `opts-types` | `opts-importer` | Pure Rust |
 | **`opts-importer`** | L1 | Turns legacy OMSI content into the native model; the only crate that knows both | `opts-model`, `opts-omsi` | *None yet* | Pure Rust |
-| **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
+| **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-fleet-number`, `opts-game`, `opts-mesh-dir`, `opts-road-surf`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
 | **`opts-traffic`** | L2 | AI road traffic: lane graph, conflict zones, right of way, agents and lane changes | `opts-car-following`, `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-benchmark`, `opts-game` | Pure Rust |
 | **`opts-theme-files`** | L2 | RON theme files in the configuration folder: discovery and loading through the contrast checker of `opts-gui` (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-theme.md)) | `opts-gui` | `opts-game` | Pure Rust (external: `directories`) |
 | **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game`, `opts-theme-files` | Bevy UI |
+| **`opts-road-surf`** | L2 | Fine road-texture unevenness: the `.surf` height maps, texture strips and the synthetic roughness per surface type (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-core` | `opts-game` | Pure Rust (external: `image`) |
 | **`opts-debounce`** | L0 | Trailing debounce of file-change events for the hot-reload watcher (split out of `opts-bevy`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-map-advice`** | L0 | Map load profile and the heuristic advice engine: pure thresholds, no engine dependency (split out of `opts-game`, [plan](../../dev/crate-split-advice.md)) | *None* | `opts-game` | Pure Rust |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
-| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game` | Bevy Engine |
+| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-fleet-number`, `opts-game`, `opts-mesh-dir`, `opts-world-session` | Bevy Engine |
 | **`opts-exhaust`** | L3 | Engine exhaust plumes of the player and the nearest vehicles: puff emission, the model outlet, the distance fade (split out of `opts-game`, M-0117 budget room; [plan](../../dev/crate-split-exhaust.md)) | `opts-bevy`, `opts-sim` | `opts-game` | Bevy Engine |
-| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
+| **`opts-fleet-number`** | L3 | Vehicle fleet number drawn from the `.org` registration list of a `.bus` with the script seed (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy`, `opts-core` | `opts-game` | Bevy Engine (via `opts-bevy`) |
+| **`opts-mesh-dir`** | L3 | Base folder of a vehicle's mesh paths: the config folder or the model folder, by the meshes each resolves (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy`, `opts-core` | `opts-game` | Bevy Engine (via `opts-bevy`) |
+| **`opts-world-session`** | L3 | Resolved content paths and the menu's request for a world session (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine (via `opts-bevy`) |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-fleet-number`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-mesh-dir`, `opts-road-surf`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic`, `opts-world-session` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |
 | **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core`, `opts-hardware`, `opts-l10n` | *None (executable root)* | CLI Tooling |
 | **`opts-benchmark`** | L3 | Scenery object load verification harness ([spec](scenery-benchmark.md)): an off-screen worker that rebuilds objects through the loader and a supervisor | `opts-bevy`, `opts-catalogue`, `opts-core`, `opts-game`, `opts-sim` | *None (executable root)* | Bevy |

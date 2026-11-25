@@ -15,7 +15,7 @@ use opts_core::formats::vehicles::model::ModelConfig;
 
 /// The base folder for the meshes of `model` (read from `cfg_path`) of the vehicle in `bus_dir`,
 /// judged by the meshes of every level of detail.
-pub(crate) fn model_mesh_dir(
+pub fn model_mesh_dir(
     install: &OmsiInstall,
     bus_dir: &Path,
     cfg_path: &Path,

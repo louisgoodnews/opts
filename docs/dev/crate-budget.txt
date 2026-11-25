@@ -33,3 +33,7 @@ opts-omsi-binary 3135  # new 2026-11-24: the .o3d and .x mesh readers split out 
 opts-omsi-vehicles 4323  # new 2026-11-24: the vehicle readers, the setvar catalogue and the light reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-map 4139  # new 2026-11-24: the map manifest, tile, terrain and water readers and the chrono overlay split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-scenery 3140  # new 2026-11-24: the .sco, .sli and crossing readers and the train consist reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
+opts-fleet-number 38  # estimate 2026-11-25 (ISS-067 stage 1): fleet_number.rs moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
+opts-mesh-dir 119  # estimate 2026-11-25 (ISS-067 stage 1): mesh_dir.rs moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
+opts-road-surf 289  # estimate 2026-11-25 (ISS-067 stage 1): road_surf.rs and road_surf/ (map, strip, tests) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
+opts-world-session 27  # estimate 2026-11-25 (ISS-067 stage 1): session.rs (OmsiSessionConfig, SessionRequest) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
