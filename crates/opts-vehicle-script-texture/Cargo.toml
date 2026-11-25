@@ -1,0 +1,16 @@
+[package]
+name = "opts-vehicle-script-texture"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Dynamic script textures of vehicles: the canvases that scripts draw and the GPU images they upload to (split out of opts-game's omsi_world)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-core = { workspace = true }

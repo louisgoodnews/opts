@@ -1,0 +1,16 @@
+[package]
+name = "opts-world-stats"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Counters, positions and camera parameters of the loaded world (split out of opts-game's omsi_world)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-core = { workspace = true }
