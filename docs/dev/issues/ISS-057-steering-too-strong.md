@@ -5,7 +5,7 @@
 | **Issue** | ISS-057 (local register: [issues-2026-11-18](../../audit/issues-2026-11-18.md)) |
 | **Severity** | major (player) |
 | **Milestone** | to be triaged |
-| **Status** | owner decision 2026-11-25: keep the current steering curve, so no code change; to be reviewed in the game when the application runs |
+| **Status** | closed 2026-11-25 by the owner: steering feels better in game with the current curve kept (decision 2026-11-25; no code change) |
 
 ## Problem
 
