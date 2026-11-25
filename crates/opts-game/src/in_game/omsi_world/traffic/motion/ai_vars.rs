@@ -1,5 +1,6 @@
 //! Script variables of the moving AI vehicles: wheels, indicators, lamps, sound and passengers.
 
+use super::lamp_log::{log_lamps, LampLog};
 use super::*;
 
 /// Period of the indicator flash (s); half of it on, half off.
@@ -71,6 +72,7 @@ pub fn update_ai_variables(
     state: Res<TrafficState>,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
     clock: Option<Res<opts_bevy::SceneryClock>>,
+    mut lamp_log: Local<LampLog>,
     mut vehicles: Query<(
         &mut TrafficVehicle,
         &mut opts_bevy::AiVariables,
@@ -82,6 +84,7 @@ pub fn update_ai_variables(
     let weather = clock.map(|c| (c.temperature_c, c.weather));
     let now = time.elapsed_secs();
     let dark = env.is_some_and(|e| e.night());
+    lamp_log.note_dark(dark);
     for (mut v, mut vars, events) in &mut vehicles {
         let Some(agent) = state.world.agent(v.id) else {
             continue;
@@ -121,6 +124,9 @@ pub fn update_ai_variables(
         }
         vars.set("lights_ai", light);
         set_lamp_variables(&mut vars, dark);
+        if lamp_log.take_sample(now) {
+            log_lamps(v.id.0, &vars);
+        }
         // Sound variables (M-0140): speed and pedals, the engine speed of a gear model, the wheel
         // speeds and the road state.
         let wet = weather.as_ref().is_some_and(|(_, w)| w.precip_rate > 0.05);
@@ -138,3 +144,6 @@ pub fn update_ai_variables(
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

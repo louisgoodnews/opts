@@ -149,9 +149,12 @@ pub fn scenery_light_system(
         let level = if light.level <= 0.0 || pos.distance(cam) > LIGHT_DRAW_DISTANCE_M {
             0.0
         } else {
-            // The direction is in the object's frame; bring the camera into it.
+            // The direction is in the object's frame (the parent's world rotation). The sprite's
+            // own rotation turns it towards the camera, so it must not be used for the frame:
+            // that made every directional light's cone test depend only on its direction's z.
+            let object_rot = global.rotation() * transform.rotation.inverse();
             let to_cam = (cam - pos).normalize_or_zero();
-            let local = global.rotation().inverse() * to_cam;
+            let local = object_rot.inverse() * to_cam;
             light.seen_level(local)
         };
         let want = if level > 0.01 {

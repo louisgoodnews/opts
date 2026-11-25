@@ -4,6 +4,7 @@ use super::*;
 
 mod ai_vars;
 mod debug;
+mod lamp_log;
 
 pub use ai_vars::update_ai_variables;
 use debug::log_obstacles;
