@@ -112,7 +112,7 @@ pub fn render_stats(world: &mut World, reset: bool, with_parts: bool) -> Value {
         "gpu_diagnostics_ms": gpu,
         "entities": world.entities().len(),
         "memory": memory_kb(),
-        "instancing_mode": crate::instancing::mode_name(),
+        "instancing_mode": crate::mode_name(),
     });
     if with_parts {
         out["parts"] = parts(world);

@@ -1,0 +1,15 @@
+[package]
+name = "opts-bevy-season"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Season state of the scenery (half-year variables, snow cover and the season texture folders), split out of opts-bevy."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

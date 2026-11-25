@@ -1,0 +1,15 @@
+[package]
+name = "opts-bevy-moon-material"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Moon disc material (the moon photograph with its phase terminator), split out of opts-bevy."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }

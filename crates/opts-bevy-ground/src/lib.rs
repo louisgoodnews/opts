@@ -61,7 +61,7 @@ impl CpuImage {
     }
 
     /// Bilinear sample with wrap-around; `u`, `v` in texture units (1.0 = one repeat).
-    pub(crate) fn sample_wrap(&self, u: f32, v: f32) -> [f32; 4] {
+    pub fn sample_wrap(&self, u: f32, v: f32) -> [f32; 4] {
         let (x, y) = (
             u.rem_euclid(1.0) * self.width as f32 - 0.5,
             v.rem_euclid(1.0) * self.height as f32 - 0.5,

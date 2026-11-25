@@ -24,6 +24,12 @@ resolver = "2"
 members = [
     "crates/opts-benchmark",
     "crates/opts-bevy",
+    "crates/opts-bevy-bus-stops",
+    "crates/opts-bevy-ground",
+    "crates/opts-bevy-instancing",
+    "crates/opts-bevy-moon-material",
+    "crates/opts-bevy-season",
+    "crates/opts-bevy-texture-sentinel",
     "crates/opts-car-following",
     "crates/opts-catalogue",
     "crates/opts-cli",
@@ -74,6 +80,12 @@ unsafe_code = "deny"
 # --- Internal Crates ---
 opts-benchmark = { path = "crates/opts-benchmark" }
 opts-bevy = { path = "crates/opts-bevy" }
+opts-bevy-bus-stops = { path = "crates/opts-bevy-bus-stops" }
+opts-bevy-ground = { path = "crates/opts-bevy-ground" }
+opts-bevy-instancing = { path = "crates/opts-bevy-instancing" }
+opts-bevy-moon-material = { path = "crates/opts-bevy-moon-material" }
+opts-bevy-season = { path = "crates/opts-bevy-season" }
+opts-bevy-texture-sentinel = { path = "crates/opts-bevy-texture-sentinel" }
 opts-car-following = { path = "crates/opts-car-following" }
 opts-catalogue = { path = "crates/opts-catalogue" }
 opts-cli = { path = "crates/opts-cli", default-features = false }

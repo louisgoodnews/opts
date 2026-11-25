@@ -21,6 +21,13 @@ opts-cli = { workspace = true }
 opts-logging = { workspace = true }
 opts-debounce = { workspace = true }
 opts-position-tag = { workspace = true }
+# Bevy-facing leaves split out of opts-bevy (ISS-065 stage 2).
+opts-bevy-bus-stops = { workspace = true }
+opts-bevy-ground = { workspace = true }
+opts-bevy-instancing = { workspace = true }
+opts-bevy-moon-material = { workspace = true }
+opts-bevy-season = { workspace = true }
+opts-bevy-texture-sentinel = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }

@@ -53,6 +53,12 @@ graph TD
         opts_gui["opts-gui<br/>• Material Design 3 tokens<br/>• Reusable UI widgets<br/>• Glassmorphism layout<br/>• Bevy UI integration"]:::bridge
         opts_theme_files["opts-theme-files<br/>• RON theme files in the config folder<br/>• Discovery and contrast-checked loading<br/>• No Bevy"]:::bridge
         opts_bevy["opts-bevy<br/>• 3D mesh loaders & materials<br/>• Coordinate system mapping<br/>• ECS VehicleController bridge<br/>• Scenery object spawning"]:::bridge
+        opts_bevy_bus_stops["opts-bevy-bus-stops<br/>• Bus stop marker component of the map<br/>• Bevy-facing leaf"]:::bridge
+        opts_bevy_ground["opts-bevy-ground<br/>• Ground texture CPU images and BC decoding<br/>• Tile ground composition<br/>• Bevy-facing leaf"]:::bridge
+        opts_bevy_instancing["opts-bevy-instancing<br/>• Mesh instancing layers (dedupe, static merge)<br/>• render.stats diagnostics<br/>• Bevy-facing leaf"]:::bridge
+        opts_bevy_moon_material["opts-bevy-moon-material<br/>• Moon disc material and its shader<br/>• Bevy-facing leaf"]:::bridge
+        opts_bevy_season["opts-bevy-season<br/>• Season state and snow cover folders<br/>• No dependencies · Zero Bevy"]:::bridge
+        opts_bevy_texture_sentinel["opts-bevy-texture-sentinel<br/>• Benchmark-only missing-texture sentinel<br/>• Bevy-facing leaf"]:::bridge
     end
 
     %% Layer 3: Application Executables & Tools
@@ -69,6 +75,12 @@ graph TD
     opts_benchmark --> opts_core
     opts_benchmark --> opts_game
     opts_benchmark --> opts_sim
+    opts_bevy --> opts_bevy_bus_stops
+    opts_bevy --> opts_bevy_ground
+    opts_bevy --> opts_bevy_instancing
+    opts_bevy --> opts_bevy_moon_material
+    opts_bevy --> opts_bevy_season
+    opts_bevy --> opts_bevy_texture_sentinel
     opts_bevy --> opts_cli
     opts_bevy --> opts_core
     opts_bevy --> opts_debounce
@@ -157,7 +169,13 @@ graph TD
 | **`opts-debounce`** | L0 | Trailing debounce of file-change events for the hot-reload watcher (split out of `opts-bevy`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-map-advice`** | L0 | Map load profile and the heuristic advice engine: pure thresholds, no engine dependency (split out of `opts-game`, [plan](../../dev/crate-split-advice.md)) | *None* | `opts-game` | Pure Rust |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
-| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game` | Bevy Engine |
+| **`opts-bevy-bus-stops`** | L2 | Bus stop marker component of the map objects tagged `[busstop]` (split out of `opts-bevy`, ISS-065 stage 2) | *None* | `opts-bevy` | Bevy Engine |
+| **`opts-bevy-ground`** | L2 | Ground texture CPU images: decoding, block-compressed texels, wrap sampling and tile ground composition (split out of `opts-bevy`, ISS-065 stage 2) | *None* | `opts-bevy` | Bevy Engine |
+| **`opts-bevy-instancing`** | L2 | Mesh instancing layers (dedupe and static merge, `OPTS_INSTANCING`) and the `render.stats` diagnostics (split out of `opts-bevy`, ISS-065 stage 2) | *None* | `opts-bevy` | Bevy Engine |
+| **`opts-bevy-moon-material`** | L2 | Moon disc material: the moon photograph with its phase terminator, and its shader (split out of `opts-bevy`, ISS-065 stage 2) | *None* | `opts-bevy` | Bevy Engine |
+| **`opts-bevy-season`** | L2 | Season state of the scenery: half-year variables, snow cover and the season texture folders (split out of `opts-bevy`, ISS-065 stage 2) | *None* | `opts-bevy` | Pure Rust |
+| **`opts-bevy-texture-sentinel`** | L2 | Benchmark-only missing-texture sentinel material (split out of `opts-bevy`, ISS-065 stage 2) | *None* | `opts-bevy` | Bevy Engine |
+| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-bevy-bus-stops`, `opts-bevy-ground`, `opts-bevy-instancing`, `opts-bevy-moon-material`, `opts-bevy-season`, `opts-bevy-texture-sentinel`, `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game` | Bevy Engine |
 | **`opts-exhaust`** | L3 | Engine exhaust plumes of the player and the nearest vehicles: puff emission, the model outlet, the distance fade (split out of `opts-game`, M-0117 budget room; [plan](../../dev/crate-split-exhaust.md)) | `opts-bevy`, `opts-sim` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |

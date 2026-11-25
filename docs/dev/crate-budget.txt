@@ -33,3 +33,9 @@ opts-omsi-binary 3135  # new 2026-11-24: the .o3d and .x mesh readers split out 
 opts-omsi-vehicles 4323  # new 2026-11-24: the vehicle readers, the setvar catalogue and the light reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-map 4139  # new 2026-11-24: the map manifest, tile, terrain and water readers and the chrono overlay split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-scenery 3140  # new 2026-11-24: the .sco, .sli and crossing readers and the train consist reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
+opts-bevy-bus-stops 59  # new ISS-065 stage 2, ESTIMATE counted by hand (non-blank, non-comment lines; audit not run): the bus stop marker split out of opts-bevy
+opts-bevy-ground 277  # new ISS-065 stage 2, ESTIMATE counted by hand: the ground texture CPU image, BC decoder and tile composition split out of opts-bevy
+opts-bevy-instancing 572  # new ISS-065 stage 2, ESTIMATE counted by hand: the mesh instancing layers and render.stats split out of opts-bevy (the epic's ~420 was a rough figure)
+opts-bevy-moon-material 51  # new ISS-065 stage 2, ESTIMATE counted by hand: the moon disc material and its shader split out of opts-bevy
+opts-bevy-season 56  # new ISS-065 stage 2, ESTIMATE counted by hand: the season state and snow-cover folders split out of opts-bevy
+opts-bevy-texture-sentinel 24  # new ISS-065 stage 2, ESTIMATE counted by hand: the benchmark-only missing-texture sentinel split out of opts-bevy
