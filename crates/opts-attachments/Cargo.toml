@@ -1,0 +1,18 @@
+[package]
+name = "opts-attachments"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Spline attachments: placements of street furniture, fences and parking bays along splines (split out of opts-game, ISS-067 stage 1)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-bevy = { workspace = true }
+opts-core = { workspace = true }
+tracing = { workspace = true }

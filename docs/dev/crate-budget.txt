@@ -63,6 +63,7 @@ opts-shell-calendar 345  # new 2026-11-25 (ISS-068 stage 1, estimate: non-blank 
 opts-shell-dialog 187  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the confirmation dialog spec, spawn and answer systems split out of opts-game's shell
 opts-shell-icons 19  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the shell's Material Icons codepoints split out of opts-game
 opts-shell-nav TBD-measure  # new 2026-11-25 (ISS-068 stage 2, estimate: the audit has not measured it yet): the shell navigation (registry, rail frame, back stack, Esc, banners) split out of opts-game; opts-game keeps its own budget until the audit measures it
+opts-attachments TBD-measure  # new 2026-11-25 (ISS-067 stage 1, estimate: the audit has not measured it yet): spline attachments (placements along splines and the map-wide spline index) split out of opts-game omsi_world/in_game
 opts-pause-report 8  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the report dialog state helper split out of opts-game's pause module
 opts-hud-widgets 439  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit; re-measure before the owner's review): the HUD widget vocabulary and registry split out of opts-game
 opts-hud-keys 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the HUD message key tables split out of opts-game
