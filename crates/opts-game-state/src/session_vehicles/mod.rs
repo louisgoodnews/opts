@@ -3,9 +3,11 @@
 //! which re-exports these types at its old paths.
 
 pub mod state;
+pub mod store;
 pub mod types;
 
 pub use state::VehicleState;
+pub use store::SessionVehicles;
 pub use types::{
     DespawnReason, EntrySel, Lifecycle, SessionVehicle, SessionVehicleRecord, SpawnParams,
     SpawnPoint, VehicleId, SAVE_SECTION, SAVE_SECTION_VERSION,

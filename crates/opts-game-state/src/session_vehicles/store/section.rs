@@ -2,8 +2,8 @@
 
 use serde_json::{json, Value};
 
-use super::store::SessionVehicles;
-use super::types::{Lifecycle, SessionVehicleRecord, SAVE_SECTION_VERSION};
+use super::SessionVehicles;
+use crate::session_vehicles::types::{Lifecycle, SessionVehicleRecord, SAVE_SECTION_VERSION};
 
 impl SessionVehicles {
     /// The registry as the control protocol answers it.

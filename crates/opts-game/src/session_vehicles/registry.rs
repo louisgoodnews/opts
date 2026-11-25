@@ -8,8 +8,6 @@
 //! module keep in step. The lifecycle and the switch and despawn rules are in
 //! `docs/src/architecture/session-vehicles.md`.
 
-mod lifecycle;
-mod section;
 mod store;
 mod types;
 

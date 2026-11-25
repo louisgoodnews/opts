@@ -2,10 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::in_game::omsi_world::CameraSetup;
+use opts_world_stats::CameraSetup;
 
-use super::store::SessionVehicles;
-use super::types::{
+use super::SessionVehicles;
+use crate::session_vehicles::types::{
     DespawnReason, Lifecycle, SessionVehicleRecord, SpawnParams, SpawnPoint, VehicleId,
 };
 
