@@ -151,12 +151,12 @@ pub struct NewGameSetup {
     pub formation: Vec<(String, bool)>,
     /// The timetable run to drive (step *Trip*): the drive starts at its first stop instead of
     /// the start point and follows it.
-    pub trip: Option<super::trips::TripChoice>,
+    pub trip: Option<crate::trip_choice::TripChoice>,
 }
 
 impl Default for NewGameSetup {
     fn default() -> Self {
-        let today = super::planner::today();
+        let today = crate::date::today();
         Self {
             selected_map: "Berlin-Spandau".to_string(),
             // No map-specific default: the wizard picks the first start point of the chosen map

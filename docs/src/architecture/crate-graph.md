@@ -98,6 +98,7 @@ graph TD
         opts_settings_io["opts-settings-io<br/>• settings.toml and settings.db file I/O<br/>• Background settings writer (one thread, newest copy per file)<br/>• Free functions over opts-game-state types"]:::app
         opts_attachments["opts-attachments<br/>• Spline attachment placements along splines<br/>• Map-wide spline index<br/>• Zero file I/O · Bevy transforms over opts-bevy"]:::app
         opts_tile_loading["opts-tile-loading<br/>• Tile load-all and radius decisions (M-0080)<br/>• Streaming budget and residency as pure functions<br/>• Pure Rust over opts-hardware, opts-stream-budget and opts-game-state"]:::app
+        opts_new_game_types["opts-new-game-types<br/>• Plan-a-drive catalogue and choice types<br/>• Trip choice and planner date arithmetic<br/>• Bevy derives over opts-bevy and opts-shell-calendar"]:::app
         opts_pause_report["opts-pause-report<br/>• Report dialog state for the pause menu<br/>• Bevy state over opts-bevy"]:::app
         opts_hud_widgets["opts-hud-widgets<br/>• HUD widget slots, vehicle kinds and descriptors<br/>• Built-in widget registry<br/>• Bevy CameraMode via opts-bevy"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
@@ -161,6 +162,8 @@ graph TD
     opts_tile_loading --> opts_game_state
     opts_tile_loading --> opts_hardware
     opts_tile_loading --> opts_stream_budget
+    opts_new_game_types --> opts_bevy
+    opts_new_game_types --> opts_shell_calendar
     opts_game --> opts_bevy
     opts_game --> opts_game_state
     opts_game_state --> opts_bevy
@@ -193,6 +196,7 @@ graph TD
     opts_game --> opts_settings_io
     opts_game --> opts_attachments
     opts_game --> opts_tile_loading
+    opts_game --> opts_new_game_types
     opts_game --> opts_minimap_zoom_canvas
     opts_game --> opts_save_error
     opts_game --> opts_shell_keys
@@ -332,6 +336,7 @@ graph TD
 | **`opts-settings-io`** | L3 | Settings file I/O: `settings.toml`, `settings.db` and the background writer (split out of `opts-game`'s `settings`, ISS-068 remainder) | `opts-game-state` (external: `directories`, `rusqlite`, `toml`, `tracing`) | `opts-game` | Pure Rust |
 | **`opts-attachments`** | L3 | Spline attachments: placements of street furniture, fences and parking bays along splines, and the map-wide spline index (split out of `opts-game`, ISS-067 stage 1) | `opts-bevy`, `opts-core` | `opts-game` | Bevy Engine |
 | **`opts-tile-loading`** | L3 | Tile loading controls (M-0080): the load-all and tile-radius decisions, the streaming budget and residency as pure functions (split out of `opts-game`, ISS-067 stage 1) | `opts-game-state`, `opts-hardware`, `opts-stream-budget` | `opts-game` | Pure Rust |
+| **`opts-new-game-types`** | L3 | Plan-a-drive types without UI: the catalogue lists, the drive choices, the trip choice and the planner date arithmetic (split out of `opts-game`, ISS-064 stage 3) | `opts-bevy`, `opts-shell-calendar` (external: `bevy`, `chrono`, `serde`) | `opts-game` | Bevy Engine |
 | **`opts-pause-report`** | L3 | Report dialog state helper for the pause menu (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-pause-report`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-shell-icons`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-hud-widgets`** | L3 | HUD widget vocabulary: slots, vehicle kinds, widget descriptors and the built-in registry (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | `opts-bevy` (external: `serde`) | `opts-game` | Bevy Engine |

@@ -10,7 +10,7 @@ use super::types::{GameCatalogue, NewGameSetup};
 #[cfg(test)]
 use opts_bevy::CalendarDate;
 
-mod date;
+use opts_new_game_types::date;
 mod era;
 mod quick;
 mod validation;

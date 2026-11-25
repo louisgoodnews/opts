@@ -22,7 +22,7 @@ pub mod step_when;
 pub mod step_where;
 pub mod thumbnails;
 pub mod trips;
-pub mod types;
+pub use opts_new_game_types::types;
 pub mod weather;
 
 mod screen;

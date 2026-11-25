@@ -1,7 +1,5 @@
 //! The runs an offer is made of: the chosen trip and the offered run, with their labels.
 
-use super::*;
-
 /// The trip chosen for the drive.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TripChoice {

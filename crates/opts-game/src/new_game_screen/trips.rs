@@ -30,7 +30,7 @@ pub const WINDOW_S: u32 = 3_600;
 /// Id of the *No trip* entry.
 pub const NO_TRIP_ID: &str = "__no_trip__";
 
-mod choice;
+use opts_new_game_types::trip_choice as choice;
 mod list;
 mod refresh;
 pub use choice::{TripChoice, TripOption};
