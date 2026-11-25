@@ -36,6 +36,8 @@ pub struct TextureOverride {
     /// `[matl_nightmap]`: the night texture, drawn as it is (lit windows, a display's backlight)
     /// when the night switch (`NightlightA`) is on; used when the material has no light map.
     pub night_map: Option<String>,
+    /// `[matl_texadress_clamp]`: the texture is sampled at its edges, not repeated.
+    pub clamp: bool,
     /// `[matl_freetex]`: the string variable that names the texture to show instead of
     /// `texture` at run time (reported in [`ModelPart::free_texture`]).
     pub free_texture: Option<String>,

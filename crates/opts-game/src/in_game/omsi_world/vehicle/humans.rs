@@ -44,6 +44,7 @@ pub(in super::super::super) fn load_human_parts(
             .materials
             .iter()
             .map(|m| TextureOverride {
+                clamp: false,
                 slot: m.slot_index as usize,
                 texture: m.texture.clone(),
                 alpha: m.alpha_mode,

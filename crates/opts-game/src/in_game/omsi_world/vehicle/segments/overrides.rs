@@ -68,6 +68,7 @@ pub(crate) fn build_overrides(
         .materials
         .iter()
         .map(|m| TextureOverride {
+            clamp: m.clamp_addressing,
             slot: m.slot_index as usize,
             texture: m.texture.clone(),
             alpha: m.alpha_mode,

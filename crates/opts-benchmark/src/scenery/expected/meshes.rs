@@ -33,11 +33,9 @@ pub(super) fn overrides(sco: &SceneryObject, mesh: &ScoMesh) -> Vec<(TextureOver
     mesh.materials
         .iter()
         .map(|m| {
-            let text = m
-                .text_texture
-                .is_some_and(|i| sco.text_textures.get(i).is_some());
             (
                 TextureOverride {
+                    clamp: false,
                     slot: m.material_index,
                     texture: m.texture.clone(),
                     alpha: m.alpha_mode,
@@ -48,7 +46,8 @@ pub(super) fn overrides(sco: &SceneryObject, mesh: &ScoMesh) -> Vec<(TextureOver
                     free_texture: None,
                     night_map: None,
                 },
-                text,
+                m.text_texture
+                    .is_some_and(|i| sco.text_textures.get(i).is_some()),
             )
         })
         .collect()

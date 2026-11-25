@@ -9,6 +9,7 @@ fn over(alpha: Option<u32>, trans: Option<&str>, scaled: bool) -> TextureOverrid
 
 fn over_with(alpha: Option<u32>, trans: Option<&str>, scaled: bool, name: &str) -> TextureOverride {
     TextureOverride {
+        clamp: false,
         slot: 0,
         texture: "t.tga".into(),
         alpha,
