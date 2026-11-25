@@ -39,6 +39,10 @@ opts-fleet-number = { workspace = true }
 opts-mesh-dir = { workspace = true }
 opts-road-surf = { workspace = true }
 opts-world-session = { workspace = true }
+opts-shell-calendar = { workspace = true }
+opts-shell-dialog = { workspace = true }
+opts-shell-icons = { workspace = true }
+opts-pause-report = { workspace = true }
 
 # Bevy Engine
 bevy = { workspace = true }

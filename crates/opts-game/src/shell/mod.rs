@@ -11,16 +11,18 @@
 //! * [`dialog`]: confirmation dialogs; [`footer`]: theme toggle and quit.
 
 pub mod banner;
-pub mod calendar;
-pub mod dialog;
 pub mod esc;
 pub mod footer;
 pub mod frame;
-pub mod icons;
 pub mod keys;
 pub mod nav;
 pub mod notify;
 pub mod registry;
+
+// Leaves split out as crates (ISS-068 stage 1); the old module paths stay.
+pub use opts_shell_calendar as calendar;
+pub use opts_shell_dialog as dialog;
+pub use opts_shell_icons as icons;
 
 use bevy::prelude::*;
 

@@ -65,6 +65,7 @@ members = [
     "crates/opts-omsi-map",
     "crates/opts-omsi-scenery",
     "crates/opts-position-tag",
+    "crates/opts-pause-report",
     "crates/opts-types",
     "crates/opts-vdf",
     "crates/opts-theme-files",
@@ -75,6 +76,9 @@ members = [
     "crates/opts-map-advice",
     "crates/opts-sim",
     "crates/opts-sim-passengers",
+    "crates/opts-shell-calendar",
+    "crates/opts-shell-dialog",
+    "crates/opts-shell-icons",
     "crates/opts-tools",
     "crates/opts-traffic",
 ]
@@ -132,6 +136,7 @@ opts-omsi-vehicles = { path = "crates/opts-omsi-vehicles" }
 opts-omsi-map = { path = "crates/opts-omsi-map" }
 opts-omsi-scenery = { path = "crates/opts-omsi-scenery" }
 opts-position-tag = { path = "crates/opts-position-tag" }
+opts-pause-report = { path = "crates/opts-pause-report" }
 opts-types = { path = "crates/opts-types" }
 opts-vdf = { path = "crates/opts-vdf" }
 opts-theme-files = { path = "crates/opts-theme-files" }
@@ -148,6 +153,9 @@ opts-map-advice = { path = "crates/opts-map-advice" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }
 opts-sim-passengers = { path = "crates/opts-sim-passengers" }
+opts-shell-calendar = { path = "crates/opts-shell-calendar" }
+opts-shell-dialog = { path = "crates/opts-shell-dialog" }
+opts-shell-icons = { path = "crates/opts-shell-icons" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }
 

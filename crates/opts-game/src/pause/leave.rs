@@ -141,11 +141,3 @@ pub fn reset_on_exit(
     *pause = Pause::default();
     time.unpause();
 }
-
-/// The report dialog's state exists even in headless runs (where the reporting plugin is absent).
-pub fn ensure_report_state(app: &mut App) {
-    if !app.world().contains_resource::<State<ReportModalState>>() {
-        app.init_state::<ReportModalState>();
-    }
-    app.init_resource::<ReportModalData>();
-}

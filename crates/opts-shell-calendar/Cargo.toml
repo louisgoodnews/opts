@@ -1,0 +1,17 @@
+[package]
+name = "opts-shell-calendar"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shell calendar controls: date and time steppers, their arithmetic and the frame of a choice chip (split out of opts-game)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-bevy = { workspace = true }
+opts-gui = { workspace = true }

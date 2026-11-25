@@ -57,3 +57,7 @@ opts-fleet-number 38  # estimate 2026-11-25 (ISS-067 stage 1): fleet_number.rs m
 opts-mesh-dir 119  # estimate 2026-11-25 (ISS-067 stage 1): mesh_dir.rs moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
 opts-road-surf 289  # estimate 2026-11-25 (ISS-067 stage 1): road_surf.rs and road_surf/ (map, strip, tests) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
 opts-world-session 27  # estimate 2026-11-25 (ISS-067 stage 1): session.rs (OmsiSessionConfig, SessionRequest) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
+opts-shell-calendar 345  # new 2026-11-25 (ISS-068 stage 1, estimate: non-blank non-comment lines counted by hand, not by the audit): the date and time steppers and choice frame split out of opts-game's shell
+opts-shell-dialog 187  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the confirmation dialog spec, spawn and answer systems split out of opts-game's shell
+opts-shell-icons 19  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the shell's Material Icons codepoints split out of opts-game
+opts-pause-report 8  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the report dialog state helper split out of opts-game's pause module
