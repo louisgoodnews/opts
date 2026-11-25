@@ -52,13 +52,6 @@ pub fn opaque_share_rgba(rgba: &[u8]) -> f32 {
     solid as f32 / texels as f32
 }
 
-/// [`opaque_share_rgba`] of a composed image's base level; `None` without CPU texels.
-pub(in crate::model) fn composed_opaque_share(composed: &Image) -> Option<f32> {
-    let data = composed.data.as_deref()?;
-    let (w, h) = (composed.width() as usize, composed.height() as usize);
-    Some(opaque_share_rgba(data.get(..w * h * 4)?))
-}
-
 /// [`transmap_glass_rgba`] on a composed image (RGBA8, as [`compose_alpha`] returns it).
 ///
 /// The composed image already carries its mip chain; the glass is built from its base level

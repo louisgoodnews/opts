@@ -90,7 +90,7 @@ pub(crate) fn reset_keys(world: &mut World, params: &Value) -> Outcome {
         });
     }
     if !changed.is_empty() {
-        world.resource_mut::<GameSettings>().save_in_background();
+        crate::settings::save_in_background(&world.resource_mut::<GameSettings>());
     }
     let list: Vec<Value> = changed
         .iter()

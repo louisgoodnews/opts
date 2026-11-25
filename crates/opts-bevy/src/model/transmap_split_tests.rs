@@ -33,8 +33,14 @@ fn mostly_translucent_composition_is_not_split() {
 /// The logged share is the measured opaque fraction the split decision is made on.
 #[test]
 fn opaque_share_is_the_measured_fraction() {
-    assert_eq!(opaque_share_rgba(&image(&[255, 255, 250, 243, 0, 0, 0, 0])), 0.5);
-    assert_eq!(opaque_share_rgba(&image(&[0, 40, 80, 120, 255, 30])), 1.0 / 6.0);
+    assert_eq!(
+        opaque_share_rgba(&image(&[255, 255, 250, 243, 0, 0, 0, 0])),
+        0.5
+    );
+    assert_eq!(
+        opaque_share_rgba(&image(&[0, 40, 80, 120, 255, 30])),
+        1.0 / 6.0
+    );
     assert_eq!(opaque_share_rgba(&[]), 0.0);
     // Just below the split line: 3 of 7 opaque is under 0.5, so no split is made.
     let below = image(&[255, 255, 255, 0, 0, 0, 0]);

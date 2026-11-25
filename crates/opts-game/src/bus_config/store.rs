@@ -64,7 +64,7 @@ impl BusConfigurations {
     /// Where the file is stored (beside the settings database), if a directory is known.
     #[must_use]
     pub fn path() -> Option<PathBuf> {
-        GameSettings::database_path().map(|p| p.with_file_name(FILE_NAME))
+        crate::settings::database_path().map(|p| p.with_file_name(FILE_NAME))
     }
 
     /// Reads the store at `path`; a missing file is an empty store.

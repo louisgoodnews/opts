@@ -1,7 +1,9 @@
 //! Challenge definitions: a stable id, the number of stops the run must serve, its rules and its
 //! pass criteria.
 
-use crate::rules::{ScoringRules, MAX_COLLISIONS, MAX_MISSED_STOPS, MIN_ON_TIME_RATIO, TIGHT_WINDOW_S};
+use crate::rules::{
+    ScoringRules, MAX_COLLISIONS, MAX_MISSED_STOPS, MIN_ON_TIME_RATIO, TIGHT_WINDOW_S,
+};
 
 /// What a run must achieve to pass.
 #[derive(Debug, Clone, Copy, PartialEq)]

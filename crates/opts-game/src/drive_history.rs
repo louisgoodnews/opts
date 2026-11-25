@@ -9,7 +9,6 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::new_game_screen::types::NewGameSetup;
-use crate::settings::GameSettings;
 
 /// One remembered choice of map, vehicle and conditions.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -119,7 +118,7 @@ impl DriveHistory {
     /// Where the history is stored (beside the settings database), if a directory is known.
     #[must_use]
     pub fn path() -> Option<PathBuf> {
-        GameSettings::database_path().map(|p| p.with_file_name("drive_history.json"))
+        crate::settings::database_path().map(|p| p.with_file_name("drive_history.json"))
     }
 
     /// Reads the history; a missing or unreadable file gives an empty history.

@@ -162,10 +162,7 @@ pub struct CareerPlugin;
 impl Plugin for CareerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Career>()
-            .add_systems(
-                Update,
-                advance_career.run_if(in_state(AppState::InGame)),
-            )
+            .add_systems(Update, advance_career.run_if(in_state(AppState::InGame)))
             .add_systems(OnExit(AppState::InGame), reset_career);
     }
 }

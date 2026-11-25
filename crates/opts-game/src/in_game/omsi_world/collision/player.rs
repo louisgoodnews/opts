@@ -110,7 +110,15 @@ pub fn player_collisions(
             if push <= 0.0 {
                 break;
             }
-            log_contact(hit, mine[hit], worst_other, normal, depth, push, worst_is_traffic);
+            log_contact(
+                hit,
+                mine[hit],
+                worst_other,
+                normal,
+                depth,
+                push,
+                worst_is_traffic,
+            );
             push_part(&mut controller.sim, hit, (normal * push).as_dvec2());
             push_total += normal * push;
             normals.push(normal);

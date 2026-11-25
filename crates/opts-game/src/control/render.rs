@@ -38,7 +38,7 @@ pub(super) fn render_look(world: &mut World, params: &Value) -> Outcome {
         world.resource_mut::<crate::look::ActiveLook>().0 = look;
         if let Some(mut settings) = world.get_resource_mut::<crate::settings::GameSettings>() {
             settings.look = look;
-            settings.save_in_background();
+            crate::settings::save_in_background(&settings);
         }
     }
     let available: Vec<&str> = crate::look::Look::ALL.iter().map(|l| l.key()).collect();

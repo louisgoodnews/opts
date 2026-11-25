@@ -17,7 +17,6 @@ use serde::{Deserialize, Serialize};
 use crate::new_game_screen::repaints::VehicleRepaints;
 use crate::new_game_screen::setvars_discovery::catalogue_of;
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup, VehicleItem};
-use crate::settings::GameSettings;
 
 /// The version of the file layout this build writes and reads.
 pub const FORMAT_VERSION: u32 = 1;

@@ -4,7 +4,6 @@ use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use std::time::Duration;
 
-use crate::settings::GameSettings;
 use crate::shutdown::ShutdownPlugin;
 use crate::OptsGamePlugin;
 use opts_bevy::OptsAssetPlugin;
@@ -72,13 +71,13 @@ fn add_engine_plugins(app: &mut App, args: &CliArgs) {
 /// Loads the user settings (with the map paths of the command line), applies the startup render
 /// options and inserts the fixed time step and the script drive switch.
 fn insert_startup_resources(app: &mut App, args: &CliArgs) {
-    let mut settings = GameSettings::load_or_default();
+    let mut settings = crate::settings::load_or_default();
     if let Some(ref path) = args.map_path {
         settings.recent_map_path = Some(path.clone());
     }
     if let Some(ref path) = args.recent_map {
         settings.recent_map_path = Some(path.clone());
-        let _ = settings.save();
+        let _ = crate::settings::save(&settings);
     }
     crate::look::apply_startup_render_options(app, &settings, args);
     app.insert_resource(settings);

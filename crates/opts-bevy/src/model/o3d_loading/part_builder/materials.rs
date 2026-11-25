@@ -12,8 +12,7 @@ impl ContentLoader<'_> {
         let (tex_name, mut tex) = self.resolve_slot_texture_initial(base, over, ctx);
         // The missing-texture sentinel looks at the diffuse texture only, not the maps after it.
         let failures_after_diffuse = self.cache.stats.failures.len();
-        let (mut glass_tex, blended_by_map) =
-            self.compose_transmap_glass(&mut tex, tex_name.as_deref(), over, ctx);
+        let (mut glass_tex, blended_by_map) = self.compose_transmap_glass(&mut tex, over, ctx);
         if glass_tex.is_none() {
             glass_tex = self.resolve_body_glass_split(&tex, over, blended_by_map);
         }

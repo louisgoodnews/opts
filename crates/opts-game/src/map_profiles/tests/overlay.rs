@@ -14,7 +14,7 @@ fn a_session_overlay_never_reaches_the_file_and_restores_exactly() {
     s.db_path_override = Some(root.join("settings.db"));
     s.set_raw("gameplay.traffic", "100");
     s.set_raw("texture_filtering", "16");
-    s.save().unwrap();
+    crate::settings::save(&s).unwrap();
     let before = s.clone();
 
     let mut values = BTreeMap::new();
@@ -28,10 +28,10 @@ fn a_session_overlay_never_reaches_the_file_and_restores_exactly() {
 
     // Saving while the profile is on writes the global values.
     s.set_raw("ui_scale", "125");
-    s.save().unwrap();
+    crate::settings::save(&s).unwrap();
     let mut on_disk = GameSettings::default();
     let conn = rusqlite::Connection::open(root.join("settings.db")).unwrap();
-    on_disk.apply_from_connection(&conn).unwrap();
+    crate::settings::apply_from_connection(&mut on_disk, &conn).unwrap();
     assert_eq!(on_disk.raw("gameplay.traffic").as_deref(), Some("100"));
     assert_eq!(on_disk.raw("texture_filtering").as_deref(), Some("16"));
     assert_eq!(on_disk.raw("graphics.bloom"), None);

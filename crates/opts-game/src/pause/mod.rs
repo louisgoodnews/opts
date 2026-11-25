@@ -12,7 +12,7 @@ pub mod stats;
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
-use opts_bevy::reporting::{request_report, ReportModalData, ReportModalState};
+use opts_bevy::reporting::{request_report, ReportModalState};
 use opts_gui::components::modal::{ModalBuilder, ModalEvent, ModalRoot};
 use opts_gui::interaction::activation::Activated;
 use opts_gui::l10n::{L10nArgs, L10nKey};

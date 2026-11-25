@@ -4,8 +4,6 @@ use std::path::PathBuf;
 
 use bevy::prelude::*;
 
-use crate::settings::GameSettings;
-
 use super::ChooseError;
 
 /// The step the first-run flow shows.
@@ -42,7 +40,7 @@ impl Default for FirstRun {
 }
 
 pub(super) fn state_file() -> Option<PathBuf> {
-    GameSettings::database_path().map(|p| p.with_file_name("first_run.json"))
+    crate::settings::database_path().map(|p| p.with_file_name("first_run.json"))
 }
 
 impl FirstRun {

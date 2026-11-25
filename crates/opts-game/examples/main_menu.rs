@@ -11,7 +11,7 @@
 
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
-use opts_game::{GameSettings, OptsGamePlugin};
+use opts_game::OptsGamePlugin;
 use std::path::PathBuf;
 
 fn main() {
@@ -26,7 +26,7 @@ fn main() {
         }
     }
 
-    let mut settings = GameSettings::load_or_default();
+    let mut settings = opts_game::settings::load_or_default();
     if let Some(path) = cli_map_path {
         settings.recent_map_path = Some(path);
     }

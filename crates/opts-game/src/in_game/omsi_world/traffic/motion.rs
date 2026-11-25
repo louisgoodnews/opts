@@ -1,7 +1,7 @@
 //! Moving traffic vehicles and their script variables.
 
-use super::*;
 use super::ai_script::timing::Window;
+use super::*;
 
 mod ai_vars;
 mod debug;
@@ -74,7 +74,11 @@ pub fn move_traffic(
         state.world.step(dt / steps);
     }
     let ms = started.elapsed().as_secs_f64() * 1000.0;
-    timing.record("world", ms, u32::try_from(state.world.agents().len()).unwrap_or(u32::MAX));
+    timing.record(
+        "world",
+        ms,
+        u32::try_from(state.world.agents().len()).unwrap_or(u32::MAX),
+    );
     for e in state.world.drain_events() {
         if let opts_traffic::TrafficEvent::Stuck { id, lane } = e {
             tracing::warn!(id = id.0, lane = lane.0, "AI vehicle stuck, despawned");

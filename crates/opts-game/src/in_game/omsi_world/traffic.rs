@@ -199,7 +199,7 @@ mod motion;
 pub use motion::{move_traffic, update_ai_variables};
 
 mod response;
-pub use response::{dispatch_responders, Incident, IncidentQueue, ServiceKind, INCIDENT_STATION};
+pub use response::{dispatch_responders, Incident, IncidentQueue, ServiceKind};
 pub(crate) mod lane_overlay;
 
 mod settings;

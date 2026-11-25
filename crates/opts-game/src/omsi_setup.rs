@@ -64,7 +64,7 @@ pub fn resolve_omsi_on_startup(
                 // For this run even when saving fails: everything else reads the remembered path.
                 set_saved_root(Some(root.clone()));
                 settings.omsi_path = Some(root);
-                if let Err(e) = settings.save() {
+                if let Err(e) = crate::settings::save(&settings) {
                     warn!("could not save the OMSI path: {e}");
                 }
             }

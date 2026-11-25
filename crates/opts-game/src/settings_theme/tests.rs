@@ -6,7 +6,7 @@ use rusqlite::Connection;
 
 fn load(rows: &[(&str, &str)]) -> GameSettings {
     let conn = Connection::open_in_memory().expect("db");
-    GameSettings::init_database(&conn).expect("schema");
+    crate::settings::init_database(&conn).expect("schema");
     for (k, v) in rows {
         conn.execute(
             "INSERT INTO app_settings (key, value) VALUES (?1, ?2)",
@@ -15,7 +15,7 @@ fn load(rows: &[(&str, &str)]) -> GameSettings {
         .expect("insert");
     }
     let mut s = GameSettings::default();
-    s.apply_from_connection(&conn).expect("load");
+    crate::settings::apply_from_connection(&mut s, &conn).expect("load");
     s
 }
 

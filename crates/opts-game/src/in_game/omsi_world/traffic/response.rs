@@ -18,8 +18,8 @@ use super::{ScheduledTraffic, TrafficPool, TrafficState};
 
 mod events;
 mod kind;
-pub use kind::{service_kind, ServiceKind, MAX_RESPONSE_ROUTE_M};
 use kind::nearest_responder;
+pub use kind::{service_kind, ServiceKind};
 
 /// The station of the stop at an incident; no timetable station has this id.
 pub const INCIDENT_STATION: u32 = u32::MAX;
@@ -92,7 +92,10 @@ pub fn dispatch_responders(
     pool: Res<TrafficPool>,
     sched: Res<ScheduledTraffic>,
 ) {
-    let IncidentQueue { pending, responding } = &mut *queue;
+    let IncidentQueue {
+        pending,
+        responding,
+    } = &mut *queue;
     responding.retain(|id, _| state.world.agent(*id).is_some());
     let dt = time.delta_secs();
     let mut waiting = VecDeque::new();

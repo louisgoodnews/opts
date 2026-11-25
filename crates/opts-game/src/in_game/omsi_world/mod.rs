@@ -4,7 +4,7 @@
 //! geometry. Assets that cannot be loaded are logged at `ERROR` and skipped.
 
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use bevy::prelude::*;
@@ -47,13 +47,13 @@ pub(crate) mod trace;
 pub(crate) mod traffic;
 mod traffic_chain;
 mod traffic_variant;
+use opts_fleet_number as fleet_number;
 pub(crate) use pedestrians::passenger_factor;
 #[cfg(test)]
 pub(crate) use pedestrians::DEFAULT_PEDESTRIAN_BASELINE;
 pub(crate) use traffic::line_runs_on;
 #[cfg(test)]
 pub(crate) use traffic::DEFAULT_TRAFFIC_BASELINE;
-use opts_fleet_number as fleet_number;
 mod trees;
 mod vehicle;
 pub mod vehicle_script_texture;

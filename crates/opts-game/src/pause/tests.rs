@@ -6,6 +6,7 @@ use bevy::input::ButtonState;
 use super::*;
 use crate::in_game::types::SimulationLoadState;
 use crate::shell::ShellPlugin;
+use opts_bevy::reporting::ReportModalData;
 
 fn app() -> App {
     crate::isolation::isolate_user_dirs();

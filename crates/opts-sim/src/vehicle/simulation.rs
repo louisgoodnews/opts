@@ -1,7 +1,7 @@
 //! The vehicle simulation state: chassis, axles, drivetrain, suspension, consist and inputs.
 
-use super::axle::AxleState;
 use super::aids::DriverAids;
+use super::axle::AxleState;
 use super::brakes::BrakeSystem;
 use super::chassis::ChassisState;
 use super::consist::UnitLoad;

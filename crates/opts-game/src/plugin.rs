@@ -21,7 +21,7 @@ impl Plugin for OptsGamePlugin {
     fn build(&self, app: &mut App) {
         // Initialize persistent settings if not already present
         if !app.world().contains_resource::<GameSettings>() {
-            app.insert_resource(GameSettings::load_or_default());
+            app.insert_resource(crate::settings::load_or_default());
         }
 
         // Configure Material Theme based on settings
@@ -29,7 +29,7 @@ impl Plugin for OptsGamePlugin {
             .world()
             .get_resource::<GameSettings>()
             .cloned()
-            .unwrap_or_else(GameSettings::load_or_default);
+            .unwrap_or_else(crate::settings::load_or_default);
 
         // The first theme comes straight from the settings (dark unless the user chose
         // otherwise); the `opts-gui` theme systems keep it in step afterwards.
@@ -61,7 +61,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(help::HelpPlugin)
             .add_plugins(pause::PausePlugin)
             .add_plugins(save::SavePlugin)
-            .add_plugins(career::CareerPlugin)
+            .add_plugins(crate::career::CareerPlugin)
             .add_plugins(hud::HudPlugin)
             .add_plugins(viewpoints::ViewpointPlugin)
             .add_plugins(session_summary::SessionSummaryPlugin)

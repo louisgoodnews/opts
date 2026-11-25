@@ -13,7 +13,10 @@ fn loading_screen_hud_and_shell_screens_carry_no_literal_colours() {
         ("home/mod.rs", include_str!("../../src/home/mod.rs")),
         ("help/mod.rs", include_str!("../../src/help/mod.rs")),
         ("shell/frame.rs", include_str!("../../src/shell/frame.rs")),
-        ("shell/dialog.rs", include_str!("../../src/shell/dialog.rs")),
+        (
+            "shell/dialog.rs",
+            include_str!("../../../opts-shell-dialog/src/lib.rs"),
+        ),
         (
             "instruments.rs",
             include_str!("../../src/in_game/instruments.rs"),

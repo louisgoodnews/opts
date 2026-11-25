@@ -21,7 +21,15 @@ pub struct Scorer {
 impl Scorer {
     /// A scorer for a fresh run of `challenge`.
     pub fn new(challenge: Challenge) -> Self {
-        Self { challenge, score: 0, on_time: 0, off_time: 0, missed: 0, collisions: 0, passengers: 0 }
+        Self {
+            challenge,
+            score: 0,
+            on_time: 0,
+            off_time: 0,
+            missed: 0,
+            collisions: 0,
+            passengers: 0,
+        }
     }
 
     /// The score so far.
@@ -47,7 +55,11 @@ impl Scorer {
     fn tally(&mut self, event: ChallengeEvent) -> i64 {
         let rules = self.challenge.rules;
         match event {
-            ChallengeEvent::StopServed { scheduled_s, actual_s, .. } => {
+            ChallengeEvent::StopServed {
+                scheduled_s,
+                actual_s,
+                ..
+            } => {
                 let gap = (actual_s - scheduled_s).abs();
                 if gap <= rules.punctual_window_s {
                     self.on_time += 1;

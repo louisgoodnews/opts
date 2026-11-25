@@ -4,11 +4,11 @@
 
 use bevy::prelude::*;
 
+#[cfg(test)]
+use opts_gui::theme::ThemeMode;
 use opts_gui::theme::{
     motion::MotionPreference, Density, ThemePreferences, ThemeSwitchLock, UiScalePercent,
 };
-#[cfg(test)]
-use opts_gui::theme::ThemeMode;
 
 use crate::app_state::AppState;
 use crate::settings::GameSettings;

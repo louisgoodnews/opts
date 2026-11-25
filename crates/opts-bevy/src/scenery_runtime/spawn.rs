@@ -70,7 +70,6 @@ pub(super) fn local(p: Vec3) -> Vec3 {
     omsi_to_bevy_pos(p)
 }
 
-
 mod groups;
 mod meshes;
 mod sprites;

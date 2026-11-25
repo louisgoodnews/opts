@@ -46,10 +46,7 @@ pub fn descriptors() -> Vec<D> {
 }
 
 /// Copies the two settings into `HeadTrackSettings`. A missing or invalid gain is the default.
-pub fn sync_head_track_settings(
-    settings: Res<GameSettings>,
-    mut head: ResMut<HeadTrackSettings>,
-) {
+pub fn sync_head_track_settings(settings: Res<GameSettings>, mut head: ResMut<HeadTrackSettings>) {
     let enabled = settings
         .raw(HEAD_TRACKING_KEY)
         .is_some_and(|v| v.trim() == "true");

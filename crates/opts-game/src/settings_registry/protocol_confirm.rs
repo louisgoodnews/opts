@@ -56,7 +56,7 @@ pub(crate) fn confirm(world: &mut World, _: &Value) -> Outcome {
     let Some(p) = world.remove_resource::<ProtocolRevert>() else {
         return nothing_waits();
     };
-    world.resource_mut::<GameSettings>().save_in_background();
+    crate::settings::save_in_background(&world.resource_mut::<GameSettings>());
     Outcome::ok(json!({ "key": p.key, "value": p.new, "confirmed": true }))
 }
 

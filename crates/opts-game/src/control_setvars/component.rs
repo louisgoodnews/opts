@@ -7,6 +7,7 @@
 //! The scripts and triggers that run after a swap are the vehicle's own: they read the option.
 //! The ticket printer is not a part here; it waits for M-0156 (the ticket model).
 
+use bevy::prelude::World;
 use opts_bevy::control::state::Outcome;
 use opts_cli::protocol::RpcError;
 use opts_core::setvars::{SetvarCatalogue, SetvarEntry, SetvarKind};

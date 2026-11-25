@@ -5,7 +5,6 @@ use opts_gui::prelude::*;
 
 use super::super::rows::{label, Ctx};
 use super::{hardware_info, line, path_text};
-use crate::settings::GameSettings;
 
 /// The hardware profile and the places of the files.
 pub(super) fn advanced_info(c: &mut Commands, pane: Entity, ctx: &Ctx) {
@@ -21,14 +20,14 @@ pub(super) fn advanced_info(c: &mut Commands, pane: Entity, ctx: &Ctx) {
         c,
         pane,
         "settings-info-settings-file",
-        &[("path", path_text(GameSettings::database_path()))],
+        &[("path", path_text(crate::settings::database_path()))],
         TypeScale::BodyMedium,
     );
     line(
         c,
         pane,
         "settings-info-reference-file",
-        &[("path", path_text(GameSettings::toml_reference_path()))],
+        &[("path", path_text(crate::settings::toml_reference_path()))],
         TypeScale::BodyMedium,
     );
     line(

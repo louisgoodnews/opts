@@ -45,6 +45,9 @@ impl HeadPose {
         let pitch_limit = HEAD_PITCH_LIMIT_DEG.to_radians();
         let yaw = -(self.yaw - centre.yaw) * gain;
         let pitch = (self.pitch - centre.pitch) * gain;
-        (yaw.clamp(-yaw_limit, yaw_limit), pitch.clamp(-pitch_limit, pitch_limit))
+        (
+            yaw.clamp(-yaw_limit, yaw_limit),
+            pitch.clamp(-pitch_limit, pitch_limit),
+        )
     }
 }

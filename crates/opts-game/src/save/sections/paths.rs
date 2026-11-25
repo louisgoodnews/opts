@@ -20,7 +20,10 @@ pub(super) fn map_folder_name(raw: &str) -> Result<&str, String> {
     if single {
         return Ok(raw);
     }
-    tracing::warn!(map_folder = raw, "save refused: the map folder is not one folder name");
+    tracing::warn!(
+        map_folder = raw,
+        "save refused: the map folder is not one folder name"
+    );
     Err(format!("the map folder `{raw}` is not one folder name"))
 }
 

@@ -27,7 +27,11 @@ pub(super) fn follower_poses(
             let seg = segments.get(*e).ok()?;
             seg.kinematic_pose()?;
             let unit = sim.consist.get(k)?;
-            let turn = if seg.reversed { std::f64::consts::PI } else { 0.0 };
+            let turn = if seg.reversed {
+                std::f64::consts::PI
+            } else {
+                0.0
+            };
             let h = (unit.heading + turn) as f32;
             Some((*b, unit.origin.as_vec2(), h))
         })

@@ -2,6 +2,8 @@
 
 use super::*;
 use opts_gui::theme::{Density, ThemeMode};
+use rusqlite::Connection;
+use std::path::PathBuf;
 
 #[test]
 fn baseline_tracks_what_changed_since_the_load() {
@@ -21,30 +23,26 @@ fn baseline_tracks_what_changed_since_the_load() {
 #[test]
 fn test_sqlite_settings_roundtrip() {
     let mut conn = Connection::open_in_memory().expect("In-memory SQLite connection");
-    let settings = GameSettings {
-        recent_map_path: Some(PathBuf::from("/maps/Berlin")),
-        omsi_path: Some(PathBuf::from("/games/OMSI 2")),
-        theme_mode: ThemeMode::AutoClock,
-        auto_light_from: "06:30".into(),
-        auto_dark_from: "20:15".into(),
-        high_contrast: true,
-        active_theme: "Amber".to_string(),
-        ui_scale: 150,
-        density: Density::Compact,
-        reduced_motion: true,
-        discovery_interval_days: 1,
-        texture_filtering: opts_bevy::TextureFiltering::X4,
-        look: crate::look::Look::Natural,
-        ..GameSettings::default()
-    };
+    let mut settings = GameSettings::default();
+    settings.recent_map_path = Some(PathBuf::from("/maps/Berlin"));
+    settings.omsi_path = Some(PathBuf::from("/games/OMSI 2"));
+    settings.theme_mode = ThemeMode::AutoClock;
+    settings.auto_light_from = "06:30".into();
+    settings.auto_dark_from = "20:15".into();
+    settings.high_contrast = true;
+    settings.active_theme = "Amber".to_string();
+    settings.ui_scale = 150;
+    settings.density = Density::Compact;
+    settings.reduced_motion = true;
+    settings.discovery_interval_days = 1;
+    settings.texture_filtering = opts_bevy::TextureFiltering::X4;
+    settings.look = crate::look::Look::Natural;
 
-    settings
-        .save_to_connection(&mut conn)
+    crate::settings::save_to_connection(&settings, &mut conn)
         .expect("Saving to SQLite must succeed");
 
     let mut loaded = GameSettings::default();
-    loaded
-        .apply_from_connection(&conn)
+    crate::settings::apply_from_connection(&mut loaded, &conn)
         .expect("Loading from SQLite must succeed");
 
     assert_eq!(loaded.recent_map_path, Some(PathBuf::from("/maps/Berlin")));
@@ -65,14 +63,14 @@ fn test_sqlite_settings_roundtrip() {
 fn new_keys_default_when_absent_from_an_old_database() {
     // A database written before the keys existed: only the old ones are present.
     let conn = Connection::open_in_memory().expect("In-memory SQLite connection");
-    GameSettings::init_database(&conn).expect("schema");
+    crate::settings::init_database(&conn).expect("schema");
     conn.execute(
         "INSERT INTO app_settings (key, value) VALUES ('active_theme', 'Amber')",
         [],
     )
     .expect("insert");
     let mut s = GameSettings::default();
-    s.apply_from_connection(&conn).expect("load");
+    crate::settings::apply_from_connection(&mut s, &conn).expect("load");
     assert_eq!(s.active_theme, "Amber");
     assert_eq!(s.texture_filtering, opts_bevy::TextureFiltering::X16);
     assert_eq!(s.look, crate::look::Look::Vivid);
@@ -88,7 +86,7 @@ fn new_keys_default_when_absent_from_an_old_database() {
         [],
     )
     .expect("insert");
-    s.apply_from_connection(&conn).expect("load");
+    crate::settings::apply_from_connection(&mut s, &conn).expect("load");
     assert_eq!(s.look, crate::look::Look::Vivid);
     assert_eq!(s.texture_filtering, opts_bevy::TextureFiltering::X16);
 }

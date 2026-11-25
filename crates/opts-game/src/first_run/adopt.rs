@@ -24,7 +24,7 @@ pub fn adopt_root(
     if !persist {
         return;
     }
-    if let Err(e) = settings.save() {
+    if let Err(e) = crate::settings::save(settings) {
         tracing::warn!("could not save the OMSI path: {e}");
         show_banner(
             commands,

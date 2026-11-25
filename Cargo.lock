@@ -5333,6 +5333,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-audio"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-main-camera",
+]
+
+[[package]]
 name = "opts-benchmark"
 version = "0.1.0"
 dependencies = [
@@ -5368,11 +5376,20 @@ dependencies = [
  "directories",
  "image",
  "notify 6.1.1",
+ "opts-audio",
+ "opts-bevy-bus-stops",
+ "opts-bevy-ground",
+ "opts-bevy-instancing",
+ "opts-bevy-moon-material",
+ "opts-bevy-season",
+ "opts-bevy-texture-sentinel",
  "opts-cli",
  "opts-core",
  "opts-debounce",
  "opts-gui",
+ "opts-light-quality",
  "opts-logging",
+ "opts-main-camera",
  "opts-position-tag",
  "opts-scene-trace",
  "opts-sim",
@@ -5391,6 +5408,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-bevy-bus-stops"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
+name = "opts-bevy-ground"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
+name = "opts-bevy-instancing"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde_json",
+]
+
+[[package]]
+name = "opts-bevy-moon-material"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
+name = "opts-bevy-season"
+version = "0.1.0"
+
+[[package]]
+name = "opts-bevy-texture-sentinel"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "opts-car-following"
 version = "0.1.0"
 
@@ -5402,6 +5459,13 @@ dependencies = [
  "rayon",
  "rusqlite",
  "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
+name = "opts-challenge"
+version = "0.1.0"
+dependencies = [
  "tracing",
 ]
 
@@ -5445,6 +5509,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-fleet-number"
+version = "0.1.0"
+dependencies = [
+ "opts-bevy",
+ "opts-core",
+]
+
+[[package]]
 name = "opts-game"
 version = "0.1.0"
 dependencies = [
@@ -5459,17 +5531,33 @@ dependencies = [
  "opts-collision",
  "opts-core",
  "opts-exhaust",
+ "opts-fleet-number",
+ "opts-game-state",
  "opts-gui",
  "opts-hardware",
+ "opts-hud-keys",
+ "opts-hud-widgets",
  "opts-l10n",
+ "opts-load-problem",
  "opts-logging",
  "opts-map-advice",
+ "opts-mesh-dir",
+ "opts-minimap-zoom-canvas",
+ "opts-pause-report",
+ "opts-road-surf",
+ "opts-save-error",
  "opts-scripted-drive",
+ "opts-shell-calendar",
+ "opts-shell-dialog",
+ "opts-shell-icons",
+ "opts-shell-keys",
  "opts-sim",
  "opts-steam",
  "opts-stream-budget",
  "opts-theme-files",
  "opts-traffic",
+ "opts-vehicle-gears",
+ "opts-world-session",
  "rfd",
  "ron 0.8.1",
  "rusqlite",
@@ -5478,6 +5566,17 @@ dependencies = [
  "thiserror 1.0.69",
  "toml 0.8.23",
  "tracing",
+]
+
+[[package]]
+name = "opts-game-state"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "chrono",
+ "opts-bevy",
+ "opts-gui",
+ "serde",
 ]
 
 [[package]]
@@ -5506,6 +5605,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-hud-keys"
+version = "0.1.0"
+
+[[package]]
+name = "opts-hud-widgets"
+version = "0.1.0"
+dependencies = [
+ "opts-bevy",
+ "serde",
+]
+
+[[package]]
 name = "opts-importer"
 version = "0.1.0"
 dependencies = [
@@ -5526,6 +5637,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-light-quality"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "tracing",
+]
+
+[[package]]
+name = "opts-load-problem"
+version = "0.1.0"
+
+[[package]]
 name = "opts-logging"
 version = "0.1.0"
 dependencies = [
@@ -5540,7 +5663,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-main-camera"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "opts-map-advice"
+version = "0.1.0"
+
+[[package]]
+name = "opts-mesh-dir"
+version = "0.1.0"
+dependencies = [
+ "opts-bevy",
+ "opts-core",
+ "tracing",
+]
+
+[[package]]
+name = "opts-minimap-zoom-canvas"
 version = "0.1.0"
 
 [[package]]
@@ -5621,7 +5764,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-pause-report"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-bevy",
+]
+
+[[package]]
 name = "opts-position-tag"
+version = "0.1.0"
+
+[[package]]
+name = "opts-road-surf"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "opts-core",
+]
+
+[[package]]
+name = "opts-save-error"
 version = "0.1.0"
 
 [[package]]
@@ -5639,6 +5802,31 @@ name = "opts-scripted-drive"
 version = "0.1.0"
 
 [[package]]
+name = "opts-shell-calendar"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-bevy",
+ "opts-gui",
+]
+
+[[package]]
+name = "opts-shell-dialog"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-gui",
+]
+
+[[package]]
+name = "opts-shell-icons"
+version = "0.1.0"
+
+[[package]]
+name = "opts-shell-keys"
+version = "0.1.0"
+
+[[package]]
 name = "opts-signals"
 version = "0.1.0"
 
@@ -5650,8 +5838,27 @@ dependencies = [
  "glam",
  "opts-core",
  "opts-kinematic",
+ "opts-sim-passengers",
+ "opts-sim-pedestrian",
  "serde",
  "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "opts-sim-passengers"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "tracing",
+]
+
+[[package]]
+name = "opts-sim-pedestrian"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "opts-core",
 ]
 
 [[package]]
@@ -5727,6 +5934,10 @@ name = "opts-vdf"
 version = "0.1.0"
 
 [[package]]
+name = "opts-vehicle-gears"
+version = "0.1.0"
+
+[[package]]
 name = "opts-vehicle-traits"
 version = "0.1.0"
 dependencies = [
@@ -5736,6 +5947,13 @@ dependencies = [
 [[package]]
 name = "opts-wav"
 version = "0.1.0"
+
+[[package]]
+name = "opts-world-session"
+version = "0.1.0"
+dependencies = [
+ "opts-bevy",
+]
 
 [[package]]
 name = "orbclient"

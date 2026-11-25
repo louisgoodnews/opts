@@ -49,7 +49,7 @@ pub fn first_run_choices(
                 loc.set_locale(next);
                 settings.set_raw("interface.language", next);
                 if first_run.persist {
-                    settings.save_in_background();
+                    crate::settings::save_in_background(&settings);
                 }
             }
             (view::CHOOSE, _) => choose_omsi_folder(&mut commands),

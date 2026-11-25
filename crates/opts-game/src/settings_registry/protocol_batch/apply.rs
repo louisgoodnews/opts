@@ -72,7 +72,7 @@ fn apply(world: &mut World, batch: &[(String, String)]) -> Outcome {
         }
     }
     if !changed.is_empty() {
-        world.resource_mut::<GameSettings>().save_in_background();
+        crate::settings::save_in_background(&world.resource_mut::<GameSettings>());
     }
     Outcome::ok(json!({
         "count": batch.len(),

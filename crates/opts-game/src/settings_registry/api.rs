@@ -23,7 +23,7 @@ pub fn change_in(
     };
     if save && old != new {
         // Off the main thread: a click never waits for SQLite.
-        settings.save_in_background();
+        crate::settings::save_in_background(&settings);
     }
     Ok(SettingChanged {
         key: key.to_string(),
@@ -90,13 +90,13 @@ impl SettingsApi<'_> {
             });
         }
         if !changed.is_empty() {
-            self.settings.save_in_background();
+            crate::settings::save_in_background(&self.settings);
         }
         changed.len()
     }
 
     /// Writes the settings file (after a confirmed risky change).
     pub fn save(&mut self) {
-        self.settings.save_in_background();
+        crate::settings::save_in_background(&self.settings);
     }
 }
