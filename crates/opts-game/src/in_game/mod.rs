@@ -15,7 +15,7 @@ pub mod screenshot;
 pub mod sky;
 pub mod sky_cube;
 pub use opts_stream_budget as stream_budget;
-pub mod tile_loading;
+pub use opts_tile_loading as tile_loading;
 pub mod types;
 pub mod vehicle_spawner;
 pub mod weather;

@@ -4,14 +4,14 @@
 //! `gameplay.tile_radius` keeps the tiles within that Chebyshev radius of the centre tile (1 is
 //! 3 x 3, 2 is 5 x 5, ...); `0` means *automatic*, the radius `opts-hardware` recommends for this
 //! machine. This module holds the decisions as pure functions so they are testable without a
-//! map; the streamer ([`stream_world_tiles`](super::omsi_world::stream_world_tiles)) and the
+//! map; the streamer (`stream_world_tiles` in opts-game) and the
 //! loading pipeline apply them. See `docs/src/architecture/map-streaming.md`.
 
 use opts_hardware::recommend::{recommended_tile_radius, MapStats};
 use opts_hardware::HardwareProfile;
 
-use super::stream_budget::{chebyshev, evictable, TileKey};
-use crate::settings::GameSettings;
+use opts_game_state::settings::GameSettings;
+use opts_stream_budget::{chebyshev, evictable, TileKey};
 
 /// Key of the *Load all tiles on start* setting.
 pub const LOAD_ALL_KEY: &str = "gameplay.load_all_tiles";

@@ -95,6 +95,7 @@ graph TD
         opts_shell_dialog["opts-shell-dialog<br/>• Confirmation dialogs and their answer systems<br/>• Bevy UI over opts-gui"]:::app
         opts_shell_nav["opts-shell-nav<br/>• Screen registry, rail frame, back stack and Esc<br/>• Banners and the shell content area<br/>• Bevy UI over opts-bevy, opts-gui and opts-game-state"]:::app
         opts_attachments["opts-attachments<br/>• Spline attachment placements along splines<br/>• Map-wide spline index<br/>• Zero file I/O · Bevy transforms over opts-bevy"]:::app
+        opts_tile_loading["opts-tile-loading<br/>• Tile load-all and radius decisions (M-0080)<br/>• Streaming budget and residency as pure functions<br/>• Pure Rust over opts-hardware, opts-stream-budget and opts-game-state"]:::app
         opts_pause_report["opts-pause-report<br/>• Report dialog state for the pause menu<br/>• Bevy state over opts-bevy"]:::app
         opts_hud_widgets["opts-hud-widgets<br/>• HUD widget slots, vehicle kinds and descriptors<br/>• Built-in widget registry<br/>• Bevy CameraMode via opts-bevy"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
@@ -151,6 +152,9 @@ graph TD
     opts_shell_nav --> opts_shell_keys
     opts_attachments --> opts_bevy
     opts_attachments --> opts_core
+    opts_tile_loading --> opts_game_state
+    opts_tile_loading --> opts_hardware
+    opts_tile_loading --> opts_stream_budget
     opts_game --> opts_bevy
     opts_game --> opts_game_state
     opts_game_state --> opts_bevy
@@ -180,6 +184,7 @@ graph TD
     opts_game --> opts_shell_icons
     opts_game --> opts_shell_nav
     opts_game --> opts_attachments
+    opts_game --> opts_tile_loading
     opts_game --> opts_minimap_zoom_canvas
     opts_game --> opts_save_error
     opts_game --> opts_shell_keys
@@ -316,6 +321,7 @@ graph TD
 | **`opts-shell-dialog`** | L3 | Confirmation dialogs: the spec, the card and the answer systems (split out of `opts-game`, ISS-068 stage 1) | `opts-gui` | `opts-game` | Bevy UI |
 | **`opts-shell-nav`** | L3 | Shell navigation: the screen registry, the rail frame, the back stack, Esc and banners (split out of `opts-game`, ISS-068 stage 2) | `opts-bevy`, `opts-game-state`, `opts-gui`, `opts-shell-icons`, `opts-shell-keys` | `opts-game` | Bevy UI |
 | **`opts-attachments`** | L3 | Spline attachments: placements of street furniture, fences and parking bays along splines, and the map-wide spline index (split out of `opts-game`, ISS-067 stage 1) | `opts-bevy`, `opts-core` | `opts-game` | Bevy Engine |
+| **`opts-tile-loading`** | L3 | Tile loading controls (M-0080): the load-all and tile-radius decisions, the streaming budget and residency as pure functions (split out of `opts-game`, ISS-067 stage 1) | `opts-game-state`, `opts-hardware`, `opts-stream-budget` | `opts-game` | Pure Rust |
 | **`opts-pause-report`** | L3 | Report dialog state helper for the pause menu (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-pause-report`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-shell-icons`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-hud-widgets`** | L3 | HUD widget vocabulary: slots, vehicle kinds, widget descriptors and the built-in registry (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | `opts-bevy` (external: `serde`) | `opts-game` | Bevy Engine |

@@ -43,6 +43,8 @@ opts-shell-calendar = { workspace = true }
 opts-shell-dialog = { workspace = true }
 opts-shell-icons = { workspace = true }
 opts-shell-nav = { workspace = true }
+opts-attachments = { workspace = true }
+opts-tile-loading = { workspace = true }
 opts-pause-report = { workspace = true }
 opts-hud-keys = { workspace = true }
 opts-hud-widgets = { workspace = true }

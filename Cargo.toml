@@ -91,6 +91,7 @@ members = [
     "crates/opts-shell-icons",
     "crates/opts-shell-nav",
     "crates/opts-attachments",
+    "crates/opts-tile-loading",
     "crates/opts-sim-pedestrian",
     "crates/opts-tools",
     "crates/opts-traffic",
@@ -180,6 +181,7 @@ opts-shell-dialog = { path = "crates/opts-shell-dialog" }
 opts-shell-icons = { path = "crates/opts-shell-icons" }
 opts-shell-nav = { path = "crates/opts-shell-nav" }
 opts-attachments = { path = "crates/opts-attachments" }
+opts-tile-loading = { path = "crates/opts-tile-loading" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }

@@ -1,0 +1,17 @@
+[package]
+name = "opts-tile-loading"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Tile loading controls (M-0080): the load-all and tile-radius decisions, the streaming budget and residency as pure functions (split out of opts-game)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-game-state = { workspace = true }
+opts-hardware = { workspace = true }
+opts-stream-budget = { workspace = true }
