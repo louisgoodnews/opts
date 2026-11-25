@@ -100,6 +100,7 @@ graph TD
         opts_tile_loading["opts-tile-loading<br/>• Tile load-all and radius decisions (M-0080)<br/>• Streaming budget and residency as pure functions<br/>• Pure Rust over opts-hardware, opts-stream-budget and opts-game-state"]:::app
         opts_new_game_types["opts-new-game-types<br/>• Plan-a-drive catalogue and choice types<br/>• Trip choice and planner date arithmetic<br/>• Bevy derives over opts-bevy and opts-shell-calendar"]:::app
         opts_repaints["opts-repaints<br/>• Vehicle repaint discovery for the new-game vehicle tab<br/>• .bus, model.cfg and .cti chain as pure file reads<br/>• Over opts-bevy, opts-core, opts-new-game-types and opts-steam"]:::app
+        opts_app_args["opts-app-args<br/>• AppArgs: the parsed command line as a Bevy resource<br/>• Bevy resource over opts-cli"]:::app
         opts_pause_report["opts-pause-report<br/>• Report dialog state for the pause menu<br/>• Bevy state over opts-bevy"]:::app
         opts_hud_widgets["opts-hud-widgets<br/>• HUD widget slots, vehicle kinds and descriptors<br/>• Built-in widget registry<br/>• Bevy CameraMode via opts-bevy"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
@@ -169,6 +170,8 @@ graph TD
     opts_repaints --> opts_core
     opts_repaints --> opts_new_game_types
     opts_repaints --> opts_steam
+    opts_app_args --> opts_cli
+    opts_game --> opts_app_args
     opts_game --> opts_bevy
     opts_game --> opts_game_state
     opts_game_state --> opts_bevy
@@ -344,6 +347,7 @@ graph TD
 | **`opts-tile-loading`** | L3 | Tile loading controls (M-0080): the load-all and tile-radius decisions, the streaming budget and residency as pure functions (split out of `opts-game`, ISS-067 stage 1) | `opts-game-state`, `opts-hardware`, `opts-stream-budget` | `opts-game` | Pure Rust |
 | **`opts-new-game-types`** | L3 | Plan-a-drive types without UI: the catalogue lists, the drive choices, the trip choice and the planner date arithmetic (split out of `opts-game`, ISS-064 stage 3) | `opts-bevy`, `opts-shell-calendar` (external: `bevy`, `chrono`, `serde`) | `opts-game` | Bevy Engine |
 | **`opts-repaints`** | L3 | Vehicle repaint discovery for the new-game vehicle tab: the `.bus`, `model.cfg` and `.cti` chain as pure file reads (split out of `opts-game`, ISS-064 stage 3) | `opts-bevy`, `opts-core`, `opts-new-game-types`, `opts-steam` | `opts-game` | Pure Rust |
+| **`opts-app-args`** | L3 | The parsed command line as a Bevy resource, `AppArgs` (split out of `opts-game`'s `app` module, ISS-064 stage 3) | `opts-cli` (external: `bevy`) | `opts-game` | Bevy Engine |
 | **`opts-pause-report`** | L3 | Report dialog state helper for the pause menu (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-pause-report`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-shell-icons`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-hud-widgets`** | L3 | HUD widget vocabulary: slots, vehicle kinds, widget descriptors and the built-in registry (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | `opts-bevy` (external: `serde`) | `opts-game` | Bevy Engine |

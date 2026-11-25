@@ -96,6 +96,7 @@ members = [
     "crates/opts-tile-loading",
     "crates/opts-new-game-types",
     "crates/opts-repaints",
+    "crates/opts-app-args",
     "crates/opts-sim-pedestrian",
     "crates/opts-tools",
     "crates/opts-traffic",
@@ -190,6 +191,7 @@ opts-attachments = { path = "crates/opts-attachments" }
 opts-tile-loading = { path = "crates/opts-tile-loading" }
 opts-new-game-types = { path = "crates/opts-new-game-types" }
 opts-repaints = { path = "crates/opts-repaints" }
+opts-app-args = { path = "crates/opts-app-args" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }

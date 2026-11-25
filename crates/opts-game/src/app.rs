@@ -9,9 +9,8 @@ use crate::OptsGamePlugin;
 use opts_bevy::OptsAssetPlugin;
 use opts_cli::CliArgs;
 
-/// Resource storing the parsed CLI arguments.
-#[derive(Resource, Debug, Clone)]
-pub struct AppArgs(pub CliArgs);
+/// Resource storing the parsed CLI arguments (defined in `opts-app-args`, ISS-064 stage 3).
+pub use opts_app_args::AppArgs;
 
 /// The engine plugins: a minimal headless set, or the default plugins with the window set up from
 /// the command line.
