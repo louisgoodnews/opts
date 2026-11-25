@@ -2,6 +2,10 @@
 
 use super::*;
 
+/// A listed tile of the full map: its key, its file name and its south-west corner. The same
+/// shape as the full map's `hud::fullmap::overview::ListedTile` (a type alias, so both are one type).
+type ListedTile = ((i32, i32), String, (f32, f32));
+
 impl WorldLoadJob {
     /// Index of every spline on the map with its chain offset, built by reading all tiles once
     /// (through [`Self::read_tile`], so it sees what the tiles hold for the session).
@@ -39,7 +43,7 @@ impl WorldLoadJob {
     ) -> (
         PathBuf,
         PathBuf,
-        Vec<crate::hud::fullmap::overview::ListedTile>,
+        Vec<ListedTile>,
     ) {
         let mut tiles: Vec<_> = self
             .tile_files

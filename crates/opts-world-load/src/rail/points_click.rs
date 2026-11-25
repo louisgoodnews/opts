@@ -14,7 +14,7 @@ use opts_sim::pedestrian::PedestrianNet;
 
 use super::points::{all_trains, occupied_points, OBJECT_MATCH_M};
 use super::*;
-use crate::hud::{AlertSeverity, RaiseAlert};
+use opts_game_state::alerts::{AlertSeverity, RaiseAlert};
 
 /// The script trigger of the tongue meshes.
 pub const TOGGLE_SWITCH: &str = "toggle_switch";

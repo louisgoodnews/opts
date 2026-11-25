@@ -6,7 +6,7 @@
 //! when no vehicle is on the points.
 
 use super::*;
-use crate::hud::{AlertSeverity, RaiseAlert};
+use opts_game_state::alerts::{AlertSeverity, RaiseAlert};
 
 /// Points are announced from this far ahead (m).
 const HINT_REACH_M: f32 = 120.0;

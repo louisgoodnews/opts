@@ -1,6 +1,8 @@
-//! How serious an alert is: its colour, its word and whether it stays until cleared.
+//! The alert types that sources write and the queue reads: the severity and the raise message.
+//! The queue, its systems and the slot are in `opts-game` (`hud::alerts`), which re-exports these.
 
-use super::*;
+use bevy::prelude::*;
+use opts_hud_keys as keys;
 
 /// How serious an alert is; decides the colour, the word, and whether it stays.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -47,4 +49,17 @@ impl AlertSeverity {
             .into_iter()
             .find(|s| s.id() == id)
     }
+}
+
+/// Asks for an alert. The same `id` again replaces the earlier one (new severity, new timer).
+#[derive(Message, Debug, Clone)]
+pub struct RaiseAlert {
+    /// Identifies the source (`brake.moving`).
+    pub id: &'static str,
+    /// Severity.
+    pub severity: AlertSeverity,
+    /// Message key of the text.
+    pub key: &'static str,
+    /// Variables of the text.
+    pub args: Vec<(&'static str, String)>,
 }

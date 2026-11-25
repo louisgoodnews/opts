@@ -2,19 +2,6 @@
 
 use super::*;
 
-/// Asks for an alert. The same `id` again replaces the earlier one (new severity, new timer).
-#[derive(Message, Debug, Clone)]
-pub struct RaiseAlert {
-    /// Identifies the source (`brake.moving`).
-    pub id: &'static str,
-    /// Severity.
-    pub severity: AlertSeverity,
-    /// Message key of the text.
-    pub key: &'static str,
-    /// Variables of the text.
-    pub args: Vec<(&'static str, String)>,
-}
-
 /// Withdraws the alert of `id`.
 #[derive(Message, Debug, Clone, Copy)]
 pub struct ClearAlert(pub &'static str);

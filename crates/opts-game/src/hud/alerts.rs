@@ -17,11 +17,10 @@ pub const BRAKE_CRITICAL_KMH: f32 = 15.0;
 pub const BRAKE_WARN_KMH: f32 = 3.0;
 
 mod queue;
-mod severity;
 mod systems;
 mod weather;
-pub use queue::{ActiveAlert, AlertQueue, ClearAlert, RaiseAlert};
-pub use severity::AlertSeverity;
+pub use opts_game_state::alerts::{AlertSeverity, RaiseAlert};
+pub use queue::{ActiveAlert, AlertQueue, ClearAlert};
 pub use systems::{parking_brake_alert, update_queue};
 pub use weather::weather_alerts;
 
