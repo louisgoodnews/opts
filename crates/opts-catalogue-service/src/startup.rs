@@ -8,10 +8,10 @@ use bevy::prelude::*;
 use opts_catalogue::{Catalogue, Staleness};
 use opts_gui::components::toast::ToastBuilder;
 
-use crate::app::AppArgs;
-use crate::new_game_screen::types::{GameCatalogue, NewGameSetup};
-use crate::omsi_root::locate_omsi_root;
-use crate::settings::GameSettings;
+use opts_app_args::AppArgs;
+use opts_game_state::settings::GameSettings;
+use opts_new_game_types::types::{GameCatalogue, NewGameSetup};
+use opts_steam::omsi_root::locate_omsi_root;
 
 use super::{
     catalogue_db_path, load_menu_lists, reconcile_selection, spawn_discovery, CatalogueService,

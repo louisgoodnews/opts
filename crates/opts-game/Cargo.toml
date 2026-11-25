@@ -50,6 +50,7 @@ opts-tile-loading = { workspace = true }
 opts-new-game-types = { workspace = true }
 opts-repaints = { workspace = true }
 opts-app-args = { workspace = true }
+opts-catalogue-service = { workspace = true }
 opts-pause-report = { workspace = true }
 opts-hud-keys = { workspace = true }
 opts-hud-widgets = { workspace = true }
@@ -83,7 +84,7 @@ opts-cli = { workspace = true }
 
 [features]
 # Fixtures for integration tests (miniature OMSI installation); not part of the shipped game.
-test-support = []
+test-support = ["opts-catalogue-service/test-support"]
 # Bevy system spans plus `OPTS_SYSTEM_TIMING=<seconds>` per-system timing (profiling builds).
 profile = ["bevy/trace", "bevy/debug"]
 # Streaming pipeline timers and `OPTS_STREAM_TRACE=<file>` per-frame JSON lines (M-0089); zero cost when off.

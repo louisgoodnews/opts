@@ -7,7 +7,7 @@ pub mod audio_content;
 pub mod bus_config;
 pub mod bus_config_spawn;
 pub mod career;
-pub mod catalogue_service;
+pub use opts_catalogue_service as catalogue_service;
 pub mod content_facts;
 pub mod control;
 pub mod control_audio;

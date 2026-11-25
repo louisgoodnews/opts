@@ -15,7 +15,7 @@ pub fn reconcile_selection(lists: &GameCatalogue, setup: &mut NewGameSetup) {
         }
     }
     if let Some(v) = lists.find_vehicle(&setup.selected_vehicle) {
-        if !crate::new_game_screen::repaints::vehicle_repaints(v)
+        if !opts_repaints::vehicle_repaints(v)
             .names
             .contains(&setup.selected_livery)
         {

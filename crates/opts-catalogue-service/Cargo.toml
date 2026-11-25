@@ -1,0 +1,28 @@
+[package]
+name = "opts-catalogue-service"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Background discovery and menu lists backed by the SQLite catalogue: startup, the discovery thread and selection reconciliation (split out of opts-game, ISS-064 stage 3)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Fixtures for integration tests (miniature OMSI installation); not part of the shipped game.
+test-support = []
+
+[dependencies]
+bevy = { workspace = true }
+opts-app-args = { workspace = true }
+opts-bevy = { workspace = true }
+opts-catalogue = { workspace = true }
+opts-game-state = { workspace = true }
+opts-gui = { workspace = true }
+opts-new-game-types = { workspace = true }
+opts-repaints = { workspace = true }
+opts-settings-io = { workspace = true }
+opts-steam = { workspace = true }

@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use bevy::prelude::*;
 use opts_catalogue::{Catalogue, Phase, Summary};
 
-use crate::new_game_screen::types::{GameCatalogue, MapItem, NewGameSetup, VehicleItem};
+use opts_new_game_types::types::{GameCatalogue, MapItem, NewGameSetup, VehicleItem};
 
 /// State of the background discovery task.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,7 +87,7 @@ impl CatalogueService {
 /// Location of the catalogue database (next to the settings database).
 #[must_use]
 pub fn catalogue_db_path() -> Option<PathBuf> {
-    crate::settings::database_path().map(|p| p.with_file_name("catalogue.db"))
+    opts_settings_io::database_path().map(|p| p.with_file_name("catalogue.db"))
 }
 
 /// Converts catalogue rows into the menu's list types.
