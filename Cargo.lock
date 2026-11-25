@@ -5621,6 +5621,10 @@ name = "opts-position-tag"
 version = "0.1.0"
 
 [[package]]
+name = "opts-signals"
+version = "0.1.0"
+
+[[package]]
 name = "opts-sim"
 version = "0.1.0"
 dependencies = [
@@ -5666,8 +5670,17 @@ dependencies = [
  "glam",
  "opts-car-following",
  "opts-core",
+ "opts-signals",
+ "opts-traffic-weather",
  "opts-vehicle-traits",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opts-traffic-weather"
+version = "0.1.0"
+dependencies = [
+ "opts-car-following",
 ]
 
 [[package]]

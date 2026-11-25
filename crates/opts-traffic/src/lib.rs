@@ -36,9 +36,9 @@ pub mod neighbours;
 pub mod obstacles;
 pub mod rightofway;
 pub mod rng;
-pub mod signals;
+pub use opts_signals as signals;
 pub mod source;
-pub mod weather;
+pub use opts_traffic_weather as weather;
 
 pub use agent::{
     Agent, AgentId, Blinker, DriverCommand, StopPoint, TrafficEvent, TrafficStats, TrafficWorld,
