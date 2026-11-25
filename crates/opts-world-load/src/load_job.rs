@@ -78,6 +78,8 @@ pub struct WorldLoadJob {
     /// The passenger rig of `opts-game` the load attaches and joins (ISS-064); set by
     /// `set_passenger_hooks`.
     pub(super) passenger_hooks: Arc<dyn crate::passenger_hooks::PassengerHooks>,
+    /// The session-vehicle layer of `opts-game` the load calls (ISS-064); set by `set_session_ops`.
+    pub(super) session_ops: Arc<dyn crate::session_ops::SessionVehicleOps>,
     /// `[crossing_heightdeformation]` base surfaces by file.
     pub(super) crossing_bases:
         HashMap<PathBuf, Option<Arc<opts_core::formats::scenery::BaseSurface>>>,

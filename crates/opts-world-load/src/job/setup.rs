@@ -41,6 +41,7 @@ pub(super) fn new_job(
         sound_cfgs: HashMap::new(),
         sound_hooks: std::sync::Arc::new(crate::sound_hooks::NoSoundHooks),
         passenger_hooks: std::sync::Arc::new(crate::passenger_hooks::NoPassengerHooks),
+        session_ops: std::sync::Arc::new(crate::session_ops::NoSessionVehicleOps),
         crossing_bases: HashMap::new(),
         ground_faces: HashMap::new(),
         tile_objects: HashMap::new(),

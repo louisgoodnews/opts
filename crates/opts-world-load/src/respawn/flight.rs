@@ -11,6 +11,7 @@ pub(super) fn complete_flight(
     (loc, flight): (Option<&Localization>, &SpawnVehicleRequest),
 ) {
     let id = flight.id;
+    let session_ops = job.session_ops();
     match load_player_vehicle(
         (job, stats, commands),
         (
@@ -32,7 +33,7 @@ pub(super) fn complete_flight(
             camera.mode = CameraMode::External;
             tracing::info!(id, entry = %flight.entry.1, "session vehicle spawned");
             commands.queue(move |world: &mut World| {
-                if let Err(e) = ops::switch_to(world, id) {
+                if let Err(e) = session_ops.switch_to(world, id) {
                     tracing::error!(at = %opts_bevy::position_tag(), "cannot activate the new vehicle: {e}");
                 }
             });

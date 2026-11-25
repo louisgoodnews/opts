@@ -42,6 +42,7 @@ pub mod rail;
 pub mod reload;
 pub mod respawn;
 pub mod scenery_objects;
+pub mod session_ops;
 pub mod setvar_state;
 pub mod sound_hooks;
 pub mod tile;
