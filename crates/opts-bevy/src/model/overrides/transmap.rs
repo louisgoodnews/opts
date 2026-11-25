@@ -18,23 +18,45 @@ pub const TRANSMAP_SPLIT_SHARE: f32 = 0.5;
 /// the alpha of every opaque texel set to 0 (the body pass draws those).
 #[must_use]
 pub fn transmap_glass_rgba(rgba: &[u8]) -> Option<Vec<u8>> {
-    // `a / 255 >= 0.95` exactly as the mask test compares it.
-    let opaque = |a: u8| f32::from(a) / 255.0 >= TRANSMAP_OPAQUE;
     let texels = rgba.len() / 4;
     if texels == 0 {
         return None;
     }
-    let solid = rgba.chunks_exact(4).filter(|p| opaque(p[3])).count();
+    let solid = rgba.chunks_exact(4).filter(|p| is_opaque(p[3])).count();
     if (solid as f32) < TRANSMAP_SPLIT_SHARE * texels as f32 {
         return None;
     }
     let mut glass = rgba.to_vec();
     for p in glass.chunks_exact_mut(4) {
-        if opaque(p[3]) {
+        if is_opaque(p[3]) {
             p[3] = 0;
         }
     }
     Some(glass)
+}
+
+/// `a / 255 >= 0.95` exactly as the mask test compares it.
+fn is_opaque(a: u8) -> bool {
+    f32::from(a) / 255.0 >= TRANSMAP_OPAQUE
+}
+
+/// The measured share (0 to 1) of opaque texels of an RGBA8 buffer, for the load log. 0 for an
+/// empty buffer.
+#[must_use]
+pub fn opaque_share_rgba(rgba: &[u8]) -> f32 {
+    let texels = rgba.len() / 4;
+    if texels == 0 {
+        return 0.0;
+    }
+    let solid = rgba.chunks_exact(4).filter(|p| is_opaque(p[3])).count();
+    solid as f32 / texels as f32
+}
+
+/// [`opaque_share_rgba`] of a composed image's base level; `None` without CPU texels.
+pub(in crate::model) fn composed_opaque_share(composed: &Image) -> Option<f32> {
+    let data = composed.data.as_deref()?;
+    let (w, h) = (composed.width() as usize, composed.height() as usize);
+    Some(opaque_share_rgba(data.get(..w * h * 4)?))
 }
 
 /// [`transmap_glass_rgba`] on a composed image (RGBA8, as [`compose_alpha`] returns it).

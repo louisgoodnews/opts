@@ -42,6 +42,18 @@ impl ContentLoader<'_> {
         if sentinel {
             material = crate::texture_sentinel::sentinel_material();
         }
+        if over.is_some_and(|o| o.trans_map.is_some()) {
+            tracing::debug!(
+                path = %ctx.o3d_path.display(),
+                slot,
+                texture = ?res.tex_name,
+                body_alpha = ?material.alpha_mode,
+                glass_pass = glass_material.is_some(),
+                glass_alpha = ?glass_material.as_ref().map(|g| g.alpha_mode),
+                sentinel,
+                "transmap slot alpha at spawn"
+            );
+        }
         tracing::debug!(path = %ctx.o3d_path.display(), slot, vertices, textured, alpha = ?material.alpha_mode, texture = ?res.tex_name, "model part");
         Self::trace_slot_material(sc, slot, res.tex_name.as_deref(), &material, textured);
         let pivot = model
