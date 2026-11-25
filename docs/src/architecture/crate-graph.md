@@ -22,6 +22,7 @@ graph TD
         opts_logging["opts-logging<br/>• Non-blocking tracing writers<br/>• Subsystem file routing<br/>• Panic hook & crash telemetry"]:::foundation
         opts_cli["opts-cli<br/>• Control-protocol types<br/>• Command-line client<br/>• Zero Bevy"]:::foundation
         opts_hardware["opts-hardware<br/>• Privacy-respecting hardware probe<br/>• Default recommendations<br/>• No network, no identifiers"]:::foundation
+        opts_shell_icons["opts-shell-icons<br/>• Material Icons codepoints of the shell<br/>• No dependencies · Zero Bevy"]:::foundation
         opts_collision["opts-collision<br/>• Oriented-box contact (separating axes)<br/>• Velocity response & spatial grid<br/>• Zero Bevy · Zero File I/O"]:::foundation
     end
 
@@ -58,6 +59,9 @@ graph TD
     %% Layer 3: Application Executables & Tools
     subgraph L3 ["Layer 3 — Application Executables & Tooling"]
         opts_exhaust["opts-exhaust<br/>• Exhaust plumes of the vehicles nearest the camera<br/>• Puff emission, outlets, distance fade<br/>• Bevy systems over opts-bevy and opts-sim"]:::app
+        opts_shell_calendar["opts-shell-calendar<br/>• Date and time steppers and choice chips<br/>• Bevy UI over opts-bevy and opts-gui"]:::app
+        opts_shell_dialog["opts-shell-dialog<br/>• Confirmation dialogs and their answer systems<br/>• Bevy UI over opts-gui"]:::app
+        opts_pause_report["opts-pause-report<br/>• Report dialog state for the pause menu<br/>• Bevy state over opts-bevy"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
         opts_benchmark["opts-benchmark (Binary)<br/>• Scenery load verification<br/>• Off-screen worker & supervisor"]:::app
         opts_tools["opts-tools (Binary: opts)<br/>• CLI asset inspector<br/>• Mesh & texture converter<br/>• Dependency & format validator"]:::app
@@ -82,6 +86,10 @@ graph TD
     opts_core --> opts_omsi
     opts_exhaust --> opts_bevy
     opts_exhaust --> opts_sim
+    opts_pause_report --> opts_bevy
+    opts_shell_calendar --> opts_bevy
+    opts_shell_calendar --> opts_gui
+    opts_shell_dialog --> opts_gui
     opts_game --> opts_bevy
     opts_game --> opts_catalogue
     opts_game --> opts_cli
@@ -93,6 +101,10 @@ graph TD
     opts_game --> opts_l10n
     opts_game -.->|diagnostics| opts_logging
     opts_game --> opts_map_advice
+    opts_game --> opts_pause_report
+    opts_game --> opts_shell_calendar
+    opts_game --> opts_shell_dialog
+    opts_game --> opts_shell_icons
     opts_game --> opts_sim
     opts_game --> opts_steam
     opts_game --> opts_theme_files
@@ -153,13 +165,17 @@ graph TD
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-benchmark`, `opts-game` | Pure Rust |
 | **`opts-theme-files`** | L2 | RON theme files in the configuration folder: discovery and loading through the contrast checker of `opts-gui` (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-theme.md)) | `opts-gui` | `opts-game` | Pure Rust (external: `directories`) |
-| **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game`, `opts-theme-files` | Bevy UI |
+| **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-theme-files` | Bevy UI |
 | **`opts-debounce`** | L0 | Trailing debounce of file-change events for the hot-reload watcher (split out of `opts-bevy`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-map-advice`** | L0 | Map load profile and the heuristic advice engine: pure thresholds, no engine dependency (split out of `opts-game`, [plan](../../dev/crate-split-advice.md)) | *None* | `opts-game` | Pure Rust |
+| **`opts-shell-icons`** | L0 | Material Icons codepoints used by the shell (split out of `opts-game`, ISS-068 stage 1) | *None* | `opts-game` | Pure Rust |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
-| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game` | Bevy Engine |
+| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game`, `opts-pause-report`, `opts-shell-calendar` | Bevy Engine |
+| **`opts-shell-calendar`** | L3 | Date and time steppers, their arithmetic and the frame of a choice chip (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy`, `opts-gui` | `opts-game` | Bevy UI |
+| **`opts-shell-dialog`** | L3 | Confirmation dialogs: the spec, the card and the answer systems (split out of `opts-game`, ISS-068 stage 1) | `opts-gui` | `opts-game` | Bevy UI |
+| **`opts-pause-report`** | L3 | Report dialog state helper for the pause menu (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine |
 | **`opts-exhaust`** | L3 | Engine exhaust plumes of the player and the nearest vehicles: puff emission, the model outlet, the distance fade (split out of `opts-game`, M-0117 budget room; [plan](../../dev/crate-split-exhaust.md)) | `opts-bevy`, `opts-sim` | `opts-game` | Bevy Engine |
-| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-pause-report`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-shell-icons`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |
 | **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core`, `opts-hardware`, `opts-l10n` | *None (executable root)* | CLI Tooling |
 | **`opts-benchmark`** | L3 | Scenery object load verification harness ([spec](scenery-benchmark.md)): an off-screen worker that rebuilds objects through the loader and a supervisor | `opts-bevy`, `opts-catalogue`, `opts-core`, `opts-game`, `opts-sim` | *None (executable root)* | Bevy |

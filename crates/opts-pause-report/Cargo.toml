@@ -1,0 +1,16 @@
+[package]
+name = "opts-pause-report"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Report dialog state for the pause menu and the screens that open it (split out of opts-game)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-bevy = { workspace = true }

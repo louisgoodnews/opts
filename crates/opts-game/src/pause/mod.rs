@@ -90,9 +90,9 @@ pub(crate) use overlay::{close_pause, spawn_overlay};
 
 mod leave;
 pub use leave::{
-    ensure_report_state, leave_choices, leave_spec, reopen_after_report, reset_on_exit,
-    return_after_overlay,
+    leave_choices, leave_spec, reopen_after_report, reset_on_exit, return_after_overlay,
 };
+pub use opts_pause_report::ensure_report_state;
 
 /// Registers the overlay.
 pub struct PausePlugin;
