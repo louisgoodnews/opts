@@ -70,6 +70,7 @@ members = [
     "crates/opts-logging",
     "crates/opts-map-advice",
     "crates/opts-sim",
+    "crates/opts-sim-passengers",
     "crates/opts-tools",
     "crates/opts-traffic",
 ]
@@ -138,6 +139,7 @@ opts-game-state = { path = "crates/opts-game-state" }
 opts-map-advice = { path = "crates/opts-map-advice" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }
+opts-sim-passengers = { path = "crates/opts-sim-passengers" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }
 

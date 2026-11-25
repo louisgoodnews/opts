@@ -1,0 +1,16 @@
+[package]
+name = "opts-sim-passengers"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Passenger model of OPTS: boarding, tickets, seats, standing places and getting off (M-0101)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Math
+glam = { workspace = true }

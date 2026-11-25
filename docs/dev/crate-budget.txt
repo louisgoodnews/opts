@@ -21,6 +21,8 @@ opts-logging 1288  # set 2026-11-22 to the current total
 opts-model 107  # set 2026-11-22 to the current total
 opts-omsi 31  # lowered 2026-11-24 from 3163 to the total after the scenery and train readers moved to opts-omsi-scenery; the facade only re-exports (docs/dev/crate-split-omsi.md, step 5)
 opts-sim 11295  # lowered 2026-11-25: AI response unit tests moved to crates/opts-sim/tests/ai_response.rs (M-0103)
+opts-sim 11331  # set 2026-11-22 to the current total
+opts-sim-passengers 1897  # new 2026-11-25 (ISS-066 stage 1): the passenger module moved out of opts-sim; estimate, measured by an awk count of non-blank, non-comment lines (the audit's crate table is not run here)
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 5822  # unchanged 2026-11-25: signals and weather moved out (232 lines), kept as room for the near-vehicle hook (no raise)
 opts-types 461  # set 2026-11-22 to the current total
