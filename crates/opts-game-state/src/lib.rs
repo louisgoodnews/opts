@@ -7,3 +7,4 @@ pub mod app_state;
 pub mod in_game;
 pub mod look;
 pub mod settings;
+pub mod viewpoint_keys;

@@ -1,6 +1,21 @@
-//! The keys of viewpoints: the key of a bus file, its model name, and the normalised key the file stores.
+//! The keys of stored viewpoints: the catalogue identity and model of the player's vehicle (the
+//! components), and the pure helpers that read them from a `.bus` path. The store and its plugin
+//! stay in `opts-game` (`viewpoints`), which re-exports these.
 
-use super::*;
+use std::path::Path;
+
+use bevy::prelude::*;
+
+/// Longest vehicle key kept.
+const MAX_KEY_LEN: usize = 128;
+
+/// The catalogue identity of the player's vehicle, on its root entity.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct ViewpointKey(pub String);
+
+/// The model of the player's vehicle (the folder of its `.bus` file, lower case), on its root.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct ViewpointModel(pub String);
 
 /// The model key of a `.bus` file: its folder name in lower case.
 #[must_use]

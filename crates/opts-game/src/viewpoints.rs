@@ -29,19 +29,11 @@ use crate::hud::{keys as hud_keys, AlertSeverity, RaiseAlert};
 /// The file format version this build reads and writes.
 pub const FILE_VERSION: u64 = 1;
 
-/// Longest vehicle key kept.
-const MAX_KEY_LEN: usize = 128;
-
-/// The catalogue identity of the player's vehicle, on its root entity.
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
-pub struct ViewpointKey(pub String);
-
-/// The model of the player's vehicle (the folder of its `.bus` file, lower case), on its root.
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
-pub struct ViewpointModel(pub String);
-
-mod keys;
-pub use keys::{key_of_bus_file, model_of_bus_file, normalise_key};
+/// The keys of the player's vehicle (the components and the `.bus` path helpers) live in
+/// `opts-game-state`; they are re-exported here under their old paths.
+pub use opts_game_state::viewpoint_keys::{
+    key_of_bus_file, model_of_bus_file, normalise_key, ViewpointKey, ViewpointModel,
+};
 
 /// Every stored viewpoint.
 #[derive(Debug, Clone, PartialEq, Default)]

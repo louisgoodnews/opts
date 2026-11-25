@@ -80,15 +80,15 @@ pub(super) fn insert_vehicle_components(
         InGameEntity,
     ));
     // The catalogue identity of the vehicle keys its stored viewpoints.
-    if let Some(key) = crate::viewpoints::key_of_bus_file(bus_path) {
+    if let Some(key) = opts_game_state::viewpoint_keys::key_of_bus_file(bus_path) {
         commands
             .entity(root)
-            .insert(crate::viewpoints::ViewpointKey(key));
+            .insert(opts_game_state::viewpoint_keys::ViewpointKey(key));
     }
-    if let Some(model) = crate::viewpoints::model_of_bus_file(bus_path) {
+    if let Some(model) = opts_game_state::viewpoint_keys::model_of_bus_file(bus_path) {
         commands
             .entity(root)
-            .insert(crate::viewpoints::ViewpointModel(model));
+            .insert(opts_game_state::viewpoint_keys::ViewpointModel(model));
     }
     if activate {
         // ISS-012: the player vehicle is the zone subject, so zones.query reports its membership.
