@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 
 use super::super::registry::{CheckEnv, Issue, IssueKind};
 use super::super::{fingerprint, PlayClock};
-use super::{parse, to_value};
+use super::{parse, paths, to_value};
 use crate::in_game::omsi_world::WorldLoadJob;
 use crate::in_game::types::InGameSessionInfo;
 use crate::new_game_screen::types::NewGameSetup;
@@ -53,8 +53,9 @@ pub(super) fn session_capture(world: &mut World) -> Result<Option<Value>, String
 
 pub(super) fn session_prepare(world: &mut World, data: &Value) -> Result<(), String> {
     let d: SessionData = parse(data, "session")?;
+    let map = paths::map_folder_name(&d.map_folder)?.to_owned();
     let mut setup = world.resource_mut::<NewGameSetup>();
-    setup.selected_map = d.map_folder;
+    setup.selected_map = map;
     setup.selected_entry_point = d.entry_point;
     // The vehicles come back through the spawner, not the loading pipeline's first vehicle.
     setup.no_vehicle = true;
@@ -74,6 +75,9 @@ pub(super) fn session_check(data: &Value, env: &CheckEnv) -> Vec<Issue> {
         subject: d.map_name.clone(),
         blocking,
     };
+    if paths::map_folder_name(&d.map_folder).is_err() {
+        return vec![missing(true)];
+    }
     let Some(root) = env.root else {
         return vec![missing(true)];
     };
