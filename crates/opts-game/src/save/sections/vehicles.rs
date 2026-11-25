@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 
 use super::super::fingerprint;
 use super::super::registry::{CheckEnv, Issue, IssueKind};
-use super::resolve_bus_file;
+use super::{paths, resolve_bus_file};
 use crate::in_game::omsi_world::WorldLoadJob;
 use crate::session_vehicles::{ops, EntrySel, SessionVehicles, SAVE_SECTION_VERSION};
 
@@ -72,6 +72,17 @@ pub(super) fn vehicles_migrate(from: u32, mut data: Value) -> Result<Value, Stri
 pub(super) fn vehicles_apply(world: &mut World, data: &Value) -> Result<(), String> {
     let mut reg = SessionVehicles::from_section(data)?;
     let root = root_of(world);
+    // A save naming a bus file outside the save and OMSI folders is refused as a whole.
+    if let Some(bad) = reg
+        .records()
+        .iter()
+        .find(|r| !paths::bus_path_allowed(Path::new(&r.bus_file), root.as_deref()))
+    {
+        return Err(format!(
+            "vehicle `{}`: its bus file is outside the save and OMSI folders",
+            bad.name
+        ));
+    }
     let ids: Vec<_> = reg.records().iter().map(|r| r.id).collect();
     for id in ids {
         let Some(r) = reg.get_mut(id) else { continue };

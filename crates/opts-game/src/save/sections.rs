@@ -25,6 +25,7 @@ use super::sections_runtime as runtime;
 use crate::session_vehicles::{SAVE_SECTION, SAVE_SECTION_VERSION};
 
 mod fuel;
+mod paths;
 mod session;
 mod vehicles;
 
@@ -54,7 +55,7 @@ pub fn resolve_bus_file(
     root: Option<&Path>,
 ) -> Option<std::path::PathBuf> {
     let direct = std::path::PathBuf::from(saved);
-    if direct.is_file() {
+    if paths::bus_path_allowed(&direct, root) && direct.is_file() {
         return Some(direct);
     }
     let root = root?;
