@@ -5,7 +5,7 @@
 | **Issue** | ISS-057 (local register: [issues-2026-11-18](../../audit/issues-2026-11-18.md)) |
 | **Severity** | major (player) |
 | **Milestone** | to be triaged |
-| **Status** | open, reported 2026-11-24 |
+| **Status** | owner decision 2026-11-25: keep the current steering curve, so no code change; to be reviewed in the game when the application runs |
 
 ## Problem
 

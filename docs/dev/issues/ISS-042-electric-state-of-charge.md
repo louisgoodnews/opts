@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Issue** | ISS-042. Research item RG-01 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | [M-0123](../../src/roadmap/phase-12/M-0123.md) Fuel and Battery State (suggested by the report; not yet assigned) |
-| **Status** | open (proposed 2026-11-22 from the feature research; milestone suggested, not yet assigned) |
+| **Milestone** | [M-0123](../../src/roadmap/phase-12/M-0123.md) Fuel and Battery State (assigned 2026-11-25, owner decision) |
+| **Status** | open: milestone assigned (M-0123, owner decision 2026-11-25); variable name recorded in fuel-battery.md; the code item is open |
 
 ## Problem
 
