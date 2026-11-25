@@ -17,7 +17,7 @@ use opts_gui::interaction::state::Focused;
 use opts_gui::prelude::UiAction;
 
 use super::nav::NavigateBack;
-use crate::app_state::AppState;
+use opts_game_state::app_state::AppState;
 
 /// Whether something else owns this frame's Back press; computed before any system of the frame
 /// can close it.

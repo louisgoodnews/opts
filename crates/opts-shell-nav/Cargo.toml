@@ -1,0 +1,21 @@
+[package]
+name = "opts-shell-nav"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shell navigation: the screen registry, the rail frame, the back stack, Esc and banners (split out of opts-game, ISS-068 stage 2)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-bevy = { workspace = true }
+opts-gui = { workspace = true }
+opts-game-state = { workspace = true }
+opts-shell-icons = { workspace = true }
+opts-shell-keys = { workspace = true }
+tracing = { workspace = true }

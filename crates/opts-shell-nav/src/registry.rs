@@ -3,13 +3,13 @@
 //! Adding a screen is one module and one [`ScreenAppExt::register_screen`] call
 //! (`docs/src/roadmap/phase-9/expandability.md` section 4). The page itself is still built by the
 //! screen's own `OnEnter` system of the [`AppState`] named in the descriptor, with
-//! [`crate::shell::spawn_screen_root`].
+//! [`crate::spawn_screen_root`].
 
 use bevy::prelude::*;
 use opts_gui::not_yet::{self, Availability};
 
 use super::{icons, keys};
-use crate::app_state::AppState;
+use opts_game_state::app_state::AppState;
 
 /// The group a destination belongs to in the rail.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

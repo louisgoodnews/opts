@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use opts_gui::not_yet::Availability;
 
 use super::registry::ScreenRegistry;
-use crate::app_state::AppState;
+use opts_game_state::app_state::AppState;
 
 /// How a navigation treats the back stack.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

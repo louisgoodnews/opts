@@ -89,6 +89,7 @@ members = [
     "crates/opts-shell-calendar",
     "crates/opts-shell-dialog",
     "crates/opts-shell-icons",
+    "crates/opts-shell-nav",
     "crates/opts-sim-pedestrian",
     "crates/opts-tools",
     "crates/opts-traffic",
@@ -176,6 +177,7 @@ opts-sim-passengers = { path = "crates/opts-sim-passengers" }
 opts-shell-calendar = { path = "crates/opts-shell-calendar" }
 opts-shell-dialog = { path = "crates/opts-shell-dialog" }
 opts-shell-icons = { path = "crates/opts-shell-icons" }
+opts-shell-nav = { path = "crates/opts-shell-nav" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }

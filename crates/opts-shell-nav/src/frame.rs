@@ -14,7 +14,7 @@ use opts_gui::theme::LayoutClass;
 
 use super::registry::{ScreenDescriptor, ScreenGroup, ScreenRegistry};
 use super::{icons, keys, nav, ShellContent};
-use crate::app_state::AppState;
+use opts_game_state::app_state::AppState;
 
 /// Rail width with icons only.
 pub const RAIL_COMPACT_PX: f32 = 72.0;

@@ -93,6 +93,7 @@ graph TD
         opts_world_session["opts-world-session<br/>• Resolved content paths and the menu request for a world session"]:::app
         opts_shell_calendar["opts-shell-calendar<br/>• Date and time steppers and choice chips<br/>• Bevy UI over opts-bevy and opts-gui"]:::app
         opts_shell_dialog["opts-shell-dialog<br/>• Confirmation dialogs and their answer systems<br/>• Bevy UI over opts-gui"]:::app
+        opts_shell_nav["opts-shell-nav<br/>• Screen registry, rail frame, back stack and Esc<br/>• Banners and the shell content area<br/>• Bevy UI over opts-bevy, opts-gui and opts-game-state"]:::app
         opts_pause_report["opts-pause-report<br/>• Report dialog state for the pause menu<br/>• Bevy state over opts-bevy"]:::app
         opts_hud_widgets["opts-hud-widgets<br/>• HUD widget slots, vehicle kinds and descriptors<br/>• Built-in widget registry<br/>• Bevy CameraMode via opts-bevy"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
@@ -142,6 +143,11 @@ graph TD
     opts_shell_calendar --> opts_bevy
     opts_shell_calendar --> opts_gui
     opts_shell_dialog --> opts_gui
+    opts_shell_nav --> opts_bevy
+    opts_shell_nav --> opts_game_state
+    opts_shell_nav --> opts_gui
+    opts_shell_nav --> opts_shell_icons
+    opts_shell_nav --> opts_shell_keys
     opts_game --> opts_bevy
     opts_game --> opts_game_state
     opts_game_state --> opts_bevy
@@ -169,6 +175,7 @@ graph TD
     opts_game --> opts_shell_calendar
     opts_game --> opts_shell_dialog
     opts_game --> opts_shell_icons
+    opts_game --> opts_shell_nav
     opts_game --> opts_minimap_zoom_canvas
     opts_game --> opts_save_error
     opts_game --> opts_shell_keys
@@ -303,6 +310,7 @@ graph TD
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game`, `opts-pause-report`, `opts-shell-calendar` | Bevy Engine |
 | **`opts-shell-calendar`** | L3 | Date and time steppers, their arithmetic and the frame of a choice chip (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy`, `opts-gui` | `opts-game` | Bevy UI |
 | **`opts-shell-dialog`** | L3 | Confirmation dialogs: the spec, the card and the answer systems (split out of `opts-game`, ISS-068 stage 1) | `opts-gui` | `opts-game` | Bevy UI |
+| **`opts-shell-nav`** | L3 | Shell navigation: the screen registry, the rail frame, the back stack, Esc and banners (split out of `opts-game`, ISS-068 stage 2) | `opts-bevy`, `opts-game-state`, `opts-gui`, `opts-shell-icons`, `opts-shell-keys` | `opts-game` | Bevy UI |
 | **`opts-pause-report`** | L3 | Report dialog state helper for the pause menu (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-pause-report`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-shell-icons`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-hud-widgets`** | L3 | HUD widget vocabulary: slots, vehicle kinds, widget descriptors and the built-in registry (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | `opts-bevy` (external: `serde`) | `opts-game` | Bevy Engine |
