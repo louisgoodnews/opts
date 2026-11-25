@@ -39,7 +39,7 @@ pub(in super::super) struct SegmentState<'a> {
     pub(super) max: Vec3,
     // Dynamic text textures of this segment: one image per `[texttexture]` index, redrawn when the
     // script string variable it shows changes (`vehicle_text.rs`).
-    pub(super) text_images: std::collections::HashMap<usize, Handle<Image>>,
+    pub(super) text_images: super::overrides::TextImageMap,
     pub(super) script_images: std::collections::HashMap<usize, Handle<Image>>,
     // Dummy meshes (`…Dum_Gelenk_A`) that carry a bone's animation, and the skinned meshes
     // (`[smoothskin]` + `[setbone]`: the articulation bellows) bound to them.

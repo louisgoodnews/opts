@@ -8,10 +8,10 @@ use super::*;
 pub(super) fn text_image_for(
     (job, commands, images): (&WorldLoadJob, &mut Commands, &mut Assets<Image>),
     (mesh_def, owner, root): (&ModelMesh, Entity, Entity),
-    (text_images, i): (&mut std::collections::HashMap<usize, Handle<Image>>, usize),
+    (text_images, (i, clamp)): (&mut super::TextImageMap, (usize, bool)),
 ) -> Option<Handle<Image>> {
     let text_defs = &job.vehicle_text_defs;
-    if let Some(h) = text_images.get(&i) {
+    if let Some(h) = text_images.get(&(i, clamp)) {
         return Some(h.clone());
     }
     let Some(def) = text_defs.get(i) else {
@@ -19,17 +19,18 @@ pub(super) fn text_image_for(
         return None;
     };
     let (w, h) = (def.width.max(1), def.height.max(1));
-    let handle = images.add(opts_bevy::text_texture::text_image(
+    let handle = images.add(opts_bevy::text_texture::text_image_addressed(
         w,
         h,
         vec![0; (w * h * 4) as usize],
+        clamp,
     ));
     commands.spawn((
         VehicleTextTexture::new(owner, def, handle.clone()),
         Name::new(format!("text_texture_{i}_{}", def.variable)),
         ChildOf(root),
     ));
-    text_images.insert(i, handle.clone());
+    text_images.insert((i, clamp), handle.clone());
     Some(handle)
 }
 

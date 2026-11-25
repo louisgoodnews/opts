@@ -54,11 +54,15 @@ pub(crate) fn in_file_order(
 /// Images by material index.
 pub(crate) type ImageMap = std::collections::HashMap<usize, Handle<Image>>;
 
+/// Text images by (texture index, clamped): a material with `[matl_texadress_clamp]` gets its own
+/// image, so the same text slot can repeat for one material and clamp for another.
+pub(crate) type TextImageMap = std::collections::HashMap<(usize, bool), Handle<Image>>;
+
 pub(crate) fn build_overrides(
     (job, commands, images): (&WorldLoadJob, &mut Commands, &mut Assets<Image>),
     (mesh_def, owner, root): (&ModelMesh, Entity, Entity),
     tex_dirs: &[PathBuf],
-    (text_images, script_images): (&mut ImageMap, &mut ImageMap),
+    (text_images, script_images): (&mut TextImageMap, &mut ImageMap),
 ) -> Vec<TextureOverride> {
     mesh_def
         .materials
@@ -75,7 +79,7 @@ pub(crate) fn build_overrides(
                     text_image_for(
                         (job, commands, images),
                         (mesh_def, owner, root),
-                        (&mut *text_images, i),
+                        (&mut *text_images, (i, m.clamp_addressing)),
                     )
                 })
                 .or_else(|| {

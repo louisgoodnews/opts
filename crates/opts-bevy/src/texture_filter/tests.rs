@@ -48,3 +48,21 @@ fn current_setting_is_used_by_the_shared_sampler() {
     assert_eq!(d.anisotropy_clamp, 4);
     set_texture_filtering(TextureFiltering::X16);
 }
+
+#[test]
+fn a_clamped_text_image_samples_at_its_edges_and_a_plain_one_repeats() {
+    use crate::text_texture::{text_image, text_image_addressed};
+    let ImageSampler::Descriptor(clamped) = text_image_addressed(4, 4, vec![0; 64], true).sampler
+    else {
+        panic!("a text image has a descriptor sampler");
+    };
+    assert_eq!(clamped.address_mode_u, ImageAddressMode::ClampToEdge);
+    assert_eq!(clamped.address_mode_v, ImageAddressMode::ClampToEdge);
+    let ImageSampler::Descriptor(plain) = text_image(4, 4, vec![0; 64]).sampler else {
+        panic!("a text image has a descriptor sampler");
+    };
+    assert_eq!(plain.address_mode_v, ImageAddressMode::Repeat);
+    // Clamping keeps the filtering of the setting.
+    assert_eq!(clamped.mag_filter, plain.mag_filter);
+    assert_eq!(clamped.min_filter, plain.min_filter);
+}
