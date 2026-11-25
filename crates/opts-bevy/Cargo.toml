@@ -26,6 +26,13 @@ opts-light-quality = { workspace = true }
 opts-main-camera = { workspace = true }
 opts-scene-trace = { workspace = true }
 opts-spatial-zones = { workspace = true }
+# Bevy-facing leaves split out of opts-bevy (ISS-065 stage 2).
+opts-bevy-bus-stops = { workspace = true }
+opts-bevy-ground = { workspace = true }
+opts-bevy-instancing = { workspace = true }
+opts-bevy-moon-material = { workspace = true }
+opts-bevy-season = { workspace = true }
+opts-bevy-texture-sentinel = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }

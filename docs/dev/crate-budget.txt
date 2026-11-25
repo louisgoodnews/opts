@@ -45,3 +45,9 @@ opts-spatial-zones 946  # new 2026-11-25: the spatial zones moved out of opts-be
 opts-light-quality 1030  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the lighting quality, ladder and governor moved out of opts-bevy (crate split)
 opts-audio 812  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the sound engine moved out of opts-bevy (crate split)
 opts-main-camera 4  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the MainCamera marker moved out of opts-bevy so that opts-audio can use it
+opts-bevy-bus-stops 59  # new ISS-065 stage 2, ESTIMATE counted by hand (non-blank, non-comment lines; audit not run): the bus stop marker split out of opts-bevy
+opts-bevy-ground 277  # new ISS-065 stage 2, ESTIMATE counted by hand: the ground texture CPU image, BC decoder and tile composition split out of opts-bevy
+opts-bevy-instancing 572  # new ISS-065 stage 2, ESTIMATE counted by hand: the mesh instancing layers and render.stats split out of opts-bevy (the epic's ~420 was a rough figure)
+opts-bevy-moon-material 51  # new ISS-065 stage 2, ESTIMATE counted by hand: the moon disc material and its shader split out of opts-bevy
+opts-bevy-season 56  # new ISS-065 stage 2, ESTIMATE counted by hand: the season state and snow-cover folders split out of opts-bevy
+opts-bevy-texture-sentinel 24  # new ISS-065 stage 2, ESTIMATE counted by hand: the benchmark-only missing-texture sentinel split out of opts-bevy

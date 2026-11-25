@@ -56,6 +56,8 @@ mod keys;
 mod merge;
 mod pool;
 
+pub mod render_stats;
+
 pub use keys::*;
 pub use merge::*;
 pub use pool::*;

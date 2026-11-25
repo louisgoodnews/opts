@@ -1,0 +1,16 @@
+[package]
+name = "opts-bevy-instancing"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Mesh instancing layers (dedupe and static merge) and the render statistics of the instancing research, split out of opts-bevy."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+serde_json = { workspace = true }
