@@ -29,6 +29,7 @@ impl ContentLoader<'_> {
                 textures: Vec::new(),
             });
         let over = find_override(&model.materials, slot, ctx.overrides);
+        tracing::debug!(path = %ctx.o3d_path.display(), slot, texture = ?base.primary_texture(), has_override = over.is_some(), clamp = over.is_some_and(|o| o.clamp), text_image = over.is_some_and(|o| o.image.is_some()), "slot override chosen");
         let failures_before = self.cache.stats.failures.len();
         let res = self.resolve_slot_textures(&base, over, ctx);
         let sentinel = crate::texture_sentinel::missing_texture_sentinel()

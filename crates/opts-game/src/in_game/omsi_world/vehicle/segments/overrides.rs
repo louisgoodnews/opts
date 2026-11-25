@@ -51,8 +51,8 @@ pub(crate) fn in_file_order(
 }
 
 /// Builds the texture overrides of `mesh_def`.
-/// Images by material index.
-pub(crate) type ImageMap = std::collections::HashMap<usize, Handle<Image>>;
+/// Script images by (texture index, clamped), as [`TextImageMap`].
+pub(crate) type ImageMap = std::collections::HashMap<(usize, bool), Handle<Image>>;
 
 /// Text images by (texture index, clamped): a material with `[matl_texadress_clamp]` gets its own
 /// image, so the same text slot can repeat for one material and clamp for another.
@@ -67,6 +67,9 @@ pub(crate) fn build_overrides(
     mesh_def
         .materials
         .iter()
+        .inspect(|m| {
+            tracing::debug!(mesh = %mesh_def.path, slot = m.slot_index, texture = %m.texture, clamp = m.clamp_addressing, text = ?m.text_texture_index, script = ?m.script_texture_index, "model material override built");
+        })
         .map(|m| TextureOverride {
             clamp: m.clamp_addressing,
             slot: m.slot_index as usize,

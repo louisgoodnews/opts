@@ -15,6 +15,7 @@ impl ContentLoader<'_> {
         }
         let out = match self.images.get(handle) {
             Some(img) => {
+                tracing::debug!(image = ?handle.id(), "clamped variant made");
                 let mut copy = img.clone();
                 let mut d = match &copy.sampler {
                     bevy::image::ImageSampler::Descriptor(d) => d.clone(),
