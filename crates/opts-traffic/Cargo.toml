@@ -15,6 +15,7 @@ workspace = true
 # Internal
 opts-core = { workspace = true }
 opts-car-following = { workspace = true }
+opts-vehicle-traits = { workspace = true }
 
 # Math
 glam = { workspace = true }

@@ -5666,6 +5666,7 @@ dependencies = [
  "glam",
  "opts-car-following",
  "opts-core",
+ "opts-vehicle-traits",
  "thiserror 1.0.69",
 ]
 
@@ -5679,6 +5680,13 @@ dependencies = [
 [[package]]
 name = "opts-vdf"
 version = "0.1.0"
+
+[[package]]
+name = "opts-vehicle-traits"
+version = "0.1.0"
+dependencies = [
+ "opts-car-following",
+]
 
 [[package]]
 name = "opts-wav"

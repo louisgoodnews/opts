@@ -1,0 +1,15 @@
+[package]
+name = "opts-vehicle-traits"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Traffic traits of a vehicle type (class, length, mass, drive and brake force) mapped onto the car-following driver parameters (pure Rust, no traffic graph)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-car-following = { workspace = true }
