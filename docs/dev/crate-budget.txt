@@ -78,3 +78,4 @@ opts-vehicle-gears 45  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines c
 opts-world-stats TBD-measure  # new 2026-11-25 (ISS-067 stage 1): the world counters, positions and camera setup moved out of opts-game omsi_world; the audit has not been run, measure before the next gate
 opts-vehicle-script-texture TBD-measure  # new 2026-11-25 (ISS-067 stage 1): the vehicle script texture canvases and colour maps moved out of opts-game omsi_world; the audit has not been run, measure before the next gate
 opts-new-game-types TBD-measure  # new 2026-11-25 (ISS-064 stage 3, estimate: the audit has not measured it yet): the wizard's catalogue and choice types, the trip choice and the planner date arithmetic split out of opts-game's new_game_screen
+opts-repaints TBD-measure  # new 2026-11-25 (ISS-064 stage 3, estimate: the audit has not measured it yet): the vehicle repaint discovery (.bus, model.cfg, .cti chain) split out of opts-game's new_game_screen

@@ -9,7 +9,7 @@ use opts_core::formats::vehicles::BusManifest;
 
 use super::model::add_model_repaints;
 use super::VehicleRepaints;
-use crate::new_game_screen::types::VehicleItem;
+use opts_new_game_types::types::VehicleItem;
 
 /// The first folder below `Vehicles` of a vehicle file or folder (the vendor's family folder).
 #[must_use]
@@ -139,7 +139,7 @@ pub fn discover_for_model(
 /// Repaints of a menu vehicle (empty list when the installation is unknown).
 #[must_use]
 pub fn vehicle_repaints(vehicle: &VehicleItem) -> VehicleRepaints {
-    match crate::omsi_root::known_omsi_root() {
+    match opts_steam::omsi_root::known_omsi_root() {
         Some(root) if !vehicle.bus_file.is_empty() => {
             discover(&root, &vehicle.bus_file, &vehicle.default_livery)
         }

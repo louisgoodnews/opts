@@ -13,7 +13,7 @@ pub mod history;
 pub mod livery;
 pub mod options;
 pub mod planner;
-pub mod repaints;
+pub use opts_repaints as repaints;
 pub mod setvars_discovery;
 pub mod step_load;
 pub mod step_review;

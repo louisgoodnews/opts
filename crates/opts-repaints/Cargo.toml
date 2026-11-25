@@ -1,0 +1,18 @@
+[package]
+name = "opts-repaints"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Vehicle repaint discovery for the new-game vehicle tab: the .bus, model.cfg and .cti chain as pure file reads (split out of opts-game, ISS-064 stage 3)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-bevy = { workspace = true }
+opts-core = { workspace = true }
+opts-new-game-types = { workspace = true }
+opts-steam = { workspace = true }

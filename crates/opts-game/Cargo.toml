@@ -48,6 +48,7 @@ opts-settings-io = { workspace = true }
 opts-attachments = { workspace = true }
 opts-tile-loading = { workspace = true }
 opts-new-game-types = { workspace = true }
+opts-repaints = { workspace = true }
 opts-pause-report = { workspace = true }
 opts-hud-keys = { workspace = true }
 opts-hud-widgets = { workspace = true }
