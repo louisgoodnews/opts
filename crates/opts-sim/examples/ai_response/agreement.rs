@@ -11,18 +11,18 @@ use super::{find_ci, Counts};
 
 /// Reference mass (kg) and wheel radius (m): both models scale by the same factor, so the
 /// agreement does not depend on them.
-const REF_MASS_KG: f32 = 12_000.0;
-const REF_RADIUS_M: f32 = 0.5;
+pub const REF_MASS_KG: f32 = 12_000.0;
+pub const REF_RADIUS_M: f32 = 0.5;
 /// Frame time, run-up target (50 km/h in m/s), run-up limit (s) and tolerance: the same frame
 /// count as the measurement's warm-up.
-const FRAME_S: f32 = 1.0 / 60.0;
-const TARGET_MS: f32 = 50.0 / 3.6;
-const LIMIT_S: f32 = 120.0;
+pub const FRAME_S: f32 = 1.0 / 60.0;
+pub const TARGET_MS: f32 = 50.0 / 3.6;
+pub const LIMIT_S: f32 = 120.0;
 pub const TOLERANCE: f32 = 0.15;
-const WARM_UP_FRAMES: usize = 600;
+pub const WARM_UP_FRAMES: usize = 600;
 
 /// Whether the vehicle's scripts have `{frame_ai}` blocks (what `measure_ai_response` checks).
-fn has_ai_frame(bus: &BusManifest, dir: &Path, root: &Path) -> bool {
+pub fn has_ai_frame(bus: &BusManifest, dir: &Path, root: &Path) -> bool {
     bus.scripts
         .iter()
         .filter_map(|rel| find_ci(dir, rel).or_else(|| find_ci(root, rel)))

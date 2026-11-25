@@ -13,6 +13,8 @@ use opts_sim::script::{load_vehicle_scripts, measure_ai_response};
 
 #[path = "ai_response/agreement.rs"]
 mod agreement;
+#[path = "ai_response/transfer.rs"]
+mod transfer;
 use agreement::{check_agreement, TOLERANCE};
 
 #[derive(Default)]
@@ -26,6 +28,9 @@ struct Counts {
     disagree: usize,
     stall: usize,
     no_run: usize,
+    /// Transfer test: [agree, disagree, stall in both] for the path and for the sampled table.
+    path: [usize; 3],
+    table: [usize; 3],
 }
 
 fn evaluate_vehicle(
@@ -54,6 +59,14 @@ fn evaluate_vehicle(
     }
     if std::env::var_os("AGREE").is_some() {
         check_agreement(vehicle_name, bus, &dir, root, &r, show, counts);
+    }
+    if std::env::var_os("TRANSFER").is_some() {
+        let (by_path, by_table) = transfer::transfer_check(bus, &dir, root, &r);
+        tally(&mut counts.path, by_path);
+        tally(&mut counts.table, by_table);
+        if show && by_path == Some(false) {
+            println!("TRANSFER  {vehicle_name} path disagrees at {} kg", 8000);
+        }
     }
     let c = |n: &str| {
         let mut e2 = engine_const(bus, &dir, root, n);
@@ -125,8 +138,20 @@ fn main() {
         TOLERANCE * 100.0, counts.agree, counts.disagree, counts.stall, counts.no_run
     );
     println!(
+        "transfer to 8 t, [agree, disagree, stall]: path {:?}, sampled table {:?}",
+        counts.path, counts.table
+    );
+    println!(
         "{} vehicles: {} without scripts, {} whose script gives no torque or brake force, \
          {} follow the shared law, {} deviate",
         counts.total, counts.no_script, counts.dead, counts.follows, counts.deviates
     );
+}
+
+fn tally(c: &mut [usize; 3], ok: Option<bool>) {
+    match ok {
+        Some(true) => c[0] += 1,
+        Some(false) => c[1] += 1,
+        None => c[2] += 1,
+    }
 }
