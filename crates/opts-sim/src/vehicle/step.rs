@@ -2,6 +2,7 @@
 //! [`VehicleSimulation`].
 
 use super::drivetrain::DrivetrainForces;
+use super::steering::{steering_curve, trace_steering, CENTRAL_LOCK_RAD};
 use super::*;
 
 /// The net force along the vehicle (N, forward positive). Moving, the brakes and the resistances
@@ -54,7 +55,8 @@ impl VehicleSimulation {
             .map_or(0.49, |a| a.config.wheel_diameter_m * 0.5);
 
         // 1. Steering kinematics: update all steered axles
-        let central_steer_rad = self.inputs.steering() * 0.82; // Max ~47 degrees lock
+        // ISS-057: the wheel input passes the steering curve (full lock unchanged, less at centre).
+        let central_steer_rad = steering_curve(self.inputs.steering()) * CENTRAL_LOCK_RAD;
         for axle in &mut self.axles {
             axle.apply_steering(central_steer_rad, self.wheelbase_m);
         }
@@ -96,6 +98,7 @@ impl VehicleSimulation {
         // the steering at a fraction of its empty rate, set by the load on the steered axle
         // (M-0124 steering authority).
         let yaw_rate = (speed / self.wheelbase_m) * central_steer_rad.tan();
+        trace_steering(self.inputs.steering(), central_steer_rad, speed, yaw_rate);
         let (unladen_steer_n, people_steer_n) = self.steer_axle_weights_n();
         let authority = steering_authority(unladen_steer_n, people_steer_n);
         let yaw_torque = (yaw_rate - self.chassis.yaw_rate_rad_s)

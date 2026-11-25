@@ -62,6 +62,7 @@ mod construct;
 mod ground_ops;
 mod hitch_pose;
 mod simulation;
+mod steering;
 mod step;
 
 pub use simulation::VehicleSimulation;
