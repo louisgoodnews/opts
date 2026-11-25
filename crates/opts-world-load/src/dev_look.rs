@@ -57,7 +57,7 @@ const HOLD_FRAMES: u32 = 30;
 /// Places the free camera 12 m in front of the chosen object (OMSI +y side), looking at it.
 pub fn place_dev_camera(
     job: Option<ResMut<super::WorldLoadJob>>,
-    load: Res<crate::in_game::types::SimulationLoadState>,
+    load: Res<opts_game_state::in_game::types::SimulationLoadState>,
     mut state: ResMut<CameraState>,
     objects: Query<&GlobalTransform, Without<opts_bevy::MainCamera>>,
     mut cameras: Query<&mut Transform, With<opts_bevy::MainCamera>>,

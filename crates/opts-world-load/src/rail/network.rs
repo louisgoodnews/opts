@@ -18,7 +18,7 @@ pub use pose::{rail_player_pose, unit_frame, unit_pose};
 
 /// Resets the per-session state and reads `--trains`.
 pub fn configure_rail(
-    args: Option<Res<crate::AppArgs>>,
+    args: Option<Res<opts_app_args::AppArgs>>,
     mut settings: ResMut<RailSettings>,
     mut net: ResMut<RailNetwork>,
     mut pool: ResMut<RailAiPool>,

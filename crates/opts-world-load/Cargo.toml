@@ -13,19 +13,25 @@ workspace = true
 
 [dependencies]
 bevy = { workspace = true }
+opts-app-args = { workspace = true }
 opts-attachments = { workspace = true }
 opts-bevy = { workspace = true }
+opts-catalogue-service = { workspace = true }
 opts-collision = { workspace = true }
 opts-core = { workspace = true }
 opts-fleet-number = { workspace = true }
 opts-game-state = { workspace = true }
 opts-gui = { workspace = true, features = ["serde"] }
+opts-hud-keys = { workspace = true }
 opts-logging = { workspace = true }
 opts-mesh-dir = { workspace = true }
+opts-new-game-types = { workspace = true }
 opts-repaints = { workspace = true }
 opts-road-surf = { workspace = true }
 opts-scripted-drive = { workspace = true }
+opts-shell-keys = { workspace = true }
 opts-sim = { workspace = true }
+opts-steam = { workspace = true }
 opts-stream-budget = { workspace = true }
 opts-tile-loading = { workspace = true }
 opts-traffic = { workspace = true }

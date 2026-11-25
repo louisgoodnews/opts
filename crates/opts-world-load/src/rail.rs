@@ -16,7 +16,7 @@ use opts_sim::pedestrian::{
 };
 use opts_sim::rail::{Branch, Moved, Train};
 
-use crate::in_game::types::InGameEntity;
+use opts_game_state::in_game::types::InGameEntity;
 
 use super::vehicle::load_segment_meshes;
 use super::WorldLoadJob;

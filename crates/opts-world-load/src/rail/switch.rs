@@ -81,9 +81,9 @@ pub fn switch_hint_system(
             id: "rail.switch",
             severity: AlertSeverity::Info,
             key: match p.chosen {
-                Branch::Straight => crate::hud::keys::ALERT_SWITCH_STRAIGHT,
-                Branch::Left => crate::hud::keys::ALERT_SWITCH_LEFT,
-                Branch::Right => crate::hud::keys::ALERT_SWITCH_RIGHT,
+                Branch::Straight => opts_hud_keys::ALERT_SWITCH_STRAIGHT,
+                Branch::Left => opts_hud_keys::ALERT_SWITCH_LEFT,
+                Branch::Right => opts_hud_keys::ALERT_SWITCH_RIGHT,
             },
             args: vec![(
                 "distance",

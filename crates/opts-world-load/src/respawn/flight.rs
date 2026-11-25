@@ -43,7 +43,7 @@ pub(super) fn complete_flight(
             registry.mark_failed(id, e.clone());
             if let Some(loc) = loc {
                 ToastBuilder::new(loc.t_args(
-                    crate::shell::keys::SPAWN_FAILED,
+                    opts_shell_keys::SPAWN_FAILED,
                     &[
                         ("name".to_owned(), name.as_str().into()),
                         ("error".to_owned(), e.as_str().into()),

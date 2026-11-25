@@ -16,7 +16,7 @@ use opts_sim::pedestrian::{
     gait, lanes_from_object, lanes_from_spline, Advance, FootLane, PedestrianNet, Walker,
 };
 
-use crate::in_game::types::InGameEntity;
+use opts_game_state::in_game::types::InGameEntity;
 
 use super::vehicle::load_human_parts;
 use super::WorldLoadJob;

@@ -12,8 +12,8 @@ pub use walker::move_pedestrians;
 
 /// Reads `--pedestrians` and resets the per-session state when a session starts.
 pub fn configure_pedestrians(
-    args: Option<Res<crate::AppArgs>>,
-    user: Option<Res<crate::settings::GameSettings>>,
+    args: Option<Res<opts_app_args::AppArgs>>,
+    user: Option<Res<opts_game_state::settings::GameSettings>>,
     mut settings: ResMut<PedestrianSettings>,
     mut net: ResMut<PedestrianNetwork>,
     mut pool: ResMut<PedestrianPool>,

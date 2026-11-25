@@ -75,12 +75,12 @@ pub fn click_points_system(
         let (id, key_text, args) = match throw(&mut net.0, key, &occupied) {
             Some(p) => (
                 "rail.points",
-                crate::hud::keys::ALERT_POINTS_THROWN,
+                opts_hud_keys::ALERT_POINTS_THROWN,
                 vec![("position", (p + 1).to_string())],
             ),
             None if occupied.contains(&key) => (
                 "rail.points",
-                crate::hud::keys::ALERT_POINTS_OCCUPIED,
+                opts_hud_keys::ALERT_POINTS_OCCUPIED,
                 Vec::new(),
             ),
             None => continue,

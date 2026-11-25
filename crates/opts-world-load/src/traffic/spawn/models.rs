@@ -11,7 +11,7 @@ use opts_core::formats::script_texture::CpuScriptTexture;
 use crate::traffic_variant::Variant;
 use crate::vehicle::load_segment_meshes_for;
 use crate::{trace, ChronoState, WorldLoadJob};
-use crate::in_game::types::InGameEntity;
+use opts_game_state::in_game::types::InGameEntity;
 
 use super::super::variants::unit_lod;
 

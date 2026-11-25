@@ -10,7 +10,7 @@ use super::super::TrafficState;
 use super::lanes::{bevy_point, session_xy};
 use super::LaneOverlay;
 use crate::WorldStats;
-use crate::in_game::types::InGameEntity;
+use opts_game_state::in_game::types::InGameEntity;
 
 /// Vehicles further than this from the camera (m) get no marker or label.
 const LABEL_RADIUS_M: f64 = 150.0;

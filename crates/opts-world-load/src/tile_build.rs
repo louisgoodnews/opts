@@ -15,7 +15,7 @@ use opts_bevy::TileTerrain;
 use opts_core::formats::map::{MapObjectInstance, MapTile};
 
 use opts_stream_budget::FrameBudget;
-use crate::in_game::types::InGameEntity;
+use opts_game_state::in_game::types::InGameEntity;
 
 use super::tile::{place_attached_objects, TileRoot};
 use super::tile_ground::{ensure_surfaces, load_terrain, TerrainInput, NEIGHBOURHOOD_LEN};

@@ -10,7 +10,7 @@ use opts_bevy::{attach_model_parts, spawn_vehicle_model, ContentLoader, TextureO
 use opts_core::formats::vehicles::model::ModelConfig;
 use opts_core::formats::vehicles::BusManifest;
 
-use crate::in_game::types::InGameEntity;
+use opts_game_state::in_game::types::InGameEntity;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{CameraSetup, WorldLoadJob, WorldStats};

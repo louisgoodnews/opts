@@ -11,10 +11,10 @@ use opts_core::formats::map::{MapManifest, MapObjectInstance, MapSplineInstance,
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 use super::vehicle::FormationCar;
-use crate::catalogue_service::CatalogueService;
+use opts_catalogue_service::CatalogueService;
 use opts_attachments::SplineIndex;
-use crate::new_game_screen::types::GameCatalogue;
-use crate::omsi_root::locate_omsi_root;
+use opts_new_game_types::types::GameCatalogue;
+use opts_steam::omsi_root::locate_omsi_root;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{OmsiSessionConfig, SessionRequest, WorldLoadJob};

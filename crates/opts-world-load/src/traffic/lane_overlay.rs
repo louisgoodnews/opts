@@ -4,9 +4,9 @@
 
 use bevy::prelude::*;
 
-use crate::app_state::AppState;
+use opts_game_state::app_state::AppState;
 use crate::WorldStats;
-use crate::in_game::types::InGameEntity;
+use opts_game_state::in_game::types::InGameEntity;
 
 mod agent_id_overlay;
 mod lanes;

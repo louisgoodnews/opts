@@ -16,8 +16,8 @@ pub(in super::super::super) use source::tile_segments;
 
 /// Reads `--traffic` and resets the per-session state when a session starts.
 pub fn configure_traffic(
-    args: Option<Res<crate::AppArgs>>,
-    user: Option<Res<crate::settings::GameSettings>>,
+    args: Option<Res<opts_app_args::AppArgs>>,
+    user: Option<Res<opts_game_state::settings::GameSettings>>,
     mut settings: ResMut<TrafficSettings>,
     mut state: ResMut<TrafficState>,
     mut pool: ResMut<TrafficPool>,

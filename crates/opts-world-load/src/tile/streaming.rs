@@ -91,7 +91,7 @@ pub struct StreamViewpoint<'w, 's> {
 /// Parsed objects and textures stay cached, so revisiting a tile is cheap.
 pub fn stream_world_tiles(
     job: Option<ResMut<WorldLoadJob>>,
-    state: Res<crate::in_game::types::SimulationLoadState>,
+    state: Res<opts_game_state::in_game::types::SimulationLoadState>,
     viewpoint: StreamViewpoint,
     mut hybrid: Local<HybridState>,
     mut stats: ResMut<WorldStats>,
