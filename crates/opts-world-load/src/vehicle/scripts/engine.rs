@@ -45,7 +45,7 @@ fn host_context(
         ))),
         font_bitmaps: opts_bevy::script_text::FontBitmapSource::new(&job.install),
         texture_base_dir: Some(bus_dir.join("Texture")),
-        tickets: std::sync::Arc::new(crate::passengers::ticket_book(
+        tickets: std::sync::Arc::new(opts_passenger_spec::ticket_book(
             &super::super::passengers::ticket_pack(job),
         )),
         coins: std::sync::Arc::new(

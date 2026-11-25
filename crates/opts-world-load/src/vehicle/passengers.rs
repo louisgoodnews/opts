@@ -92,7 +92,7 @@ pub(super) fn attach_unit(
     let Ok(paths) = opts_core::formats::vehicles::PassengerPaths::parse_bytes(&paths) else {
         return;
     };
-    let mut unit = crate::passengers::unit_spec(
+    let mut unit = opts_passenger_spec::unit_spec(
         &opts_core::formats::vehicles::cabin::PassengerCabin::parse_bytes(&cabin),
         &paths,
     );

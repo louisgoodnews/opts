@@ -26,6 +26,7 @@ opts-hud-keys = { workspace = true }
 opts-logging = { workspace = true }
 opts-mesh-dir = { workspace = true }
 opts-new-game-types = { workspace = true }
+opts-passenger-spec = { workspace = true }
 opts-repaints = { workspace = true }
 opts-road-surf = { workspace = true }
 opts-scripted-drive = { workspace = true }
