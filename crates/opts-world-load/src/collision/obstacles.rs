@@ -28,7 +28,7 @@ pub(super) type PlayerCollide = (
 /// Road vehicles of the player (rail vehicles are ghosts).
 pub(super) type GroundPlayer = (
     Or<(
-        With<crate::session_vehicles::SessionVehicle>,
+        With<opts_game_state::session_vehicles::SessionVehicle>,
         With<PlayerVehicle>,
     )>,
     Without<RailPlayer>,

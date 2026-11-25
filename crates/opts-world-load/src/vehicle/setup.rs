@@ -59,7 +59,7 @@ pub(super) fn insert_vehicle_components(
     commands: &mut Commands,
     root: Entity,
     (manifest, bus_path): (&BusManifest, &Path),
-    (session_id, activate): (crate::session_vehicles::VehicleId, bool),
+    (session_id, activate): (opts_game_state::session_vehicles::VehicleId, bool),
     (spawn_world, heading_deg): (Vec3, f32),
     formation_free: bool,
 ) {
@@ -76,7 +76,7 @@ pub(super) fn insert_vehicle_components(
     controller.sim.chassis.heading_rad = heading_deg.to_radians();
     commands.entity(root).insert((
         controller,
-        crate::session_vehicles::SessionVehicle(session_id),
+        opts_game_state::session_vehicles::SessionVehicle(session_id),
         InGameEntity,
     ));
     // The catalogue identity of the vehicle keys its stored viewpoints.

@@ -38,7 +38,7 @@ pub(super) fn assemble_vehicle(
     ),
     root: Entity,
     (manifest, bus_path, bus_dir): (&BusManifest, &Path, &Path),
-    (session_id, activate, pose): (crate::session_vehicles::VehicleId, bool, (Vec3, f32)),
+    (session_id, activate, pose): (opts_game_state::session_vehicles::VehicleId, bool, (Vec3, f32)),
 ) -> Vec3 {
     insert_vehicle_components(
         commands,

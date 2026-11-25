@@ -6,7 +6,7 @@ use super::*;
 pub(super) fn record_vehicle(
     (job, stats): (&WorldLoadJob, &mut WorldStats),
     (vehicle_name, activate): (&str, bool),
-    (session_id, mesh_count, vertex_count): (crate::session_vehicles::VehicleId, usize, usize),
+    (session_id, mesh_count, vertex_count): (opts_game_state::session_vehicles::VehicleId, usize, usize),
 ) {
     if activate {
         stats.vehicle_name.clone_from(&vehicle_name.to_owned());
@@ -29,7 +29,7 @@ pub(super) fn trace_vehicle(
     (vehicle_name, bus_path, cfg_path): (&str, &Path, &Path),
     (root, root_tf, trace_frame): (Entity, &Transform, &super::super::trace::Frame),
     (session_id, activate, mesh_count, vertex_count): (
-        crate::session_vehicles::VehicleId,
+        opts_game_state::session_vehicles::VehicleId,
         bool,
         usize,
         usize,

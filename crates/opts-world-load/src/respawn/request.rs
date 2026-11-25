@@ -5,7 +5,7 @@ use super::*;
 /// The spawn request being worked on: it is built on the next frame. One at a time; the others
 /// wait in the registry as [`Lifecycle::Spawning`] records.
 ///
-/// [`Lifecycle::Spawning`]: crate::session_vehicles::Lifecycle::Spawning
+/// [`Lifecycle::Spawning`]: opts_game_state::session_vehicles::Lifecycle::Spawning
 #[derive(Resource)]
 pub struct SpawnVehicleRequest {
     /// The registry id of the vehicle being built.
@@ -56,7 +56,7 @@ pub fn handle_vehicle_requests(
         // Cancelled (despawned before it existed): drop the request.
         let wanted = registry
             .get(flight.id)
-            .is_some_and(|r| r.lifecycle == crate::session_vehicles::Lifecycle::Spawning);
+            .is_some_and(|r| r.lifecycle == opts_game_state::session_vehicles::Lifecycle::Spawning);
         if !wanted {
             commands.remove_resource::<SpawnVehicleRequest>();
             return;
@@ -98,7 +98,7 @@ pub fn handle_vehicle_requests(
         tracing::error!(at = %opts_bevy::position_tag(), file = %rec.bus_file, "vehicle file not found; nothing spawned");
         return;
     }
-    if let crate::session_vehicles::EntrySel::Stop(station) = rec.entry {
+    if let opts_game_state::session_vehicles::EntrySel::Stop(station) = rec.entry {
         place_at_stop(
             (&mut job, &mut commands, &mut registry),
             &vehicles,

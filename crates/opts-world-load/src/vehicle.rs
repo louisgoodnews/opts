@@ -67,7 +67,7 @@ pub fn load_player_vehicle(
         &mut Assets<Image>,
         &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
     ),
-    (session_id, activate): (crate::session_vehicles::VehicleId, bool),
+    (session_id, activate): (opts_game_state::session_vehicles::VehicleId, bool),
 ) -> Result<SpawnedVehicle, String> {
     let (bus_path, manifest, cfg_path, model) = read_vehicle_files(job)?;
     let bus_dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();

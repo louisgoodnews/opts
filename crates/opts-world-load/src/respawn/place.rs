@@ -7,8 +7,8 @@ pub(super) fn place_at_stop(
     (job, commands, registry): (&mut WorldLoadJob, &mut Commands, &mut SessionVehicles),
     vehicles: &Query<&GlobalTransform, VehicleFilter>,
     (id, rec, bus_path, formation_cars): (
-        crate::session_vehicles::VehicleId,
-        &crate::session_vehicles::SessionVehicleRecord,
+        opts_game_state::session_vehicles::VehicleId,
+        &opts_game_state::session_vehicles::SessionVehicleRecord,
         PathBuf,
         Vec<super::super::FormationCar>,
     ),
@@ -56,16 +56,16 @@ pub(super) fn place_at_entry(
     (job, commands, registry): (&mut WorldLoadJob, &mut Commands, &mut SessionVehicles),
     entries: &EntryIndex,
     (id, rec, bus_path, formation_cars): (
-        crate::session_vehicles::VehicleId,
-        &crate::session_vehicles::SessionVehicleRecord,
+        opts_game_state::session_vehicles::VehicleId,
+        &opts_game_state::session_vehicles::SessionVehicleRecord,
         PathBuf,
         Vec<super::super::FormationCar>,
     ),
 ) {
     let entry = match &rec.entry {
-        crate::session_vehicles::EntrySel::Id(i) => job.entry_name(*i).map(|n| (*i, n)),
-        crate::session_vehicles::EntrySel::Name(n) => job.entry_by_name(n),
-        crate::session_vehicles::EntrySel::Default | crate::session_vehicles::EntrySel::Stop(_) => {
+        opts_game_state::session_vehicles::EntrySel::Id(i) => job.entry_name(*i).map(|n| (*i, n)),
+        opts_game_state::session_vehicles::EntrySel::Name(n) => job.entry_by_name(n),
+        opts_game_state::session_vehicles::EntrySel::Default | opts_game_state::session_vehicles::EntrySel::Stop(_) => {
             job.configured_entry()
         }
     };
@@ -105,8 +105,8 @@ pub(super) fn place(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
     (id, rec, bus_path, formation_cars): (
-        crate::session_vehicles::VehicleId,
-        &crate::session_vehicles::SessionVehicleRecord,
+        opts_game_state::session_vehicles::VehicleId,
+        &opts_game_state::session_vehicles::SessionVehicleRecord,
         PathBuf,
         Vec<super::super::FormationCar>,
     ),

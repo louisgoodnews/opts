@@ -14,7 +14,7 @@ pub(super) use engine::attach_scripts;
 pub(super) fn script_seed(
     root: &Path,
     bus_path: &Path,
-    session_id: crate::session_vehicles::VehicleId,
+    session_id: opts_game_state::session_vehicles::VehicleId,
 ) -> u64 {
     let rel = bus_path
         .strip_prefix(root)
