@@ -39,6 +39,7 @@ pub(super) fn new_job(
         tile_ground: None,
         sco_cache: HashMap::new(),
         sound_cfgs: HashMap::new(),
+        sound_hooks: std::sync::Arc::new(crate::sound_hooks::NoSoundHooks),
         crossing_bases: HashMap::new(),
         ground_faces: HashMap::new(),
         tile_objects: HashMap::new(),

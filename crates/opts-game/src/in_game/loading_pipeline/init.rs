@@ -24,6 +24,8 @@ fn resolve_trip(
 /// What the loading screen builds: the share of parked bays, and *Load all tiles* or the tile
 /// radius (M-0080).
 fn configure_job(env: &LoadEnv, job: &mut WorldLoadJob, no_vehicle: bool) {
+    // The sound modules serve the load's calls through the hooks (ISS-064).
+    job.set_sound_hooks(std::sync::Arc::new(crate::world_sound_hooks::GameSoundHooks));
     job.no_vehicle = no_vehicle;
     // The share of the parking bays that hold a vehicle (setting *Parked vehicles*).
     job.parked_permille = env
@@ -69,6 +71,8 @@ fn enter_build(
                 );
             }
             env.commands.insert_resource(job.chrono_state());
+            env.commands
+                .insert_resource(opts_world_load::sound_hooks::SoundHooksRes(job.sound()));
             env.commands.insert_resource(job);
             state.progress = P_TERRAIN;
             state.stage = LoadStage::BuildTerrain;

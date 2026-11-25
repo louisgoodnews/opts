@@ -75,6 +75,7 @@ pub mod vehicle_keys;
 pub mod vehicle_setup_settings;
 pub mod vehicle_sound;
 pub mod viewpoints;
+pub mod world_sound_hooks;
 
 mod plugin;
 
