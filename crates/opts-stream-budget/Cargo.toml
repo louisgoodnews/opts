@@ -1,0 +1,14 @@
+[package]
+name = "opts-stream-budget"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Frame budget and prioritisation for tile streaming: wanted and evictable tiles, spreading and motion policy (pure Rust, no Bevy)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

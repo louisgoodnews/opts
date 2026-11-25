@@ -11,6 +11,8 @@ use crate::texture::load_bevy_image;
 use super::cache::ContentLoader;
 use super::season_refresh;
 
+mod clamped;
+
 /// `load_bevy_image` under the `tex.decode` stream-trace span (M-0089).
 fn decode_traced(bytes: &[u8]) -> Result<Image, crate::texture::TextureError> {
     let _t = opts_logging::stream_trace::span("tex.decode");

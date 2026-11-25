@@ -16,7 +16,7 @@ pub(crate) use opts_core::formats::oft::{OftChar, OftFile, OftFont};
 use crate::install::OmsiInstall;
 
 mod gpu;
-pub use gpu::{led_image, rebind_redrawn_images, text_image, RedrawnImages};
+pub use gpu::{led_image, rebind_redrawn_images, text_image, text_image_addressed, RedrawnImages};
 
 /// What to draw: one `[texttexture]` slot resolved against one object instance.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

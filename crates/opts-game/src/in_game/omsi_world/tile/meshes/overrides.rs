@@ -15,6 +15,7 @@ pub(super) fn texture_overrides(
         .materials
         .iter()
         .map(|m| TextureOverride {
+            clamp: false,
             slot: m.material_index,
             texture: m.texture.clone(),
             alpha: m.alpha_mode,

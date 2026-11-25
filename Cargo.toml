@@ -28,6 +28,14 @@ members = [
     "crates/opts-catalogue",
     "crates/opts-cli",
     "crates/opts-collision",
+    "crates/opts-kinematic",
+    "crates/opts-vehicle-traits",
+    "crates/opts-signals",
+    "crates/opts-scripted-drive",
+    "crates/opts-scene-trace",
+    "crates/opts-spatial-zones",
+    "crates/opts-stream-budget",
+    "crates/opts-traffic-weather",
     "crates/opts-core",
     "crates/opts-debounce",
     "crates/opts-exhaust",
@@ -78,6 +86,14 @@ opts-car-following = { path = "crates/opts-car-following" }
 opts-catalogue = { path = "crates/opts-catalogue" }
 opts-cli = { path = "crates/opts-cli", default-features = false }
 opts-collision = { path = "crates/opts-collision" }
+opts-kinematic = { path = "crates/opts-kinematic" }
+opts-vehicle-traits = { path = "crates/opts-vehicle-traits" }
+opts-signals = { path = "crates/opts-signals" }
+opts-scripted-drive = { path = "crates/opts-scripted-drive" }
+opts-scene-trace = { path = "crates/opts-scene-trace" }
+opts-spatial-zones = { path = "crates/opts-spatial-zones" }
+opts-stream-budget = { path = "crates/opts-stream-budget" }
+opts-traffic-weather = { path = "crates/opts-traffic-weather" }
 opts-core = { path = "crates/opts-core" }
 opts-debounce = { path = "crates/opts-debounce" }
 opts-game = { path = "crates/opts-game" }

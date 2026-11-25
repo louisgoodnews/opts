@@ -43,7 +43,7 @@ pub(super) fn route_scheduled(
             commands,
             root,
             head_bus_path,
-            (canvases, &r.run),
+            (canvases, Some(&r.run)),
             (seed, head_setvars),
         );
         if let (true, Some(set)) = (scripted, sound) {

@@ -1,0 +1,14 @@
+[package]
+name = "opts-kinematic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Cheap kinematic acceleration of an AI vehicle from its measured drive torque over speed (M-0103): no script, no traffic graph."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

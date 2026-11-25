@@ -22,7 +22,9 @@ use super::run_schedule::RunRef;
 use super::*;
 
 mod engine;
+mod fallback;
 pub(in crate::in_game::omsi_world) use engine::engine_for;
+pub(super) use fallback::{is_fallback, ScriptDrive};
 mod frame;
 pub use frame::step_ai_scripts;
 
@@ -79,7 +81,7 @@ pub(super) fn attach(
     commands: &mut Commands,
     root: Entity,
     bus_path: &Path,
-    (canvases, run): (Arc<RwLock<Vec<CpuScriptTexture>>>, &RunRef),
+    (canvases, run): (Arc<RwLock<Vec<CpuScriptTexture>>>, Option<&RunRef>),
     (seed, setvars): (u64, &[(String, String)]),
 ) -> bool {
     let Some((scripts, vehicle_route)) = engine_for(job, bus_path, canvases, run, seed, setvars)

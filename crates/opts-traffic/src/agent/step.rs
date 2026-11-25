@@ -35,7 +35,11 @@ impl TrafficWorld {
             .map(|(a, g)| g.is_some_and(|g| g < 12.0) && a.speed < 3.0)
             .collect();
 
-        let (accels, blocked) = self.compute_accelerations(&looks, &signal, &held, &by_lane);
+        let (accels, blocked, desired) =
+            self.compute_accelerations(&looks, &signal, &held, &by_lane);
+        for (a, d) in self.agents.iter_mut().zip(desired) {
+            a.desired_accel = d;
+        }
         let travel = self.integrate_agents(&accels, dt);
         self.handle_strategic_timeouts(dt);
         self.resolve_deadlocks(&blocked, dt);
@@ -68,10 +72,11 @@ impl TrafficWorld {
     #[must_use]
     pub fn command(&self, id: AgentId) -> Option<DriverCommand> {
         let a = self.agent(id)?;
-        let (throttle, brake) = if a.accel >= 0.0 {
-            ((a.accel / a.params.max_accel).clamp(0.0, 1.0), 0.0)
+        let desired = a.desired_accel;
+        let (throttle, brake) = if desired >= 0.0 {
+            ((desired / a.params.max_accel).clamp(0.0, 1.0), 0.0)
         } else {
-            (0.0, (-a.accel / a.params.max_decel).clamp(0.0, 1.0))
+            (0.0, (-desired / a.params.max_decel).clamp(0.0, 1.0))
         };
         let lane = self.graph.lane(a.lane)?;
         let mut blinker = match a.lc_side {

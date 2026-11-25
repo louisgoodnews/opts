@@ -18,6 +18,7 @@ use super::*;
 mod log;
 use log::{log_spawned, trace_spawned};
 mod place;
+mod support;
 use place::{agent_params, fill_unit_sizes, finish_spawned, Placed};
 
 /// The canvases of the head's script textures, once.

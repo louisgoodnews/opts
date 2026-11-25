@@ -1,0 +1,15 @@
+[package]
+name = "opts-traffic-weather"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Weather for AI drivers: the road grip and fog visibility change the car-following parameters (pure Rust)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-car-following = { workspace = true }

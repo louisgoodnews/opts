@@ -36,10 +36,9 @@ pub mod neighbours;
 pub mod obstacles;
 pub mod rightofway;
 pub mod rng;
-pub mod signals;
+pub use opts_signals as signals;
 pub mod source;
-pub mod traits;
-pub mod weather;
+pub use opts_traffic_weather as weather;
 
 pub use agent::{
     Agent, AgentId, Blinker, DriverCommand, StopPoint, TrafficEvent, TrafficStats, TrafficWorld,
@@ -59,8 +58,8 @@ pub use neighbours::{Neighbour, Side};
 pub use obstacles::Obstacle;
 /// The car-following law lives in `opts-car-following`; this alias keeps `opts_traffic::idm` working.
 pub use opts_car_following as idm;
+pub use opts_vehicle_traits::{Calibration, IdmFromTraits, VehicleKind, VehicleTraits};
 pub use rightofway::{precedence, Precedence};
 pub use rng::Rng;
 pub use signals::{Aspect, SignalKey, SignalProgram};
 pub use source::{segments_from_tile, signals_from_tile, tile_origin, PathSource};
-pub use traits::{Calibration, IdmFromTraits, VehicleKind, VehicleTraits};

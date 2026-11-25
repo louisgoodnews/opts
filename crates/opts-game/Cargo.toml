@@ -20,6 +20,8 @@ path = "src/main.rs"
 opts-core = { workspace = true }
 opts-l10n = { workspace = true }
 opts-bevy = { workspace = true }
+opts-stream-budget = { workspace = true }
+opts-scripted-drive = { workspace = true }
 opts-hardware = { workspace = true }
 rfd = { workspace = true }
 opts-gui = { workspace = true, features = ["serde"] }

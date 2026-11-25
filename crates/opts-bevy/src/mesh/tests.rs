@@ -88,6 +88,7 @@ Frame Text {\n\
         let models =
             parse_mesh_file(std::path::Path::new("strschild_1.x"), TWO_FRAME_SIGN).expect("parse");
         let over = [crate::model::TextureOverride {
+            clamp: false,
             slot: 0,
             texture: "StrSchild_Text1.bmp".into(),
             alpha: Some(2),
@@ -114,6 +115,7 @@ Frame Text {\n\
         assert_eq!(models[1].face_materials, vec![1]);
         // `[matl] StrSchild_1.bmp 1` reaches the second sub-mesh only (occurrence 1).
         let over = [crate::model::TextureOverride {
+            clamp: false,
             slot: 1,
             texture: "StrSchild_1.bmp".into(),
             alpha: Some(1),

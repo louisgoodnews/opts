@@ -3,42 +3,21 @@
 //! `ai_response <OMSI dir>` (`SHOW=1` lists the vehicles whose script deviates from the law).
 use std::path::{Path, PathBuf};
 
+#[path = "ai_response/lookup.rs"]
+mod lookup;
+use lookup::{engine_const, find_ci};
+
 use opts_core::formats::map::AiLists;
 use opts_core::formats::vehicles::BusManifest;
 use opts_sim::script::{load_vehicle_scripts, measure_ai_response};
 
-fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
-    let mut cur = base.to_path_buf();
-    for comp in rel
-        .split(['\\', '/'])
-        .filter(|c| !c.is_empty() && *c != ".")
-    {
-        if comp == ".." {
-            cur = cur.parent()?.to_path_buf();
-            continue;
-        }
-        let direct = cur.join(comp);
-        if direct.exists() {
-            cur = direct;
-            continue;
-        }
-        cur = std::fs::read_dir(&cur)
-            .ok()?
-            .flatten()
-            .find(|e| e.file_name().to_string_lossy().eq_ignore_ascii_case(comp))?
-            .path();
-    }
-    Some(cur)
-}
-
-#[derive(Default)]
-struct Counts {
-    total: usize,
-    no_script: usize,
-    dead: usize,
-    follows: usize,
-    deviates: usize,
-}
+#[path = "ai_response/agreement.rs"]
+mod agreement;
+#[path = "ai_response/fed.rs"]
+mod fed;
+#[path = "ai_response/transfer.rs"]
+mod transfer;
+use agreement::{check_agreement, Counts, TOLERANCE};
 
 fn evaluate_vehicle(
     vehicle_name: &str,
@@ -56,13 +35,32 @@ fn evaluate_vehicle(
     let dir = path.parent().unwrap_or(root).to_path_buf();
     let (mut engine, _) =
         load_vehicle_scripts(bus, |rel| find_ci(&dir, rel).or_else(|| find_ci(root, rel)));
-    let r = measure_ai_response(&mut engine);
+    let r = fed::response(
+        &mut engine,
+        agreement::has_ai_frame(bus, &dir, root),
+        vehicle_name,
+    )
+    .unwrap_or_else(|| measure_ai_response(&mut engine));
     if !r.is_live() {
         counts.dead += 1;
         if show {
             println!("DEAD      {vehicle_name}");
         }
         return;
+    }
+    if std::env::var_os("AGREE").is_some() {
+        check_agreement(vehicle_name, bus, &dir, root, &r, show, counts);
+    }
+    if std::env::var_os("TRANSFER").is_some() {
+        let (by_path, by_table) = transfer::transfer_check(bus, &dir, root, &r);
+        transfer::tally(&mut counts.path, by_path);
+        transfer::tally(&mut counts.table, by_table);
+        if by_path == Some(false) {
+            counts.fallback.insert(vehicle_name.to_string());
+        }
+        if show && by_path == Some(false) {
+            println!("TRANSFER  {vehicle_name} path disagrees at {} kg", 8000);
+        }
     }
     let c = |n: &str| {
         let mut e2 = engine_const(bus, &dir, root, n);
@@ -130,25 +128,17 @@ fn main() {
         }
     }
     println!(
+        "agreement on time to 50 km/h within {} %: {} agree, {} disagree, {} stall in both, {} no run",
+        TOLERANCE * 100.0, counts.agree, counts.disagree, counts.stall, counts.no_run
+    );
+    transfer::write_fallback(&counts);
+    println!(
+        "transfer to 8 t, [agree, disagree, stall]: path {:?}, sampled table {:?}",
+        counts.path, counts.table
+    );
+    println!(
         "{} vehicles: {} without scripts, {} whose script gives no torque or brake force, \
          {} follow the shared law, {} deviate",
         counts.total, counts.no_script, counts.dead, counts.follows, counts.deviates
     );
-}
-
-/// A scalar constant of a vehicle's constant files.
-fn engine_const(bus: &BusManifest, dir: &Path, root: &Path, name: &str) -> Option<f32> {
-    bus.constfiles
-        .iter()
-        .rev()
-        .filter_map(|c| find_ci(dir, c).or_else(|| find_ci(root, c)))
-        .filter_map(|p| std::fs::read(p).ok())
-        .map(|b| opts_core::formats::constfile::ConstFile::parse(&b))
-        .find_map(|f| {
-            f.scalars
-                .iter()
-                .rev()
-                .find(|(k, _)| k.eq_ignore_ascii_case(name))
-                .map(|(_, v)| *v)
-        })
 }

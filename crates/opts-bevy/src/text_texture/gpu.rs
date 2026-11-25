@@ -14,6 +14,13 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, T
 /// the sampler wraps like every OMSI texture.
 #[must_use]
 pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
+    text_image_addressed(width, height, data, false)
+}
+
+/// Like [`text_image`]; with `clamp` the sampler stops at the edge instead of repeating, as a
+/// material with `[matl_texadress_clamp]` asks (its text would otherwise tile).
+#[must_use]
+pub fn text_image_addressed(width: u32, height: u32, data: Vec<u8>, clamp: bool) -> Image {
     let mut image = Image::new(
         Extent3d {
             width: width.max(1),
@@ -27,6 +34,9 @@ pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
     );
     // Mesh UVs may lie outside 0..1 (negative V is common): wrap like every OMSI texture.
     crate::texture_filter::prepare_text_texture(&mut image);
+    if clamp {
+        clamp_sampler(&mut image);
+    }
     // Bevy copies a redrawn image of the same size into the texture already on the GPU, and
     // that copy fills only the largest mip level: the smaller ones keep the first (blank)
     // picture, so text seen small (the HH109's EFAD printer: a 1024 × 64 line on a few
@@ -39,6 +49,17 @@ pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
             .remove(TextureUsages::COPY_DST);
     }
     image
+}
+
+/// Stops the image's sampler at its edges on every axis (`[matl_texadress_clamp]`), keeping its
+/// filtering.
+fn clamp_sampler(image: &mut bevy::image::Image) {
+    use bevy::image::{ImageAddressMode, ImageSampler};
+    if let ImageSampler::Descriptor(d) = &mut image.sampler {
+        d.address_mode_u = ImageAddressMode::ClampToEdge;
+        d.address_mode_v = ImageAddressMode::ClampToEdge;
+        d.address_mode_w = ImageAddressMode::ClampToEdge;
+    }
 }
 
 /// Images replaced in place this frame (text textures, script canvases) whose materials must be

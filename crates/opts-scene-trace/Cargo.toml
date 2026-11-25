@@ -1,0 +1,18 @@
+[package]
+name = "opts-scene-trace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Scene trace of the vehicle and scenery under the camera: records, filters, the trace store and its notes (Bevy-facing types, no OMSI)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }

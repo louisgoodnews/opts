@@ -5374,7 +5374,9 @@ dependencies = [
  "opts-gui",
  "opts-logging",
  "opts-position-tag",
+ "opts-scene-trace",
  "opts-sim",
+ "opts-spatial-zones",
  "opts-traffic",
  "rav1e",
  "serde",
@@ -5462,8 +5464,10 @@ dependencies = [
  "opts-l10n",
  "opts-logging",
  "opts-map-advice",
+ "opts-scripted-drive",
  "opts-sim",
  "opts-steam",
+ "opts-stream-budget",
  "opts-theme-files",
  "opts-traffic",
  "rfd",
@@ -5508,6 +5512,10 @@ dependencies = [
  "opts-model",
  "opts-omsi",
 ]
+
+[[package]]
+name = "opts-kinematic"
+version = "0.1.0"
 
 [[package]]
 name = "opts-l10n"
@@ -5617,14 +5625,43 @@ name = "opts-position-tag"
 version = "0.1.0"
 
 [[package]]
+name = "opts-scene-trace"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "opts-scripted-drive"
+version = "0.1.0"
+
+[[package]]
+name = "opts-signals"
+version = "0.1.0"
+
+[[package]]
 name = "opts-sim"
 version = "0.1.0"
 dependencies = [
  "bincode",
  "glam",
  "opts-core",
+ "opts-kinematic",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "opts-spatial-zones"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]
@@ -5633,6 +5670,10 @@ version = "0.1.0"
 dependencies = [
  "opts-vdf",
 ]
+
+[[package]]
+name = "opts-stream-budget"
+version = "0.1.0"
 
 [[package]]
 name = "opts-theme-files"
@@ -5661,7 +5702,17 @@ dependencies = [
  "glam",
  "opts-car-following",
  "opts-core",
+ "opts-signals",
+ "opts-traffic-weather",
+ "opts-vehicle-traits",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opts-traffic-weather"
+version = "0.1.0"
+dependencies = [
+ "opts-car-following",
 ]
 
 [[package]]
@@ -5674,6 +5725,13 @@ dependencies = [
 [[package]]
 name = "opts-vdf"
 version = "0.1.0"
+
+[[package]]
+name = "opts-vehicle-traits"
+version = "0.1.0"
+dependencies = [
+ "opts-car-following",
+]
 
 [[package]]
 name = "opts-wav"

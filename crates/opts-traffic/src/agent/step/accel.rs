@@ -9,12 +9,14 @@ impl TrafficWorld {
         signal: &[Option<f64>],
         held: &[bool],
         by_lane: &HashMap<LaneId, Vec<usize>>,
-    ) -> (Vec<f64>, Vec<bool>) {
+    ) -> (Vec<f64>, Vec<bool>, Vec<f64>) {
         let mut accels = Vec::with_capacity(self.agents.len());
+        let mut desired = Vec::with_capacity(self.agents.len());
         let mut blocked = vec![false; self.agents.len()];
         for (i, a) in self.agents.iter().enumerate() {
             if a.foreign || self.graph.lane(a.lane).is_none() {
                 accels.push(0.0);
+                desired.push(0.0);
                 continue;
             }
             let leader = self.leader(i, &looks[i], by_lane);
@@ -34,10 +36,16 @@ impl TrafficWorld {
             }
             let (cap, brake) = self.speed_cap(i);
             let p = self.driver(&a.params);
-            let acc = p.acceleration(a.speed, cap, ahead).min(brake);
-            accels.push(acc.max(-p.max_decel));
+            let acc = p
+                .acceleration(a.speed, cap, ahead)
+                .min(brake)
+                .max(-p.max_decel);
+            desired.push(acc);
+            // The car-following law stays a limit: a script can brake or ease off, never pass a red
+            // light, a stop or the vehicle ahead.
+            accels.push(a.external_accel.map_or(acc, |e| e.min(acc)));
         }
-        (accels, blocked)
+        (accels, blocked, desired)
     }
 
     pub(super) fn integrate_agents(&mut self, accels: &[f64], dt: f64) -> Vec<f64> {

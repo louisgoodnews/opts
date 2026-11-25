@@ -58,6 +58,8 @@ impl TrafficWorld {
             lc_cooldown_until: 0.0,
             lc_next_check: self.time + (id.0 % 10) as f64 * 0.1,
             foreign: false,
+            external_accel: None,
+            desired_accel: 0.0,
         });
         let last = self.agents.len() - 1;
         self.extend_plan(last);

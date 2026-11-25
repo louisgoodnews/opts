@@ -33,6 +33,7 @@ fn street_sign_plate_keeps_its_texture_and_the_text_quad_gets_the_override() {
                 .materials
                 .iter()
                 .map(|m| TextureOverride {
+                    clamp: false,
                     slot: m.material_index,
                     texture: m.texture.clone(),
                     alpha: m.alpha_mode,

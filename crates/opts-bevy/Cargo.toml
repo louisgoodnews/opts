@@ -21,6 +21,8 @@ opts-cli = { workspace = true }
 opts-logging = { workspace = true }
 opts-debounce = { workspace = true }
 opts-position-tag = { workspace = true }
+opts-scene-trace = { workspace = true }
+opts-spatial-zones = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }

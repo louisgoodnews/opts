@@ -7,6 +7,7 @@ opts-bevy 45830  # lowered 2026-11-24 to the measured total after the ISS-002 re
 opts-catalogue 2066  # set 2026-11-22 to the current total
 opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-collision 211  # set 2026-11-23 at its size after the split from opts-sim (ISS-034 budget room)
+opts-kinematic 70  # new 2026-11-25: the cheap kinematic acceleration model of M-0103 (drive curve and run-up; pure Rust)
 opts-core 4  # set 2026-11-22 to the current total
 opts-debounce 86  # new 2026-11-23: the hot-reload file-event debouncer split out of opts-bevy (docs/dev/crate-split-weather.md)
 opts-map-advice 121  # new 2026-11-23: the map load profile and advice engine split out of opts-game (docs/dev/crate-split-advice.md)
@@ -18,9 +19,9 @@ opts-l10n 2743  # set 2026-11-22 to the current total
 opts-logging 1288  # set 2026-11-22 to the current total
 opts-model 107  # set 2026-11-22 to the current total
 opts-omsi 31  # lowered 2026-11-24 from 3163 to the total after the scenery and train readers moved to opts-omsi-scenery; the facade only re-exports (docs/dev/crate-split-omsi.md, step 5)
-opts-sim 11331  # set 2026-11-22 to the current total
+opts-sim 11295  # lowered 2026-11-25: AI response unit tests moved to crates/opts-sim/tests/ai_response.rs (M-0103)
 opts-tools 1245  # set 2026-11-22 to the current total
-opts-traffic 6142  # lowered 2026-11-23 from 6300: the IDM car-following law moved to opts-car-following (ISS-034 split plan)
+opts-traffic 5822  # unchanged 2026-11-25: signals and weather moved out (232 lines), kept as room for the near-vehicle hook (no raise)
 opts-types 461  # set 2026-11-22 to the current total
 opts-theme-files 59  # new 2026-11-23: the RON theme file loader split out of opts-game (docs/dev/crate-split-theme.md)
 opts-exhaust 333  # new 2026-11-24: the exhaust plume module moved out of opts-game (M-0117 nearest-N, docs/dev/crate-split-exhaust.md)
@@ -33,3 +34,10 @@ opts-omsi-binary 3135  # new 2026-11-24: the .o3d and .x mesh readers split out 
 opts-omsi-vehicles 4323  # new 2026-11-24: the vehicle readers, the setvar catalogue and the light reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-map 4139  # new 2026-11-24: the map manifest, tile, terrain and water readers and the chrono overlay split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-scenery 3140  # new 2026-11-24: the .sco, .sli and crossing readers and the train consist reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
+opts-vehicle-traits 319  # new 2026-11-25: the traffic traits moved out of opts-traffic (crate split)
+opts-signals 126  # new 2026-11-25: the traffic-light programs moved out of opts-traffic (crate split)
+opts-traffic-weather 106  # new 2026-11-25: the weather rules for AI drivers moved out of opts-traffic (crate split)
+opts-scripted-drive 12  # new 2026-11-25: the near-vehicle drive (M-0103): pedals and script acceleration, pure Rust
+opts-stream-budget 657  # new 2026-11-25: the tile streaming budget (M-0089) moved out of opts-game (crate split); opts-game keeps its budget as room
+opts-scene-trace 1326  # new 2026-11-25: the scene trace moved out of opts-bevy (crate split)
+opts-spatial-zones 946  # new 2026-11-25: the spatial zones moved out of opts-bevy (crate split)
