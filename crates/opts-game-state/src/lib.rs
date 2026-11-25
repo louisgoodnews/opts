@@ -6,5 +6,6 @@ pub mod alerts;
 pub mod app_state;
 pub mod in_game;
 pub mod look;
+pub mod session_vehicles;
 pub mod settings;
 pub mod viewpoint_keys;

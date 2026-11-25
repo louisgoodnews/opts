@@ -20,10 +20,12 @@ opts-core = { workspace = true }
 opts-sim = { workspace = true }
 opts-collision = { workspace = true }
 opts-road-surf = { workspace = true }
+opts-world-stats = { workspace = true }
 
 # Bevy Engine (Bevy-facing type crate, see docs/src/architecture/crate-graph.md, rule 4)
 bevy = { workspace = true }
 
 # Serialization & Time
 serde = { workspace = true }
+serde_json = { workspace = true }
 chrono = { workspace = true }
