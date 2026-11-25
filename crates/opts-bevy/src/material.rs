@@ -76,7 +76,9 @@ pub fn o3d_material_to_standard_material(
 
     let perceptual_roughness = specular_power_to_roughness(mat.power);
 
-    let alpha_mode = if a < 0.999 {
+    // Within 0.01 of opaque is opaque, as `effective_diffuse_alpha` reads within 0.01 of zero.
+    // A blended mesh writes no depth, so a 0.99 roof let the seats and the framing behind it show.
+    let alpha_mode = if a < 0.99 {
         AlphaMode::Blend
     } else {
         AlphaMode::Opaque

@@ -55,7 +55,7 @@ impl ContentLoader<'_> {
                 "transmap slot alpha at spawn"
             );
         }
-        tracing::debug!(path = %ctx.o3d_path.display(), slot, vertices, textured, alpha = ?material.alpha_mode, texture = ?res.tex_name, "model part");
+        tracing::debug!(path = %ctx.o3d_path.display(), slot, vertices, textured, diffuse_alpha = base.diffuse[3], alpha = ?material.alpha_mode, texture = ?res.tex_name, "model part");
         Self::trace_slot_material(sc, slot, res.tex_name.as_deref(), &material, textured);
         let pivot = model
             .transform
