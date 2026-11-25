@@ -42,9 +42,10 @@ mod types;
 
 pub use cache::{ContentCache, ContentLoader};
 pub use overrides::compose_light;
-use overrides::{base_name, compose_alpha, transmap_glass};
+use overrides::{base_name, compose_alpha, composed_opaque_share, transmap_glass};
 pub use overrides::{
-    find_override, is_weather_overlay, overlay_class, transmap_glass_rgba, OverlayClass,
+    find_override, is_weather_overlay, opaque_share_rgba, overlay_class, transmap_glass_rgba,
+    OverlayClass,
     TextureOverride, TRANSMAP_OPAQUE, TRANSMAP_SPLIT_SHARE,
 };
 pub use season_refresh::{refresh_loaded, SeasonTexturePlugin};

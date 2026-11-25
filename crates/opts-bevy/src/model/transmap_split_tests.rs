@@ -1,6 +1,6 @@
 //! Transmap split tests of the model loader.
 
-use super::{transmap_glass_rgba, TRANSMAP_OPAQUE};
+use super::{opaque_share_rgba, transmap_glass_rgba, TRANSMAP_OPAQUE, TRANSMAP_SPLIT_SHARE};
 use bevy::image::Image;
 
 fn image(alphas: &[u8]) -> Vec<u8> {
@@ -28,6 +28,18 @@ fn mostly_opaque_composition_splits_into_body_and_glass() {
 fn mostly_translucent_composition_is_not_split() {
     assert!(transmap_glass_rgba(&image(&[0, 40, 80, 120, 255, 30])).is_none());
     assert!(transmap_glass_rgba(&[]).is_none());
+}
+
+/// The logged share is the measured opaque fraction the split decision is made on.
+#[test]
+fn opaque_share_is_the_measured_fraction() {
+    assert_eq!(opaque_share_rgba(&image(&[255, 255, 250, 243, 0, 0, 0, 0])), 0.5);
+    assert_eq!(opaque_share_rgba(&image(&[0, 40, 80, 120, 255, 30])), 1.0 / 6.0);
+    assert_eq!(opaque_share_rgba(&[]), 0.0);
+    // Just below the split line: 3 of 7 opaque is under 0.5, so no split is made.
+    let below = image(&[255, 255, 255, 0, 0, 0, 0]);
+    assert!(opaque_share_rgba(&below) < TRANSMAP_SPLIT_SHARE);
+    assert!(transmap_glass_rgba(&below).is_none());
 }
 
 /// The composed image comes with a mip chain; the glass must carry exactly the data its

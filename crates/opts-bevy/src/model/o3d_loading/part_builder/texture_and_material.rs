@@ -4,6 +4,9 @@ use super::*;
 
 mod glass;
 mod lighting;
+mod transmap_log;
+
+use transmap_log::{log_transmap_pass, split_requested};
 
 pub(super) struct ResolvedTextures {
     pub tex_name: Option<String>,
@@ -56,19 +59,22 @@ impl ContentLoader<'_> {
     pub(super) fn compose_transmap_glass(
         &mut self,
         tex: &mut Option<Handle<Image>>,
+        tex_name: Option<&str>,
         over: Option<&TextureOverride>,
         ctx: &SlotBuildCtx<'_>,
     ) -> (Option<Handle<Image>>, bool) {
         let mut blended_by_map = false;
         let mut glass_tex = None;
+        let matl_alpha = over.and_then(|o| o.alpha);
         if let (Some(base_h), Some(tm)) = (tex.clone(), over.and_then(|o| o.trans_map.clone())) {
             if let Some(trans_h) = self.texture(&tm, ctx.tex_dirs) {
-                let split = over.and_then(|o| o.alpha).is_none_or(|a| a == 2);
+                let split = split_requested(matl_alpha);
                 let key = (base_h.id(), trans_h.id(), split);
                 if let Some((done, glass)) = self.cache.composed.get(&key) {
                     *tex = Some(done.clone());
                     glass_tex = glass.clone();
                     blended_by_map = true;
+                    log_transmap_pass(ctx, tex_name, &tm, matl_alpha, None, glass.is_some(), true);
                 } else {
                     let composed = match (self.images.get(&base_h), self.images.get(&trans_h)) {
                         (Some(b), Some(t)) => {
@@ -78,10 +84,20 @@ impl ContentLoader<'_> {
                         _ => None,
                     };
                     if let Some(img) = composed {
+                        let share = composed_opaque_share(&img);
                         let glass = split
                             .then(|| transmap_glass(&img))
                             .flatten()
                             .map(|g| self.images.add(g));
+                        log_transmap_pass(
+                            ctx,
+                            tex_name,
+                            &tm,
+                            matl_alpha,
+                            share,
+                            glass.is_some(),
+                            false,
+                        );
                         let done = self.images.add(img);
                         self.cache
                             .composed
@@ -89,8 +105,22 @@ impl ContentLoader<'_> {
                         *tex = Some(done);
                         glass_tex = glass;
                         blended_by_map = true;
+                    } else {
+                        tracing::debug!(
+                            mesh = %ctx.o3d_path.display(),
+                            texture = ?tex_name,
+                            trans_map = %tm,
+                            "transmap compose failed, texture keeps its own alpha"
+                        );
                     }
                 }
+            } else {
+                tracing::debug!(
+                    mesh = %ctx.o3d_path.display(),
+                    texture = ?tex_name,
+                    trans_map = %tm,
+                    "transmap texture not found, texture keeps its own alpha"
+                );
             }
         }
         (glass_tex, blended_by_map)
