@@ -83,6 +83,7 @@ pub(super) fn add_frame_systems(app: &mut App) {
                 omsi_world::load_traffic_variants,
                 omsi_world::plan_scheduled,
                 omsi_world::spawn_traffic,
+                omsi_world::dispatch_responders,
                 omsi_world::move_traffic,
                 omsi_world::move_traffic_chains,
                 omsi_world::update_ai_variables,

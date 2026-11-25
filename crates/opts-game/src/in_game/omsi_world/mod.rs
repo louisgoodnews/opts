@@ -94,9 +94,10 @@ pub use tile::{
     advance_tile_loading, load_next_tile, stream_world_tiles, sync_tile_zones, TileRoot,
 };
 pub use traffic::{
-    active_runs, configure_traffic, load_traffic_variants, move_traffic, plan_scheduled, run_phase,
-    spawn_traffic, step_ai_scripts, update_ai_variables, update_traffic_graph, RunPhase, RunRef,
-    ScheduledStats, ScheduledTraffic, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
+    active_runs, configure_traffic, dispatch_responders, load_traffic_variants, move_traffic,
+    plan_scheduled, run_phase, spawn_traffic, step_ai_scripts, update_ai_variables,
+    update_traffic_graph, Incident, IncidentQueue, RunPhase, RunRef, ScheduledStats,
+    ScheduledTraffic, ServiceKind, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
 use traffic::{engine_for, next_doors, Doors, DOORS_OPEN_SHARE, FRAME_S, SCRIPT_RADIUS_M};
 pub use traffic_chain::move_traffic_chains;

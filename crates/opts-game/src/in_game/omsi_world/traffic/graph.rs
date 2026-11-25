@@ -22,6 +22,7 @@ pub fn configure_traffic(
     mut state: ResMut<TrafficState>,
     mut pool: ResMut<TrafficPool>,
     mut sched: ResMut<ScheduledTraffic>,
+    mut incidents: ResMut<super::IncidentQueue>,
 ) {
     // The command line wins for this run (`--traffic N` is the baseline); then the setting *Road traffic*; then the default.
     settings.baseline = args
@@ -31,4 +32,6 @@ pub fn configure_traffic(
     *state = TrafficState::default();
     *pool = TrafficPool::default();
     *sched = ScheduledTraffic::default();
+    // Incident lanes belong to the graph that is replaced here.
+    *incidents = super::IncidentQueue::default();
 }

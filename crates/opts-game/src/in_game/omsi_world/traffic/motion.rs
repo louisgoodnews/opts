@@ -48,6 +48,7 @@ pub fn move_traffic(
     weather: crate::in_game::weather::grip::AiWeather,
     mut state: ResMut<TrafficState>,
     mut sched: ResMut<ScheduledTraffic>,
+    mut incidents: ResMut<super::IncidentQueue>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut vehicles: Query<(
         Entity,
@@ -73,6 +74,7 @@ pub fn move_traffic(
             tracing::warn!(id = id.0, lane = lane.0, "AI vehicle stuck, despawned");
         }
         sched.on_event(&e);
+        incidents.on_event(&e);
         // A scheduled vehicle at the last stop of its run is removed shortly after, when nobody
         // can see it go (see `RETIRE_FAR_M`); in view it drives on as ordinary traffic.
         if let opts_traffic::TrafficEvent::ArrivedAtStop { id, clock, .. } = e {

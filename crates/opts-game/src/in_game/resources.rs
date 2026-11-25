@@ -10,6 +10,7 @@ pub(super) fn add_resources(app: &mut App) {
         .init_resource::<omsi_world::ChronoState>()
         .init_resource::<omsi_world::DeveloperDetail>()
         .init_resource::<omsi_world::CollisionIndex>()
+        .init_resource::<omsi_world::IncidentQueue>()
         .init_resource::<omsi_world::RailNetwork>()
         .init_resource::<omsi_world::BikeNetwork>()
         .init_resource::<omsi_world::BikeSettings>()
