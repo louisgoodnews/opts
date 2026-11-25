@@ -3,33 +3,17 @@
 //! `ai_response <OMSI dir>` (`SHOW=1` lists the vehicles whose script deviates from the law).
 use std::path::{Path, PathBuf};
 
+#[path = "ai_response/lookup.rs"]
+mod lookup;
+use lookup::{engine_const, find_ci};
+
 use opts_core::formats::map::AiLists;
 use opts_core::formats::vehicles::BusManifest;
 use opts_sim::script::{load_vehicle_scripts, measure_ai_response};
 
-fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
-    let mut cur = base.to_path_buf();
-    for comp in rel
-        .split(['\\', '/'])
-        .filter(|c| !c.is_empty() && *c != ".")
-    {
-        if comp == ".." {
-            cur = cur.parent()?.to_path_buf();
-            continue;
-        }
-        let direct = cur.join(comp);
-        if direct.exists() {
-            cur = direct;
-            continue;
-        }
-        cur = std::fs::read_dir(&cur)
-            .ok()?
-            .flatten()
-            .find(|e| e.file_name().to_string_lossy().eq_ignore_ascii_case(comp))?
-            .path();
-    }
-    Some(cur)
-}
+#[path = "ai_response/agreement.rs"]
+mod agreement;
+use agreement::{check_agreement, TOLERANCE};
 
 #[derive(Default)]
 struct Counts {
@@ -38,6 +22,10 @@ struct Counts {
     dead: usize,
     follows: usize,
     deviates: usize,
+    agree: usize,
+    disagree: usize,
+    stall: usize,
+    no_run: usize,
 }
 
 fn evaluate_vehicle(
@@ -63,6 +51,9 @@ fn evaluate_vehicle(
             println!("DEAD      {vehicle_name}");
         }
         return;
+    }
+    if std::env::var_os("AGREE").is_some() {
+        check_agreement(vehicle_name, bus, &dir, root, &r, show, counts);
     }
     let c = |n: &str| {
         let mut e2 = engine_const(bus, &dir, root, n);
@@ -130,25 +121,12 @@ fn main() {
         }
     }
     println!(
+        "agreement on time to 50 km/h within {} %: {} agree, {} disagree, {} stall in both, {} no run",
+        TOLERANCE * 100.0, counts.agree, counts.disagree, counts.stall, counts.no_run
+    );
+    println!(
         "{} vehicles: {} without scripts, {} whose script gives no torque or brake force, \
          {} follow the shared law, {} deviate",
         counts.total, counts.no_script, counts.dead, counts.follows, counts.deviates
     );
-}
-
-/// A scalar constant of a vehicle's constant files.
-fn engine_const(bus: &BusManifest, dir: &Path, root: &Path, name: &str) -> Option<f32> {
-    bus.constfiles
-        .iter()
-        .rev()
-        .filter_map(|c| find_ci(dir, c).or_else(|| find_ci(root, c)))
-        .filter_map(|p| std::fs::read(p).ok())
-        .map(|b| opts_core::formats::constfile::ConstFile::parse(&b))
-        .find_map(|f| {
-            f.scalars
-                .iter()
-                .rev()
-                .find(|(k, _)| k.eq_ignore_ascii_case(name))
-                .map(|(_, v)| *v)
-        })
 }
