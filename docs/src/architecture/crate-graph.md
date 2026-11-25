@@ -47,6 +47,7 @@ graph TD
     %% Layer 2: Domain Simulation & Engine Bridges
     subgraph L2 ["Layer 2 — Simulation & Engine Presentation Bridges"]
         opts_sim["opts-sim<br/>• Vehicle physics & kinematics<br/>• Drivetrain, suspension, steering<br/>• Script VM bytecode interpreter<br/>• Zero Bevy · Zero File I/O"]:::bridge
+        opts_sim_passengers["opts-sim-passengers<br/>• Passenger model: boarding, tickets, seats<br/>• Standing places and getting off<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_traffic["opts-traffic<br/>• Lane graph & car following<br/>• Conflict zones, right of way<br/>• Zero Bevy"]:::bridge
         opts_car_following["opts-car-following<br/>• Intelligent Driver Model<br/>• Vehicle classes & driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_catalogue["opts-catalogue<br/>• Installation scan into a catalogue<br/>• Map & vehicle lists"]:::bridge
@@ -115,6 +116,7 @@ graph TD
     opts_omsi_scenery --> opts_omsi_vehicles
     opts_omsi_vehicles --> opts_omsi_text
     opts_sim --> opts_core
+    opts_sim --> opts_sim_passengers
     opts_steam --> opts_vdf
     opts_theme_files --> opts_gui
     opts_tools --> opts_core
@@ -148,7 +150,8 @@ graph TD
 | **`opts-model`** | L1 | The native content model and its TOML form (stubs: `VehicleDefinition`, `ContentSource`) | `opts-types` | `opts-importer` | Pure Rust |
 | **`opts-importer`** | L1 | Turns legacy OMSI content into the native model; the only crate that knows both | `opts-model`, `opts-omsi` | *None yet* | Pure Rust |
 | **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
-| **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
+| **`opts-sim-passengers`** | L2 | The passengers of a vehicle: boarding through open doors, tickets, seats and standing places, getting off (split out of `opts-sim`, ISS-066 stage 1; [epic](../../dev/issues/ISS-066-epic-split-opts-sim.md)) | *None* | `opts-sim` | Pure Rust |
+| **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core`, `opts-sim-passengers` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
 | **`opts-traffic`** | L2 | AI road traffic: lane graph, conflict zones, right of way, agents and lane changes | `opts-car-following`, `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-benchmark`, `opts-game` | Pure Rust |

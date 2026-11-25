@@ -14,6 +14,7 @@ workspace = true
 [dependencies]
 # Internal
 opts-core = { workspace = true }
+opts-sim-passengers = { workspace = true }
 
 # Math & Data
 glam = { workspace = true, features = ["serde"] }

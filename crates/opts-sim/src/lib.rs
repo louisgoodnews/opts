@@ -11,7 +11,7 @@
 #![warn(missing_docs)]
 
 pub mod exhaust;
-pub mod passengers;
+pub use opts_sim_passengers::passengers;
 pub mod pedestrian;
 pub mod rail;
 pub mod script;
