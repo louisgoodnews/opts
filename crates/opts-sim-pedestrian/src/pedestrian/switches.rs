@@ -2,11 +2,9 @@
 //! points (`[switchdir]` of the scenery object), and the position each points object is in.
 //!
 //! The network keeps the positions; the game sets them (a train that approaches asks for the
-//! way it wants, a click toggles). Trains choose among the lanes that are open ([`Train`]
+//! way it wants, a click toggles). Trains choose among the lanes that are open (`Train`
 //! avoids a closed lane while an open one exists), so a switch in the wrong position is taken
 //! as a trailing movement instead of leaving the rails.
-//!
-//! [`Train`]: crate::rail::Train
 
 use super::lane::FootLane;
 use super::net::{LaneId, PedestrianNet};
