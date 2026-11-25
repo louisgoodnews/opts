@@ -38,7 +38,6 @@ pub(crate) fn facing(direction: Vec3) -> Quat {
     }
 }
 
-mod convert;
 mod crowd;
 mod destinations;
 mod draw;
@@ -49,7 +48,7 @@ mod system;
 mod weight;
 pub(crate) use weight::PassengerCountOverride;
 
-pub use convert::{cabin_spec, paths_spec, ticket_book, unit_spec};
+pub use opts_passenger_spec::{cabin_spec, paths_spec, ticket_book, unit_spec};
 pub use protocol::{command, register};
 pub use rig::PassengerRig;
 pub use system::update_passengers;

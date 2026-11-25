@@ -87,6 +87,7 @@ members = [
     "crates/opts-vehicle-gears",
     "crates/opts-sim",
     "crates/opts-sim-passengers",
+    "crates/opts-passenger-spec",
     "crates/opts-shell-calendar",
     "crates/opts-shell-dialog",
     "crates/opts-shell-icons",
@@ -185,6 +186,7 @@ opts-vehicle-gears = { path = "crates/opts-vehicle-gears" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }
 opts-sim-passengers = { path = "crates/opts-sim-passengers" }
+opts-passenger-spec = { path = "crates/opts-passenger-spec" }
 opts-shell-calendar = { path = "crates/opts-shell-calendar" }
 opts-shell-dialog = { path = "crates/opts-shell-dialog" }
 opts-shell-icons = { path = "crates/opts-shell-icons" }

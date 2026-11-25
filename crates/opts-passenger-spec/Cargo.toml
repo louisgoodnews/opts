@@ -1,0 +1,16 @@
+[package]
+name = "opts-passenger-spec"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Pure conversions from the parsed passenger files (cabin, paths, ticket pack) to the simulation's specs (ISS-064)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-core = { workspace = true }
+opts-sim = { workspace = true }

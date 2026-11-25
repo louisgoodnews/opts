@@ -63,6 +63,7 @@ opts-vehicle-gears = { workspace = true }
 opts-vehicle-script-texture = { workspace = true }
 opts-world-stats = { workspace = true }
 opts-world-load = { workspace = true }
+opts-passenger-spec = { workspace = true }
 
 # Bevy Engine
 bevy = { workspace = true }
