@@ -54,18 +54,19 @@ pub(super) fn attach_passengers(
     ) else {
         return;
     };
-    let Some(rig) =
-        crate::passengers::PassengerRig::from_files(&cabin, &paths, ticket_pack(job), seed, root)
+    // The rig is built and inserted on `root` by `opts-game` (ISS-064); the counts are for the log.
+    let Some(counts) = job
+        .passenger_hooks
+        .attach_rig(commands, root, &cabin, &paths, ticket_pack(job), seed)
     else {
         return;
     };
     tracing::info!(
-        places = rig.sim.cabin.places.len(),
-        entries = rig.sim.cabin.entries.len(),
-        tickets = rig.sim.tickets.tickets.len(),
+        places = counts.places,
+        entries = counts.entries,
+        tickets = counts.tickets,
         "passengers: cabin loaded"
     );
-    commands.entity(root).insert(rig);
 }
 
 /// A following unit of the chain joins the head's passengers: its cabin and paths are added to
@@ -114,9 +115,8 @@ pub(super) fn attach_unit(
         link_to_next = ?unit.link_to_next,
         "passengers: unit joins the chain"
     );
+    let hooks = job.passenger_hooks.clone();
     commands.queue(move |world: &mut World| {
-        if let Some(mut rig) = world.get_mut::<crate::passengers::PassengerRig>(head) {
-            rig.add_unit(seg, unit, store);
-        }
+        hooks.add_unit(world, head, seg, unit, store);
     });
 }
