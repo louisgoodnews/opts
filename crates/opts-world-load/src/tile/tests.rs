@@ -7,6 +7,20 @@ use super::*;
 /// `[LOD] 0` holding a bare file name without `[mesh]`.
 const PARKED: &str = "[LOD]\r\n0.025\r\n\r\n[mesh]\r\nbody.o3d\r\n\r\n[mesh]\r\nwheels.o3d\r\n\r\n[LOD]\r\n0\r\n\r\n..\\..\\other\\model\\far.o3d\r\n";
 
+/// ISS-060: the Falkensee Bahnhof level-crossing arms (`bue_schranke1_Main.sco`, object IDs
+/// 128680 and 128681, `[object]` headings 107 and 287) are drawn turned by 90 degrees, so that
+/// their arms run along the track axis of the crossing (heading 17) and cross the road.
+#[test]
+fn the_falkensee_crossing_arms_are_turned_ninety_degrees_on_berlin_spandau() {
+    use super::placement::heading_with_override;
+    let fixed = |id: u64, heading: f32| heading_with_override("Berlin-Spandau", id, heading);
+    assert!((fixed(128680, 107.0) - 17.0).abs() < 1e-3, "{}", fixed(128680, 107.0));
+    assert!((fixed(128681, 287.0) - 197.0).abs() < 1e-3, "{}", fixed(128681, 287.0));
+    // Other objects and other maps keep their heading.
+    assert_eq!(fixed(128682, 107.0), 107.0);
+    assert_eq!(heading_with_override("Berlin-Other", 128680, 107.0), 107.0);
+}
+
 #[test]
 fn a_parked_model_without_meshes_at_lod_0_draws_its_close_up_level() {
     let model = ModelConfig::parse_bytes(PARKED.as_bytes()).expect("parses");

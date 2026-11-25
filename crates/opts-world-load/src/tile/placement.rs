@@ -21,6 +21,24 @@ fn is_barrier(sco_file: &str) -> bool {
     lower.contains("schranke") || lower.contains("barriere")
 }
 
+/// Objects whose `[object]` heading the map data gets wrong, keyed by map folder and ID code, with
+/// the turn to add in OMSI degrees (clockwise). Falkensee Bahnhof (ISS-060): the two arms of the
+/// level crossing `bue_schranke1_Main.sco` are placed at headings 107 and 287, across the
+/// pedestrian way; the owner's decision is a turn of about 90 degrees.
+const HEADING_OVERRIDES: &[(&str, u64, f32)] = &[
+    ("Berlin-Spandau", 128680, -90.0),
+    ("Berlin-Spandau", 128681, -90.0),
+];
+
+/// The heading an object is drawn with: its `[object]` heading, turned by the override of its map
+/// and ID code where the map data places it wrongly (ISS-060). OMSI degrees, clockwise.
+pub(super) fn heading_with_override(map: &str, id_code: u64, heading_deg: f32) -> f32 {
+    HEADING_OVERRIDES
+        .iter()
+        .find(|(m, id, _)| *m == map && *id == id_code)
+        .map_or(heading_deg, |(_, _, turn)| heading_deg + turn)
+}
+
 /// Where the object stands: the terrain height at its place (or the absolute one), moved onto the
 /// road for markings and parked cars, and the transform from its OMSI heading, pitch and roll.
 pub(super) fn object_transform(
@@ -71,13 +89,22 @@ pub(super) fn object_transform(
         }
     }
     let world = Vec3::new(origin.0 + obj.position.x, origin.1 + obj.position.y, z);
+    // The map folder names the map (`maps/Berlin-Spandau`) for the per-object overrides.
+    let map = job
+        .config
+        .map_dir
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default();
+    let heading_deg = heading_with_override(map, obj.id_code, obj.heading_deg);
     if is_barrier(&obj.sco_file) {
         // The angle the barrier is turned by, and where it comes from (ISS-060).
         let source = match placement {
             Placement::OnParent(_) => "parent transform",
+            _ if heading_deg != obj.heading_deg => "map [object] heading with a map override",
             _ => "map [object] heading, negated for the CCW helper",
         };
-        tracing::debug!(object = %obj.id_code, sco = %obj.sco_file, heading = obj.heading_deg, yaw = -obj.heading_deg, pitch = ?obj.pitch_deg, roll = ?obj.roll_deg, source, "barrier orientation");
+        tracing::debug!(object = %obj.id_code, sco = %obj.sco_file, map, heading = obj.heading_deg, drawn = heading_deg, yaw = -heading_deg, pitch = ?obj.pitch_deg, roll = ?obj.roll_deg, source, "barrier orientation");
     }
     let transform = match placement {
         Placement::OnParent(t) => t,
@@ -85,7 +112,7 @@ pub(super) fn object_transform(
             translation: omsi_to_bevy_pos(world),
             // OMSI headings are clockwise-positive (compass-style); the helper is CCW.
             rotation: omsi_euler_to_bevy_quat(
-                -obj.heading_deg,
+                -heading_deg,
                 obj.pitch_deg.unwrap_or(0.0),
                 obj.roll_deg.unwrap_or(0.0),
             ),
