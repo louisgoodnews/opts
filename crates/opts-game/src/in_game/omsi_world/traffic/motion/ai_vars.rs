@@ -38,6 +38,27 @@ fn set_blinker_variables(
     );
     vars.set("lights_blinker_l", left);
     vars.set("lights_blinker_r", right);
+    // The flasher bulbs and the blink clock the model's lamps read (the lights script sets them
+    // for a driven vehicle; an AI vehicle has no script to do it).
+    vars.set("lights_blinkgeber", f32::from(flash));
+    for n in 1..=4 {
+        vars.set(&format!("lights_blinker_l_bulb_{n}"), left);
+        vars.set(&format!("lights_blinker_r_bulb_{n}"), right);
+    }
+}
+
+/// The headlights, the tail lamps and the position lights of an AI vehicle: dipped beam, position
+/// and rear lamps on in the dark, no high beam (OMSI's AI lamps are `0` off, `0.5` position, `1`
+/// dipped, `2` high beam, the same mapping as `ai_light`).
+fn set_lamp_variables(vars: &mut opts_bevy::AiVariables, dark: bool) {
+    let on = f32::from(dark);
+    vars.set("lights_abbl", on);
+    vars.set("lights_stand", on);
+    vars.set("lights_rueck", on);
+    vars.set("lights_fern", 0.0);
+    for n in 1..=2 {
+        vars.set(&format!("lights_abbl_bulb_{n}"), on);
+    }
 }
 
 /// Feeds the variables the AI vehicle models read: wheel rotation and steering from speed and lane
@@ -99,6 +120,7 @@ pub fn update_ai_variables(
             vars.set("preciprate", w.precip_rate);
         }
         vars.set("lights_ai", light);
+        set_lamp_variables(&mut vars, dark);
         // Sound variables (M-0140): speed and pedals, the engine speed of a gear model, the wheel
         // speeds and the road state.
         let wet = weather.as_ref().is_some_and(|(_, w)| w.precip_rate > 0.05);
