@@ -68,7 +68,7 @@ fn apply_rotations(human: &Human, q: &[Quat; 13], transforms: &mut Query<&mut Tr
 }
 
 /// A character of the map for a passenger.
-pub(crate) struct Actor {
+pub struct Actor {
     /// The root entity of the rig.
     pub entity: Entity,
     /// Leg length for the gait (m).
@@ -79,13 +79,13 @@ pub(crate) struct Actor {
 
 impl PedestrianPool {
     /// Asks for the characters to be loaded (passengers).
-    pub(crate) fn want(&mut self) {
+    pub fn want(&mut self) {
         self.wanted = true;
     }
 
     /// Spawns a character drawn by the `humans.txt` weights with the value `unit` in `[0, 1)`,
     /// standing; `None` while no character has finished loading.
-    pub(crate) fn spawn_actor(
+    pub fn spawn_actor(
         &self,
         commands: &mut Commands,
         bindposes: &mut Assets<SkinnedMeshInverseBindposes>,

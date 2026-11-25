@@ -100,7 +100,7 @@ pub fn update_layer_status(
 }
 
 /// Registers the lane overlay systems (called from the in-game plugin).
-pub(crate) fn add_lane_overlay(app: &mut App) {
+pub fn add_lane_overlay(app: &mut App) {
     app.init_resource::<LaneOverlay>()
         .add_systems(
             Update,

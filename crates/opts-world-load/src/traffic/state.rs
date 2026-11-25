@@ -34,19 +34,19 @@ impl TrafficState {
 
     /// Behaviour counters of the traffic world (hard brakes, aborted lane changes).
     #[must_use]
-    pub(crate) fn stats(&self) -> opts_traffic::TrafficStats {
+    pub fn stats(&self) -> opts_traffic::TrafficStats {
         self.world.stats()
     }
 
     /// Vehicles on the lanes (scheduled ones included).
     #[must_use]
-    pub(crate) fn agent_count(&self) -> usize {
+    pub fn agent_count(&self) -> usize {
         self.world.agents().len()
     }
 
     /// World position and compass heading of the vehicles `keep` accepts (the maps draw the
     /// scheduled ones).
-    pub(crate) fn poses_where(&self, keep: impl Fn(AgentId) -> bool, out: &mut Vec<(DVec2, f32)>) {
+    pub fn poses_where(&self, keep: impl Fn(AgentId) -> bool, out: &mut Vec<(DVec2, f32)>) {
         let graph = self.world.graph();
         out.extend(
             self.world
@@ -77,19 +77,19 @@ impl TrafficState {
 
     /// The agents on the lanes (scheduled ones included), in id order.
     #[must_use]
-    pub(crate) fn agents(&self) -> &[opts_traffic::Agent] {
+    pub fn agents(&self) -> &[opts_traffic::Agent] {
         self.world.agents()
     }
 
     /// The lane graph of the resident tiles.
     #[must_use]
-    pub(crate) fn lane_graph(&self) -> &LaneGraph {
+    pub fn lane_graph(&self) -> &LaneGraph {
         self.world.graph()
     }
 
     /// Whether the lanes of tile `key` are in the graph (the tile is resident).
     #[must_use]
-    pub(crate) fn has_tile(&self, key: (i32, i32)) -> bool {
+    pub fn has_tile(&self, key: (i32, i32)) -> bool {
         self.segments.contains_key(&key)
     }
 }

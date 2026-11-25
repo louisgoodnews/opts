@@ -38,7 +38,7 @@ impl WorldLoadJob {
     /// the full-size map): the installation root, the map folder and, for each listed tile, its
     /// key, its file name and its south-west corner in the session frame (OMSI axes, metres).
     #[must_use]
-    pub(crate) fn tile_listing(
+    pub fn tile_listing(
         &self,
     ) -> (
         PathBuf,
