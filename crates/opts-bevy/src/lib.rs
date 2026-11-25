@@ -19,7 +19,7 @@
 pub mod action_keys;
 pub mod ai_variables;
 pub mod articulation;
-pub mod audio;
+pub use opts_audio as audio;
 pub mod bloom;
 pub mod bus_stops;
 pub mod cab_switch;
@@ -40,7 +40,7 @@ pub mod human;
 pub mod install;
 pub mod instancing;
 pub mod light_cones;
-pub mod light_quality;
+pub use opts_light_quality as light_quality;
 pub mod light_rooms;
 pub mod loader;
 pub mod material;

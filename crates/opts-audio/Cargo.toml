@@ -1,0 +1,16 @@
+[package]
+name = "opts-audio"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Sound engine: decoded clips, sound emitters, gain curves, the voice budget and the distance fade, Bevy-facing types (no file formats)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-main-camera = { workspace = true }

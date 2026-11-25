@@ -1,0 +1,16 @@
+[package]
+name = "opts-light-quality"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Lighting quality: the effective light state the lighting effects read, the unified fallback ladder and the automatic frame-time governor, Bevy-facing types."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+tracing = { workspace = true }

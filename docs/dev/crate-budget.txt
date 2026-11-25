@@ -41,3 +41,6 @@ opts-scripted-drive 12  # new 2026-11-25: the near-vehicle drive (M-0103): pedal
 opts-stream-budget 657  # new 2026-11-25: the tile streaming budget (M-0089) moved out of opts-game (crate split); opts-game keeps its budget as room
 opts-scene-trace 1326  # new 2026-11-25: the scene trace moved out of opts-bevy (crate split)
 opts-spatial-zones 946  # new 2026-11-25: the spatial zones moved out of opts-bevy (crate split)
+opts-light-quality 1030  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the lighting quality, ladder and governor moved out of opts-bevy (crate split)
+opts-audio 812  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the sound engine moved out of opts-bevy (crate split)
+opts-main-camera 4  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the MainCamera marker moved out of opts-bevy so that opts-audio can use it
