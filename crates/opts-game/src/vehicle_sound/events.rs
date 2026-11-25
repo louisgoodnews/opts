@@ -11,19 +11,8 @@ use super::AiAudioStats;
 use crate::audio_content::{ClipLoader, ClipState};
 use opts_core::formats::sound::SoundDef;
 
-/// An event the traffic model raises for an AI vehicle (`ev_AI_Horn`): it plays the one-shots of
-/// the configuration that name it.
-#[derive(Component, Debug, Clone, Default)]
-pub struct AiEvents(pub Vec<String>);
-
-impl AiEvents {
-    /// Raises event `name`.
-    pub fn raise(&mut self, name: &str) {
-        if self.0.len() < 8 {
-            self.0.push(name.to_owned());
-        }
-    }
-}
+/// The event component is data the world load raises; its type lives in `opts-world-load`.
+pub use opts_world_load::sound_hooks::AiEvents;
 
 /// A one-shot of an AI vehicle on a host event, a child at its `[3d]` position.
 #[derive(Component, Debug, Clone)]

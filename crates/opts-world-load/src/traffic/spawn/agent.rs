@@ -26,7 +26,7 @@ type HeadCanvases =
     Option<Arc<std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>>>;
 
 /// The sound set of a vehicle.
-type SoundSet = Arc<crate::vehicle_sound::AiSoundSet>;
+type SoundSet = Arc<crate::sound_hooks::AiSoundSet>;
 
 mod route;
 use route::route_scheduled;

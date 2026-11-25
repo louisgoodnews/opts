@@ -56,7 +56,7 @@ pub(super) struct Unit {
     /// The unit is coupled the other way round (its model faces backwards).
     pub reversed: bool,
     /// The sounds the vehicle can play as AI traffic (M-0140); `None`: silent.
-    pub sound: Option<std::sync::Arc<crate::vehicle_sound::AiSoundSet>>,
+    pub sound: Option<std::sync::Arc<crate::sound_hooks::AiSoundSet>>,
     /// Where the first passenger door is, forward from the model origin (m), from the
     /// passenger cabin and paths files; `None` for a vehicle without them. A scheduled bus stops
     /// with this door at the stop.

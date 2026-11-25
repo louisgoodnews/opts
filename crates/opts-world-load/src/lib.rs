@@ -40,6 +40,7 @@ pub mod reload;
 pub mod respawn;
 pub mod scenery_objects;
 pub mod setvar_state;
+pub mod sound_hooks;
 pub mod tile;
 pub mod tile_build;
 pub mod tile_ground;

@@ -33,7 +33,7 @@ pub(super) fn variant_look(
     let door_ahead = head
         .front_door_y
         .map_or(0.0, |y| (head.size.unwrap_or((4.4, 2.2)).1 - y).max(0.0));
-    let unit_sounds: Vec<Option<Arc<crate::vehicle_sound::AiSoundSet>>> = variant
+    let unit_sounds: Vec<Option<Arc<crate::sound_hooks::AiSoundSet>>> = variant
         .units
         .iter()
         .skip(1)

@@ -76,7 +76,7 @@ pub fn update_ai_variables(
     mut vehicles: Query<(
         &mut TrafficVehicle,
         &mut opts_bevy::AiVariables,
-        Option<&mut crate::vehicle_sound::AiEvents>,
+        Option<&mut crate::sound_hooks::AiEvents>,
     )>,
 ) {
     let dt = time.delta_secs().min(0.2);

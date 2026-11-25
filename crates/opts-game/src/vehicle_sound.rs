@@ -26,22 +26,8 @@ use crate::scenery_sound::SceneryVoice;
 /// Most continuous voices one AI vehicle carries.
 pub const MAX_AI_VOICES: usize = 16;
 
-/// The definitions of an AI vehicle type that can be played, with their sound files.
-#[derive(Debug, Clone, Default)]
-pub struct AiSoundSet {
-    /// The loops the traffic model can drive (at most [`MAX_AI_VOICES`]) with their files:
-    /// continuous, their conditions and variables all stated by the model.
-    pub voices: Vec<(Arc<SoundDef>, PathBuf)>,
-    /// One-shots the traffic model raises itself (the horn, [`HOST_EVENTS`]).
-    pub events: Vec<(Arc<SoundDef>, PathBuf)>,
-    /// Definitions that need the vehicle's own scripts (door triggers and door variables,
-    /// anything else the model does not state): played only by a vehicle that runs scripts, a
-    /// scheduled bus (at most [`MAX_SCRIPTED_VOICES`]).
-    pub scripted: Vec<(Arc<SoundDef>, PathBuf)>,
-    /// Definitions of the configuration that were left out (a condition mode that is not
-    /// understood, interior-only sounds, no file, over a cap).
-    pub skipped: usize,
-}
+/// The AI sound set is data the world load builds; its type lives in `opts-world-load` (ISS-064).
+pub use opts_world_load::sound_hooks::AiSoundSet;
 
 /// Most script-driven voices a scheduled AI vehicle carries.
 pub const MAX_SCRIPTED_VOICES: usize = 48;
