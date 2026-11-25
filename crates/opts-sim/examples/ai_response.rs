@@ -13,27 +13,11 @@ use opts_sim::script::{load_vehicle_scripts, measure_ai_response};
 
 #[path = "ai_response/agreement.rs"]
 mod agreement;
+#[path = "ai_response/fed.rs"]
+mod fed;
 #[path = "ai_response/transfer.rs"]
 mod transfer;
-use agreement::{check_agreement, TOLERANCE};
-
-#[derive(Default)]
-struct Counts {
-    total: usize,
-    no_script: usize,
-    dead: usize,
-    follows: usize,
-    deviates: usize,
-    agree: usize,
-    disagree: usize,
-    stall: usize,
-    no_run: usize,
-    /// Transfer test: [agree, disagree, stall in both] for the path and for the sampled table.
-    path: [usize; 3],
-    table: [usize; 3],
-    /// Vehicles that keep their script: they fail the agreement or the path transfer.
-    fallback: std::collections::BTreeSet<String>,
-}
+use agreement::{check_agreement, Counts, TOLERANCE};
 
 fn evaluate_vehicle(
     vehicle_name: &str,
@@ -51,7 +35,12 @@ fn evaluate_vehicle(
     let dir = path.parent().unwrap_or(root).to_path_buf();
     let (mut engine, _) =
         load_vehicle_scripts(bus, |rel| find_ci(&dir, rel).or_else(|| find_ci(root, rel)));
-    let r = measure_ai_response(&mut engine);
+    let r = fed::response(
+        &mut engine,
+        agreement::has_ai_frame(bus, &dir, root),
+        vehicle_name,
+    )
+    .unwrap_or_else(|| measure_ai_response(&mut engine));
     if !r.is_live() {
         counts.dead += 1;
         if show {

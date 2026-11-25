@@ -7,7 +7,7 @@ use super::BusManifest;
 use opts_kinematic::run_up_with;
 use opts_sim::script::{load_vehicle_scripts, AiResponse, ScriptEngine};
 
-use super::{find_ci, Counts};
+use super::find_ci;
 
 /// Reference mass (kg) and wheel radius (m): both models scale by the same factor, so the
 /// agreement does not depend on them.
@@ -109,4 +109,22 @@ pub fn check_agreement(
             }
         }
     }
+}
+
+#[derive(Default)]
+pub struct Counts {
+    pub total: usize,
+    pub no_script: usize,
+    pub dead: usize,
+    pub follows: usize,
+    pub deviates: usize,
+    pub agree: usize,
+    pub disagree: usize,
+    pub stall: usize,
+    pub no_run: usize,
+    /// Transfer test: [agree, disagree, stall in both] for the path and for the sampled table.
+    pub path: [usize; 3],
+    pub table: [usize; 3],
+    /// Vehicles that keep their script: they fail the agreement or the path transfer.
+    pub fallback: std::collections::BTreeSet<String>,
 }
