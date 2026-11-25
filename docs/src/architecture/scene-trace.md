@@ -2,7 +2,7 @@
 
 Scope: an opt-in debug mode that keeps one record per placed thing and writes it as JSON Lines
 next to the run logs. A defect seen in a screenshot becomes a source file in one call
-(`trace.pick`), for people and for agents. Code: `crates/opts-bevy/src/scene_trace/` (records,
+(`trace.pick`), for people and for agents. Code: `crates/opts-scene-trace/` (records,
 store, filters, picking), `crates/opts-game/src/in_game/omsi_world/trace.rs` (the loader hooks),
 `crates/opts-game/src/control_trace.rs` (protocol and overlay).
 

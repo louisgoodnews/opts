@@ -5374,7 +5374,9 @@ dependencies = [
  "opts-gui",
  "opts-logging",
  "opts-position-tag",
+ "opts-scene-trace",
  "opts-sim",
+ "opts-spatial-zones",
  "opts-traffic",
  "rav1e",
  "serde",
@@ -5623,6 +5625,16 @@ name = "opts-position-tag"
 version = "0.1.0"
 
 [[package]]
+name = "opts-scene-trace"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "opts-scripted-drive"
 version = "0.1.0"
 
@@ -5640,6 +5652,16 @@ dependencies = [
  "opts-kinematic",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "opts-spatial-zones"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]

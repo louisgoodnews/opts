@@ -1,0 +1,18 @@
+[package]
+name = "opts-spatial-zones"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Spatial zones (tunnels, ceilings and their sampling and overlays) with a tracker for the vehicle, Bevy-facing types, no OMSI."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }

@@ -51,6 +51,8 @@ graph TD
         opts_car_following["opts-car-following<br/>• Intelligent Driver Model<br/>• Vehicle classes & driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_signals["opts-signals<br/>• Traffic-light programs<br/>• Aspect shown to each vehicle<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_scripted_drive["opts-scripted-drive<br/>• Pedals from the desired acceleration<br/>• Script torque back to acceleration<br/>• Zero Bevy · Zero File I/O"]:::bridge
+        opts_scene_trace["opts-scene-trace<br/>• Scene trace records and store<br/>• Bevy types, no OMSI"]:::bridge
+        opts_spatial_zones["opts-spatial-zones<br/>• Ceilings and tunnels<br/>• Sampling, tracking, overlays"]:::bridge
         opts_stream_budget["opts-stream-budget<br/>• Tile-streaming frame budget<br/>• Wanted and evictable tiles<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_traffic_weather["opts-traffic-weather<br/>• Grip and fog for AI drivers<br/>• Car-following parameter rules<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_vehicle_traits["opts-vehicle-traits<br/>• Traffic traits of a vehicle type<br/>• Mapped onto the driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
@@ -134,6 +136,8 @@ graph TD
     opts_traffic_weather --> opts_car_following
     opts_game --> opts_stream_budget
     opts_game --> opts_scripted_drive
+    opts_bevy --> opts_scene_trace
+    opts_bevy --> opts_spatial_zones
     opts_traffic --> opts_core
 ```
 
@@ -167,6 +171,8 @@ graph TD
 | **`opts-vehicle-traits`** | L2 | Traffic traits of a vehicle type (class, length, mass, drive and brake force) mapped onto the car-following driver parameters, split out of `opts-traffic` (crate split, M-0103) | `opts-car-following` | `opts-traffic` | Pure Rust |
 | **`opts-signals`** | L2 | Traffic-light programs and the aspect each instant shows to a vehicle, split out of `opts-traffic` (crate split, M-0103) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-scripted-drive`** | L2 | The near-vehicle drive (M-0103): the desired acceleration as script pedals, and the script's wheel torque and brake force back as an acceleration | *None* | `opts-game` | Pure Rust |
+| **`opts-scene-trace`** | L2 | The scene trace: records, filters and the trace store of what is under the camera, split out of `opts-bevy` (crate split) | *None* | `opts-bevy` | Bevy |
+| **`opts-spatial-zones`** | L2 | Spatial zones (ceilings, tunnels) with their sampling, tracking and overlays, split out of `opts-bevy` (crate split) | *None* | `opts-bevy` | Bevy |
 | **`opts-stream-budget`** | L2 | Tile-streaming frame budget and prioritisation (M-0089): wanted and evictable tiles, spreading and motion policy, split out of `opts-game` (crate split) | *None* | `opts-game` | Pure Rust |
 | **`opts-traffic-weather`** | L2 | Weather for AI drivers: grip and fog visibility change the car-following parameters, split out of `opts-traffic` (M-0117) | `opts-car-following` | `opts-traffic` | Pure Rust |
 | **`opts-kinematic`** | L2 | Cheap kinematic acceleration of an AI vehicle from its measured drive torque over speed; the run-up law shared with the script census in `opts-sim` examples (M-0103) | *None* | *None* | Pure Rust |
@@ -176,7 +182,7 @@ graph TD
 | **`opts-debounce`** | L0 | Trailing debounce of file-change events for the hot-reload watcher (split out of `opts-bevy`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-map-advice`** | L0 | Map load profile and the heuristic advice engine: pure thresholds, no engine dependency (split out of `opts-game`, [plan](../../dev/crate-split-advice.md)) | *None* | `opts-game` | Pure Rust |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
-| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game` | Bevy Engine |
+| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-scene-trace`, `opts-spatial-zones`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game` | Bevy Engine |
 | **`opts-exhaust`** | L3 | Engine exhaust plumes of the player and the nearest vehicles: puff emission, the model outlet, the distance fade (split out of `opts-game`, M-0117 budget room; [plan](../../dev/crate-split-exhaust.md)) | `opts-bevy`, `opts-sim` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-scripted-drive`, `opts-sim`, `opts-steam`, `opts-stream-budget`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |
