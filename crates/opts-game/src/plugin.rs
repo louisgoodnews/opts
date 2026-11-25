@@ -70,6 +70,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(ui_typography::UiTypographyPlugin)
             .add_plugins(opts_bevy::door_camera::DoorCameraPlugin)
             .add_plugins(passengers::PassengersPlugin)
+            .add_plugins(crate::driver_aids::DriverAidsPlugin)
             .add_plugins(route_progress::RouteProgressPlugin)
             .add_plugins(trip_start::TripStartPlugin)
             .add_plugins(in_game::weather::WeatherPlugin)

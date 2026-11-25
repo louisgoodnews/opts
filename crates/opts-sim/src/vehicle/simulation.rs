@@ -1,6 +1,7 @@
 //! The vehicle simulation state: chassis, axles, drivetrain, suspension, consist and inputs.
 
 use super::axle::AxleState;
+use super::aids::DriverAids;
 use super::brakes::BrakeSystem;
 use super::chassis::ChassisState;
 use super::consist::UnitLoad;
@@ -76,6 +77,9 @@ pub struct VehicleSimulation {
     /// The service brake's pressure and per-axle forces (M-0073).
     #[serde(default)]
     pub brakes: BrakeSystem,
+    /// The ABS and ASR driver aids (ISS-043): their switches and the shares they let through.
+    #[serde(default)]
+    pub driver_aids: DriverAids,
     /// Height of the ground under each wheel against the plane the chassis follows (m; axle by
     /// axle, left then right): the host fills it from the terrain, missing entries are 0.
     #[serde(default)]

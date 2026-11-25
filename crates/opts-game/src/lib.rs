@@ -37,6 +37,7 @@ pub mod formation;
 pub mod hardware;
 pub mod help;
 pub mod home;
+pub mod driver_aids;
 pub mod hud;
 pub mod in_game;
 pub mod isolation;

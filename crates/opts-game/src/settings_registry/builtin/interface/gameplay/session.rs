@@ -78,5 +78,25 @@ pub(super) fn session() -> Vec<D> {
         )
         .keywords(&["passengers", "mass", "weight", "kilogram"])
         .since("0.3"),
+        D::new(
+            "gameplay.abs",
+            K::Bool,
+            "false",
+            C::Gameplay,
+            98,
+            "set-abs",
+            "set-abs-desc",
+        )
+        .keywords(&["abs", "anti-lock", "brakes", "locking", "driver aid"]),
+        D::new(
+            "gameplay.asr",
+            K::Bool,
+            "false",
+            C::Gameplay,
+            99,
+            "set-asr",
+            "set-asr-desc",
+        )
+        .keywords(&["asr", "traction", "spin", "wheelspin", "driver aid"]),
     ]
 }

@@ -5,6 +5,7 @@
 //! compliance, and optional multi-unit trailer articulation.
 
 pub mod axle;
+pub mod aids;
 pub mod brakes;
 pub mod chassis;
 pub mod consist;

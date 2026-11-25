@@ -66,7 +66,17 @@ impl VehicleSimulation {
             .count()
             + unit_driven)
             * 2;
-        let torque_each = d.wheel_torque_nm / driven_wheels.max(1) as f32;
+        // ASR: the fastest driven wheel's slip (from the last step) sets the share of the drive
+        // torque that all driven wheels get.
+        let worst_slip = self
+            .axles
+            .iter()
+            .filter(|a| a.config.is_driven || !any_driven)
+            .flat_map(|a| [&a.left_wheel, &a.right_wheel])
+            .map(|w| aids::wheel_slip(w, speed))
+            .fold(0.0_f32, f32::max);
+        let drive_share = self.driver_aids.drive_share_for(worst_slip);
+        let torque_each = d.wheel_torque_nm * drive_share / driven_wheels.max(1) as f32;
         let rated_head: f32 = self.axles.iter().map(|a| a.config.max_force_n).sum();
         let rated_all: f32 = rated_head
             + self
@@ -82,7 +92,7 @@ impl VehicleSimulation {
         };
         let mut total = 0.0;
         let axle_count = self.axles.len().max(1) as f32;
-        for axle in &mut self.axles {
+        for (n, axle) in self.axles.iter_mut().enumerate() {
             let drive = if axle.config.is_driven || !any_driven {
                 torque_each
             } else {
@@ -93,9 +103,17 @@ impl VehicleSimulation {
             } else {
                 1.0 / axle_count
             };
-            for w in [&mut axle.left_wheel, &mut axle.right_wheel] {
+            for (side, w) in [&mut axle.left_wheel, &mut axle.right_wheel]
+                .into_iter()
+                .enumerate()
+            {
+                // ABS: the wheel's brake share from its slip at the start of the step.
+                let index = 2 * n + side;
+                let aid_share =
+                    self.driver_aids
+                        .brake_share_for(index, aids::wheel_slip(w, speed), speed);
                 let r = w.rolling_radius_m.max(0.1);
-                let brake_nm = head_brake_n * share * 0.5 * r;
+                let brake_nm = head_brake_n * share * 0.5 * r * aid_share;
                 let load = w.vertical_load_n;
                 let st = wheels::step_wheel(w, drive, brake_nm, load, speed, mu, dt);
                 total += st.force_n;
