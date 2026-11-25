@@ -100,3 +100,8 @@ set-vkr-ticket_change = Ticket with change (trams, trains)
 set-vkr-ticket_change-desc = Fahrschein mit Rückgeld
 set-vkr-ticket_take = Collect money (trams, trains)
 set-vkr-ticket_take-desc = Geld einsammeln
+
+set-head-tracking = Head tracking (TrackIR)
+set-head-tracking-desc = Turns the driver's view with the head pose of a TrackIR device, from the centre set by the reset. Off by default. Needs a device; the build without a device backend never moves the view.
+set-head-tracking-gain = Head tracking gain
+set-head-tracking-gain-desc = How far the view turns per degree of head turn. Applies at once.

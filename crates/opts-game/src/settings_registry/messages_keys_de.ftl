@@ -100,3 +100,8 @@ set-vkr-ticket_change = Hands over a ticket with change. (Tram, Bahn)
 set-vkr-ticket_change-desc = Gibt Fahrschein mit Rückgeld aus.
 set-vkr-ticket_take = Collects the passenger's money. (Tram, Bahn)
 set-vkr-ticket_take-desc = Nimmt das Geld des Fahrgasts.
+
+set-head-tracking = Kopf-Tracking (TrackIR)
+set-head-tracking-desc = Dreht die Fahrersicht mit der Kopfhaltung eines TrackIR-Geräts, von der Mitte aus, die der Zurücksetzen-Befehl setzt. Standardmäßig aus. Braucht ein Gerät; ohne Gerätetreiber bewegt sich die Sicht nie.
+set-head-tracking-gain = Kopf-Tracking-Verstärkung
+set-head-tracking-gain-desc = Wie weit sich die Sicht pro Grad Kopfdrehung dreht. Gilt sofort.

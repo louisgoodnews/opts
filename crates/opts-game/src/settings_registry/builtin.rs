@@ -52,5 +52,6 @@ fn all_unscoped() -> Vec<D> {
     v.extend(crate::action_settings::descriptors());
     v.extend(crate::vehicle_setup_settings::descriptors());
     v.extend(crate::vehicle_fuel_settings::descriptors());
+    v.extend(crate::head_track_settings::descriptors());
     v
 }

@@ -34,6 +34,7 @@ pub mod free_texture;
 pub mod glass;
 pub use opts_bevy_ground as ground;
 pub mod ground_material;
+pub mod head_track;
 pub mod host_callbacks;
 pub mod hot_reload;
 pub mod human;

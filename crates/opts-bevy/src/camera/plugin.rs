@@ -45,6 +45,7 @@ impl Plugin for OptsCameraPlugin {
             .init_resource::<CameraState>()
             .init_resource::<CameraAvailability>()
             .init_resource::<ViewpointState>()
+            .add_plugins(crate::head_track::HeadTrackPlugin)
             .add_systems(
                 Update,
                 (
