@@ -52,7 +52,8 @@ impl PathPolicy {
     /// Resolves a path for writing (the file itself may not exist yet; its directory must).
     ///
     /// # Errors
-    /// `1004` when the directory does not exist, `1002` when it is outside the write roots.
+    /// `1004` when the directory does not exist, `1002` when it is outside the write roots or
+    /// when the target already exists as a symbolic link.
     pub fn check_write(&self, path: &Path) -> Result<PathBuf, RpcError> {
         let name = path
             .file_name()
@@ -64,12 +65,29 @@ impl PathPolicy {
         let real_dir = dir.canonicalize().map_err(|_| {
             RpcError::new(code::NOT_FOUND, format!("{} does not exist", dir.display()))
         })?;
-        if within(&real_dir, &self.write_roots) {
-            Ok(real_dir.join(name))
-        } else {
-            Err(forbidden(path, "write"))
+        if !within(&real_dir, &self.write_roots) {
+            tracing::warn!(target: "opts_bevy::control", path = %path.display(), "write refused: outside the write roots");
+            return Err(forbidden(path, "write"));
         }
+        let target = real_dir.join(name);
+        refuse_symlink(path, &target)?;
+        tracing::debug!(target: "opts_bevy::control", path = %target.display(), "write allowed");
+        Ok(target)
     }
+}
+
+/// Refuses a write target that is itself a symbolic link: writing would follow it out of the roots.
+/// `symlink_metadata` inspects the link itself, not what it points to.
+fn refuse_symlink(path: &Path, target: &Path) -> Result<(), RpcError> {
+    let is_link = std::fs::symlink_metadata(target).is_ok_and(|m| m.file_type().is_symlink());
+    if is_link {
+        tracing::warn!(target: "opts_bevy::control", path = %path.display(), "write refused: target is a symbolic link");
+        return Err(RpcError::new(
+            code::FORBIDDEN_PATH,
+            format!("write refused: {} is a symbolic link", path.display()),
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
