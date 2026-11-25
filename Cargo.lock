@@ -5333,6 +5333,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-app-args"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-cli",
+]
+
+[[package]]
+name = "opts-attachments"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-bevy",
+ "opts-core",
+ "tracing",
+]
+
+[[package]]
 name = "opts-audio"
 version = "0.1.0"
 dependencies = [
@@ -5463,6 +5481,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-catalogue-service"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-app-args",
+ "opts-bevy",
+ "opts-catalogue",
+ "opts-game-state",
+ "opts-gui",
+ "opts-new-game-types",
+ "opts-repaints",
+ "opts-settings-io",
+ "opts-steam",
+]
+
+[[package]]
 name = "opts-challenge"
 version = "0.1.0"
 dependencies = [
@@ -5525,8 +5559,11 @@ dependencies = [
  "directories",
  "image",
  "libc",
+ "opts-app-args",
+ "opts-attachments",
  "opts-bevy",
  "opts-catalogue",
+ "opts-catalogue-service",
  "opts-cli",
  "opts-collision",
  "opts-core",
@@ -5543,21 +5580,32 @@ dependencies = [
  "opts-map-advice",
  "opts-mesh-dir",
  "opts-minimap-zoom-canvas",
+ "opts-new-game-types",
+ "opts-notification",
+ "opts-passenger-spec",
  "opts-pause-report",
+ "opts-repaints",
  "opts-road-surf",
  "opts-save-error",
  "opts-scripted-drive",
+ "opts-settings-io",
  "opts-shell-calendar",
  "opts-shell-dialog",
  "opts-shell-icons",
  "opts-shell-keys",
+ "opts-shell-nav",
  "opts-sim",
  "opts-steam",
  "opts-stream-budget",
  "opts-theme-files",
+ "opts-tile-loading",
  "opts-traffic",
+ "opts-traffic-schedule",
  "opts-vehicle-gears",
+ "opts-vehicle-script-texture",
+ "opts-world-load",
  "opts-world-session",
+ "opts-world-stats",
  "rfd",
  "ron 0.8.1",
  "rusqlite",
@@ -5578,9 +5626,12 @@ dependencies = [
  "opts-collision",
  "opts-core",
  "opts-gui",
+ "opts-hud-keys",
  "opts-road-surf",
  "opts-sim",
+ "opts-world-stats",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -5701,6 +5752,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-new-game-types"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "chrono",
+ "opts-bevy",
+ "opts-shell-calendar",
+ "serde",
+]
+
+[[package]]
+name = "opts-notification"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-gui",
+ "opts-shell-keys",
+ "opts-shell-nav",
+ "tracing",
+]
+
+[[package]]
 name = "opts-omsi"
 version = "0.1.0"
 dependencies = [
@@ -5768,6 +5841,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-passenger-spec"
+version = "0.1.0"
+dependencies = [
+ "opts-core",
+ "opts-sim",
+]
+
+[[package]]
 name = "opts-pause-report"
 version = "0.1.0"
 dependencies = [
@@ -5778,6 +5859,17 @@ dependencies = [
 [[package]]
 name = "opts-position-tag"
 version = "0.1.0"
+
+[[package]]
+name = "opts-repaints"
+version = "0.1.0"
+dependencies = [
+ "opts-bevy",
+ "opts-core",
+ "opts-new-game-types",
+ "opts-steam",
+ "tracing",
+]
 
 [[package]]
 name = "opts-road-surf"
@@ -5806,6 +5898,17 @@ name = "opts-scripted-drive"
 version = "0.1.0"
 
 [[package]]
+name = "opts-settings-io"
+version = "0.1.0"
+dependencies = [
+ "directories",
+ "opts-game-state",
+ "rusqlite",
+ "toml 0.8.23",
+ "tracing",
+]
+
+[[package]]
 name = "opts-shell-calendar"
 version = "0.1.0"
 dependencies = [
@@ -5829,6 +5932,19 @@ version = "0.1.0"
 [[package]]
 name = "opts-shell-keys"
 version = "0.1.0"
+
+[[package]]
+name = "opts-shell-nav"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-bevy",
+ "opts-game-state",
+ "opts-gui",
+ "opts-shell-icons",
+ "opts-shell-keys",
+ "tracing",
+]
 
 [[package]]
 name = "opts-signals"
@@ -5896,6 +6012,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-tile-loading"
+version = "0.1.0"
+dependencies = [
+ "opts-game-state",
+ "opts-hardware",
+ "opts-stream-budget",
+]
+
+[[package]]
 name = "opts-tools"
 version = "0.1.0"
 dependencies = [
@@ -5917,6 +6042,13 @@ dependencies = [
  "opts-traffic-weather",
  "opts-vehicle-traits",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opts-traffic-schedule"
+version = "0.1.0"
+dependencies = [
+ "opts-core",
 ]
 
 [[package]]
@@ -5942,6 +6074,15 @@ name = "opts-vehicle-gears"
 version = "0.1.0"
 
 [[package]]
+name = "opts-vehicle-script-texture"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-bevy",
+ "opts-core",
+]
+
+[[package]]
 name = "opts-vehicle-traits"
 version = "0.1.0"
 dependencies = [
@@ -5953,10 +6094,54 @@ name = "opts-wav"
 version = "0.1.0"
 
 [[package]]
+name = "opts-world-load"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-app-args",
+ "opts-attachments",
+ "opts-bevy",
+ "opts-catalogue-service",
+ "opts-collision",
+ "opts-core",
+ "opts-fleet-number",
+ "opts-game-state",
+ "opts-gui",
+ "opts-hud-keys",
+ "opts-logging",
+ "opts-mesh-dir",
+ "opts-new-game-types",
+ "opts-passenger-spec",
+ "opts-repaints",
+ "opts-road-surf",
+ "opts-scripted-drive",
+ "opts-shell-keys",
+ "opts-sim",
+ "opts-steam",
+ "opts-stream-budget",
+ "opts-tile-loading",
+ "opts-traffic",
+ "opts-traffic-schedule",
+ "opts-vehicle-script-texture",
+ "opts-world-session",
+ "opts-world-stats",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "opts-world-session"
 version = "0.1.0"
 dependencies = [
  "opts-bevy",
+]
+
+[[package]]
+name = "opts-world-stats"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-core",
 ]
 
 [[package]]

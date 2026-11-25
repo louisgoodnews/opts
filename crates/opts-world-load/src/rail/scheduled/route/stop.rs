@@ -14,7 +14,7 @@ const ARRIVED_MS: f32 = 0.3;
 
 /// How far a train is from a place on a lane.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(in super::super::super) enum Ahead {
+pub(crate) enum Ahead {
     /// This far (m) along the track.
     At(f32),
     /// Beyond the look-ahead.
@@ -23,7 +23,7 @@ pub(in super::super::super) enum Ahead {
     Gone,
 }
 
-pub(in super::super::super) fn distance_to(
+pub(crate) fn distance_to(
     train: &Train,
     net: &PedestrianNet,
     lane: LaneId,
@@ -54,7 +54,7 @@ pub(in super::super::super) fn distance_to(
 
 /// The speed limit (m/s) a scheduled train must keep to stop where its run says, `None` for no
 /// limit. Records arrivals and departures.
-pub(in super::super::super) fn control(
+pub(crate) fn control(
     t: &mut AiTrain,
     net: &PedestrianNet,
     clock: f64,

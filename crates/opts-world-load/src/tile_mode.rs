@@ -29,7 +29,7 @@ impl WorldLoadJob {
     /// The radius at which the map is covered from the start tile.
     #[must_use]
     pub fn map_radius(&self) -> u32 {
-        tile_loading::max_radius(self.listed_tiles(), self.start_tile)
+        opts_tile_loading::max_radius(self.listed_tiles(), self.start_tile)
     }
 
     /// The map's `[trafficdensity_passenger]` curve (hour, factor).
@@ -79,7 +79,7 @@ impl WorldLoadJob {
         self.queue.clear();
         self.missing_listed = 0;
         let centre = self.start_tile;
-        let wanted = tile_loading::wanted(mode, centre, self.listed_tiles(), |k| {
+        let wanted = opts_tile_loading::wanted(mode, centre, self.listed_tiles(), |k| {
             self.resident.contains_key(&k)
         });
         for key in wanted {

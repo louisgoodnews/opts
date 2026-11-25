@@ -6,7 +6,7 @@ use super::RETIRE_FAR_M;
 
 /// Whether a scheduled train that has reached its last stop may be removed now: its time has
 /// come and the camera is far away.
-pub(in super::super::super) fn retired(
+pub(crate) fn retired(
     t: &AiTrain,
     net: &PedestrianNet,
     clock: f64,
@@ -27,6 +27,6 @@ pub(in super::super::super) fn retired(
 }
 
 /// The run of a scheduled train that is being removed, for the bookkeeping.
-pub(in super::super::super) fn run_of(t: &AiTrain) -> Option<&RunRef> {
+pub(crate) fn run_of(t: &AiTrain) -> Option<&RunRef> {
     t.plan.as_ref().map(|p| &p.run)
 }

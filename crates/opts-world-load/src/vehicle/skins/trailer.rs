@@ -10,15 +10,15 @@ use super::super::coupling_joint;
 /// The first coupled trailer of a head: the head's coupling point and the trailer's front point,
 /// in the same OMSI frame (the pair of [`coupling_joint`]). The trailer hitch is `coupling`.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(in super::super::super) struct TrailerLink {
-    pub(in super::super::super) coupling: Vec3,
-    pub(in super::super::super) front: Vec3,
+pub(crate) struct TrailerLink {
+    pub(crate) coupling: Vec3,
+    pub(crate) front: Vec3,
 }
 
 /// The trailer coupled behind `head` (its `[couple_back]` file, found in `bus_dir`). `None` when
 /// the head has no coupled trailer, the link is reversed (the chain leads back into the unit),
 /// the head is a rail unit, or the trailer's points are missing.
-pub(in super::super::super) fn trailer_link(
+pub(crate) fn trailer_link(
     job: &WorldLoadJob,
     bus_dir: &Path,
     head: &BusManifest,

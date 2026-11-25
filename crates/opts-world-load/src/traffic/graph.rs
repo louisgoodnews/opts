@@ -9,10 +9,10 @@ mod register;
 mod source;
 
 pub use rebuild::update_traffic_graph;
-pub(in super::super::super) use register::{
+pub(crate) use register::{
     register_parked_object, register_tile, reset_pool, unregister_tile,
 };
-pub(in super::super::super) use source::tile_segments;
+pub(crate) use source::tile_segments;
 
 /// Reads `--traffic` and resets the per-session state when a session starts.
 pub fn configure_traffic(

@@ -45,7 +45,7 @@ impl WorldLoadJob {
     /// (`docs/src/formats/map/lists.md`). The draw is a hash of the marker's id code and position
     /// (the instances of an attachment share the id), so a bay shows the same car on every load.
     /// `None` for a bay that stays empty (`gameplay.parked`).
-    pub(in super::super::super) fn parked_vehicle(
+    pub(crate) fn parked_vehicle(
         &mut self,
         marker: &MapObjectInstance,
     ) -> Option<String> {

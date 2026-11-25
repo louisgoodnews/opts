@@ -30,7 +30,7 @@ pub(super) fn attachment_transform(
 /// Places the tile's `[attachObj]` children on their parents (objects, spline attachments or other
 /// children placed before them, all on this tile). Chains are resolved in rounds; a child whose
 /// parent never appears or whose parent has no such attachment point is logged at WARN.
-pub(in super::super::super) fn place_attached_objects(
+pub(crate) fn place_attached_objects(
     (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
     (meshes, materials, images): (
         &mut Assets<Mesh>,

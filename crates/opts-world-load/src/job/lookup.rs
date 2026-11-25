@@ -4,12 +4,12 @@ use super::*;
 
 /// How far behind a bus stop object a vehicle starting there stands when its `.bus` gives no
 /// bounding box (m): about half a 12 m bus, so its front is at the stop.
-pub(in super::super::super) const STOP_SPAWN_BACK_M: f32 = 6.0;
+pub(crate) const STOP_SPAWN_BACK_M: f32 = 6.0;
 
 /// The distance from a vehicle's origin to its front (m): the `.bus` bounding box's centre plus
 /// half its length along the vehicle (`y`). For an articulated bus that is the front unit.
 #[must_use]
-pub(in super::super::super) fn front_of(
+pub(crate) fn front_of(
     bus: &opts_core::formats::vehicles::BusManifest,
 ) -> Option<f32> {
     bus.bounding_box

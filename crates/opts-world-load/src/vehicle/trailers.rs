@@ -32,7 +32,7 @@ pub(super) fn max_parts(formation: bool) -> usize {
 /// train (y forward): the rear point of the unit in front and the front point of the unit behind,
 /// each relative to its own vehicle's origin. A turned unit has its points negated and swapped
 /// (its model's front point faces the rear of the train). `None` when a point is missing.
-pub(in super::super::super) fn coupling_joint(
+pub(crate) fn coupling_joint(
     parent: &BusManifest,
     parent_turned: bool,
     own: &BusManifest,
@@ -67,12 +67,12 @@ impl super::super::consist_plan::Files for JobFiles<'_> {
 /// Spawns the units behind the head `root`: its `[couple_back]` chain, then the cars of a train
 /// formation (`job.formation_cars`), each with its own chain, where `consist_plan` puts them.
 /// Camera presets with the unit entity they are defined in.
-pub(in super::super::super) type CabCameras =
+pub(crate) type CabCameras =
     Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)>;
 
 /// Returns the passenger and the driver camera presets of all trailers with the segment entity
 /// they are defined in.
-pub(in super::super::super) fn spawn_trailer_chain(
+pub(crate) fn spawn_trailer_chain(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,

@@ -64,7 +64,7 @@ fn spline_material(
 }
 
 /// Spline stage: extrudes every spline's profile and spawns the ribbons.
-pub(in super::super::super) fn spawn_splines(
+pub(crate) fn spawn_splines(
     (job, stats, commands): (&mut WorldLoadJob, &mut WorldStats, &mut Commands),
     (meshes, materials, images): (
         &mut Assets<Mesh>,

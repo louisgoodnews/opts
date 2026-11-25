@@ -10,7 +10,7 @@ use super::*;
 /// Entries come first, then exits, each in declaration order; an index without a pathpoint is
 /// left out.
 #[must_use]
-pub(in super::super::super) fn door_points(
+pub(crate) fn door_points(
     cabin_text: &str,
     paths: &PassengerPaths,
 ) -> Vec<DoorPoint> {
@@ -44,7 +44,7 @@ pub(in super::super::super) fn door_points(
 
 /// [`door_points`] from the bytes of the two files (none when the paths file is unreadable).
 #[must_use]
-pub(in super::super::super) fn door_points_from_bytes(
+pub(crate) fn door_points_from_bytes(
     cabin: &[u8],
     paths: &[u8],
 ) -> Vec<DoorPoint> {

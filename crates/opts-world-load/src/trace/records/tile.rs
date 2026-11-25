@@ -58,7 +58,7 @@ fn record_spline(
 }
 
 /// Records the terrain of a tile and its splines.
-pub(in super::super::super) fn tile_content(
+pub(crate) fn tile_content(
     job: &mut WorldLoadJob,
     tile: &MapTile,
     key: (i32, i32),

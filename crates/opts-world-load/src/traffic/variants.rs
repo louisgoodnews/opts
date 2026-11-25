@@ -10,7 +10,7 @@ mod tests;
 mod unit;
 
 pub(super) use lanes::baseline_targets;
-pub(in super::super::super) use lanes::{group_lane_metres, time_factor};
+pub(crate) use lanes::{group_lane_metres, time_factor};
 pub(super) use slot::pick_slot;
 pub(super) use unit::{unit_lod, unit_size};
 

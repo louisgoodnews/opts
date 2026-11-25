@@ -6,7 +6,7 @@ use super::*;
 ///
 /// Fails with "no human meshes could be loaded" while scrambled meshes are still being decoded in
 /// the background; callers may retry later.
-pub(in super::super::super) fn load_human_parts(
+pub(crate) fn load_human_parts(
     job: &mut WorldLoadJob,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
@@ -76,7 +76,7 @@ pub(in super::super::super) fn load_human_parts(
 ///
 /// The skinned mesh, joint pivots and head anchor come from the `.hum`, its model manifest and
 /// the `.o3d` bone weights; the seat contact point comes from the vehicle's passenger cabin.
-pub(in super::super::super) fn load_driver_human(
+pub(crate) fn load_driver_human(
     (job, commands): (&mut WorldLoadJob, &mut Commands),
     (meshes, materials, images, bindposes): (
         &mut Assets<Mesh>,

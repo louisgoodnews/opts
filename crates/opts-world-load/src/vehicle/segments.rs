@@ -12,7 +12,7 @@ use super::skins::TrailerLink;
 use state::{SegmentAssets, SegmentState};
 
 /// Reads the first vehicle listed in the map's `ailists.cfg` (fallback when no `--vehicle-path`).
-pub(in super::super::super) fn first_ai_list_vehicle(job: &WorldLoadJob) -> Option<PathBuf> {
+pub(crate) fn first_ai_list_vehicle(job: &WorldLoadJob) -> Option<PathBuf> {
     let cfg = job.install.find_in(&job.config.map_dir, "ailists.cfg")?;
     let text = opts_core::formats::text::decode_bytes(&std::fs::read(cfg).ok()?);
     text.lines()
@@ -62,7 +62,7 @@ pub(super) fn repaint_map(
 
 /// Loads the visible lod0 meshes of one vehicle segment as children of `root`.
 /// Returns `(mesh_count, vertex_count, bounds_min, bounds_max)` (Bevy space, body meshes only).
-pub(in super::super::super) fn load_segment_meshes(
+pub(crate) fn load_segment_meshes(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
     stores: (
@@ -88,7 +88,7 @@ pub(in super::super::super) fn load_segment_meshes(
 
 /// [`load_segment_meshes`] for a segment whose animations, light maps and hot spots read the
 /// variables of `owner` (the leading unit: trailers share its scripts, `[scriptshare]`).
-pub(in super::super::super) fn load_segment_meshes_for(
+pub(crate) fn load_segment_meshes_for(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
     (meshes, materials, images): (
@@ -114,7 +114,7 @@ pub(in super::super::super) fn load_segment_meshes_for(
 
 /// [`load_segment_meshes`] for the head of an articulated vehicle: the bellow's trailer end
 /// follows the coupled `trailer` (see [`TrailerLink`]), when there is one.
-pub(in super::super::super) fn load_head_segment_meshes(
+pub(crate) fn load_head_segment_meshes(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
     stores: (
