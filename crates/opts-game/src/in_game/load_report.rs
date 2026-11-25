@@ -17,7 +17,7 @@ pub struct AcceptLoadProblems(pub bool);
 #[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct AcceptLoadProblemsAlways(pub bool);
 
-mod problem;
+use opts_load_problem as problem;
 pub use problem::{severity_of, LoadProblem, Severity};
 mod report;
 pub use report::{LoadOutcome, LoadReport};

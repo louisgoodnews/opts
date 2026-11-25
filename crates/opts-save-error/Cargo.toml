@@ -1,0 +1,15 @@
+[package]
+name = "opts-save-error"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The save container error type, split out of opts-game (ISS-062)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

@@ -1,0 +1,15 @@
+[package]
+name = "opts-minimap-zoom-canvas"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Pure mini map helpers: the speed-based zoom filter and the RGBA8 pixel canvas, split out of opts-game (ISS-062)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

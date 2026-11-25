@@ -17,7 +17,7 @@ pub const MAX_SECTION_BYTES: usize = 4 * 1024 * 1024;
 /// Longest save name, in characters.
 pub const MAX_NAME_CHARS: usize = 60;
 
-mod error;
+use opts_save_error as error;
 mod names;
 pub use error::SaveError;
 pub use names::{clean_name, slug, valid_id};

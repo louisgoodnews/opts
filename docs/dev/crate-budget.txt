@@ -33,3 +33,10 @@ opts-omsi-binary 3135  # new 2026-11-24: the .o3d and .x mesh readers split out 
 opts-omsi-vehicles 4323  # new 2026-11-24: the vehicle readers, the setvar catalogue and the light reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-map 4139  # new 2026-11-24: the map manifest, tile, terrain and water readers and the chrono overlay split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-scenery 3140  # new 2026-11-24: the .sco, .sli and crossing readers and the train consist reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
+opts-hud-widgets 439  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit; re-measure before the owner's review): the HUD widget vocabulary and registry split out of opts-game
+opts-hud-keys 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the HUD message key tables split out of opts-game
+opts-shell-keys 268  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the shell message key tables split out of opts-game
+opts-minimap-zoom-canvas 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the mini map zoom filter and pixel canvas split out of opts-game
+opts-save-error 58  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the save container error type split out of opts-game
+opts-load-problem 55  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the load problem type split out of opts-game
+opts-vehicle-gears 45  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the AI engine gear model split out of opts-game

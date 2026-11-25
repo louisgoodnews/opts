@@ -1,0 +1,16 @@
+[package]
+name = "opts-hud-widgets"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The HUD widget vocabulary: slots, vehicle kinds, widget descriptors and the built-in registry, split out of opts-game (ISS-062)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-bevy = { workspace = true }
+serde = { workspace = true }
