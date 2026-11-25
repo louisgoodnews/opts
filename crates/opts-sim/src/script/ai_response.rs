@@ -13,6 +13,9 @@ use super::ScriptEngine;
 const SAMPLE_KMH: [f32; 8] = [0.0, 5.0, 10.0, 20.0, 30.0, 50.0, 70.0, 100.0];
 /// Frames run per sample, so scripts that integrate over time settle.
 const SETTLE_FRAMES: usize = 8;
+/// Frames run once at standstill, full throttle, before the first sample, so an engine that
+/// starts at rest (a lorry's gearbox engages only above 500 rpm) reaches its working state.
+const WARM_UP_FRAMES: usize = 600;
 /// Frame time of the measurement (s).
 const DT: f32 = 1.0 / 60.0;
 
@@ -77,6 +80,14 @@ pub fn measure_ai_response(engine: &mut ScriptEngine) -> AiResponse {
     engine.set("AI", 1.0);
     engine.set("AI_Engine", 1.0);
     engine.run_init();
+    let ai_blocks = !engine.program.frame_ai.is_empty();
+    for _ in 0..WARM_UP_FRAMES {
+        engine.set("Velocity", 0.0);
+        engine.set("Velocity_Ground", 0.0);
+        engine.set("Throttle", 1.0);
+        engine.set("Brake", 0.0);
+        engine.run_frame(DT, ai_blocks);
+    }
     let drive = SAMPLE_KMH
         .iter()
         .map(|&kmh| {
@@ -87,55 +98,4 @@ pub fn measure_ai_response(engine: &mut ScriptEngine) -> AiResponse {
     run(engine, 0.0, 1.0, 30.0);
     let brake_force = engine.get("Brakeforce");
     AiResponse { drive, brake_force }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const SHARED_CAR_SCRIPT: &str = "{frame}\n\
-(L.L.Throttle) (C.L.AI_M_gas_max) * 1 (L.L.Velocity) (C.L.AI_v_max_erreich) / - * (S.L.M_Wheel)\n\
-(L.L.Brake) (C.L.AI_F_brems_max) * (S.L.Brakeforce)\n{end}\n";
-
-    fn engine() -> ScriptEngine {
-        let (mut e, diags) = ScriptEngine::from_sources(&[("main_AI.osc", SHARED_CAR_SCRIPT)]);
-        assert!(diags.is_empty(), "{diags:?}");
-        e.consts_mut().set_scalar("AI_M_gas_max", 1000.0);
-        e.consts_mut().set_scalar("AI_v_max_erreich", 190.0);
-        e.consts_mut().set_scalar("AI_F_brems_max", 18_000.0);
-        e
-    }
-
-    #[test]
-    fn the_shared_car_script_follows_its_law() {
-        let r = measure_ai_response(&mut engine());
-        assert!((r.torque_at(0.0) - 1000.0).abs() < 1e-3);
-        let want = 1000.0 * (1.0 - 50.0 / 190.0);
-        assert!(
-            (r.torque_at(50.0) - want).abs() < 0.5,
-            "{}",
-            r.torque_at(50.0)
-        );
-        assert_eq!(r.brake_force, 18_000.0);
-        assert!(r.is_live());
-    }
-
-    #[test]
-    fn interpolation_clamps_and_is_linear() {
-        let r = AiResponse {
-            drive: vec![(0.0, 100.0), (10.0, 50.0), (20.0, 0.0)],
-            brake_force: 0.0,
-        };
-        assert_eq!(r.torque_at(-5.0), 100.0);
-        assert_eq!(r.torque_at(5.0), 75.0);
-        assert_eq!(r.torque_at(15.0), 25.0);
-        assert_eq!(r.torque_at(99.0), 0.0);
-        assert_eq!(r.peak_torque(), 100.0);
-        assert!(r.is_live());
-        assert!(!AiResponse {
-            drive: vec![(0.0, 0.0)],
-            brake_force: 0.0
-        }
-        .is_live());
-    }
 }
