@@ -1,5 +1,6 @@
 //! Constructing a vehicle simulation: the standard bus and the one from a manifest, and applying its spec.
 
+use super::aids::DriverAids;
 use super::axle::AxleState;
 use super::brakes::BrakeSystem;
 use super::chassis::ChassisState;
@@ -65,6 +66,7 @@ impl VehicleSimulation {
             teleports: 0,
             passenger_mass_kg: 0.0,
             unit_passenger_mass_kg: Vec::new(),
+            driver_aids: DriverAids::default(),
             road_friction: ROAD_FRICTION,
             fuel: None,
             surface: VehicleSurface::default(),
@@ -117,6 +119,7 @@ impl VehicleSimulation {
             teleports: 0,
             passenger_mass_kg: 0.0,
             unit_passenger_mass_kg: Vec::new(),
+            driver_aids: DriverAids::default(),
             road_friction: ROAD_FRICTION,
             fuel: None,
             surface: VehicleSurface::default(),
