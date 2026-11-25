@@ -98,6 +98,7 @@ members = [
     "crates/opts-repaints",
     "crates/opts-app-args",
     "crates/opts-catalogue-service",
+    "crates/opts-traffic-schedule",
     "crates/opts-sim-pedestrian",
     "crates/opts-tools",
     "crates/opts-traffic",
@@ -194,6 +195,7 @@ opts-new-game-types = { path = "crates/opts-new-game-types" }
 opts-repaints = { path = "crates/opts-repaints" }
 opts-app-args = { path = "crates/opts-app-args" }
 opts-catalogue-service = { path = "crates/opts-catalogue-service" }
+opts-traffic-schedule = { path = "crates/opts-traffic-schedule" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }

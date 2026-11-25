@@ -102,6 +102,7 @@ graph TD
         opts_repaints["opts-repaints<br/>• Vehicle repaint discovery for the new-game vehicle tab<br/>• .bus, model.cfg and .cti chain as pure file reads<br/>• Over opts-bevy, opts-core, opts-new-game-types and opts-steam"]:::app
         opts_app_args["opts-app-args<br/>• AppArgs: the parsed command line as a Bevy resource<br/>• Bevy resource over opts-cli"]:::app
         opts_catalogue_service["opts-catalogue-service<br/>• Startup of the SQLite catalogue and menu lists<br/>• Background discovery thread and selection reconciliation<br/>• Bevy systems over opts-catalogue, opts-steam, opts-repaints and opts-game-state"]:::app
+        opts_traffic_schedule["opts-traffic-schedule<br/>• Timetable logic for scheduled vehicles<br/>• Which runs are on the road at a clock time, and where a run is along its stops<br/>• Pure functions over opts-core"]:::app
         opts_pause_report["opts-pause-report<br/>• Report dialog state for the pause menu<br/>• Bevy state over opts-bevy"]:::app
         opts_hud_widgets["opts-hud-widgets<br/>• HUD widget slots, vehicle kinds and descriptors<br/>• Built-in widget registry<br/>• Bevy CameraMode via opts-bevy"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
@@ -191,6 +192,8 @@ graph TD
     opts_game --> opts_cli
     opts_game --> opts_collision
     opts_game --> opts_core
+    opts_game --> opts_traffic_schedule
+    opts_traffic_schedule --> opts_core
     opts_fleet_number --> opts_bevy
     opts_game --> opts_exhaust
     opts_game --> opts_fleet_number
@@ -347,7 +350,7 @@ graph TD
 | **`opts-fleet-number`** | L3 | Vehicle fleet number drawn from the `.org` registration list of a `.bus` with the script seed (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy`, `opts-core` | `opts-game` | Bevy Engine (via `opts-bevy`) |
 | **`opts-mesh-dir`** | L3 | Base folder of a vehicle's mesh paths: the config folder or the model folder, by the meshes each resolves (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy`, `opts-core` | `opts-game` | Bevy Engine (via `opts-bevy`) |
 | **`opts-world-session`** | L3 | Resolved content paths and the menu's request for a world session (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine (via `opts-bevy`) |
-| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-fleet-number`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-mesh-dir`, `opts-road-surf`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic`, `opts-world-session` | `opts`, `opts-benchmark` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-fleet-number`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-mesh-dir`, `opts-road-surf`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic`, `opts-traffic-schedule`, `opts-world-session` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game`, `opts-pause-report`, `opts-shell-calendar` | Bevy Engine |
 | **`opts-shell-calendar`** | L3 | Date and time steppers, their arithmetic and the frame of a choice chip (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy`, `opts-gui` | `opts-game` | Bevy UI |
 | **`opts-shell-dialog`** | L3 | Confirmation dialogs: the spec, the card and the answer systems (split out of `opts-game`, ISS-068 stage 1) | `opts-gui` | `opts-game` | Bevy UI |
@@ -360,6 +363,7 @@ graph TD
 | **`opts-repaints`** | L3 | Vehicle repaint discovery for the new-game vehicle tab: the `.bus`, `model.cfg` and `.cti` chain as pure file reads (split out of `opts-game`, ISS-064 stage 3) | `opts-bevy`, `opts-core`, `opts-new-game-types`, `opts-steam` | `opts-game` | Pure Rust |
 | **`opts-app-args`** | L3 | The parsed command line as a Bevy resource, `AppArgs` (split out of `opts-game`'s `app` module, ISS-064 stage 3) | `opts-cli` (external: `bevy`) | `opts-game` | Bevy Engine |
 | **`opts-catalogue-service`** | L3 | Background discovery and menu lists backed by the SQLite catalogue: startup, the discovery thread and selection reconciliation (split out of `opts-game`, ISS-064 stage 3) | `opts-app-args`, `opts-bevy`, `opts-catalogue`, `opts-game-state`, `opts-gui`, `opts-new-game-types`, `opts-repaints`, `opts-settings-io`, `opts-steam` (external: `bevy`) | `opts-game` | Bevy Engine |
+| **`opts-traffic-schedule`** | L3 | Timetable logic for scheduled vehicles: which runs are on the road at a clock time and where a run is along its stops (split out of `opts-game`, ISS-064 stage 3) | `opts-core` | `opts-game` | Pure Rust |
 | **`opts-pause-report`** | L3 | Report dialog state helper for the pause menu (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-pause-report`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-shell-icons`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-hud-widgets`** | L3 | HUD widget vocabulary: slots, vehicle kinds, widget descriptors and the built-in registry (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | `opts-bevy` (external: `serde`) | `opts-game` | Bevy Engine |

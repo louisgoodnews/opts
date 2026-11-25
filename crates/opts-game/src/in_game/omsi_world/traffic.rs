@@ -186,7 +186,7 @@ mod spawn;
 pub use spawn::spawn_traffic;
 
 mod ai_script;
-mod run_schedule;
+pub use opts_traffic_schedule as run_schedule;
 pub use ai_script::step_ai_scripts;
 pub(super) use ai_script::{
     engine_for, next_doors, Doors, DOORS_OPEN_SHARE, FRAME_S, SCRIPT_RADIUS_M,

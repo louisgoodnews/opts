@@ -51,6 +51,7 @@ opts-new-game-types = { workspace = true }
 opts-repaints = { workspace = true }
 opts-app-args = { workspace = true }
 opts-catalogue-service = { workspace = true }
+opts-traffic-schedule = { workspace = true }
 opts-pause-report = { workspace = true }
 opts-hud-keys = { workspace = true }
 opts-hud-widgets = { workspace = true }

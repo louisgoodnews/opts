@@ -1,0 +1,15 @@
+[package]
+name = "opts-traffic-schedule"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Timetable logic for scheduled vehicles: runs on the road at a clock time and a run's place along its stops (pure Rust, split out of opts-game, ISS-064 stage 3)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-core = { workspace = true }
