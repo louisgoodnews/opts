@@ -16,6 +16,7 @@ impl Plugin for OptsVehiclePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::vehicle_remote::RemoteControls>()
             .init_resource::<crate::mouse_driving::MouseDriving>()
+            .init_resource::<crate::gamepad_input::PadBindings>()
             .add_systems(FixedUpdate, vehicle_physics_step_system)
             .add_systems(
                 Update,
@@ -30,6 +31,15 @@ impl Plugin for OptsVehiclePlugin {
                     )
                         .chain()
                         .after(vehicle_input_system)
+                        .run_if(crate::camera::vehicle_accepts_input)
+                        .run_if(crate::reporting::not_modal_active),
+                    // The pad axes and buttons follow the mouse: an axis past its dead zone wins.
+                    (
+                        crate::gamepad_input::pad_driving_system,
+                        crate::gamepad_input::pad_button_system,
+                    )
+                        .after(vehicle_input_system)
+                        .after(crate::mouse_driving::mouse_driving_axes)
                         .run_if(crate::camera::vehicle_accepts_input)
                         .run_if(crate::reporting::not_modal_active),
                     crate::mouse_driving::mouse_driving_gate_closed

@@ -31,6 +31,7 @@ pub mod coords;
 pub mod door_camera;
 pub mod environment;
 pub mod free_texture;
+pub mod gamepad_input;
 pub mod glass;
 pub use opts_bevy_ground as ground;
 pub mod ground_material;

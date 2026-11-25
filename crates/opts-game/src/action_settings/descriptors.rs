@@ -102,5 +102,6 @@ pub fn descriptors() -> Vec<D> {
                     .keywords(&["key", "keyboard", "binding", "reset", "default"])
             }),
     );
+    v.extend(super::pad::descriptors());
     v
 }
