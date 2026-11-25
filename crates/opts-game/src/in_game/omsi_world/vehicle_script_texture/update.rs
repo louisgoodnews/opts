@@ -59,7 +59,8 @@ pub fn update_vehicle_script_textures(
                         if let Some(map) = target.colour_map.as_ref().filter(|m| m.fits(w, h)) {
                             // A screen: the picture's colours under the canvas's alpha.
                             map.paint(&mut data, w, h);
-                            *img = opts_bevy::text_texture::text_image(w, h, data);
+                            let next = opts_bevy::text_texture::text_image(w, h, data);
+                            *img = opts_bevy::text_texture::redrawn_as(&img, next);
                             canvas.clear_dirty();
                             continue;
                         }
@@ -74,19 +75,21 @@ pub fn update_vehicle_script_textures(
                             // An LED canvas is a grid of small bright dots: a mip chain would
                             // average them into the dark between them and the board would fade
                             // out with distance. Linear sampling of the full size keeps them lit.
-                            *img = opts_bevy::text_texture::led_image(
+                            let next = opts_bevy::text_texture::led_image(
                                 canvas.width(),
                                 canvas.height(),
                                 data,
                             );
+                            *img = opts_bevy::text_texture::redrawn_as(&img, next);
                             canvas.clear_dirty();
                             continue;
                         }
-                        *img = opts_bevy::text_texture::text_image(
+                        let next = opts_bevy::text_texture::text_image(
                             canvas.width(),
                             canvas.height(),
                             data,
                         );
+                        *img = opts_bevy::text_texture::redrawn_as(&img, next);
                     }
                     canvas.clear_dirty();
                 }

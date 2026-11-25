@@ -9,6 +9,7 @@ use opts_core::formats::vehicles::model::ModelConfig;
 
 fn over(m: &opts_core::formats::vehicles::model::ModelMaterial) -> TextureOverride {
     TextureOverride {
+        clamp: false,
         slot: m.slot_index as usize,
         texture: m.texture.clone(),
         alpha: m.alpha_mode,

@@ -62,6 +62,28 @@ fn clamp_sampler(image: &mut bevy::image::Image) {
     }
 }
 
+/// Whether the image's sampler stops at its edges (`[matl_texadress_clamp]`).
+fn is_clamped(image: &bevy::image::Image) -> bool {
+    use bevy::image::{ImageAddressMode, ImageSampler};
+    matches!(
+        &image.sampler,
+        ImageSampler::Descriptor(d) if d.address_mode_u == ImageAddressMode::ClampToEdge
+    )
+}
+
+/// `next`, the picture that replaces `old` in place, with `old`'s addressing. A redraw swaps the
+/// image for one whose sampler wraps, which undid `[matl_texadress_clamp]` on the first redraw:
+/// the fleet number of the MAN SD200 tiled up its mesh.
+#[must_use]
+pub fn redrawn_as(old: &bevy::image::Image, mut next: bevy::image::Image) -> bevy::image::Image {
+    let clamped = is_clamped(old);
+    tracing::debug!(clamped, "redrawn image keeps its addressing");
+    if clamped {
+        clamp_sampler(&mut next);
+    }
+    next
+}
+
 /// Images replaced in place this frame (text textures, script canvases) whose materials must be
 /// bound to the new GPU texture.
 #[derive(Resource, Default)]
@@ -164,6 +186,23 @@ mod tests {
         assert!(modified.contains(&shows.id()));
         assert!(!modified.contains(&unrelated.id()));
         assert!(app.world().resource::<RedrawnImages>().0.is_empty());
+    }
+
+    /// A redrawn clamped image stays clamped; a repeating one stays repeating.
+    #[test]
+    fn redrawn_image_keeps_its_addressing() {
+        let clamped = text_image_addressed(4, 4, vec![0; 64], true);
+        let plain = text_image(4, 4, vec![0; 64]);
+        assert!(is_clamped(&clamped));
+        assert!(!is_clamped(&plain));
+        assert!(is_clamped(&redrawn_as(
+            &clamped,
+            text_image(4, 4, vec![9; 64])
+        )));
+        assert!(!is_clamped(&redrawn_as(
+            &plain,
+            text_image(4, 4, vec![9; 64])
+        )));
     }
 
     /// A text image with a mip chain is not copied into its old GPU texture (which would fill

@@ -50,6 +50,14 @@ impl ContentLoader<'_> {
                 }
             }
         }
+        // A bitmap of a clamped material (`[matl_texadress_clamp]`) is sampled at its edges; a
+        // ready-made image (rendered text) was already made that way.
+        if let (Some(o), Some(h)) = (over, tex.clone()) {
+            if o.clamp && o.image.is_none() {
+                tex = Some(self.clamped_variant(&h));
+            }
+        }
+        tracing::debug!(texture = ?tex_name, clamp = over.is_some_and(|o| o.clamp), text_image = over.is_some_and(|o| o.image.is_some()), found = tex.is_some(), "slot texture resolved");
         (tex_name, tex)
     }
 

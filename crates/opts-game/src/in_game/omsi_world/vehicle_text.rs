@@ -86,8 +86,10 @@ pub fn update_vehicle_text_textures(
         // of the first (blank) image empty, so text drawn small (the HH109's EFAD printer: a
         // 1024 × 64 line on a few centimetres of LCD) disappeared.
         if let (Some(data), Some(mut image)) = (data, images.get_mut(&t.image)) {
-            *image = opts_bevy::text_texture::text_image(t.spec.width, t.spec.height, data);
+            let next = opts_bevy::text_texture::text_image(t.spec.width, t.spec.height, data);
+            *image = opts_bevy::text_texture::redrawn_as(&image, next);
             redrawn.0.insert(t.image.id());
+            tracing::debug!(variable = %t.variable, chars = text.len(), "vehicle text texture redrawn");
         }
         t.shown = Some(text);
     }

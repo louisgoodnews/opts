@@ -43,14 +43,12 @@ pub(super) fn script_image_for(
         Entity,
         Entity,
     ),
-    (tex_dirs, script_images, i): (
-        &[PathBuf],
-        &mut std::collections::HashMap<usize, Handle<Image>>,
-        usize,
-    ),
+    (tex_dirs, script_images, i): (&[PathBuf], &mut super::ImageMap, usize),
 ) -> Option<Handle<Image>> {
     let script_defs = &job.vehicle_script_defs;
-    if let Some(h) = script_images.get(&i) {
+    // Keyed by clamp too: a material with `[matl_texadress_clamp]` gets its own canvas image.
+    let clamp = m.clamp_addressing;
+    if let Some(h) = script_images.get(&(i, clamp)) {
         return Some(h.clone());
     }
     let Some(def) = script_defs.get(i) else {
@@ -80,7 +78,10 @@ pub(super) fn script_image_for(
             p[..3].copy_from_slice(&rgb);
         }
     }
-    let handle = images.add(opts_bevy::text_texture::text_image(w, h, blank));
+    tracing::debug!(mesh = %mesh_def.path, index = i, clamp, tint = tint.is_some(), "script texture image made");
+    let handle = images.add(opts_bevy::text_texture::text_image_addressed(
+        w, h, blank, clamp,
+    ));
     let mut component =
         VehicleScriptTexture::new(i, job.vehicle_script_textures.clone(), handle.clone());
     if let Some(rgb) = tint {
@@ -98,6 +99,6 @@ pub(super) fn script_image_for(
         Name::new(format!("script_texture_{i}")),
         ChildOf(root),
     ));
-    script_images.insert(i, handle.clone());
+    script_images.insert((i, clamp), handle.clone());
     Some(handle)
 }

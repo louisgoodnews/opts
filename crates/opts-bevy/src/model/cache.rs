@@ -30,6 +30,8 @@ pub struct ContentCache {
     pub(crate) textures: HashMap<PathBuf, Option<Handle<Image>>>,
     /// Textures without their alpha channel, by source image (see [`ContentLoader::opaque_variant`]).
     pub(crate) opaque: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
+    /// Textures sampled at their edges (`[matl_texadress_clamp]`), by source image.
+    pub(crate) clamped: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
     /// Base texture composed with its transparency map (`[matl_transmap]`): the composed
     /// picture, and its glass pass when the composition is split. The composition decodes both
     /// images and builds a new mip chain (tens of milliseconds); every vehicle of a model family
