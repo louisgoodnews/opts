@@ -67,7 +67,7 @@ pub(super) fn load_unit(
         max_alpha_deg: 52.5,
         repaints,
         reversed: false,
-        sound: crate::vehicle_sound::ai_sound_set(job, &manifest, &dir, path),
+        sound: job.sound().ai_sound_set(job, &manifest, &dir, path),
         front_door_y: front_door_y(job, &manifest, &dir),
     };
     Ok((unit, manifest, dir))

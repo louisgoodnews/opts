@@ -64,7 +64,8 @@ fn spawn_root(
         mesh_parts,
         template,
     );
-    crate::scenery_sound::attach(job, commands, parent, sco, sco_dir);
+    job.sound()
+        .attach_scenery(job, commands, parent, sco, sco_dir);
     stats.objects_loaded += 1;
 }
 

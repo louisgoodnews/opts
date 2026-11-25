@@ -96,7 +96,7 @@ pub(super) fn run_vehicle(
     }
     for _ in engine.drain_diagnostics() {}
     // The events the scripts raise (the door sounds `ev_DoorTrigger…`) wait for the sound layer
-    // like a player vehicle's do ([`crate::player_sound`]).
+    // like a player vehicle's do (the player sound layer in `opts-game`).
     for e in engine.drain_events() {
         if raised.len() < 64 {
             raised.push(e.name);

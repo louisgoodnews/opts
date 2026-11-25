@@ -47,7 +47,8 @@ pub(super) fn route_scheduled(
             (seed, head_setvars),
         );
         if let (true, Some(set)) = (scripted, sound) {
-            crate::player_sound::attach_defs(commands, root, None, &set.scripted);
+            job.sound()
+                .attach_scripted_defs(commands, root, None, &set.scripted);
         }
         scripted_head = scripted;
     }

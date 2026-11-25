@@ -11,7 +11,8 @@ pub(super) fn attach_vehicle_parts(
     (script_seed, activate): (u64, bool),
 ) {
     attach_scripts(job, commands, root, manifest, bus_dir, script_seed, None);
-    crate::player_sound::attach(job, commands, root, manifest, bus_dir);
+    job.sound()
+        .attach_player(job, commands, root, manifest, bus_dir);
     doors::attach_door_points(job, commands, root, manifest, bus_dir);
     if activate {
         passengers::attach_passengers(job, commands, root, manifest, bus_dir, script_seed);

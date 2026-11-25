@@ -78,7 +78,9 @@ pub fn update_ai_variables(
         &mut opts_bevy::AiVariables,
         Option<&mut crate::sound_hooks::AiEvents>,
     )>,
+    sound: Option<Res<crate::sound_hooks::SoundHooksRes>>,
 ) {
+    let sound = sound.map(|s| s.0.clone());
     let dt = time.delta_secs().min(0.2);
     let brightness = clock.as_ref().map(|c| c.envir_brightness());
     let weather = clock.map(|c| (c.temperature_c, c.weather));
@@ -130,15 +132,17 @@ pub fn update_ai_variables(
         // Sound variables (M-0140): speed and pedals, the engine speed of a gear model, the wheel
         // speeds and the road state.
         let wet = weather.as_ref().is_some_and(|(_, w)| w.precip_rate > 0.05);
-        crate::vehicle_sound::publish_sound_variables(
-            &mut vars,
-            agent.speed as f32,
-            agent.accel as f32,
-            command.brake,
-            v.wheel_radius,
-            wet,
-            agent.params.class != opts_traffic::VehicleClass::Car,
-        );
+        if let Some(hooks) = &sound {
+            hooks.publish_sound_variables(
+                &mut vars,
+                agent.speed as f32,
+                agent.accel as f32,
+                command.brake,
+                v.wheel_radius,
+                wet,
+                agent.params.class != opts_traffic::VehicleClass::Car,
+            );
+        }
         for i in 0..4 {
             vars.set(&format!("ai_pax{}", i + 1), f32::from(v.pax >> i & 1));
         }

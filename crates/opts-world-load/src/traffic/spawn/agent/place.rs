@@ -102,8 +102,10 @@ pub(super) fn finish_spawned(
         (speed, params, traits, measured, fallbacks, entities.len()),
         (origin, trace_frame),
     );
+    let hooks = job.sound();
     attach_agent(
         commands,
+        hooks.as_ref(),
         (root, entities),
         (id, rng_pax),
         AgentLook {

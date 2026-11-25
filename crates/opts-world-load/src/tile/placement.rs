@@ -162,7 +162,8 @@ pub(super) fn no_mesh_parts(
             mesh_parts,
             template,
         );
-        crate::scenery_sound::attach(job, commands, parent, sco, sco_dir);
+        job.sound()
+            .attach_scenery(job, commands, parent, sco, sco_dir);
         stats.objects_loaded += 1;
         return;
     }

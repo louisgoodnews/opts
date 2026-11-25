@@ -36,7 +36,8 @@ pub(super) fn attach_unit_extras(
         turned: part.turned,
     });
     super::super::doors::attach_unit_door_points(job, commands, root, seg, manifest, dir);
-    crate::player_sound::attach_unit(job, commands, seg, Some(st.owner), manifest, dir);
+    job.sound()
+        .attach_player_unit(job, commands, seg, Some(st.owner), manifest, dir);
     super::super::passengers::attach_unit(
         job,
         commands,

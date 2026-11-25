@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use opts_traffic::Rng;
 
 use super::*;
+use crate::sound_hooks::SoundHooks;
 
 /// What the vehicle's body and wheels need to follow its agent.
 pub(super) struct AgentLook {
@@ -17,6 +18,7 @@ pub(super) struct AgentLook {
 /// The traffic components of the vehicle's root, its sounds and its trailing units.
 pub(super) fn attach_agent(
     commands: &mut Commands,
+    hooks: &dyn SoundHooks,
     (root, entities): (Entity, &[Entity]),
     (id, rng_pax): (AgentId, &mut Rng),
     look: AgentLook,
@@ -55,14 +57,14 @@ pub(super) fn attach_agent(
         },
         opts_bevy::AiVariables::default(),
     ));
-    crate::vehicle_sound::attach_ai(commands, root, sound);
+    hooks.attach_ai(commands, root, sound);
     for (set, &e) in unit_sounds.iter().zip(entities.iter().skip(1)) {
         let Some(set) = set else {
             continue;
         };
-        crate::vehicle_sound::attach_ai_unit(commands, e, Some(root), set);
+        hooks.attach_ai_unit(commands, e, Some(root), set);
         if scripted_head {
-            crate::player_sound::attach_defs(commands, e, Some(root), &set.scripted);
+            hooks.attach_scripted_defs(commands, e, Some(root), &set.scripted);
         }
     }
     if !chain.is_empty() {
