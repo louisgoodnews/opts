@@ -26,6 +26,7 @@ pub mod chrono;
 pub mod collision;
 pub mod consist_plan;
 pub mod crossing;
+pub mod ai_weather;
 pub mod dev_look;
 pub mod formation;
 pub mod ground;

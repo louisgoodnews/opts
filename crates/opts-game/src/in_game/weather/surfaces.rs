@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::reflections::{Wetness, WetnessHold};
-use opts_bevy::weather::{road_surface, surface_state_for, SurfaceState};
+use opts_bevy::weather::{road_surface, SurfaceState};
 use opts_bevy::{SessionEnvironment, WeatherEffects};
 use opts_sim::surface_grip::approach;
 
@@ -23,19 +23,9 @@ pub fn ground_wet(s: &SurfaceState) -> Vec4 {
     Vec4::new(s.wet, s.puddles, s.snow_ground, 0.0)
 }
 
-/// The surface state to show: dry when the effect is off.
-#[must_use]
-pub fn wanted_state(env: &SessionEnvironment, effects: &WeatherEffects) -> SurfaceState {
-    if effects.wet_ground {
-        surface_state_for(
-            env.conditions(),
-            effects.rain_factor(),
-            effects.snow_factor(),
-        )
-    } else {
-        SurfaceState::default()
-    }
-}
+/// The surface state to show: dry when the effect is off (the weather mapping is in
+/// `opts-world-load`, re-exported here).
+pub use opts_world_load::ai_weather::wanted_state;
 
 /// The wetness that follows `target` from `current` over `dt` seconds. It uses the grip's rate
 /// limit ([`opts_sim::surface_grip::approach`], at most 0.5 per second), so a shower starts and

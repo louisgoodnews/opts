@@ -47,7 +47,7 @@ fn retire_scheduled(
 pub fn move_traffic(
     time: Res<Time>,
     mut commands: Commands,
-    weather: crate::in_game::weather::grip::AiWeather,
+    weather: crate::ai_weather::AiWeather,
     mut state: ResMut<TrafficState>,
     mut sched: ResMut<ScheduledTraffic>,
     mut incidents: ResMut<super::IncidentQueue>,
