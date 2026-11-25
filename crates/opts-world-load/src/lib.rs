@@ -36,6 +36,7 @@ pub use opts_mesh_dir as mesh_dir;
 pub mod plate_surf;
 pub use opts_road_surf as road_surf;
 pub mod road_surf_load;
+pub mod passenger_hooks;
 pub mod pedestrians;
 pub mod rail;
 pub mod reload;

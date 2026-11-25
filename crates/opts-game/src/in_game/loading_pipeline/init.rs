@@ -26,6 +26,10 @@ fn resolve_trip(
 fn configure_job(env: &LoadEnv, job: &mut WorldLoadJob, no_vehicle: bool) {
     // The sound modules serve the load's calls through the hooks (ISS-064).
     job.set_sound_hooks(std::sync::Arc::new(crate::world_sound_hooks::GameSoundHooks));
+    // The passenger rig serves the load's attach and unit join through the hooks (ISS-064).
+    job.set_passenger_hooks(std::sync::Arc::new(
+        crate::world_passenger_hooks::GamePassengerHooks,
+    ));
     job.no_vehicle = no_vehicle;
     // The share of the parking bays that hold a vehicle (setting *Parked vehicles*).
     job.parked_permille = env

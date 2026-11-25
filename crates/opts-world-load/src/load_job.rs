@@ -75,6 +75,9 @@ pub struct WorldLoadJob {
     pub(super) sound_cfgs: HashMap<PathBuf, Option<Arc<opts_core::formats::sound::SoundConfig>>>,
     /// The sound layer of `opts-game` the load calls (ISS-064); set by `set_sound_hooks`.
     pub(super) sound_hooks: Arc<dyn crate::sound_hooks::SoundHooks>,
+    /// The passenger rig of `opts-game` the load attaches and joins (ISS-064); set by
+    /// `set_passenger_hooks`.
+    pub(super) passenger_hooks: Arc<dyn crate::passenger_hooks::PassengerHooks>,
     /// `[crossing_heightdeformation]` base surfaces by file.
     pub(super) crossing_bases:
         HashMap<PathBuf, Option<Arc<opts_core::formats::scenery::BaseSurface>>>,
