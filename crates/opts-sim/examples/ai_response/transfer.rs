@@ -13,6 +13,19 @@ use opts_sim::script::{load_vehicle_scripts, AiResponse, ScriptEngine};
 
 use super::find_ci;
 
+/// Writes the vehicles that keep their script to the file named by `FALLBACK`, if set.
+pub fn write_fallback(counts: &super::Counts) {
+    if let Some(path) = std::env::var_os("FALLBACK") {
+        let list: String = counts.fallback.iter().map(|n| format!("{n}\n")).collect();
+        std::fs::write(&path, list).expect("write the fallback list");
+        println!(
+            "fallback list: {} vehicles keep their script, written to {}",
+            counts.fallback.len(),
+            path.to_string_lossy()
+        );
+    }
+}
+
 /// Mass (kg) of the transfer test: the path is recorded at the reference mass and run at this one.
 const OTHER_MASS_KG: f32 = 8_000.0;
 
@@ -92,4 +105,12 @@ pub fn transfer_check(
         _ => Some(false),
     };
     (close(by_path), close(by_table))
+}
+
+pub fn tally(c: &mut [usize; 3], ok: Option<bool>) {
+    match ok {
+        Some(true) => c[0] += 1,
+        Some(false) => c[1] += 1,
+        None => c[2] += 1,
+    }
 }

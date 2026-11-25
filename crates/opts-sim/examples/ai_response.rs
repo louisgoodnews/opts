@@ -31,6 +31,8 @@ struct Counts {
     /// Transfer test: [agree, disagree, stall in both] for the path and for the sampled table.
     path: [usize; 3],
     table: [usize; 3],
+    /// Vehicles that keep their script: they fail the agreement or the path transfer.
+    fallback: std::collections::BTreeSet<String>,
 }
 
 fn evaluate_vehicle(
@@ -62,8 +64,11 @@ fn evaluate_vehicle(
     }
     if std::env::var_os("TRANSFER").is_some() {
         let (by_path, by_table) = transfer::transfer_check(bus, &dir, root, &r);
-        tally(&mut counts.path, by_path);
-        tally(&mut counts.table, by_table);
+        transfer::tally(&mut counts.path, by_path);
+        transfer::tally(&mut counts.table, by_table);
+        if by_path == Some(false) {
+            counts.fallback.insert(vehicle_name.to_string());
+        }
         if show && by_path == Some(false) {
             println!("TRANSFER  {vehicle_name} path disagrees at {} kg", 8000);
         }
@@ -137,6 +142,7 @@ fn main() {
         "agreement on time to 50 km/h within {} %: {} agree, {} disagree, {} stall in both, {} no run",
         TOLERANCE * 100.0, counts.agree, counts.disagree, counts.stall, counts.no_run
     );
+    transfer::write_fallback(&counts);
     println!(
         "transfer to 8 t, [agree, disagree, stall]: path {:?}, sampled table {:?}",
         counts.path, counts.table
@@ -146,12 +152,4 @@ fn main() {
          {} follow the shared law, {} deviate",
         counts.total, counts.no_script, counts.dead, counts.follows, counts.deviates
     );
-}
-
-fn tally(c: &mut [usize; 3], ok: Option<bool>) {
-    match ok {
-        Some(true) => c[0] += 1,
-        Some(false) => c[1] += 1,
-        None => c[2] += 1,
-    }
 }

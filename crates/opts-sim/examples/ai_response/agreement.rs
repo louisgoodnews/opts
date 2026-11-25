@@ -87,6 +87,7 @@ pub fn check_agreement(
             None => counts.stall += 1,
             Some(_) => {
                 counts.disagree += 1;
+                counts.fallback.insert(name.to_string());
                 if show {
                     println!("NORUN     {name} (table reaches 50 km/h, script does not)");
                 }
@@ -98,6 +99,7 @@ pub fn check_agreement(
         Some((t, _)) if (t - script.0).abs() <= TOLERANCE * script.0 => counts.agree += 1,
         other => {
             counts.disagree += 1;
+            counts.fallback.insert(name.to_string());
             if show {
                 println!(
                     "DISAGREE  {name} | script {:.1} s, table {:?}",
