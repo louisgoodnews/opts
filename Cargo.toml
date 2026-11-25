@@ -55,6 +55,8 @@ members = [
     "crates/opts-hardware",
     "crates/opts-mesh-dir",
     "crates/opts-road-surf",
+    "crates/opts-vehicle-script-texture",
+    "crates/opts-world-stats",
     "crates/opts-world-session",
     "crates/opts-importer",
     "crates/opts-l10n",
@@ -155,6 +157,8 @@ opts-exhaust = { path = "crates/opts-exhaust" }
 opts-fleet-number = { path = "crates/opts-fleet-number" }
 opts-mesh-dir = { path = "crates/opts-mesh-dir" }
 opts-road-surf = { path = "crates/opts-road-surf" }
+opts-vehicle-script-texture = { path = "crates/opts-vehicle-script-texture" }
+opts-world-stats = { path = "crates/opts-world-stats" }
 opts-world-session = { path = "crates/opts-world-session" }
 opts-gui = { path = "crates/opts-gui" }
 opts-game-state = { path = "crates/opts-game-state" }

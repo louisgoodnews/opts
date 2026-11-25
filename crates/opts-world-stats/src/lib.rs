@@ -1,6 +1,7 @@
 //! Counters, positions and camera parameters of the loaded world.
 
-use super::*;
+use bevy::prelude::*;
+use opts_core::formats::map::TileGrid;
 
 /// Counters for the diagnostic overlay and the final report.
 /// OMSI-frame position (x east, y north, z up, metres) of something in the world.

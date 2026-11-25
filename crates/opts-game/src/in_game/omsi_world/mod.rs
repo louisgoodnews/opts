@@ -56,7 +56,7 @@ pub(crate) use traffic::line_runs_on;
 pub(crate) use traffic::DEFAULT_TRAFFIC_BASELINE;
 mod trees;
 mod vehicle;
-pub mod vehicle_script_texture;
+pub use opts_vehicle_script_texture as vehicle_script_texture;
 mod vehicle_text;
 mod water;
 
@@ -108,7 +108,7 @@ pub use water::warn_vehicle_in_water;
 
 mod load_job;
 use opts_world_session as session;
-mod stats;
+use opts_world_stats as stats;
 pub use load_job::{LoadAssets, WorldLoadJob};
 pub use session::{OmsiSessionConfig, SessionRequest};
 pub use stats::{CameraSetup, PositionReadout, WorldPos, WorldStats};

@@ -80,6 +80,8 @@ graph TD
         opts_bevy_season["opts-bevy-season<br/>• Season state and snow cover folders<br/>• No dependencies · Zero Bevy"]:::bridge
         opts_bevy_texture_sentinel["opts-bevy-texture-sentinel<br/>• Benchmark-only missing-texture sentinel<br/>• Bevy-facing leaf"]:::bridge
         opts_road_surf["opts-road-surf<br/>• Road-texture unevenness: .surf height maps and texture strips<br/>• Synthetic roughness per surface type<br/>• No Bevy"]:::bridge
+        opts_world_stats["opts-world-stats<br/>• World counters, positions and camera setup<br/>• Bevy types, no I/O"]:::bridge
+        opts_vehicle_script_texture["opts-vehicle-script-texture<br/>• Script texture canvases and colour maps<br/>• Bevy types, no I/O"]:::bridge
     end
 
     %% Layer 3: Application Executables & Tools
@@ -130,6 +132,8 @@ graph TD
     opts_fleet_number --> opts_core
     opts_mesh_dir --> opts_core
     opts_road_surf --> opts_core
+    opts_world_stats --> opts_core
+    opts_vehicle_script_texture --> opts_core
     opts_exhaust --> opts_bevy
     opts_exhaust --> opts_sim
     opts_mesh_dir --> opts_bevy
@@ -159,6 +163,8 @@ graph TD
     opts_game --> opts_map_advice
     opts_game --> opts_mesh_dir
     opts_game --> opts_road_surf
+    opts_game --> opts_world_stats
+    opts_game --> opts_vehicle_script_texture
     opts_game --> opts_pause_report
     opts_game --> opts_shell_calendar
     opts_game --> opts_shell_dialog
@@ -252,6 +258,8 @@ graph TD
 | **`opts-spatial-zones`** | L2 | Spatial zones (ceilings, tunnels) with their sampling, tracking and overlays, split out of `opts-bevy` (crate split) | *None* | `opts-bevy` | Bevy |
 | **`opts-stream-budget`** | L2 | Tile-streaming frame budget and prioritisation (M-0089): wanted and evictable tiles, spreading and motion policy, split out of `opts-game` (crate split) | *None* | `opts-game` | Pure Rust |
 | **`opts-traffic-weather`** | L2 | Weather for AI drivers: grip and fog visibility change the car-following parameters, split out of `opts-traffic` (M-0117) | `opts-car-following` | `opts-traffic` | Pure Rust |
+| **`opts-world-stats`** | L2 | Counters, positions and camera setup of the loaded world, split out of `opts-game` omsi_world (ISS-067 stage 1) | `opts-core` | `opts-game` | Bevy Engine |
+| **`opts-vehicle-script-texture`** | L2 | Vehicle script texture canvases, colour maps and the per-frame GPU upload, split out of `opts-game` omsi_world (ISS-067 stage 1) | `opts-core` | `opts-game` | Bevy Engine |
 | **`opts-kinematic`** | L2 | Cheap kinematic acceleration of an AI vehicle from its measured drive torque over speed; the run-up law shared with the script census in `opts-sim` examples (M-0103) | *None* | *None* | Pure Rust |
 | **`opts-sim-passengers`** | L2 | The passengers of a vehicle: boarding through open doors, tickets, seats and standing places, getting off (split out of `opts-sim`, ISS-066 stage 1; [epic](../../dev/issues/ISS-066-epic-split-opts-sim.md)) | *None* | `opts-sim` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core`, `opts-sim-passengers` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
