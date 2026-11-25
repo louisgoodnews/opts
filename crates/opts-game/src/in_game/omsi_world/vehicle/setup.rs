@@ -91,7 +91,12 @@ pub(super) fn insert_vehicle_components(
             .insert(crate::viewpoints::ViewpointModel(model));
     }
     if activate {
-        commands.entity(root).insert(PlayerVehicle);
+        // ISS-012: the player vehicle is the zone subject, so zones.query reports its membership.
+        commands.entity(root).insert((
+            PlayerVehicle,
+            opts_bevy::spatial_zones::ZoneSubject,
+            opts_bevy::spatial_zones::ZoneMembership::default(),
+        ));
     }
     if let Some((size, centre)) = manifest.bounding_box {
         commands.entity(root).insert(super::super::PlayerBox(

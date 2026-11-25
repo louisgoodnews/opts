@@ -11,8 +11,8 @@
 //! * [`sampler`]: the 10 Hz system that tests each [`sampler::ZoneSubject`] against the zones and
 //!   emits the messages.
 //!
-//! The detector is the spline ceiling rule in [`ceiling`]; the tile loader does not yet feed it the
-//! placed splines, so no zone is built in the game yet. See the milestone page for what is open.
+//! The detector is the spline ceiling rule in [`ceiling`]. The game's tile loader feeds it the placed
+//! splines of each resident tile (ISS-012). The thresholds are the constants in [`ceiling`].
 
 use bevy::prelude::*;
 
