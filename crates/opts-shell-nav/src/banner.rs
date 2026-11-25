@@ -12,7 +12,7 @@ use opts_gui::prelude::*;
 
 use super::frame::ShellBanners;
 use super::icons;
-use crate::app_state::AppState;
+use opts_game_state::app_state::AppState;
 
 /// How serious the problem is (colour and icon; the text always says what happened).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
