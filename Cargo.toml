@@ -75,6 +75,13 @@ members = [
     "crates/opts-gui",
     "crates/opts-logging",
     "crates/opts-map-advice",
+    "crates/opts-hud-keys",
+    "crates/opts-hud-widgets",
+    "crates/opts-load-problem",
+    "crates/opts-minimap-zoom-canvas",
+    "crates/opts-save-error",
+    "crates/opts-shell-keys",
+    "crates/opts-vehicle-gears",
     "crates/opts-sim",
     "crates/opts-sim-passengers",
     "crates/opts-shell-calendar",
@@ -152,6 +159,13 @@ opts-world-session = { path = "crates/opts-world-session" }
 opts-gui = { path = "crates/opts-gui" }
 opts-game-state = { path = "crates/opts-game-state" }
 opts-map-advice = { path = "crates/opts-map-advice" }
+opts-hud-keys = { path = "crates/opts-hud-keys" }
+opts-hud-widgets = { path = "crates/opts-hud-widgets" }
+opts-load-problem = { path = "crates/opts-load-problem" }
+opts-minimap-zoom-canvas = { path = "crates/opts-minimap-zoom-canvas" }
+opts-save-error = { path = "crates/opts-save-error" }
+opts-shell-keys = { path = "crates/opts-shell-keys" }
+opts-vehicle-gears = { path = "crates/opts-vehicle-gears" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }
 opts-sim-passengers = { path = "crates/opts-sim-passengers" }

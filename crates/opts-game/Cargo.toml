@@ -43,6 +43,13 @@ opts-shell-calendar = { workspace = true }
 opts-shell-dialog = { workspace = true }
 opts-shell-icons = { workspace = true }
 opts-pause-report = { workspace = true }
+opts-hud-keys = { workspace = true }
+opts-hud-widgets = { workspace = true }
+opts-load-problem = { workspace = true }
+opts-minimap-zoom-canvas = { workspace = true }
+opts-save-error = { workspace = true }
+opts-shell-keys = { workspace = true }
+opts-vehicle-gears = { workspace = true }
 
 # Bevy Engine
 bevy = { workspace = true }

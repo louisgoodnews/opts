@@ -12,7 +12,7 @@
 pub mod config;
 pub mod raster;
 pub mod source;
-pub mod zoom;
+pub use opts_minimap_zoom_canvas::zoom;
 
 #[cfg(test)]
 mod tests;

@@ -24,6 +24,12 @@ graph TD
         opts_hardware["opts-hardware<br/>• Privacy-respecting hardware probe<br/>• Default recommendations<br/>• No network, no identifiers"]:::foundation
         opts_shell_icons["opts-shell-icons<br/>• Material Icons codepoints of the shell<br/>• No dependencies · Zero Bevy"]:::foundation
         opts_collision["opts-collision<br/>• Oriented-box contact (separating axes)<br/>• Velocity response & spatial grid<br/>• Zero Bevy · Zero File I/O"]:::foundation
+        opts_hud_keys["opts-hud-keys<br/>• HUD message key tables<br/>• No dependencies · Zero Bevy"]:::foundation
+        opts_shell_keys["opts-shell-keys<br/>• Shell message key tables<br/>• No dependencies · Zero Bevy"]:::foundation
+        opts_minimap_zoom_canvas["opts-minimap-zoom-canvas<br/>• Mini map speed zoom filter<br/>• RGBA8 pixel canvas<br/>• No dependencies · Zero Bevy"]:::foundation
+        opts_save_error["opts-save-error<br/>• Save container error type<br/>• No dependencies · Zero Bevy"]:::foundation
+        opts_load_problem["opts-load-problem<br/>• Load problem type and severity table<br/>• No dependencies · Zero Bevy"]:::foundation
+        opts_vehicle_gears["opts-vehicle-gears<br/>• AI engine RPM and gear model<br/>• No dependencies · Zero Bevy"]:::foundation
     end
 
     %% Layer 1: Domain Core & Parsers
@@ -86,6 +92,7 @@ graph TD
         opts_shell_calendar["opts-shell-calendar<br/>• Date and time steppers and choice chips<br/>• Bevy UI over opts-bevy and opts-gui"]:::app
         opts_shell_dialog["opts-shell-dialog<br/>• Confirmation dialogs and their answer systems<br/>• Bevy UI over opts-gui"]:::app
         opts_pause_report["opts-pause-report<br/>• Report dialog state for the pause menu<br/>• Bevy state over opts-bevy"]:::app
+        opts_hud_widgets["opts-hud-widgets<br/>• HUD widget slots, vehicle kinds and descriptors<br/>• Built-in widget registry<br/>• Bevy CameraMode via opts-bevy"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
         opts_benchmark["opts-benchmark (Binary)<br/>• Scenery load verification<br/>• Off-screen worker & supervisor"]:::app
         opts_tools["opts-tools (Binary: opts)<br/>• CLI asset inspector<br/>• Mesh & texture converter<br/>• Dependency & format validator"]:::app
@@ -144,7 +151,10 @@ graph TD
     opts_game --> opts_fleet_number
     opts_game --> opts_gui
     opts_game --> opts_hardware
+    opts_game --> opts_hud_keys
+    opts_game --> opts_hud_widgets
     opts_game --> opts_l10n
+    opts_game --> opts_load_problem
     opts_game -.->|diagnostics| opts_logging
     opts_game --> opts_map_advice
     opts_game --> opts_mesh_dir
@@ -153,12 +163,17 @@ graph TD
     opts_game --> opts_shell_calendar
     opts_game --> opts_shell_dialog
     opts_game --> opts_shell_icons
+    opts_game --> opts_minimap_zoom_canvas
+    opts_game --> opts_save_error
+    opts_game --> opts_shell_keys
     opts_game --> opts_sim
     opts_game --> opts_steam
     opts_game --> opts_theme_files
     opts_game --> opts_traffic
     opts_game --> opts_world_session
+    opts_game --> opts_vehicle_gears
     opts_gui --> opts_l10n
+    opts_hud_widgets --> opts_bevy
     opts_importer --> opts_model
     opts_importer --> opts_omsi
     opts_model --> opts_types
@@ -206,6 +221,12 @@ graph TD
 | **`opts-logging`** | L0 | Structured diagnostics, subsystem log files, rotation, panic hook | *None* | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-cli`** | L0 | Control-protocol types and the command-line client that remote-controls a running game | *None* | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-collision`** | L0 | Planar oriented-box collision: separating-axis contact, velocity response and a spatial grid | *None* | `opts-game` | Pure Rust |
+| **`opts-hud-keys`** | L0 | HUD message key tables (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | *None* | `opts-game` | Pure Rust |
+| **`opts-shell-keys`** | L0 | Shell message key tables and their group modules (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |
+| **`opts-minimap-zoom-canvas`** | L0 | Mini map speed zoom filter and the RGBA8 pixel canvas (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |
+| **`opts-save-error`** | L0 | Save container error type (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |
+| **`opts-load-problem`** | L0 | Load problem type and its severity table (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |
+| **`opts-vehicle-gears`** | L0 | AI engine RPM and gear model of the vehicle sound stream (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |
 | **`opts-types`** | L1 | Shared geometry and tile-grid maths both the legacy readers and the native model need ([ADR-0014](../adr/0014-data-model-separation.md)) | *None* | `opts-model`, `opts-omsi-map` | Pure Rust |
 | **`opts-l10n`** | L1 | Localisation without the engine: Fluent-subset parser, language packs, checks, JSON interchange | *None* | `opts-core`, `opts-game`, `opts-gui`, `opts-tools` | Pure Rust |
 | **`opts-omsi`** | L1 | Facade over the OMSI reader crates (`opts-omsi-text`, `-binary`, `-vehicles`, `-map`, `-scenery`): re-exports them at the old `opts_omsi::formats::...` paths, so callers are unchanged ([plan](../../dev/crate-split-omsi.md)); a leaf adapter | `opts-omsi-binary`, `opts-omsi-map`, `opts-omsi-scenery`, `opts-omsi-text`, `opts-omsi-vehicles`, `opts-wav` | `opts-core`, `opts-importer` | Pure Rust |
@@ -276,6 +297,8 @@ graph TD
 | **`opts-shell-dialog`** | L3 | Confirmation dialogs: the spec, the card and the answer systems (split out of `opts-game`, ISS-068 stage 1) | `opts-gui` | `opts-game` | Bevy UI |
 | **`opts-pause-report`** | L3 | Report dialog state helper for the pause menu (split out of `opts-game`, ISS-068 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-pause-report`, `opts-shell-calendar`, `opts-shell-dialog`, `opts-shell-icons`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
+| **`opts-hud-widgets`** | L3 | HUD widget vocabulary: slots, vehicle kinds, widget descriptors and the built-in registry (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | `opts-bevy` (external: `serde`) | `opts-game` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-hud-keys`, `opts-hud-widgets`, `opts-l10n`, `opts-load-problem`, `opts-logging`, `opts-map-advice`, `opts-minimap-zoom-canvas`, `opts-save-error`, `opts-shell-keys`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic`, `opts-vehicle-gears` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |
 | **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core`, `opts-hardware`, `opts-l10n` | *None (executable root)* | CLI Tooling |
 | **`opts-benchmark`** | L3 | Scenery object load verification harness ([spec](scenery-benchmark.md)): an off-screen worker that rebuilds objects through the loader and a supervisor | `opts-bevy`, `opts-catalogue`, `opts-core`, `opts-game`, `opts-sim` | *None (executable root)* | Bevy |

@@ -4,7 +4,7 @@ use bevy::ecs::system::SystemParam;
 
 use super::*;
 
-mod gears;
+use opts_vehicle_gears as gears;
 mod variables;
 pub use gears::{ai_engine_rpm, ai_gear};
 pub(super) use variables::ai_loop;

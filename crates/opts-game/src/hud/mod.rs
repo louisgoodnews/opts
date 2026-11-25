@@ -16,7 +16,7 @@ pub mod door_camera;
 pub mod fade;
 pub mod fuel_hud;
 pub mod fullmap;
-pub mod keys;
+pub use opts_hud_keys as keys;
 pub mod layout;
 pub mod minimap;
 pub mod mouse_driving;
@@ -29,7 +29,7 @@ pub mod update;
 pub mod values;
 pub mod viewpoint;
 pub mod virtual_mirrors;
-pub mod widget;
+pub use opts_hud_widgets as widget;
 
 use bevy::prelude::*;
 

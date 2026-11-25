@@ -40,7 +40,7 @@ impl Canvas {
     }
 
     #[inline(always)]
-    pub(super) fn blend(&mut self, x: i32, y: i32, color: [u8; 4], coverage: f32) {
+    pub fn blend(&mut self, x: i32, y: i32, color: [u8; 4], coverage: f32) {
         if x < 0 || y < 0 || x >= self.size as i32 || y >= self.size as i32 || coverage <= 0.0 {
             return;
         }

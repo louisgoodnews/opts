@@ -63,3 +63,10 @@ opts-shell-calendar 345  # new 2026-11-25 (ISS-068 stage 1, estimate: non-blank 
 opts-shell-dialog 187  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the confirmation dialog spec, spawn and answer systems split out of opts-game's shell
 opts-shell-icons 19  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the shell's Material Icons codepoints split out of opts-game
 opts-pause-report 8  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the report dialog state helper split out of opts-game's pause module
+opts-hud-widgets 439  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit; re-measure before the owner's review): the HUD widget vocabulary and registry split out of opts-game
+opts-hud-keys 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the HUD message key tables split out of opts-game
+opts-shell-keys 268  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the shell message key tables split out of opts-game
+opts-minimap-zoom-canvas 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the mini map zoom filter and pixel canvas split out of opts-game
+opts-save-error 58  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the save container error type split out of opts-game
+opts-load-problem 55  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the load problem type split out of opts-game
+opts-vehicle-gears 45  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the AI engine gear model split out of opts-game

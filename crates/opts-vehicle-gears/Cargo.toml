@@ -1,0 +1,15 @@
+[package]
+name = "opts-vehicle-gears"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The AI engine RPM and gear model of the vehicle sound stream, split out of opts-game (ISS-062)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

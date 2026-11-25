@@ -1,0 +1,15 @@
+[package]
+name = "opts-load-problem"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The load problem type and its severity table, split out of opts-game (ISS-062)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

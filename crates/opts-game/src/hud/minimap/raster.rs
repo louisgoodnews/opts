@@ -6,7 +6,7 @@
 //! cut into chords of at least a few pixels. The budget is 1 ms for a frame (checked by a test
 //! and reported live by `hud.state`).
 
-mod canvas;
+use opts_minimap_zoom_canvas::canvas;
 mod lines;
 mod render;
 mod shapes;

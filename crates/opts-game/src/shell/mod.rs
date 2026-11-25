@@ -14,7 +14,7 @@ pub mod banner;
 pub mod esc;
 pub mod footer;
 pub mod frame;
-pub mod keys;
+pub use opts_shell_keys as keys;
 pub mod nav;
 pub mod notify;
 pub mod registry;
