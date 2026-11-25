@@ -13,4 +13,5 @@ workspace = true
 
 [dependencies]
 bevy = { workspace = true }
+opts-bevy = { workspace = true }
 opts-core = { workspace = true }

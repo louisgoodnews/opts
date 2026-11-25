@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 opts-bevy = { workspace = true }
+tracing = { workspace = true }
 opts-core = { workspace = true }
 opts-new-game-types = { workspace = true }
 opts-steam = { workspace = true }
