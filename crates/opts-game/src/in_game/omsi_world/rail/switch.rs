@@ -22,19 +22,6 @@ pub struct PointsAhead {
     pub chosen: Branch,
 }
 
-impl RailPlayer {
-    /// The player's train on its track, when it is placed.
-    #[must_use]
-    pub fn train(&self) -> Option<&Train> {
-        self.train.as_ref()
-    }
-
-    /// The player's train, to set the way at the next points.
-    pub fn train_mut(&mut self) -> Option<&mut Train> {
-        self.train.as_mut()
-    }
-}
-
 /// The way named by `id`.
 #[must_use]
 pub fn way_by_id(id: &str) -> Option<Branch> {

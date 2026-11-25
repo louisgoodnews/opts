@@ -5575,7 +5575,11 @@ dependencies = [
  "bevy",
  "chrono",
  "opts-bevy",
+ "opts-collision",
+ "opts-core",
  "opts-gui",
+ "opts-road-surf",
+ "opts-sim",
  "serde",
 ]
 

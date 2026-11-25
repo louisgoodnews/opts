@@ -2,33 +2,15 @@
 //!
 //! The simulation is planar; this module gives the chassis an elevation and a pitch from the
 //! loaded content, so the bus follows slopes instead of keeping its spawn height (and diving into
-//! the terrain on the first hill).
+//! the terrain on the first hill). The index itself is a state type in `opts-game-state`; this
+//! module keeps the systems that fill and drop it.
 
 use bevy::prelude::*;
-use opts_bevy::scenery::spline_pose;
 use opts_bevy::TileTerrain;
-use opts_collision::{ColliderGrid, Obb};
 use opts_core::formats::map::{MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::SplineProfile;
-use std::collections::HashMap;
 
-/// Spacing of the road centre-line samples (m).
-const SAMPLE_STEP_M: f32 = 2.0;
-/// Cell size of the sample index (m).
-const CELL_M: f32 = 8.0;
-/// How much closer than a road layer the terrain must be to the vehicle's height to win (m).
-const TERRAIN_LAYER_MARGIN_M: f32 = 0.3;
-/// A road layer this far above the vehicle is a deck over it, not the ground (m).
-const DECK_GAP_M: f32 = 1.0;
-
-mod index;
-mod insert;
-mod query;
-mod sample;
-
-use index::cell_of;
-pub use index::GroundIndex;
-use sample::RoadSample;
+pub use opts_game_state::in_game::omsi_world::ground_height::GroundIndex;
 
 /// Registers a built tile with the ground index.
 pub(super) fn register(
@@ -57,6 +39,3 @@ pub(super) fn unregister(commands: &mut Commands, key: (i32, i32)) {
         }
     });
 }
-
-#[cfg(test)]
-mod tests;

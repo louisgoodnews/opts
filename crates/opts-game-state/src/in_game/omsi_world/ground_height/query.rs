@@ -36,7 +36,7 @@ impl GroundIndex {
                     .filter(|(z, _)| (z - near_z).abs() < 0.6)
                     .min_by(|a, b| (a.0 - near_z).abs().total_cmp(&(b.0 - near_z).abs()))
                     .map_or_else(
-                        || super::super::road_surf::plain_unevenness(x, y),
+                        || opts_road_surf::plain_unevenness(x, y),
                         |(_, u)| u,
                     )
             }

@@ -20,10 +20,10 @@ pub struct GroundIndex {
     pub(super) plates: ColliderGrid<(i32, i32)>,
     pub(super) terrain: HashMap<(i32, i32), TileTerrain>,
     pub(super) cells: HashMap<(i32, i32), Vec<TileSample>>,
-    pub(super) start_tile: (i32, i32),
-    pub(super) grid: TileGrid,
+    pub start_tile: (i32, i32),
+    pub grid: TileGrid,
     /// The strips with a height map of each spline profile (by `.sli` name, M-0146).
-    pub(super) surf: HashMap<String, std::sync::Arc<Vec<super::super::road_surf::TexStrip>>>,
+    pub(super) surf: HashMap<String, std::sync::Arc<Vec<opts_road_surf::TexStrip>>>,
     /// The upward triangles of the surface plates by cell, with their tile (M-0146).
     pub(super) plate_tris: HashMap<(i32, i32), Vec<TilePlateTri>>,
 }

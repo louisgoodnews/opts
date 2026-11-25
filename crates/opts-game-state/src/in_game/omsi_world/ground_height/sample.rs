@@ -19,7 +19,7 @@ pub(super) struct RoadSample {
     /// Distance of the sample along its spline (m).
     pub(super) along_m: f32,
     /// The profile's strips with a height map (M-0146), shared by the samples of one spline.
-    pub(super) strips: std::sync::Arc<Vec<super::super::road_surf::TexStrip>>,
+    pub(super) strips: std::sync::Arc<Vec<opts_road_surf::TexStrip>>,
 }
 
 impl RoadSample {
@@ -53,6 +53,6 @@ impl RoadSample {
         let (sin, cos) = self.heading.sin_cos();
         let along = self.along_m + (x - self.x) * sin + (y - self.y) * cos;
         let surface = self.surface_z(x, y) - self.z;
-        super::super::road_surf::unevenness_at(&self.strips, self.profile_x(x, y), along, surface)
+        opts_road_surf::unevenness_at(&self.strips, self.profile_x(x, y), along, surface)
     }
 }

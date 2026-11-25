@@ -5,7 +5,7 @@ use super::*;
 impl GroundIndex {
     /// An index of one tile alone (what an object placed on that tile needs).
     #[must_use]
-    pub(in super::super) fn for_tile(
+    pub fn for_tile(
         key: (i32, i32),
         origin: (f32, f32),
         terrain: Option<TileTerrain>,
@@ -70,7 +70,7 @@ impl GroundIndex {
     pub fn set_surf_strips(
         &mut self,
         sli: &str,
-        strips: std::sync::Arc<Vec<super::super::road_surf::TexStrip>>,
+        strips: std::sync::Arc<Vec<opts_road_surf::TexStrip>>,
     ) {
         self.surf.insert(sli.to_string(), strips);
     }

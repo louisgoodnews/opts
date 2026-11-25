@@ -21,14 +21,10 @@ use crate::in_game::types::InGameEntity;
 use super::vehicle::load_segment_meshes;
 use super::WorldLoadJob;
 
-/// A player vehicle spawned farther than this from any track is not put on rails (m).
-const SNAP_MAX_M: f32 = 12.0;
 /// Below this speed (m/s) a rail vehicle may change its direction of travel.
 const STANDSTILL_M_S: f32 = 0.2;
 /// How far ahead (m) the key that toggles the points looks for them.
 const SWITCH_REACH_M: f32 = 150.0;
-/// Wheel radius assumed for the scripts' torque when the vehicle file states none (m).
-const DEFAULT_WHEEL_RADIUS_M: f32 = 0.33;
 /// A train formation is put on the nearest track within this distance of its entry point (m): the
 /// entry points of a map are road-oriented, a station track can lie some way off.
 pub const FORMATION_SNAP_M: f32 = 150.0;
