@@ -1,6 +1,6 @@
 //! Feeding the scripts of the scheduled vehicles near the camera and running their frame.
 
-use super::fallback::{apply_script_drive, release_script_drive};
+use super::fallback::{apply_script_drive, release_script_drive, ScriptedVehicle};
 use super::*;
 
 /// What the script engine is told about the agent: speed, pedals, the AI flags and the route.
@@ -103,16 +103,6 @@ pub(super) fn run_vehicle(
     }
 }
 
-/// The components a vehicle with scripts is queried by: the script, its route and its drive.
-type ScriptedVehicle = (
-    &'static TrafficVehicle,
-    &'static mut VehicleScripts,
-    &'static mut VehicleRoute,
-    &'static mut AiScript,
-    &'static opts_bevy::AiVariables,
-    Option<&'static mut ScriptDrive>,
-);
-
 /// Feeds the scripts of the scheduled vehicles near the camera and runs their frame.
 pub fn step_ai_scripts(
     time: Res<Time>,
@@ -127,6 +117,7 @@ pub fn step_ai_scripts(
     );
     let dt = time.delta_secs().min(0.2);
     let clock = state.world.clock();
+    let started = std::time::Instant::now();
     for (tv, mut scripts, mut route, mut ai, vars, drive) in &mut vehicles {
         let Some(mut drive) = drive else {
             if tv.origin.distance(cam) <= SCRIPT_RADIUS_M {
@@ -158,6 +149,11 @@ pub fn step_ai_scripts(
             (agent, command),
             (clock, dt),
         );
+        let was = drive.engaged;
         apply_script_drive(&mut state.world, tv.id, &mut scripts, &mut drive);
+        if !was && drive.engaged {
+            tracing::info!(agent = tv.id.0, "listed vehicle drives from its script");
+        }
     }
+    tracing::debug!(ms = started.elapsed().as_secs_f64() * 1000.0, "script step");
 }
