@@ -4,6 +4,7 @@
 use std::path::Path;
 
 use super::BusManifest;
+use opts_kinematic::run_up_with;
 use opts_sim::script::{load_vehicle_scripts, AiResponse, ScriptEngine};
 
 use super::{find_ci, Counts};
@@ -19,21 +20,6 @@ const TARGET_MS: f32 = 50.0 / 3.6;
 const LIMIT_S: f32 = 120.0;
 pub const TOLERANCE: f32 = 0.15;
 const WARM_UP_FRAMES: usize = 600;
-
-/// Time (s) and distance (m) to reach 50 km/h from rest, accelerating with `torque(km/h, dt)`.
-fn run_up(mut torque: impl FnMut(f32, f32) -> f32) -> Option<(f32, f32)> {
-    let (mut v, mut x, mut t) = (0.0_f32, 0.0_f32, 0.0_f32);
-    while t < LIMIT_S {
-        let a = torque(v * 3.6, FRAME_S) / (REF_RADIUS_M * REF_MASS_KG);
-        v = (v + a * FRAME_S).max(0.0);
-        x += v * FRAME_S;
-        t += FRAME_S;
-        if v >= TARGET_MS {
-            return Some((t, x));
-        }
-    }
-    None
-}
 
 /// Whether the vehicle's scripts have `{frame_ai}` blocks (what `measure_ai_response` checks).
 fn has_ai_frame(bus: &BusManifest, dir: &Path, root: &Path) -> bool {
@@ -68,7 +54,14 @@ fn scripted_run_up(bus: &BusManifest, dir: &Path, root: &Path) -> Option<(f32, f
     for _ in 0..WARM_UP_FRAMES {
         drive(&mut engine, 0.0, FRAME_S);
     }
-    run_up(|kmh, dt| drive(&mut engine, kmh, dt))
+    run_up_with(
+        |kmh, dt| drive(&mut engine, kmh, dt),
+        TARGET_MS,
+        REF_MASS_KG,
+        REF_RADIUS_M,
+        FRAME_S,
+        LIMIT_S,
+    )
 }
 
 /// Compares the closed-loop time to 50 km/h of the script and of the measured table.
@@ -81,7 +74,14 @@ pub fn check_agreement(
     show: bool,
     counts: &mut Counts,
 ) {
-    let table = run_up(|kmh, _| r.torque_at(kmh));
+    let table = run_up_with(
+        |kmh, _| r.torque_at(kmh),
+        TARGET_MS,
+        REF_MASS_KG,
+        REF_RADIUS_M,
+        FRAME_S,
+        LIMIT_S,
+    );
     let Some(script) = scripted_run_up(bus, dir, root) else {
         match table {
             None => counts.stall += 1,

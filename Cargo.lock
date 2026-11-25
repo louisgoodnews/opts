@@ -5510,6 +5510,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-kinematic"
+version = "0.1.0"
+
+[[package]]
 name = "opts-l10n"
 version = "0.1.0"
 dependencies = [
@@ -5623,6 +5627,7 @@ dependencies = [
  "bincode",
  "glam",
  "opts-core",
+ "opts-kinematic",
  "serde",
  "serde_json",
 ]

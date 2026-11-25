@@ -28,6 +28,7 @@ members = [
     "crates/opts-catalogue",
     "crates/opts-cli",
     "crates/opts-collision",
+    "crates/opts-kinematic",
     "crates/opts-core",
     "crates/opts-debounce",
     "crates/opts-exhaust",
@@ -78,6 +79,7 @@ opts-car-following = { path = "crates/opts-car-following" }
 opts-catalogue = { path = "crates/opts-catalogue" }
 opts-cli = { path = "crates/opts-cli", default-features = false }
 opts-collision = { path = "crates/opts-collision" }
+opts-kinematic = { path = "crates/opts-kinematic" }
 opts-core = { path = "crates/opts-core" }
 opts-debounce = { path = "crates/opts-debounce" }
 opts-game = { path = "crates/opts-game" }

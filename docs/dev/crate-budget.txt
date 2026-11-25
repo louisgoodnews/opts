@@ -7,6 +7,7 @@ opts-bevy 45830  # lowered 2026-11-24 to the measured total after the ISS-002 re
 opts-catalogue 2066  # set 2026-11-22 to the current total
 opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-collision 211  # set 2026-11-23 at its size after the split from opts-sim (ISS-034 budget room)
+opts-kinematic 70  # new 2026-11-25: the cheap kinematic acceleration model of M-0103 (drive curve and run-up; pure Rust)
 opts-core 4  # set 2026-11-22 to the current total
 opts-debounce 86  # new 2026-11-23: the hot-reload file-event debouncer split out of opts-bevy (docs/dev/crate-split-weather.md)
 opts-map-advice 121  # new 2026-11-23: the map load profile and advice engine split out of opts-game (docs/dev/crate-split-advice.md)

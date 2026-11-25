@@ -27,4 +27,5 @@ bincode = { workspace = true }
 # Error Handling & Logging
 
 [dev-dependencies]
+opts-kinematic = { workspace = true }
 serde_json = { workspace = true }
