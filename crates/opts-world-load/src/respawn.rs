@@ -5,8 +5,7 @@
 
 use super::vehicle::load_player_vehicle;
 use super::{LoadAssets, WorldLoadJob, WorldStats};
-use crate::session_vehicles::SessionVehicles;
-use opts_game_state::session_vehicles::{SpawnPoint, VehicleId};
+use opts_game_state::session_vehicles::{SessionVehicles, SpawnPoint, VehicleId};
 use bevy::prelude::*;
 use opts_bevy::{CameraMode, CameraState};
 use opts_core::formats::map::{MapEntryPoint, MapTile};
