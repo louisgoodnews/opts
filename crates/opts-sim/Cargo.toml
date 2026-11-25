@@ -25,6 +25,7 @@ bincode = { workspace = true }
 # Parallelism (use carefully to maintain determinism)
 
 # Error Handling & Logging
+tracing = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

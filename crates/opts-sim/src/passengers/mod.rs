@@ -8,6 +8,7 @@
 
 mod crowd;
 mod destination;
+mod fare;
 mod graph;
 mod rng;
 mod sim;
@@ -16,6 +17,7 @@ mod state;
 
 pub use crowd::standing_room;
 pub use destination::{admits, pick, Destination, DestinationTable};
+pub use fare::{fare_for_ride, Fare, FareRule, FareStop, COUNT_DAY_TICKETS, ZONE_TICKET_INDEX};
 pub use graph::CabinGraph;
 pub use rng::Rng;
 pub use sim::{Doors, Event, Passenger, PassengerSim, Phase, WALK_SPEED_M_S};
