@@ -53,3 +53,7 @@ opts-bevy-instancing 572  # new ISS-065 stage 2, ESTIMATE counted by hand: the m
 opts-bevy-moon-material 51  # new ISS-065 stage 2, ESTIMATE counted by hand: the moon disc material and its shader split out of opts-bevy
 opts-bevy-season 56  # new ISS-065 stage 2, ESTIMATE counted by hand: the season state and snow-cover folders split out of opts-bevy
 opts-bevy-texture-sentinel 24  # new ISS-065 stage 2, ESTIMATE counted by hand: the benchmark-only missing-texture sentinel split out of opts-bevy
+opts-fleet-number 38  # estimate 2026-11-25 (ISS-067 stage 1): fleet_number.rs moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
+opts-mesh-dir 119  # estimate 2026-11-25 (ISS-067 stage 1): mesh_dir.rs moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
+opts-road-surf 289  # estimate 2026-11-25 (ISS-067 stage 1): road_surf.rs and road_surf/ (map, strip, tests) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
+opts-world-session 27  # estimate 2026-11-25 (ISS-067 stage 1): session.rs (OmsiSessionConfig, SessionRequest) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run

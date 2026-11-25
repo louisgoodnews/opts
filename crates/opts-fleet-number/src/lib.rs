@@ -13,7 +13,7 @@ use opts_core::formats::vehicles::BusManifest;
 /// The fleet number of a vehicle whose `.bus` is in `bus_dir`, drawn with `seed`; `None` when
 /// the `.bus` names no `.org` list or it cannot be read.
 #[must_use]
-pub(super) fn fleet_number(
+pub fn fleet_number(
     install: &OmsiInstall,
     bus_dir: &Path,
     manifest: &BusManifest,

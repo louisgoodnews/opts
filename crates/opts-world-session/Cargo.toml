@@ -1,0 +1,15 @@
+[package]
+name = "opts-world-session"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The resolved content paths and the menu's request for a world session (split out of opts-game's omsi_world)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-bevy = { workspace = true }

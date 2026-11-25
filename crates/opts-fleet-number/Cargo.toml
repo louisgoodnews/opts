@@ -1,0 +1,16 @@
+[package]
+name = "opts-fleet-number"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The vehicle fleet number: the .org registration list of a .bus drawn with the vehicle's script seed (split out of opts-game's omsi_world)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-bevy = { workspace = true }
+opts-core = { workspace = true }

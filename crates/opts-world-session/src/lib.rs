@@ -1,6 +1,6 @@
 //! What a world session loads: the resolved content paths and the menu's request.
 
-use super::*;
+use std::path::{Path, PathBuf};
 
 /// Where the session content comes from, resolved from CLI arguments.
 #[derive(Clone)]
