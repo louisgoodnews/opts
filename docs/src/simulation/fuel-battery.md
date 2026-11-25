@@ -32,7 +32,13 @@ The OMSI files of the corpus do not state these numbers in a form the model read
 | `LOW_LEVEL` | 0.10 | low-level warning threshold |
 | `EMPTY_ELECTRIC_TORQUE_FRACTION` | 0.2 | torque an empty battery keeps |
 
-The milestone's ❓ items stay open: the unit of the scripts' `engine_tank_content` and the tank constant, the variable that carries an electric vehicle's state of charge (none is in the predefined-variable list), and whether `veh_tank` is raised by the vehicle or expected from the host. Until they are settled, the host model is the authority for the torque cut and the scripts keep their own `engine_tank_content`.
+The milestone's ❓ items stay open: the unit of the scripts' `engine_tank_content` and the tank constant, and whether `veh_tank` is raised by the vehicle or expected from the host. Until they are settled, the host model is the authority for the torque cut and the scripts keep their own `engine_tank_content`.
+
+**Electric state of charge (open item closed for the name and range, 2026-11-25; decision: part of [M-0123](../roadmap/phase-12/M-0123.md)).** The electric buses of the installed content (`HH_EBus2019` and `HH20_EBus2021`) keep their traction charge in the script variable `electric_battery`. It is not in the predefined-variable list; it is declared in each bus's own engine varlist. Its unit is not stated in the scripts (absolute, not a fraction). Its range is from 0 to the vehicle's `electric_battery_capacity` constant, which the scripts clamp to: 250 in `HH_EBus2019`, 350 in `HH20_EBus2021`. The state of charge is the variable divided by that capacity (0 to 1). The scripts lower it with the e-motor load and raise it with regenerative braking and charging, and an engine start needs it above a small threshold.
+
+- The scripts already compute this value, so the host reads it and does not model it for these two families. The host input (feeding and authority, per family) is a separate code item for M-0123; this page keeps the OPTS electric constants above as OPTS assumptions until then.
+- `elec_battery_load` (a fraction from 1.0 down to 0) is **not** the electric charge. It is the on-board electrics battery model that many diesel and electric vehicles share; the Bollore Bluebus uses it and its traction does not read it. No traction state of charge for the Bluebus was found in its scripts, so that bus stays open.
+- The unit of `electric_battery` is still ❓ (not stated in the scripts, and not settled by any other file in the install).
 
 ## 2. Setting, start and the player's vehicle
 
