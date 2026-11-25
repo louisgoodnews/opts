@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use super::model::SpatialZone;
+use super::model::{SpatialZone, ZoneId};
 
 /// The tile key: OMSI tile coordinates.
 pub type TileKey = (i32, i32);
@@ -17,11 +17,13 @@ pub type TileKey = (i32, i32);
 #[derive(Resource, Debug, Default)]
 pub struct ZoneRegistry {
     tiles: HashMap<TileKey, Vec<Entity>>,
+    /// The next zone id. Ids are unique across the resident tiles, not per tile (ISS-012).
+    next_id: u32,
 }
 
 impl ZoneRegistry {
-    /// Spawns one zone entity per zone of `tile`. A tile that is already built is first dropped,
-    /// so a double load does not duplicate zones. Returns the number of zones spawned.
+    /// Spawns one zone entity per zone of `tile`, each with a fresh id. A tile that is already
+    /// built is first dropped, so a double load does not duplicate zones. Returns the number spawned.
     pub fn build_tile(
         &mut self,
         commands: &mut Commands,
@@ -31,9 +33,14 @@ impl ZoneRegistry {
         self.drop_tile(commands, tile);
         let entities: Vec<Entity> = zones
             .iter()
-            .map(|zone| commands.spawn(*zone).id())
+            .map(|zone| {
+                let id = ZoneId(self.next_id);
+                self.next_id = self.next_id.wrapping_add(1);
+                commands.spawn(SpatialZone { id, ..*zone }).id()
+            })
             .collect();
         let count = entities.len();
+        tracing::debug!(tile = ?tile, zones = count, "spatial zones built for tile");
         self.tiles.insert(tile, entities);
         count
     }

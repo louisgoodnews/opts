@@ -43,6 +43,12 @@ fn zones_query(world: &mut World, params: &Value) -> Outcome {
     let subject = membership
         .as_ref()
         .and_then(|m| m.last.map(|point| (point, m)));
+    tracing::debug!(
+        zones = zones.len(),
+        subject = subject.is_some(),
+        limit,
+        "zones.query answered"
+    );
     Outcome::ok(zones_payload(&zones, subject, limit))
 }
 
