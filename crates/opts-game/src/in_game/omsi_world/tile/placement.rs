@@ -14,6 +14,13 @@ use crate::in_game::omsi_world::{WorldLoadJob, WorldStats};
 /// Height above a road at which an `on_surface` object is drawn (m): enough to avoid z-fighting.
 const ON_SURFACE_LIFT_M: f32 = 0.01;
 
+/// Whether a `.sco` is a level-crossing barrier or one of its arms (`Hs64_Schranke_R.sco`,
+/// `Schranke`, `Barriere`); the orientation of these is logged (ISS-059, ISS-060).
+fn is_barrier(sco_file: &str) -> bool {
+    let lower = sco_file.to_ascii_lowercase();
+    lower.contains("schranke") || lower.contains("barriere")
+}
+
 /// Where the object stands: the terrain height at its place (or the absolute one), moved onto the
 /// road for markings and parked cars, and the transform from its OMSI heading, pitch and roll.
 pub(super) fn object_transform(
@@ -64,6 +71,14 @@ pub(super) fn object_transform(
         }
     }
     let world = Vec3::new(origin.0 + obj.position.x, origin.1 + obj.position.y, z);
+    if is_barrier(&obj.sco_file) {
+        // The angle the barrier is turned by, and where it comes from (ISS-060).
+        let source = match placement {
+            Placement::OnParent(_) => "parent transform",
+            _ => "map [object] heading, negated for the CCW helper",
+        };
+        tracing::debug!(object = %obj.id_code, sco = %obj.sco_file, heading = obj.heading_deg, yaw = -obj.heading_deg, pitch = ?obj.pitch_deg, roll = ?obj.roll_deg, source, "barrier orientation");
+    }
     let transform = match placement {
         Placement::OnParent(t) => t,
         _ => Transform {

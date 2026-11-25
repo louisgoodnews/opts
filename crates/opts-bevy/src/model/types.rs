@@ -3,7 +3,6 @@
 
 use bevy::asset::Handle;
 use bevy::image::Image;
-use bevy::math::Vec3;
 use bevy::mesh::Mesh;
 use bevy::pbr::StandardMaterial;
 
@@ -27,10 +26,10 @@ pub struct ModelPart {
     /// `[matl_freetex]`: the string variable naming the texture shown at run time, and the
     /// material's light map, which lights whatever texture it shows (see `crate::free_texture`).
     pub free_texture: Option<(String, Option<Handle<Image>>)>,
-    /// Translation of the mesh file's own `0x79` matrix (the modelling tool's pivot) in Bevy
-    /// axes; `None` for files without one and for `.x` meshes (whose frames are applied).
+    /// The mesh file's own `0x79` matrix (the modelling tool's pivot: origin and rotation rows);
+    /// `None` for files without one and for `.x` meshes (whose frames are applied).
     /// `[newanim] origin_from_mesh` rotates about it.
-    pub pivot: Option<Vec3>,
+    pub pivot: Option<crate::vehicle_anim::MeshPivot>,
 }
 
 /// Counters collected while loading, shown in the diagnostic overlay and logs.

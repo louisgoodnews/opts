@@ -47,7 +47,7 @@ impl ContentLoader<'_> {
         let pivot = model
             .transform
             .filter(|_| model.version != 0)
-            .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
+            .map(crate::vehicle_anim::MeshPivot::from_o3d_transform);
         let material = self.cache.pool.material(self.materials, material);
         if let Some(m) = self.materials.get(&material) {
             crate::glass::note_surface(&material, res.tex_name.as_deref(), m, false);

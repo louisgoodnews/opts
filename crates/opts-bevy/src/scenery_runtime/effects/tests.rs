@@ -35,6 +35,7 @@ fn visibility_needs_equality_with_the_flag() {
             shown: Vec::new(),
         },
         vars: vec![VarRef::Host(HostVar::Zero)],
+        last_target: Vec::new(),
     };
     assert!(rule.visible_for(&[0.0]));
     assert!(!rule.visible_for(&[1.0]));

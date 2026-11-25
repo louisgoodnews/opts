@@ -53,6 +53,8 @@ pub struct SceneryMeshRule {
     pub anim: MeshAnimation,
     /// Variable of each step, then of each `[visible]` rule.
     pub vars: Vec<VarRef>,
+    /// The step targets last logged at debug (a change of target is a state change).
+    pub last_target: Vec<f32>,
 }
 
 impl SceneryMeshRule {
