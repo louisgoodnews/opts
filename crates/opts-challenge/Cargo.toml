@@ -1,0 +1,15 @@
+[package]
+name = "opts-challenge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Challenges and scoring for OPTS scenarios: the rule set, the scorer and the result a run produces (pure Rust, no Bevy, no OMSI)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+tracing = { workspace = true }
