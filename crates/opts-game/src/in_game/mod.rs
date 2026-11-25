@@ -14,7 +14,7 @@ pub mod omsi_world;
 pub mod screenshot;
 pub mod sky;
 pub mod sky_cube;
-pub mod stream_budget;
+pub use opts_stream_budget as stream_budget;
 pub mod tile_loading;
 pub mod types;
 pub mod vehicle_spawner;

@@ -5464,6 +5464,7 @@ dependencies = [
  "opts-map-advice",
  "opts-sim",
  "opts-steam",
+ "opts-stream-budget",
  "opts-theme-files",
  "opts-traffic",
  "rfd",
@@ -5646,6 +5647,10 @@ version = "0.1.0"
 dependencies = [
  "opts-vdf",
 ]
+
+[[package]]
+name = "opts-stream-budget"
+version = "0.1.0"
 
 [[package]]
 name = "opts-theme-files"

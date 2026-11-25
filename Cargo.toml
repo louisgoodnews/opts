@@ -32,6 +32,7 @@ members = [
     "crates/opts-vehicle-traits",
     "crates/opts-signals",
     "crates/opts-scripted-drive",
+    "crates/opts-stream-budget",
     "crates/opts-traffic-weather",
     "crates/opts-core",
     "crates/opts-debounce",
@@ -87,6 +88,7 @@ opts-kinematic = { path = "crates/opts-kinematic" }
 opts-vehicle-traits = { path = "crates/opts-vehicle-traits" }
 opts-signals = { path = "crates/opts-signals" }
 opts-scripted-drive = { path = "crates/opts-scripted-drive" }
+opts-stream-budget = { path = "crates/opts-stream-budget" }
 opts-traffic-weather = { path = "crates/opts-traffic-weather" }
 opts-core = { path = "crates/opts-core" }
 opts-debounce = { path = "crates/opts-debounce" }
