@@ -11,27 +11,8 @@ use opts_traffic::PathGeometry;
 
 use super::raster::MapLine;
 
-/// One road path in the world frame (x east, y north, metres; compass headings).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MapRoad {
-    /// Straight line or circular arc.
-    pub geometry: PathGeometry,
-    /// Width in metres.
-    pub width: f64,
-}
-
-/// A read-only supplier of road paths.
-pub trait MapSource {
-    /// Pushes the paths that may touch the circle (`centre`, `radius_m`). Paths further away may
-    /// be left out; a few extra ones are fine (the drawing clips).
-    fn roads_near(&self, centre: DVec2, radius_m: f64, out: &mut Vec<MapRoad>);
-}
-
-/// Whether a path can touch the circle: its start is within `radius + length` of the centre.
-#[must_use]
-pub fn may_touch(road: &PathGeometry, centre: DVec2, radius_m: f64) -> bool {
-    road.start.distance(centre) <= radius_m + road.length.max(0.0)
-}
+// The trait, the road record and the circle test live in `opts-world-load` (ISS-064 boundary).
+pub use opts_world_load::map_source::{may_touch, MapRoad, MapSource};
 
 /// A fixed set of roads (tests and the golden screenshot; no map data).
 #[derive(Resource, Debug, Clone, Default)]

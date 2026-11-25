@@ -58,6 +58,7 @@ members = [
     "crates/opts-vehicle-script-texture",
     "crates/opts-world-stats",
     "crates/opts-world-session",
+    "crates/opts-world-load",
     "crates/opts-importer",
     "crates/opts-l10n",
     "crates/opts-model",
@@ -170,6 +171,7 @@ opts-road-surf = { path = "crates/opts-road-surf" }
 opts-vehicle-script-texture = { path = "crates/opts-vehicle-script-texture" }
 opts-world-stats = { path = "crates/opts-world-stats" }
 opts-world-session = { path = "crates/opts-world-session" }
+opts-world-load = { path = "crates/opts-world-load" }
 opts-gui = { path = "crates/opts-gui" }
 opts-game-state = { path = "crates/opts-game-state" }
 opts-map-advice = { path = "crates/opts-map-advice" }

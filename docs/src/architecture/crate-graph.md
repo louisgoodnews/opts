@@ -81,6 +81,7 @@ graph TD
         opts_bevy_texture_sentinel["opts-bevy-texture-sentinel<br/>• Benchmark-only missing-texture sentinel<br/>• Bevy-facing leaf"]:::bridge
         opts_road_surf["opts-road-surf<br/>• Road-texture unevenness: .surf height maps and texture strips<br/>• Synthetic roughness per surface type<br/>• No Bevy"]:::bridge
         opts_world_stats["opts-world-stats<br/>• World counters, positions and camera setup<br/>• Bevy types, no I/O"]:::bridge
+        opts_world_load["opts-world-load<br/>• The in-progress world load: WorldLoadJob and its closure (ISS-064)<br/>• Bevy systems over the split crates; no opts-game dependency"]:::bridge
         opts_vehicle_script_texture["opts-vehicle-script-texture<br/>• Script texture canvases and colour maps<br/>• Bevy types, no I/O"]:::bridge
     end
 
@@ -143,6 +144,25 @@ graph TD
     opts_mesh_dir --> opts_core
     opts_road_surf --> opts_core
     opts_world_stats --> opts_core
+    opts_world_load --> opts_core
+    opts_world_load --> opts_bevy
+    opts_world_load --> opts_sim
+    opts_world_load --> opts_traffic
+    opts_world_load --> opts_traffic_schedule
+    opts_world_load --> opts_game_state
+    opts_world_load --> opts_world_stats
+    opts_world_load --> opts_world_session
+    opts_world_load --> opts_tile_loading
+    opts_world_load --> opts_stream_budget
+    opts_world_load --> opts_attachments
+    opts_world_load --> opts_repaints
+    opts_world_load --> opts_road_surf
+    opts_world_load --> opts_vehicle_script_texture
+    opts_world_load --> opts_fleet_number
+    opts_world_load --> opts_mesh_dir
+    opts_world_load --> opts_collision
+    opts_world_load --> opts_logging
+    opts_world_load --> opts_gui
     opts_vehicle_script_texture --> opts_core
     opts_exhaust --> opts_bevy
     opts_exhaust --> opts_sim
@@ -228,6 +248,7 @@ graph TD
     opts_game --> opts_theme_files
     opts_game --> opts_traffic
     opts_game --> opts_world_session
+    opts_game --> opts_world_load
     opts_game --> opts_vehicle_gears
     opts_gui --> opts_l10n
     opts_hud_widgets --> opts_bevy
@@ -310,6 +331,7 @@ graph TD
 | **`opts-stream-budget`** | L2 | Tile-streaming frame budget and prioritisation (M-0089): wanted and evictable tiles, spreading and motion policy, split out of `opts-game` (crate split) | *None* | `opts-game` | Pure Rust |
 | **`opts-traffic-weather`** | L2 | Weather for AI drivers: grip and fog visibility change the car-following parameters, split out of `opts-traffic` (M-0117) | `opts-car-following` | `opts-traffic` | Pure Rust |
 | **`opts-world-stats`** | L2 | Counters, positions and camera setup of the loaded world, split out of `opts-game` omsi_world (ISS-067 stage 1) | `opts-core` | `opts-game` | Bevy Engine |
+| **`opts-world-load`** | L3 | The in-progress world load (ISS-067 stage 1, ISS-064 chain 3): `WorldLoadJob` and the closure it reaches, moved out of `opts-game` omsi_world in one atomic change; does not compile until the compile-fix phase | `opts-attachments`, `opts-bevy`, `opts-collision`, `opts-core`, `opts-fleet-number`, `opts-game-state`, `opts-gui`, `opts-logging`, `opts-mesh-dir`, `opts-repaints`, `opts-road-surf`, `opts-scripted-drive`, `opts-sim`, `opts-stream-budget`, `opts-tile-loading`, `opts-traffic`, `opts-traffic-schedule`, `opts-vehicle-script-texture`, `opts-world-session`, `opts-world-stats` | `opts-game` | Bevy Engine |
 | **`opts-vehicle-script-texture`** | L2 | Vehicle script texture canvases, colour maps and the per-frame GPU upload, split out of `opts-game` omsi_world (ISS-067 stage 1) | `opts-core` | `opts-game` | Bevy Engine |
 | **`opts-kinematic`** | L2 | Cheap kinematic acceleration of an AI vehicle from its measured drive torque over speed; the run-up law shared with the script census in `opts-sim` examples (M-0103) | *None* | *None* | Pure Rust |
 | **`opts-sim-passengers`** | L2 | The passengers of a vehicle: boarding through open doors, tickets, seats and standing places, getting off (split out of `opts-sim`, ISS-066 stage 1; [epic](../../dev/issues/ISS-066-epic-split-opts-sim.md)) | *None* | `opts-sim` | Pure Rust |

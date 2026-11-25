@@ -2,113 +2,59 @@
 //!
 //! Every mesh, texture and position comes from the OMSI installation: nothing here fabricates
 //! geometry. Assets that cannot be loaded are logged at `ERROR` and skipped.
+//!
+//! The world-load closure (the `WorldLoadJob` and the code it reaches) is in the crate
+//! `opts-world-load` (ISS-064). This module keeps the consumers (`ground_follow`, `overlay`,
+//! `overlay_info`, `spatial_zone_overlay`) and re-exports the moved items under their old paths.
 
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::path::PathBuf;
-use std::sync::Arc;
-
-use bevy::prelude::*;
-use opts_bevy::ground_material::GroundMaterial;
-use opts_bevy::{ContentCache, OmsiInstall};
-use opts_core::formats::map::{MapManifest, MapSplineInstance, TileGrid};
-use opts_core::formats::scenery::{SceneryObject, SplineProfile};
-
-use crate::in_game::attachments::SplineIndex;
-
-/// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
-mod chrono;
-mod collision;
-mod consist_plan;
-mod crossing;
-mod dev_look;
-mod ground;
 mod ground_follow;
-mod ground_height;
-mod job;
-pub(crate) use opts_mesh_dir as mesh_dir;
 mod overlay;
 mod overlay_info;
-mod plate_surf;
-use opts_road_surf as road_surf;
-mod road_surf_load;
-pub use overlay_info::DeveloperDetail;
-mod pedestrians;
-pub(crate) mod rail;
-mod reload;
-mod respawn;
-mod scenery_objects;
-mod setvar_state;
 pub(crate) mod spatial_zone_overlay;
-mod tile;
-mod tile_build;
-mod tile_ground;
-mod tile_mode;
-pub(crate) mod trace;
-pub(crate) mod traffic;
-mod traffic_chain;
-mod traffic_variant;
-use opts_fleet_number as fleet_number;
-pub(crate) use pedestrians::passenger_factor;
-#[cfg(test)]
-pub(crate) use pedestrians::DEFAULT_PEDESTRIAN_BASELINE;
-pub(crate) use traffic::line_runs_on;
-#[cfg(test)]
-pub(crate) use traffic::DEFAULT_TRAFFIC_BASELINE;
-mod trees;
-mod vehicle;
-pub use opts_vehicle_script_texture as vehicle_script_texture;
-mod vehicle_text;
-mod water;
 
-pub use chrono::{apply_map_date_changes, chrono_date, track_chrono_rebuild, ChronoState};
-pub use collision::{
-    attach_traffic_colliders, player_collisions, publish_traffic_obstacles, BodyBox,
-    CollisionIndex, PlayerBox, VehicleCollider,
-};
-pub use dev_look::place_dev_camera;
-use ground::GroundArray;
+pub use overlay_info::DeveloperDetail;
+
 pub use ground_follow::{follow_ground, sample_consist_ground};
-pub use ground_height::GroundIndex;
-pub use job::{begin_world_load, begin_world_load_at, resolve_session_config};
 pub use overlay::{
     log_final_position, spawn_debug_overlay, toggle_developer_detail, toggle_developer_panel,
     track_position, update_debug_overlay, update_wheel_vars_overlay, DebugOverlayText,
     DebugWheelVars, WheelVarsText,
 };
-pub(crate) use pedestrians::{advance_phase, apply_gait, apply_rest_pose, apply_seated_pose};
-pub use pedestrians::{
-    configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,
-    PedestrianNetwork, PedestrianPool, PedestrianSettings,
-};
-pub use rail::{
-    click_points_system, configure_rail, is_rail, load_rail_variants, move_ai_trains, points_ahead,
-    points_visual_system, rail_player_pose, rail_player_step, set_points_system, spawn_ai_trains,
-    spawn_scheduled_trains, step_rail_scripts, switch_hint_system, way_by_id, way_id, AiTrain,
-    BikeAiPool, BikeNetwork, BikeSettings, Part, RailAiPool, RailNetwork, RailPlayer, RailSettings,
-    ScheduledTrain, VehicleComposition,
-};
-pub use reload::{ReloadPlan, TileUnload};
-pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehicleRequest};
-pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
-pub use tile::{
-    advance_tile_loading, load_next_tile, stream_world_tiles, sync_tile_zones, TileRoot,
-};
-pub use traffic::{
-    active_runs, configure_traffic, dispatch_responders, load_traffic_variants, move_traffic,
-    plan_scheduled, run_phase, spawn_traffic, step_ai_scripts, update_ai_variables,
-    update_traffic_graph, Incident, IncidentQueue, RunPhase, RunRef, ScheduledStats,
-    ScheduledTraffic, ServiceKind, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
-};
-use traffic::{engine_for, next_doors, Doors, DOORS_OPEN_SHARE, FRAME_S, SCRIPT_RADIUS_M};
-pub use traffic_chain::move_traffic_chains;
-pub use vehicle::{load_player_vehicle, FormationCar, SpawnedVehicle};
-pub use vehicle_script_texture::{update_vehicle_script_textures, VehicleScriptTexture};
-pub use vehicle_text::update_vehicle_text_textures;
-pub use water::warn_vehicle_in_water;
 
-mod load_job;
-use opts_world_session as session;
-use opts_world_stats as stats;
-pub use load_job::{LoadAssets, WorldLoadJob};
-pub use session::{OmsiSessionConfig, SessionRequest};
-pub use stats::{CameraSetup, PositionReadout, WorldPos, WorldStats};
+// Moved modules, kept under their old paths for the consumers.
+pub(crate) use opts_world_load::{
+    chrono, collision, consist_plan, crossing, dev_look, fleet_number, ground, ground_height, job,
+    load_job, mesh_dir, pedestrians, plate_surf, rail, reload, respawn, road_surf, road_surf_load,
+    scenery_objects, session, setvar_state, stats, tile, tile_build, tile_ground, tile_mode, trace,
+    traffic, traffic_chain, traffic_variant, trees, vehicle, vehicle_script_texture, vehicle_text,
+    water,
+};
+
+// Moved items, re-exported with their old paths.
+pub(crate) use opts_world_load::{
+    advance_phase, apply_gait, apply_rest_pose, apply_seated_pose, line_runs_on, passenger_factor,
+};
+#[cfg(test)]
+pub(crate) use opts_world_load::{DEFAULT_PEDESTRIAN_BASELINE, DEFAULT_TRAFFIC_BASELINE};
+pub use opts_world_load::{
+    active_runs, advance_tile_loading, apply_map_date_changes, attach_traffic_colliders,
+    begin_world_load, begin_world_load_at, chrono_date, click_points_system, configure_pedestrians,
+    configure_rail, configure_traffic, dispatch_responders, handle_vehicle_requests, is_rail,
+    load_next_tile, load_player_vehicle, load_rail_variants, load_traffic_variants, load_variants,
+    move_ai_trains, move_pedestrians, move_traffic, move_traffic_chains, player_collisions,
+    plan_scheduled, points_ahead, points_visual_system, publish_traffic_obstacles,
+    rail_player_pose, rail_player_step, resolve_session_config, run_phase, set_points_system,
+    spawn_ai_trains, spawn_pedestrians, spawn_scheduled_trains, spawn_traffic, step_ai_scripts,
+    step_rail_scripts, stream_world_tiles, switch_hint_system, sync_scenery_clock, sync_tile_zones,
+    place_dev_camera, track_chrono_rebuild, update_ai_variables, update_traffic_graph,
+    update_vehicle_script_textures, update_vehicle_text_textures, warn_vehicle_in_water,
+    way_by_id, way_id, AiTrain, BikeAiPool, BikeNetwork, BikeSettings, BodyBox, ChronoState,
+    CollisionIndex, EntryIndex, FormationCar, GroundIndex, Incident, IncidentQueue, LoadAssets,
+    OmsiSessionConfig, Part, PedestrianNetwork, PedestrianPool, PedestrianSettings, Pedestrian,
+    PlayerBox, PositionReadout, RailAiPool, RailNetwork, RailPlayer, RailSettings, ReloadPlan,
+    ResolvedEntry, RunPhase, RunRef, ScheduledStats, ScheduledTrain, SceneryWiringStats,
+    SessionRequest, SpawnVehicleRequest, SpawnedVehicle, TileRoot, TileUnload, TrafficPool,
+    TrafficSettings, TrafficState, TrafficVehicle, VehicleCollider, VehicleComposition,
+    VehicleScriptTexture, WorldLoadJob, WorldPos, WorldStats, CameraSetup, ScheduledTraffic,
+    ServiceKind,
+};

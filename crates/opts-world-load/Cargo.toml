@@ -1,0 +1,36 @@
+[package]
+name = "opts-world-load"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The in-progress world load (WorldLoadJob and the code it reaches), split out of opts-game's omsi_world (ISS-064)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-attachments = { workspace = true }
+opts-bevy = { workspace = true }
+opts-collision = { workspace = true }
+opts-core = { workspace = true }
+opts-fleet-number = { workspace = true }
+opts-game-state = { workspace = true }
+opts-gui = { workspace = true, features = ["serde"] }
+opts-logging = { workspace = true }
+opts-mesh-dir = { workspace = true }
+opts-repaints = { workspace = true }
+opts-road-surf = { workspace = true }
+opts-scripted-drive = { workspace = true }
+opts-sim = { workspace = true }
+opts-stream-budget = { workspace = true }
+opts-tile-loading = { workspace = true }
+opts-traffic = { workspace = true }
+opts-traffic-schedule = { workspace = true }
+opts-vehicle-script-texture = { workspace = true }
+opts-world-session = { workspace = true }
+opts-world-stats = { workspace = true }
+tracing = { workspace = true }

@@ -41,7 +41,7 @@ pub(super) const fn rebindable(
 }
 
 pub(super) const SIM: &str = "crates/opts-bevy/src/vehicle_sim/input.rs";
-pub(super) const RAIL_TRACK: &str = "crates/opts-game/src/in_game/omsi_world/rail/player_track.rs";
+pub(super) const RAIL_TRACK: &str = "crates/opts-world-load/src/rail/player_track.rs";
 pub(super) const RAIL_CONTROLS: &str = "crates/opts-bevy/src/rail_controls.rs";
 pub(super) const CAMERA: &str = "crates/opts-bevy/src/camera/input.rs";
 pub(super) const VIRTUAL_MIRRORS: &str = "crates/opts-bevy/src/mirrors/virtual_view.rs";
@@ -60,7 +60,7 @@ pub(super) const ZONE_OVERLAY: &str =
     "crates/opts-game/src/in_game/omsi_world/spatial_zone_overlay.rs";
 pub(super) const CAB_SWITCH: &str = "crates/opts-bevy/src/cab_switch.rs";
 pub(super) const LANE_OVERLAY: &str =
-    "crates/opts-game/src/in_game/omsi_world/traffic/lane_overlay.rs";
+    "crates/opts-world-load/src/traffic/lane_overlay.rs";
 
 /// The single registry of the keyboard bindings that the Help page prints. The input systems keep
 /// reading keys directly (they are not driven by this table); the test in this module reads their
