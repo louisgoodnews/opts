@@ -92,7 +92,8 @@ impl Plugin for SettingsRegistryPlugin {
                 )
                     .chain(),
             )
-            .add_systems(Update, crate::language_packs::reload_action);
+            .add_systems(Update, crate::language_packs::reload_action)
+            .add_systems(Update, crate::head_track_settings::sync_head_track_settings);
         protocol::register(app);
     }
 }

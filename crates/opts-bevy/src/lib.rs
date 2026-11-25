@@ -34,6 +34,7 @@ pub mod free_texture;
 pub mod glass;
 pub mod ground;
 pub mod ground_material;
+pub mod head_track;
 pub mod host_callbacks;
 pub mod hot_reload;
 pub mod human;

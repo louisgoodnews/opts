@@ -1,6 +1,7 @@
 //! Vehicle view updates: the cockpit, passenger and external camera transforms each frame.
 
 use super::*;
+use crate::head_track::{HeadTrackSettings, HeadTrackState};
 
 /// The player's vehicle, which is not the camera.
 /// A coupled unit's pose, and whether it hangs under a parent.
@@ -16,11 +17,18 @@ pub fn update_cockpit_camera(
     units: Query<UnitFrame, UnitsOnly>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut viewpoint: ResMut<ViewpointState>,
+    head: Option<Res<HeadTrackState>>,
+    head_settings: Option<Res<HeadTrackSettings>>,
     mut camera: Query<(&mut Transform, &mut Projection), With<crate::MainCamera>>,
 ) {
     if state.mode != CameraMode::Cockpit {
         return;
     }
+    // The head's look (ISS-045) adds to the mouse look; zero when head tracking is off.
+    let (head_yaw, head_pitch) = match (head.as_deref(), head_settings.as_deref()) {
+        (Some(h), Some(s)) => h.look(s),
+        _ => (0.0, 0.0),
+    };
     let (Ok((vehicle_tf, bus)), Ok((mut tf, mut proj))) = (vehicle.single(), camera.single_mut())
     else {
         return;
@@ -38,7 +46,12 @@ pub fn update_cockpit_camera(
         Some((_, g, true)) => *g,
         None => GlobalTransform::from(*vehicle_tf),
     };
-    *tf = preset_world_transform(&gt, cam, state.view_yaw, state.view_pitch);
+    *tf = preset_world_transform(
+        &gt,
+        cam,
+        state.view_yaw + head_yaw,
+        state.view_pitch + head_pitch,
+    );
     // Eye position and direction are the vehicle's own `[add_camera_driver]` preset (the player
     // character is hidden in this view, see `crate::human::hide_driver_in_seat_views`).
     // The viewpoint editor's offset (right, up, forward in the driver's frame) and FOV.

@@ -66,6 +66,7 @@ pub mod start_options;
 pub use opts_steam::{omsi_root, steam_library};
 pub use opts_theme_files as theme_files;
 pub mod trip_start;
+pub mod head_track_settings;
 pub mod ui_typography;
 pub mod vehicle_fuel_settings;
 pub mod vehicle_keys;
