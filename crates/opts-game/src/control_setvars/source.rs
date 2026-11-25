@@ -32,6 +32,8 @@ impl Context {
 /// The repaints, the chosen repaint and the user's changes of the vehicle in question.
 pub(super) struct Source {
     pub(super) context: Context,
+    /// The catalogue id of the vehicle (its bus file for a drive's load job); for the logs.
+    pub(super) vehicle: String,
     pub(super) repaints: VehicleRepaints,
     pub(super) repaint: String,
     pub(super) custom: HashMap<String, i32>,
@@ -50,6 +52,10 @@ pub(super) fn source(world: &mut World) -> Option<Source> {
         let job = world.get_resource::<WorldLoadJob>()?;
         return Some(Source {
             context: Context::Drive,
+            vehicle: job
+                .vehicle_file()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default(),
             repaints: job.vehicle_repaints()?.clone(),
             repaint: job.vehicle_livery().to_string(),
             custom: job
@@ -63,6 +69,7 @@ pub(super) fn source(world: &mut World) -> Option<Source> {
     let setup = world.get_resource::<NewGameSetup>()?;
     Some(Source {
         context: Context::Wizard,
+        vehicle: setup.selected_vehicle.clone(),
         repaints: reps,
         repaint: setup.selected_livery.clone(),
         custom: setup
@@ -107,6 +114,7 @@ pub(super) fn active_vehicle_source(world: &World) -> Option<Source> {
     let repaints = repaints_of_record(world, &record)?;
     Some(Source {
         context: Context::Drive,
+        vehicle: record.catalogue_id.clone(),
         repaints,
         repaint: record.repaint.clone(),
         custom: record

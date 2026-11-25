@@ -7,6 +7,7 @@
 //! `docs/src/formats/text/vehicles/setvars.md`.
 
 mod apply;
+mod component;
 mod describe;
 mod set;
 mod source;
@@ -40,6 +41,9 @@ fn setvars(world: &mut World, params: &Value) -> Outcome {
         ));
     };
     let catalogue = catalogue_of(&src.repaints);
+    if let Some(swap) = params.get("swap") {
+        return component::request(world, &src, &catalogue, swap);
+    }
     match params.get("values") {
         None | Some(Value::Null) => get(&src, &catalogue),
         Some(Value::Object(values)) => match opt_bool(params, "allow_unlisted") {
