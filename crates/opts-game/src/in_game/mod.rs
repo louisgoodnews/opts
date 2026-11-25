@@ -1,6 +1,6 @@
 //! In-game transit driving simulation lifecycle, loading orchestration, and telemetry HUD.
 
-pub mod attachments;
+pub use opts_attachments as attachments;
 pub mod camera;
 pub mod change_map;
 pub mod hot_reload;

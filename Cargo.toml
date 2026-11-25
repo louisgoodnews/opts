@@ -92,6 +92,7 @@ members = [
     "crates/opts-shell-nav",
     "crates/opts-notification",
     "crates/opts-settings-io",
+    "crates/opts-attachments",
     "crates/opts-sim-pedestrian",
     "crates/opts-tools",
     "crates/opts-traffic",
@@ -182,6 +183,7 @@ opts-shell-icons = { path = "crates/opts-shell-icons" }
 opts-shell-nav = { path = "crates/opts-shell-nav" }
 opts-notification = { path = "crates/opts-notification" }
 opts-settings-io = { path = "crates/opts-settings-io" }
+opts-attachments = { path = "crates/opts-attachments" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }
