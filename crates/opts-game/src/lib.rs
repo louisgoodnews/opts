@@ -76,6 +76,7 @@ pub mod vehicle_setup_settings;
 pub mod vehicle_sound;
 pub mod viewpoints;
 pub mod world_passenger_hooks;
+pub mod world_session_ops;
 pub mod world_sound_hooks;
 
 mod plugin;

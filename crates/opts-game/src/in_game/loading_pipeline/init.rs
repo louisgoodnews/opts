@@ -30,6 +30,8 @@ fn configure_job(env: &LoadEnv, job: &mut WorldLoadJob, no_vehicle: bool) {
     job.set_passenger_hooks(std::sync::Arc::new(
         crate::world_passenger_hooks::GamePassengerHooks,
     ));
+    // The session-vehicle operations the load calls (ISS-064).
+    job.set_session_ops(std::sync::Arc::new(crate::world_session_ops::GameSessionVehicleOps));
     job.no_vehicle = no_vehicle;
     // The share of the parking bays that hold a vehicle (setting *Parked vehicles*).
     job.parked_permille = env
