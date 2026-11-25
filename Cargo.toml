@@ -32,6 +32,7 @@ members = [
     "crates/opts-bevy-texture-sentinel",
     "crates/opts-car-following",
     "crates/opts-catalogue",
+    "crates/opts-challenge",
     "crates/opts-cli",
     "crates/opts-collision",
     "crates/opts-kinematic",
