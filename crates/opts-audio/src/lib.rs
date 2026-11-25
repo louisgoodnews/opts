@@ -17,6 +17,10 @@ pub mod engine;
 use bevy::audio::AddAudioSource;
 use bevy::prelude::*;
 
+// The engine places sources relative to the player's view; `crate::MainCamera` is used by the
+// engine and its tests.
+use opts_main_camera::MainCamera;
+
 pub use clip::PcmClip;
 pub use curves::{db_to_gain, percent_to_gain, semitones_to_speed, Distance};
 pub use emitter::{SoundBus, SoundEmitter, Voice};

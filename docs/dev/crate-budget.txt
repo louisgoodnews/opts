@@ -33,3 +33,8 @@ opts-omsi-binary 3135  # new 2026-11-24: the .o3d and .x mesh readers split out 
 opts-omsi-vehicles 4323  # new 2026-11-24: the vehicle readers, the setvar catalogue and the light reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-map 4139  # new 2026-11-24: the map manifest, tile, terrain and water readers and the chrono overlay split out of opts-omsi (docs/dev/crate-split-omsi.md)
 opts-omsi-scenery 3140  # new 2026-11-24: the .sco, .sli and crossing readers and the train consist reader split out of opts-omsi (docs/dev/crate-split-omsi.md)
+opts-scene-trace 1326  # new 2026-11-25: the scene trace moved out of opts-bevy (crate split)
+opts-spatial-zones 946  # new 2026-11-25: the spatial zones moved out of opts-bevy (crate split)
+opts-light-quality 1030  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the lighting quality, ladder and governor moved out of opts-bevy (crate split)
+opts-audio 812  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the sound engine moved out of opts-bevy (crate split)
+opts-main-camera 4  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the MainCamera marker moved out of opts-bevy so that opts-audio can use it

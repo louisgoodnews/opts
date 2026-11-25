@@ -5359,6 +5359,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-audio"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-main-camera",
+]
+
+[[package]]
 name = "opts-bevy"
 version = "0.1.0"
 dependencies = [
@@ -5368,13 +5376,18 @@ dependencies = [
  "directories",
  "image",
  "notify 6.1.1",
+ "opts-audio",
  "opts-cli",
  "opts-core",
  "opts-debounce",
  "opts-gui",
+ "opts-light-quality",
  "opts-logging",
+ "opts-main-camera",
  "opts-position-tag",
+ "opts-scene-trace",
  "opts-sim",
+ "opts-spatial-zones",
  "opts-traffic",
  "rav1e",
  "serde",
@@ -5518,6 +5531,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-light-quality"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "tracing",
+]
+
+[[package]]
 name = "opts-logging"
 version = "0.1.0"
 dependencies = [
@@ -5529,6 +5550,13 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "opts-main-camera"
+version = "0.1.0"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
@@ -5617,6 +5645,16 @@ name = "opts-position-tag"
 version = "0.1.0"
 
 [[package]]
+name = "opts-scene-trace"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "opts-sim"
 version = "0.1.0"
 dependencies = [
@@ -5625,6 +5663,16 @@ dependencies = [
  "opts-core",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "opts-spatial-zones"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]

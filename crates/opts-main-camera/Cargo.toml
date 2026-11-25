@@ -1,0 +1,15 @@
+[package]
+name = "opts-main-camera"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The MainCamera marker: the one camera that shows the player's view, shared by the Bevy crates without a dependency on opts-bevy."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }

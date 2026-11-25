@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Status** | 🟡 Engine implemented 2026-10-20 (this page, Phase A and the first part of Phase B of [M-0027](../roadmap/phase-4/M-0027.md)); the sounds themselves follow milestone by milestone |
-| **Code** | `crates/opts-bevy/src/audio/` (engine), `crates/opts-omsi/src/formats/wav.rs` (decoder), `crates/opts-game/src/audio_content.rs` (clip cache), `control_audio.rs` (protocol), `settings_registry/live.rs` (`sync_audio`) |
+| **Code** | `crates/opts-audio/` (engine), `crates/opts-omsi/src/formats/wav.rs` (decoder), `crates/opts-game/src/audio_content.rs` (clip cache), `control_audio.rs` (protocol), `settings_registry/live.rs` (`sync_audio`) |
 | **Related** | [wav](../formats/wav.md), [sound.cfg](../formats/text/vehicles/sound_cfg.md), [control protocol](../reference/control-protocol.md) (`audio.*`), [settings](../reference/settings.md) (Audio page) |
 
 ## 1. What exists and what is planned
