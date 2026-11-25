@@ -14,14 +14,18 @@ use super::{
     obb_of, player_boxes, BodyBox, CollisionIndex, GroundPlayer, PlayerCollide, VehicleCollider,
 };
 
+mod chain;
 mod contact;
 mod support;
 
+use chain::push_part;
 use contact::{ground_step, worst_contact, Worst};
-use support::{follower_poses, log_push, scrape_velocity};
+use support::{follower_poses, log_contact, log_push, scrape_velocity};
 
 /// Highest obstacle a vehicle drives over: kerbs and road plates (m).
 const STEP_M: f32 = 0.3;
+/// Pushes shorter than this (m) are not passed on along the chain.
+const SPREAD_MIN_M: f64 = 1e-4;
 /// Largest push out of an overlap in one fixed step (m).
 const MAX_PUSH_M: f32 = 0.5;
 /// Largest push out of an overlap with an AI vehicle per fixed step (m): the AI is kinematic, so a
@@ -65,7 +69,7 @@ pub fn player_collisions(
         let mut normals = Vec::new();
         for _ in 0..4 {
             let ch = &controller.sim.chassis;
-            let followers = follower_poses(chain, &part_boxes, &segments);
+            let followers = follower_poses(&controller.sim, chain, &part_boxes, &segments);
             let mine = player_boxes(
                 ch.position,
                 ch.heading_rad,
@@ -77,11 +81,14 @@ pub fn player_collisions(
                 mut contact,
                 traffic: worst_is_traffic,
                 other: worst_other,
+                part: worst_part,
             } = worst_contact(&mine, (&index, &dynamic), (first_seen, free, &mut touching));
+            let mut hit = worst_part;
             // Steps in the ground around the head's footprint.
             if let Some(n) = ground_step(&ground, &mine[0], ch.elevation_z, head.0.height) {
                 if contact.is_none_or(|w| 0.05 > w.1) {
                     contact = Some((n, 0.05));
+                    hit = 0;
                 }
             }
             let Some((normal, depth)) = contact else {
@@ -103,7 +110,8 @@ pub fn player_collisions(
             if push <= 0.0 {
                 break;
             }
-            controller.sim.chassis.position += normal * push;
+            log_contact(hit, mine[hit], worst_other, normal, depth, push, worst_is_traffic);
+            push_part(&mut controller.sim, hit, (normal * push).as_dvec2());
             push_total += normal * push;
             normals.push(normal);
         }
