@@ -16,6 +16,8 @@ pub(super) struct Worst {
     pub(super) contact: Option<(Vec2, f32)>,
     pub(super) traffic: bool,
     pub(super) other: Option<Obb>,
+    /// The part of the chain that hit: 0 is the head, `k` the `k`-th following part.
+    pub(super) part: usize,
 }
 
 pub(super) fn worst_contact(
@@ -24,7 +26,7 @@ pub(super) fn worst_contact(
     (first_seen, free, touching): (bool, &mut Vec<Obb>, &mut Vec<Obb>),
 ) -> Worst {
     let mut worst = Worst::default();
-    for me in mine {
+    for (part, me) in mine.iter().enumerate() {
         let statics = index.grid.query(me.centre, me.radius()).map(|o| (o, false));
         for (other, is_traffic) in statics.chain(dynamic.iter().map(|o| (o, true))) {
             if !me.overlaps_height(other, STEP_M) {
@@ -46,6 +48,7 @@ pub(super) fn worst_contact(
                     worst.contact = Some((c.normal, c.depth));
                     worst.traffic = is_traffic;
                     worst.other = Some(*other);
+                    worst.part = part;
                 }
             }
         }
