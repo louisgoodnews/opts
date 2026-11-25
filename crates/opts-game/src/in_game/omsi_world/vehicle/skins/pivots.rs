@@ -92,26 +92,7 @@ pub(in super::super) fn mesh_pivot(
     }
     let path = job.install.find_in(model_dir, rel)?;
     let o3d = opts_core::formats::o3d::parse(&std::fs::read(path).ok()?).ok()?;
-    let m = o3d.transform?;
-    // Rotation part of the matrix: normalised rows (images of the local axes, o3d coordinates).
-    let row = |i: usize| {
-        let v = Vec3::new(m[i][0], m[i][1], m[i][2]);
-        let v = v.try_normalize().unwrap_or(Vec3::ZERO);
-        [v.x, v.y, v.z]
-    };
-    let scale = (0..3)
-        .map(|i| Vec3::new(m[i][0], m[i][1], m[i][2]).length())
-        .sum::<f32>()
-        / 3.0;
-    Some(opts_bevy::MeshPivot {
-        origin: Vec3::new(m[3][0], m[3][2], m[3][1]),
-        rows: [row(0), row(1), row(2)],
-        scale: if scale.is_finite() && scale > 1e-6 {
-            scale
-        } else {
-            1.0
-        },
-    })
+    Some(opts_bevy::MeshPivot::from_o3d_transform(o3d.transform?))
 }
 
 /// Whether a mesh file stem names a bone dummy of a bellows (`bone_a` … `bone_f`).

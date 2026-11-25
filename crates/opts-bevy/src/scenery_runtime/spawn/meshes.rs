@@ -16,12 +16,23 @@ pub(super) struct MeshBuildArgs<'a, 'w, 's> {
 /// Builds the mesh entities of `[mesh]` number `i` under `parent`; returns the rule entity.
 pub(super) fn build_mesh(mut args: MeshBuildArgs<'_, '_, '_>) {
     let def = &args.sco.meshes[args.index];
-    let pivot = args.parts.iter().find_map(|p| p.pivot).map(to_omsi);
+    // The mesh's own pivot with its matrix rotation: the vehicle rule (`origin_from_mesh` turns
+    // about the frame of the file's matrix, not about the plain axes).
+    let pivot = args.parts.iter().find_map(|p| p.pivot);
     let steps: Vec<_> = def
         .animations
         .iter()
-        .flat_map(|a| anim_steps(a, if a.origin_from_mesh { pivot } else { None }))
+        .flat_map(|a| anim_steps_with(a, if a.origin_from_mesh { pivot } else { None }))
         .collect();
+    tracing::debug!(
+        root = ?args.root,
+        mesh = args.index,
+        name = ?args.sco.friendly_name,
+        origin = ?pivot.map(|p| p.origin),
+        rows = ?pivot.map(|p| p.rows),
+        variables = ?steps.iter().map(|s| s.variable.as_str()).collect::<Vec<_>>(),
+        "scenery mesh animation pivot"
+    );
     let visible: Vec<(String, f32)> = def.visible.iter().cloned().collect();
     let holder = if steps.is_empty() && visible.is_empty() {
         args.parent
@@ -40,6 +51,7 @@ pub(super) fn build_mesh(mut args: MeshBuildArgs<'_, '_, '_>) {
                 shown: Vec::new(),
             },
             vars,
+            last_target: Vec::new(),
         };
         let e = args
             .commands

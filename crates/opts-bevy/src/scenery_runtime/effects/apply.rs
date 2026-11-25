@@ -21,7 +21,13 @@ impl EffectTargets<'_, '_> {
             let steps = rule.anim.steps.len();
             let values: Vec<f32> = rule.vars.iter().map(|r| value(*r)).collect();
             if steps > 0 {
-                rule.anim.follow(&values[..steps], dt_s);
+                let targets = &values[..steps];
+                rule.anim.follow(targets, dt_s);
+                if rule.last_target.as_slice() != targets {
+                    tracing::debug!(owner = ?rule.anim.owner, targets = ?targets, shown = ?rule.anim.shown, "scenery animation target");
+                    rule.last_target = targets.to_vec();
+                }
+                tracing::trace!(owner = ?rule.anim.owner, shown = ?rule.anim.shown, "scenery animation value");
                 let m = animation_matrix_from_values(&rule.anim.steps, &rule.anim.shown);
                 let t = Transform::from_matrix(m);
                 if *transform != t {

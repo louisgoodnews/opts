@@ -13,7 +13,7 @@ use super::lod::SceneryLod;
 use super::scripts::SceneryScripts;
 use crate::coords::omsi_to_bevy_pos;
 use crate::model::{attach_model_parts, ModelPart};
-use crate::vehicle_anim::{anim_steps, MeshAnimation};
+use crate::vehicle_anim::{anim_steps_with, MeshAnimation};
 
 /// Variable that switches light maps which name none (night lighting).
 pub const NIGHT_VARIABLE: &str = "NightlightA";
@@ -70,10 +70,6 @@ pub(super) fn local(p: Vec3) -> Vec3 {
     omsi_to_bevy_pos(p)
 }
 
-/// Bevy → OMSI axes for a pivot.
-pub(super) fn to_omsi(p: Vec3) -> Vec3 {
-    Vec3::new(p.x, -p.z, p.y)
-}
 
 mod groups;
 mod meshes;

@@ -16,6 +16,28 @@ impl MeshPivot {
         }
     }
 
+    /// The pivot of a mesh from its `.o3d` matrix chunk (rows as the file stores them): the origin
+    /// in OMSI vehicle axes, the normalised rotation rows and the mean row length as the scale.
+    /// Vehicles and scenery objects share this rule (ISS-059, ISS-060).
+    #[must_use]
+    pub fn from_o3d_transform(m: [[f32; 4]; 4]) -> Self {
+        let raw = |i: usize| Vec3::new(m[i][0], m[i][1], m[i][2]);
+        let row = |i: usize| {
+            let v = raw(i).try_normalize().unwrap_or(Vec3::ZERO);
+            [v.x, v.y, v.z]
+        };
+        let scale = (0..3).map(|i| raw(i).length()).sum::<f32>() / 3.0;
+        Self {
+            origin: Vec3::new(m[3][0], m[3][2], m[3][1]),
+            rows: [row(0), row(1), row(2)],
+            scale: if scale.is_finite() && scale > 1e-6 {
+                scale
+            } else {
+                1.0
+            },
+        }
+    }
+
     pub(super) fn is_identity(&self) -> bool {
         (0..3).all(|i| (0..3).all(|j| (self.rows[i][j] - f32::from(u8::from(i == j))).abs() < 0.02))
     }
