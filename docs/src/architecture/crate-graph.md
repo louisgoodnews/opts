@@ -49,6 +49,7 @@ graph TD
     subgraph L2 ["Layer 2 — Simulation & Engine Presentation Bridges"]
         opts_sim["opts-sim<br/>• Vehicle physics & kinematics<br/>• Drivetrain, suspension, steering<br/>• Script VM bytecode interpreter<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_sim_passengers["opts-sim-passengers<br/>• Passenger model: boarding, tickets, seats<br/>• Standing places and getting off<br/>• Zero Bevy · Zero File I/O"]:::bridge
+        opts_sim_pedestrian["opts-sim-pedestrian<br/>• Footpath lanes & lane network<br/>• Walkers and gait (ISS-066, stage 2)<br/>• Zero Bevy · Zero File I/O"]:::domain
         opts_traffic["opts-traffic<br/>• Lane graph & car following<br/>• Conflict zones, right of way<br/>• Zero Bevy"]:::bridge
         opts_car_following["opts-car-following<br/>• Intelligent Driver Model<br/>• Vehicle classes & driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_signals["opts-signals<br/>• Traffic-light programs<br/>• Aspect shown to each vehicle<br/>• Zero Bevy · Zero File I/O"]:::bridge
@@ -176,6 +177,8 @@ graph TD
     opts_omsi_vehicles --> opts_omsi_text
     opts_sim --> opts_core
     opts_sim --> opts_sim_passengers
+    opts_sim --> opts_sim_pedestrian
+    opts_sim_pedestrian --> opts_core
     opts_steam --> opts_vdf
     opts_theme_files --> opts_gui
     opts_tools --> opts_core
@@ -231,6 +234,9 @@ graph TD
 | **`opts-kinematic`** | L2 | Cheap kinematic acceleration of an AI vehicle from its measured drive torque over speed; the run-up law shared with the script census in `opts-sim` examples (M-0103) | *None* | *None* | Pure Rust |
 | **`opts-sim-passengers`** | L2 | The passengers of a vehicle: boarding through open doors, tickets, seats and standing places, getting off (split out of `opts-sim`, ISS-066 stage 1; [epic](../../dev/issues/ISS-066-epic-split-opts-sim.md)) | *None* | `opts-sim` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core`, `opts-sim-passengers` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
+| **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
+| **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, OMSI script VM; pedestrians are re-exported from `opts-sim-pedestrian` | `opts-core`, `opts-sim-passengers`, `opts-sim-pedestrian` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
+| **`opts-sim-pedestrian`** | L2 | Pedestrian model: footpath lanes from splines and objects, the lane network, walkers and the gait, split out of `opts-sim` (ISS-066, stage 2) | `opts-core` | `opts-sim` | Pure Rust |
 | **`opts-traffic`** | L2 | AI road traffic: lane graph, conflict zones, right of way, agents and lane changes | `opts-car-following`, `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-audio`** | L2 | Sound engine: decoded clips, emitters, gain curves, the voice budget and the distance fade, split out of `opts-bevy` (crate split) | `opts-main-camera` | `opts-bevy` | Bevy |

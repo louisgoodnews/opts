@@ -1,0 +1,19 @@
+[package]
+name = "opts-sim-pedestrian"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Pedestrian model of OPTS: footpath lanes, the lane network, walkers and the gait (ISS-066, stage 2)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Internal
+opts-core = { workspace = true }
+
+# Math
+glam = { workspace = true }

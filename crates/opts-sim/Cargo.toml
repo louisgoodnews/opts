@@ -15,6 +15,7 @@ workspace = true
 # Internal
 opts-core = { workspace = true }
 opts-sim-passengers = { workspace = true }
+opts-sim-pedestrian = { workspace = true }
 
 # Math & Data
 glam = { workspace = true, features = ["serde"] }
