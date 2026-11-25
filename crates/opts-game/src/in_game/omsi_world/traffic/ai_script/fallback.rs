@@ -56,7 +56,9 @@ pub(super) fn apply_script_drive(
     id: opts_traffic::AgentId,
     scripts: &mut VehicleScripts,
     drive: &mut ScriptDrive,
+    speed: f64,
 ) {
+    let was = drive.engaged;
     let acc = scripts.engine.get_mut().ok().map(|engine| {
         script_accel(
             f64::from(engine.get("M_Wheel")),
@@ -67,6 +69,13 @@ pub(super) fn apply_script_drive(
     });
     world.set_external_accel(id, acc);
     drive.engaged = acc.is_some();
+    if !was && drive.engaged {
+        tracing::info!(
+            agent = id.0,
+            speed_ms = speed,
+            "listed vehicle drives from its script"
+        );
+    }
 }
 
 /// Gives the vehicle back to the car-following law (it left the script's reach).

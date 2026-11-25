@@ -118,6 +118,7 @@ pub fn step_ai_scripts(
     let dt = time.delta_secs().min(0.2);
     let clock = state.world.clock();
     let started = std::time::Instant::now();
+    let mut engaged = 0usize;
     for (tv, mut scripts, mut route, mut ai, vars, drive) in &mut vehicles {
         let Some(mut drive) = drive else {
             if tv.origin.distance(cam) <= SCRIPT_RADIUS_M {
@@ -149,11 +150,13 @@ pub fn step_ai_scripts(
             (agent, command),
             (clock, dt),
         );
-        let was = drive.engaged;
-        apply_script_drive(&mut state.world, tv.id, &mut scripts, &mut drive);
-        if !was && drive.engaged {
-            tracing::info!(agent = tv.id.0, "listed vehicle drives from its script");
-        }
+        let speed = agent.speed;
+        apply_script_drive(&mut state.world, tv.id, &mut scripts, &mut drive, speed);
+        engaged += usize::from(drive.engaged);
     }
-    tracing::debug!(ms = started.elapsed().as_secs_f64() * 1000.0, "script step");
+    tracing::debug!(
+        ms = started.elapsed().as_secs_f64() * 1000.0,
+        engaged,
+        "script step"
+    );
 }

@@ -41,7 +41,9 @@ impl TrafficWorld {
                 .min(brake)
                 .max(-p.max_decel);
             desired.push(acc);
-            accels.push(a.external_accel.unwrap_or(acc));
+            // The car-following law stays a limit: a script can brake or ease off, never pass a red
+            // light, a stop or the vehicle ahead.
+            accels.push(a.external_accel.map_or(acc, |e| e.min(acc)));
         }
         (accels, blocked, desired)
     }
