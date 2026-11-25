@@ -50,6 +50,7 @@ graph TD
         opts_traffic["opts-traffic<br/>• Lane graph & car following<br/>• Conflict zones, right of way<br/>• Zero Bevy"]:::bridge
         opts_car_following["opts-car-following<br/>• Intelligent Driver Model<br/>• Vehicle classes & driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_signals["opts-signals<br/>• Traffic-light programs<br/>• Aspect shown to each vehicle<br/>• Zero Bevy · Zero File I/O"]:::bridge
+        opts_scripted_drive["opts-scripted-drive<br/>• Pedals from the desired acceleration<br/>• Script torque back to acceleration<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_traffic_weather["opts-traffic-weather<br/>• Grip and fog for AI drivers<br/>• Car-following parameter rules<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_vehicle_traits["opts-vehicle-traits<br/>• Traffic traits of a vehicle type<br/>• Mapped onto the driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_kinematic["opts-kinematic<br/>• Cheap kinematic acceleration (M-0103)<br/>• Drive torque curve over speed<br/>• Zero Bevy · Zero File I/O"]:::bridge
@@ -162,6 +163,7 @@ graph TD
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic`, `opts-vehicle-traits`, `opts-traffic-weather` | Pure Rust |
 | **`opts-vehicle-traits`** | L2 | Traffic traits of a vehicle type (class, length, mass, drive and brake force) mapped onto the car-following driver parameters, split out of `opts-traffic` (crate split, M-0103) | `opts-car-following` | `opts-traffic` | Pure Rust |
 | **`opts-signals`** | L2 | Traffic-light programs and the aspect each instant shows to a vehicle, split out of `opts-traffic` (crate split, M-0103) | *None* | `opts-traffic` | Pure Rust |
+| **`opts-scripted-drive`** | L2 | The near-vehicle drive (M-0103): the desired acceleration as script pedals, and the script's wheel torque and brake force back as an acceleration | *None* | *None* | Pure Rust |
 | **`opts-traffic-weather`** | L2 | Weather for AI drivers: grip and fog visibility change the car-following parameters, split out of `opts-traffic` (M-0117) | `opts-car-following` | `opts-traffic` | Pure Rust |
 | **`opts-kinematic`** | L2 | Cheap kinematic acceleration of an AI vehicle from its measured drive torque over speed; the run-up law shared with the script census in `opts-sim` examples (M-0103) | *None* | *None* | Pure Rust |
 | **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-benchmark`, `opts-game` | Pure Rust |

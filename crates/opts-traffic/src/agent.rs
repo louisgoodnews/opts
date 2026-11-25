@@ -134,6 +134,9 @@ pub struct Agent {
     /// A phantom standing for a vehicle outside the traffic ([`crate::obstacles`]): only exists
     /// during a step.
     pub(crate) foreign: bool,
+    /// Acceleration set from outside (a near vehicle driven by its own script, M-0103); replaces
+    /// the car-following law for this step while set.
+    pub(crate) external_accel: Option<f64>,
 }
 
 impl Agent {

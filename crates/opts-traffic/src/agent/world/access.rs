@@ -27,6 +27,18 @@ impl TrafficWorld {
         self.stuck_after_s = seconds;
     }
 
+    /// Sets (or with `None` clears) the acceleration of agent `id` for the next steps, in place
+    /// of the car-following law (M-0103: a near vehicle driven by its own script).
+    pub fn set_external_accel(&mut self, id: AgentId, acc: Option<f64>) -> bool {
+        match self.agents.iter_mut().find(|a| a.id == id) {
+            Some(a) => {
+                a.external_accel = acc;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Removes an agent (despawn outside the player's range, say).
     pub fn despawn(&mut self, id: AgentId) -> bool {
         let before = self.agents.len();

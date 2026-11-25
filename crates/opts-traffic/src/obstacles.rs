@@ -181,6 +181,7 @@ impl Agent {
             lc_cooldown_until: f64::INFINITY,
             lc_next_check: time + 1.0e9,
             foreign: true,
+            external_accel: None,
         }
     }
 }

@@ -17,6 +17,10 @@ impl TrafficWorld {
                 accels.push(0.0);
                 continue;
             }
+            if let Some(acc) = a.external_accel {
+                accels.push(acc);
+                continue;
+            }
             let leader = self.leader(i, &looks[i], by_lane);
             let wait = self.conflict_gap(i, &looks[i], by_lane, held);
             blocked[i] = wait.is_some();

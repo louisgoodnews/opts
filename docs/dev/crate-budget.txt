@@ -37,3 +37,4 @@ opts-omsi-scenery 3140  # new 2026-11-24: the .sco, .sli and crossing readers an
 opts-vehicle-traits 319  # new 2026-11-25: the traffic traits moved out of opts-traffic (crate split)
 opts-signals 126  # new 2026-11-25: the traffic-light programs moved out of opts-traffic (crate split)
 opts-traffic-weather 106  # new 2026-11-25: the weather rules for AI drivers moved out of opts-traffic (crate split)
+opts-scripted-drive 12  # new 2026-11-25: the near-vehicle drive (M-0103): pedals and script acceleration, pure Rust
