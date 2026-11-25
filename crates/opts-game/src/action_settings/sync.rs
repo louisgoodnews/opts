@@ -3,11 +3,13 @@
 
 use bevy::prelude::*;
 use opts_bevy::action_keys::{self, ActionDef, ActionKeys};
+use opts_bevy::gamepad_input::PadBindings;
 use opts_bevy::KeyChord;
 
 use crate::settings::GameSettings;
 use crate::settings_registry::SettingsRegistry;
 
+use super::pad::sync_pad_bindings;
 use super::{binding_settings, MOUSE_DRIVING_KEY};
 
 /// The bindings of `group` (`None`: all) put back to their defaults, without conflict checks (the
@@ -79,11 +81,13 @@ impl Plugin for ActionKeysPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActionKeys::with_system_layout())
             .init_resource::<opts_bevy::MouseDriving>()
+            .init_resource::<PadBindings>()
             .add_systems(
                 PreUpdate,
                 (
                     sync_action_keys,
                     sync_mouse_driving,
+                    sync_pad_bindings,
                     opts_bevy::action_keys::learn_key_layout,
                 ),
             );
