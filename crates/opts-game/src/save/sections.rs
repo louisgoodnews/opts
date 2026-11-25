@@ -12,6 +12,7 @@
 //! | `camera` | mode, sub-camera, free camera pose, orbit and look offsets | when all vehicles exist |
 //! | `counters` | driven distance, session duration and top speed | when all vehicles exist |
 //! | `passenger_load` | the test count of people the vehicle's dynamics carry, if one is set | when all vehicles exist |
+//! | `career` | money, owned vehicles, finished shifts, experience and the running shift (ISS-047) | with the counters |
 //! | `simulation` | paused, time scale | last |
 
 use std::path::Path;
@@ -24,6 +25,7 @@ use super::registry::{SaveAppExt, SaveSection, Stage};
 use super::sections_runtime as runtime;
 use crate::session_vehicles::{SAVE_SECTION, SAVE_SECTION_VERSION};
 
+mod career;
 mod fuel;
 mod paths;
 mod session;
@@ -148,6 +150,7 @@ pub fn register(app: &mut App) {
         apply: Some(active_apply),
         about: "which vehicle the driver is in",
         ..base
-    });
+    })
+    .register_save_section(career::section(base));
     runtime::register(app, base);
 }

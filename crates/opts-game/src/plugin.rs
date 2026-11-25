@@ -61,6 +61,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(help::HelpPlugin)
             .add_plugins(pause::PausePlugin)
             .add_plugins(save::SavePlugin)
+            .add_plugins(career::CareerPlugin)
             .add_plugins(hud::HudPlugin)
             .add_plugins(viewpoints::ViewpointPlugin)
             .add_plugins(session_summary::SessionSummaryPlugin)
