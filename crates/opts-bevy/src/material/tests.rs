@@ -36,6 +36,26 @@ fn zero_diffuse_alpha_is_opaque_and_fractions_stay() {
 }
 
 #[test]
+fn a_diffuse_alpha_of_099_is_opaque_and_clearly_translucent_blends() {
+    let mat = |alpha: f32| O3dMaterial {
+        diffuse: [1.0, 1.0, 1.0, alpha],
+        specular: [0.0; 3],
+        emissive: [0.0; 3],
+        power: 0.0,
+        textures: Vec::new(),
+    };
+    assert_eq!(
+        o3d_material_to_standard_material(&mat(0.99), None).alpha_mode,
+        AlphaMode::Opaque,
+        "the EN92 roof (diffuse alpha 0.99) must not blend"
+    );
+    assert_eq!(
+        o3d_material_to_standard_material(&mat(0.9), None).alpha_mode,
+        AlphaMode::Blend
+    );
+}
+
+#[test]
 fn test_roughness_conversion() {
     assert_eq!(specular_power_to_roughness(0.0), 1.0);
     let rough_glossy = specular_power_to_roughness(50.0);
