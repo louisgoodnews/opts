@@ -5462,6 +5462,7 @@ dependencies = [
  "opts-l10n",
  "opts-logging",
  "opts-map-advice",
+ "opts-scripted-drive",
  "opts-sim",
  "opts-steam",
  "opts-stream-budget",

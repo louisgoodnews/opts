@@ -137,6 +137,9 @@ pub struct Agent {
     /// Acceleration set from outside (a near vehicle driven by its own script, M-0103); replaces
     /// the car-following law for this step while set.
     pub(crate) external_accel: Option<f64>,
+    /// The car-following acceleration of the last step, also while an external one is applied:
+    /// the pedals a driver's script reads are derived from it.
+    pub(crate) desired_accel: f64,
 }
 
 impl Agent {

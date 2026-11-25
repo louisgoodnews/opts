@@ -8,7 +8,7 @@ pub(in crate::in_game::omsi_world) fn engine_for(
     job: &mut WorldLoadJob,
     bus_path: &Path,
     canvases: Arc<RwLock<Vec<CpuScriptTexture>>>,
-    run: &RunRef,
+    run: Option<&RunRef>,
     seed: u64,
     setvars: &[(String, String)],
 ) -> Option<(VehicleScripts, VehicleRoute)> {
@@ -29,8 +29,10 @@ pub(in crate::in_game::omsi_world) fn engine_for(
     let hof = opts_bevy::route::find_depot(&dir, job.install.root(), &[friendly, folder]);
     let route = RouteHandle::new(hof.map(Arc::new));
     route.set_timetables(job.timetables());
-    if route.select_run(&run.line_file, run.tour, run.run).is_err() {
-        return None;
+    if let Some(run) = run {
+        if route.select_run(&run.line_file, run.tour, run.run).is_err() {
+            return None;
+        }
     }
     opts_bevy::route::apply_to_scripts(&mut engine, &route);
     engine.seed_random(seed as u32);

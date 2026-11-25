@@ -1,5 +1,6 @@
 //! The steps of placing one AI vehicle once its agent exists.
 
+use super::support;
 use super::*;
 use opts_traffic::IdmFromTraits;
 
@@ -88,19 +89,18 @@ pub(super) fn finish_spawned(
             ),
         );
     }
-    log_spawned(
-        id,
-        (&name, group_name),
-        speed,
-        (params, traits),
-        (entities.len(), measured, fallbacks),
-    );
-    trace_spawned(
-        root,
-        &name,
-        origin,
-        trace_frame,
-        (lane_id, speed, params, entities.len()),
+    if request.is_none() && ai_script::is_fallback(&head_bus_path) {
+        support::attach_fallback(
+            job,
+            commands,
+            root,
+            (id, &head_bus_path, head_setvars, traits),
+        );
+    }
+    support::report_spawned(
+        (id, lane_id, root, &name, group_name),
+        (speed, params, traits, measured, fallbacks, entities.len()),
+        (origin, trace_frame),
     );
     attach_agent(
         commands,

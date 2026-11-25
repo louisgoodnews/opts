@@ -1,5 +1,6 @@
 //! Feeding the scripts of the scheduled vehicles near the camera and running their frame.
 
+use super::fallback::{apply_script_drive, release_script_drive};
 use super::*;
 
 /// What the script engine is told about the agent: speed, pedals, the AI flags and the route.
@@ -102,18 +103,22 @@ pub(super) fn run_vehicle(
     }
 }
 
+/// The components a vehicle with scripts is queried by: the script, its route and its drive.
+type ScriptedVehicle = (
+    &'static TrafficVehicle,
+    &'static mut VehicleScripts,
+    &'static mut VehicleRoute,
+    &'static mut AiScript,
+    &'static opts_bevy::AiVariables,
+    Option<&'static mut ScriptDrive>,
+);
+
 /// Feeds the scripts of the scheduled vehicles near the camera and runs their frame.
 pub fn step_ai_scripts(
     time: Res<Time>,
-    state: Res<TrafficState>,
+    mut state: ResMut<TrafficState>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    mut vehicles: Query<(
-        &TrafficVehicle,
-        &mut VehicleScripts,
-        &mut VehicleRoute,
-        &mut AiScript,
-        &opts_bevy::AiVariables,
-    )>,
+    mut vehicles: Query<ScriptedVehicle>,
 ) {
     let Ok(cam) = camera.single() else { return };
     let cam = DVec2::new(
@@ -122,8 +127,25 @@ pub fn step_ai_scripts(
     );
     let dt = time.delta_secs().min(0.2);
     let clock = state.world.clock();
-    for (tv, mut scripts, mut route, mut ai, vars) in &mut vehicles {
+    for (tv, mut scripts, mut route, mut ai, vars, drive) in &mut vehicles {
+        let Some(mut drive) = drive else {
+            if tv.origin.distance(cam) <= SCRIPT_RADIUS_M {
+                if let (Some(agent), Some(command)) =
+                    (state.world.agent(tv.id), state.world.command(tv.id))
+                {
+                    run_vehicle(
+                        tv,
+                        (&mut scripts, &mut route, &mut ai, vars),
+                        (agent, command),
+                        (clock, dt),
+                    );
+                }
+            }
+            continue;
+        };
         if tv.origin.distance(cam) > SCRIPT_RADIUS_M {
+            // Out of the script's reach the car-following law drives the vehicle again.
+            release_script_drive(&mut state.world, tv.id, &mut drive);
             continue;
         }
         let (Some(agent), Some(command)) = (state.world.agent(tv.id), state.world.command(tv.id))
@@ -136,5 +158,6 @@ pub fn step_ai_scripts(
             (agent, command),
             (clock, dt),
         );
+        apply_script_drive(&mut state.world, tv.id, &mut scripts, &mut drive);
     }
 }

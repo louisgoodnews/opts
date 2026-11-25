@@ -182,6 +182,7 @@ impl Agent {
             lc_next_check: time + 1.0e9,
             foreign: true,
             external_accel: None,
+            desired_accel: 0.0,
         }
     }
 }
