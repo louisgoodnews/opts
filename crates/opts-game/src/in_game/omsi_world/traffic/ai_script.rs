@@ -27,6 +27,7 @@ pub(in crate::in_game::omsi_world) use engine::engine_for;
 pub(super) use fallback::{is_fallback, ScriptDrive};
 mod frame;
 pub use frame::step_ai_scripts;
+pub(super) mod timing;
 
 /// Scripts run within this distance (m) of the camera; farther vehicles keep their last state.
 pub(in crate::in_game::omsi_world) const SCRIPT_RADIUS_M: f64 = 150.0;

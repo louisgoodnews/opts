@@ -32,11 +32,14 @@ fn normalise(s: &str) -> String {
 /// A listed vehicle: while it is near the camera its script gives its acceleration, from the
 /// wheel torque `M_Wheel` and the brake force `Brakeforce` on a vehicle of `mass_kg` (the whole
 /// consist) and wheels of `radius_m`. `engaged` is whether the acceleration is currently set.
+/// `last_speed` is the speed (m/s) at the previous frame the vehicle was visited, for the speed
+/// jump at a LOD switch (`lod switch` log line; `None` before the first frame).
 #[derive(Component, Debug, Clone, Copy)]
 pub struct ScriptDrive {
     pub mass_kg: f64,
     pub radius_m: f64,
     pub engaged: bool,
+    pub last_speed: Option<f64>,
 }
 
 /// The components a vehicle with scripts is queried by: the script, its route and its drive.
@@ -76,6 +79,11 @@ pub(super) fn apply_script_drive(
             "listed vehicle drives from its script"
         );
     }
+    if was != drive.engaged {
+        let to = if drive.engaged { "script" } else { "kinematic" };
+        log_lod_switch(id, to, drive.last_speed, speed);
+    }
+    drive.last_speed = Some(speed);
 }
 
 /// Gives the vehicle back to the car-following law (it left the script's reach).
@@ -83,11 +91,30 @@ pub(super) fn release_script_drive(
     world: &mut opts_traffic::TrafficWorld,
     id: opts_traffic::AgentId,
     drive: &mut ScriptDrive,
+    speed: f64,
 ) {
     if drive.engaged {
         world.set_external_accel(id, None);
         drive.engaged = false;
+        log_lod_switch(id, "kinematic", drive.last_speed, speed);
     }
+    drive.last_speed = Some(speed);
+}
+
+/// Logs a LOD switch (`lod switch`) with the speed of the previous frame (`v_before_mps`), of the
+/// switch frame (`v_now_mps`) and their difference (`jump_mps`, m/s). Criterion 1 holds when
+/// `|jump_mps|` stays at or below 0.3. `to` is the driver after the switch. Without a previous
+/// frame the fields are NaN.
+fn log_lod_switch(id: opts_traffic::AgentId, to: &'static str, before: Option<f64>, now: f64) {
+    let before = before.unwrap_or(f64::NAN);
+    tracing::debug!(
+        agent = id.0,
+        to,
+        v_before_mps = before,
+        v_now_mps = now,
+        jump_mps = now - before,
+        "lod switch"
+    );
 }
 
 #[cfg(test)]

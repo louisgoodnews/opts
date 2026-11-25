@@ -1,6 +1,7 @@
 //! Feeding the scripts of the scheduled vehicles near the camera and running their frame.
 
 use super::fallback::{apply_script_drive, release_script_drive, ScriptedVehicle};
+use super::timing::Window;
 use super::*;
 
 /// What the script engine is told about the agent: speed, pedals, the AI flags and the route.
@@ -109,6 +110,7 @@ pub fn step_ai_scripts(
     mut state: ResMut<TrafficState>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut vehicles: Query<ScriptedVehicle>,
+    mut timing: Local<Window>,
 ) {
     let Ok(cam) = camera.single() else { return };
     let cam = DVec2::new(
@@ -137,7 +139,8 @@ pub fn step_ai_scripts(
         };
         if tv.origin.distance(cam) > SCRIPT_RADIUS_M {
             // Out of the script's reach the car-following law drives the vehicle again.
-            release_script_drive(&mut state.world, tv.id, &mut drive);
+            let speed = state.world.agent(tv.id).map_or(f64::NAN, |a| a.speed);
+            release_script_drive(&mut state.world, tv.id, &mut drive, speed);
             continue;
         }
         let (Some(agent), Some(command)) = (state.world.agent(tv.id), state.world.command(tv.id))
@@ -154,9 +157,6 @@ pub fn step_ai_scripts(
         apply_script_drive(&mut state.world, tv.id, &mut scripts, &mut drive, speed);
         engaged += usize::from(drive.engaged);
     }
-    tracing::debug!(
-        ms = started.elapsed().as_secs_f64() * 1000.0,
-        engaged,
-        "script step"
-    );
+    let ms = started.elapsed().as_secs_f64() * 1000.0;
+    timing.record("script", ms, u32::try_from(engaged).unwrap_or(u32::MAX));
 }
