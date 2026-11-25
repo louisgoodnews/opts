@@ -67,7 +67,7 @@ pub(super) fn load_key_bindings(job: &WorldLoadJob, commands: &mut Commands) {
         bound = bindings.0.len(),
         "vehicle script key bindings loaded"
     );
-    // The rebindable actions come from the settings (`crate::vehicle_keys`), which compose the
-    // final `ScriptKeyBindings` from this base.
+    // The rebindable actions come from the settings (`vehicle_keys` in `opts-game`), which
+    // compose the final `ScriptKeyBindings` from this base.
     commands.insert_resource(opts_bevy::ScriptKeyBase(bindings.0));
 }
