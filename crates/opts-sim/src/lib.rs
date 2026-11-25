@@ -12,7 +12,6 @@
 
 pub mod exhaust;
 pub use opts_sim_passengers::passengers;
-pub mod pedestrian;
 pub use opts_sim_pedestrian::pedestrian;
 pub mod rail;
 pub mod script;
