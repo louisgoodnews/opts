@@ -63,6 +63,7 @@ pub(super) fn attach_fallback(
             mass_kg: traits.mass_kg.unwrap_or(12_000.0),
             radius_m: traits.wheel_radius.unwrap_or(0.5),
             engaged: false,
+            last_speed: None,
         });
     }
 }

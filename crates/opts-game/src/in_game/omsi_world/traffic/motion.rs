@@ -1,6 +1,7 @@
 //! Moving traffic vehicles and their script variables.
 
 use super::*;
+use super::ai_script::timing::Window;
 
 mod ai_vars;
 mod debug;
@@ -56,6 +57,7 @@ pub fn move_traffic(
         &mut Visibility,
         Option<&TrafficChain>,
     )>,
+    mut timing: Local<Window>,
 ) {
     let dt = f64::from(time.delta_secs().min(0.2));
     // The lights follow the session's time of day.
@@ -65,9 +67,12 @@ pub fn move_traffic(
     weather.sync_traffic(&mut state.world);
     // Sub-steps of at most 0.1 s keep the car-following law stable.
     let steps = (dt / 0.1).ceil().max(1.0);
+    let started = std::time::Instant::now();
     for _ in 0..steps as usize {
         state.world.step(dt / steps);
     }
+    let ms = started.elapsed().as_secs_f64() * 1000.0;
+    timing.record("world", ms, u32::try_from(state.world.agents().len()).unwrap_or(u32::MAX));
     for e in state.world.drain_events() {
         if let opts_traffic::TrafficEvent::Stuck { id, lane } = e {
             tracing::warn!(id = id.0, lane = lane.0, "AI vehicle stuck, despawned");
