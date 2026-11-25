@@ -1,21 +1,5 @@
 //! Top-level application lifecycle states for OPTS.
+//!
+//! The type lives in the `opts-game-state` crate; this path keeps working for the game.
 
-use bevy::prelude::*;
-
-/// Primary state machine governing navigation and lifecycle in OPTS.
-#[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum AppState {
-    /// Initial asset and resource loading phase.
-    #[default]
-    Loading,
-    /// Home, the first screen of the shell.
-    MainMenu,
-    /// *Drive*: planning a drive (map, vehicle, time).
-    VehicleSelection,
-    /// Simulation and audio/display settings.
-    Settings,
-    /// Help: controls, guides, report an issue, About.
-    Help,
-    /// Active 3D driving simulation gameplay.
-    InGame,
-}
+pub use opts_game_state::app_state::AppState;

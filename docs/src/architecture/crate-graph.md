@@ -69,6 +69,7 @@ graph TD
     %% Layer 3: Application Executables & Tools
     subgraph L3 ["Layer 3 — Application Executables & Tooling"]
         opts_exhaust["opts-exhaust<br/>• Exhaust plumes of the vehicles nearest the camera<br/>• Puff emission, outlets, distance fade<br/>• Bevy systems over opts-bevy and opts-sim"]:::app
+        opts_game_state["opts-game-state<br/>• App states, settings types & defaults<br/>• In-game component and resource types<br/>• Bevy-facing type crate: no systems, no I/O"]:::app
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
         opts_benchmark["opts-benchmark (Binary)<br/>• Scenery load verification<br/>• Off-screen worker & supervisor"]:::app
         opts_tools["opts-tools (Binary: opts)<br/>• CLI asset inspector<br/>• Mesh & texture converter<br/>• Dependency & format validator"]:::app
@@ -100,6 +101,9 @@ graph TD
     opts_exhaust --> opts_bevy
     opts_exhaust --> opts_sim
     opts_game --> opts_bevy
+    opts_game --> opts_game_state
+    opts_game_state --> opts_bevy
+    opts_game_state --> opts_gui
     opts_game --> opts_catalogue
     opts_game --> opts_cli
     opts_game --> opts_collision
@@ -192,7 +196,7 @@ graph TD
 | **`opts-main-camera`** | L2 | The `MainCamera` marker, the one camera that shows the player's view, split out of `opts-bevy` so that `opts-audio` can query it (crate split) | *None* | `opts-audio`, `opts-bevy` | Bevy |
 | **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-benchmark`, `opts-game` | Pure Rust |
 | **`opts-theme-files`** | L2 | RON theme files in the configuration folder: discovery and loading through the contrast checker of `opts-gui` (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-theme.md)) | `opts-gui` | `opts-game` | Pure Rust (external: `directories`) |
-| **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game`, `opts-theme-files` | Bevy UI |
+| **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game`, `opts-game-state`, `opts-theme-files` | Bevy UI |
 | **`opts-debounce`** | L0 | Trailing debounce of file-change events for the hot-reload watcher (split out of `opts-bevy`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-map-advice`** | L0 | Map load profile and the heuristic advice engine: pure thresholds, no engine dependency (split out of `opts-game`, [plan](../../dev/crate-split-advice.md)) | *None* | `opts-game` | Pure Rust |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
@@ -200,6 +204,9 @@ graph TD
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-audio`, `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-light-quality`, `opts-logging`, `opts-main-camera`, `opts-position-tag`, `opts-scene-trace`, `opts-sim`, `opts-spatial-zones`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game` | Bevy Engine |
 | **`opts-exhaust`** | L3 | Engine exhaust plumes of the player and the nearest vehicles: puff emission, the model outlet, the distance fade (split out of `opts-game`, M-0117 budget room; [plan](../../dev/crate-split-exhaust.md)) | `opts-bevy`, `opts-sim` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-scripted-drive`, `opts-sim`, `opts-steam`, `opts-stream-budget`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
+| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game`, `opts-game-state` | Bevy Engine |
+| **`opts-game-state`** | L3 | Shared state types of the game: `AppState`, `GameSettings` with its defaults, session overlay and baseline, `Look` and `LookParams`, the in-game components and resources (split out of `opts-game`, ISS-064 stage 2). Types and pure helpers only; file I/O and systems stay in `opts-game` | `opts-bevy`, `opts-gui` | `opts-game` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-game-state`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game` | *None (executable root)* | — |
 | **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core`, `opts-hardware`, `opts-l10n` | *None (executable root)* | CLI Tooling |
 | **`opts-benchmark`** | L3 | Scenery object load verification harness ([spec](scenery-benchmark.md)): an off-screen worker that rebuilds objects through the loader and a supervisor | `opts-bevy`, `opts-catalogue`, `opts-core`, `opts-game`, `opts-sim` | *None (executable root)* | Bevy |
@@ -222,3 +229,4 @@ graph TD
    - Provides pure tracing layers, rotation policies, and file writers.
 4. **Engine Access Gating:**
    - Only `opts-bevy`, `opts-gui`, and `opts-game` are permitted to declare `bevy` as a dependency.
+   - **Amendment (ISS-064 stage 2, owner-approved):** the exempt crates are also the Bevy-facing type crates listed in the inventory with the coupling "Bevy Engine": currently `opts-game-state`. They may declare `bevy` for the derives of their types, and they hold types and pure helpers only; systems, plugins, UI and file I/O stay in `opts-game`.
