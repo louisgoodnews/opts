@@ -1,7 +1,7 @@
 //! The cached facts and the request in flight: the store the Content page reads, and the
 //! worker threads that gather the facts.
 
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -78,22 +78,6 @@ impl ContentFactsStore {
     pub fn invalidate(&mut self) {
         self.heavy_stale = true;
         self.since_light = LIGHT_REFRESH;
-    }
-
-    /// Runs `job` (file-system work such as clearing the texture cache) on a worker thread and
-    /// invalidates the heavy facts when it is done.
-    pub fn run_then_invalidate(&mut self, job: impl FnOnce() + Send + 'static) {
-        let (tx, rx) = mpsc::channel();
-        let spawned = std::thread::Builder::new()
-            .name("content-job".into())
-            .spawn(move || {
-                job();
-                let _ = tx.send(());
-            });
-        match spawned {
-            Ok(_) => self.jobs.push(Mutex::new(rx)),
-            Err(e) => tracing::warn!(err = %e, "cannot start the content job thread"),
-        }
     }
 
     /// A request is running.

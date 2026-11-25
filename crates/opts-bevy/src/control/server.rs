@@ -5,7 +5,7 @@ use std::net::{IpAddr, SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(test)]
 use std::sync::mpsc;
-use std::sync::mpsc::{Sender, SyncSender};
+use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -128,9 +128,6 @@ pub fn start(config: &ServerConfig, tx: SyncSender<Pending>) -> std::io::Result<
         })?;
     Ok(ServerHandle { addr, stop, slots })
 }
-
-/// A sender-side handle kept for tests that need to inject without a socket.
-pub type CommandSender = Sender<Pending>;
 
 #[cfg(test)]
 mod tests;

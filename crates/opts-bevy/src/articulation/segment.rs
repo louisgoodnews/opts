@@ -128,13 +128,6 @@ impl ArticulatedSegment {
         self.curr_ground
     }
 
-    /// Position and heading of the segment in the kinematic frame (its mirrored frame when
-    /// `reversed`): the frame its coupling points and rear axle are given in.
-    #[must_use]
-    pub fn kinematic_pose(&self) -> Option<(Vec2, f32)> {
-        self.curr_pose
-    }
-
     /// Position and heading (compass, rad) of the segment's own frame after the last fixed step
     /// (a reversed segment's frame is turned half a circle against the kinematic one).
     #[must_use]
