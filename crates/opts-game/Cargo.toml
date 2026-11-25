@@ -32,6 +32,7 @@ opts-steam = { workspace = true }
 opts-map-advice = { workspace = true }
 opts-theme-files = { workspace = true }
 opts-exhaust = { workspace = true }
+opts-game-state = { workspace = true }
 
 # Bevy Engine
 bevy = { workspace = true }

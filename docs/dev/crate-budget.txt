@@ -11,6 +11,7 @@ opts-core 4  # set 2026-11-22 to the current total
 opts-debounce 86  # new 2026-11-23: the hot-reload file-event debouncer split out of opts-bevy (docs/dev/crate-split-weather.md)
 opts-map-advice 121  # new 2026-11-23: the map load profile and advice engine split out of opts-game (docs/dev/crate-split-advice.md)
 opts-game 90578  # lowered 2026-11-24 to the measured total: the exhaust module moved to opts-exhaust (M-0117 nearest-N, docs/dev/crate-split-exhaust.md); the rail rule bridge (sync_exhaust, behind) added lines, paid by moving the VehicleComposition and road grip unit tests to crates/opts-game/tests
+opts-game-state 504  # new 2026-11-25 (ISS-064 stage 2): ESTIMATE from a hand count of the moved files, not measured by the audit; replace with the measured total
 opts-gui 18492  # raised 2026-11-23 from 18409 to the total after the ISS-056 disabled-label contrast fix (owner decision)
 opts-hardware 2642  # set 2026-11-22 to the current total
 opts-importer 60  # set 2026-11-22 to the current total

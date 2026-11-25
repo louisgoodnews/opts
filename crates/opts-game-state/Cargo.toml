@@ -1,0 +1,24 @@
+[package]
+name = "opts-game-state"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shared state types of the Open Public Transport Simulator: app states, settings types and in-game components and resources."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Internal Crates
+opts-gui = { workspace = true, features = ["serde"] }
+opts-bevy = { workspace = true }
+
+# Bevy Engine (Bevy-facing type crate, see docs/src/architecture/crate-graph.md, rule 4)
+bevy = { workspace = true }
+
+# Serialization & Time
+serde = { workspace = true }
+chrono = { workspace = true }

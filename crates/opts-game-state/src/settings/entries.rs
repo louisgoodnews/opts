@@ -1,10 +1,13 @@
 //! The persisted key/value pairs of the settings, and the baseline they are compared with.
 
-use super::*;
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+
+use super::GameSettings;
 
 impl GameSettings {
     /// The persisted values as key/value pairs.
-    pub(in crate::settings) fn entries(&self) -> BTreeMap<String, String> {
+    pub fn entries(&self) -> BTreeMap<String, String> {
         let path = |p: &Option<PathBuf>| {
             p.as_ref()
                 .and_then(|p| p.to_str())
@@ -41,7 +44,7 @@ impl GameSettings {
         m
     }
 
-    pub(in crate::settings) fn remember_baseline(&self) {
+    pub fn remember_baseline(&self) {
         if let Ok(mut b) = self.baseline.0.lock() {
             *b = Some(self.entries());
         }
