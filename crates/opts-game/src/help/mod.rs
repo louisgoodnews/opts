@@ -5,6 +5,7 @@
 //! unchanged.
 
 mod about;
+mod credits;
 pub mod controls;
 mod overlay;
 mod page;
@@ -45,10 +46,18 @@ pub enum HelpTab {
     Report,
     /// Version and licences.
     About,
+    /// The project's credits and the third-party components (ISS-082).
+    Credits,
 }
 
 impl HelpTab {
-    pub(super) const ALL: [Self; 4] = [Self::Controls, Self::Guides, Self::Report, Self::About];
+    pub(super) const ALL: [Self; 5] = [
+        Self::Controls,
+        Self::Guides,
+        Self::Report,
+        Self::About,
+        Self::Credits,
+    ];
 
     pub(super) fn key(self) -> &'static str {
         match self {
@@ -56,6 +65,7 @@ impl HelpTab {
             Self::Guides => keys::HELP_TAB_GUIDES,
             Self::Report => keys::HELP_TAB_REPORT,
             Self::About => keys::HELP_TAB_ABOUT,
+            Self::Credits => keys::HELP_TAB_CREDITS,
         }
     }
 
@@ -65,6 +75,7 @@ impl HelpTab {
             Self::Guides => "guides",
             Self::Report => "report",
             Self::About => "about",
+            Self::Credits => "credits",
         }
     }
 
