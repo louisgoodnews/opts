@@ -1,0 +1,15 @@
+[package]
+name = "opts-omsi-weather"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OMSI 2 weather files: the presets (.owt), the cloud catalogue (clouds.cfg) and the localised names and descriptions (.dsc)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-omsi-scan = { workspace = true }

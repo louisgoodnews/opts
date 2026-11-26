@@ -9,8 +9,8 @@
 //! title): the parsers read positionally and never skip a blank line inside a record.
 //!
 //! Split out of `opts-omsi-text` (ISS-087, stage 1). `opts-omsi-text` re-exports this crate as
-//! `formats::timetable`, so the old paths keep working. Pure in-memory parsers: no file I/O, no
-//! engine, no OMSI binaries (ADR-0002).
+//! `formats::timetable`, so the old paths keep working. The parsers work on in-memory text; the
+//! folder loader (`load`) is the one place that reads files (no engine, no OMSI binaries, ADR-0002).
 
 #![warn(missing_docs)]
 #![deny(unsafe_code)]
