@@ -1,49 +1,29 @@
-//! The JSON payload of the `zones.query` control method: the zones of the loaded tiles and the
-//! membership of the subject. The handler that serves it is `control::handlers::zones`.
+//! The JSON payload of the `zones.query` control method, the facade over
+//! `opts-spatial-zones-core::query` (ISS-092). The handler that serves it is
+//! `control::handlers::zones` in `opts-bevy`.
 
 use bevy::math::Vec2;
-use serde_json::{json, Value};
+use serde_json::Value;
 
-use super::model::{SpatialZone, ZoneKind};
+use super::model::SpatialZone;
 use super::sampler::ZoneMembership;
+use opts_spatial_zones_core::query::SubjectSample;
 
-/// The label of a zone kind in the protocol.
-#[must_use]
-pub fn kind_label(kind: ZoneKind) -> &'static str {
-    match kind {
-        ZoneKind::Tunnel => "tunnel",
-    }
-}
+pub use opts_spatial_zones_core::query::kind_label;
 
-fn zone_json(zone: &SpatialZone) -> Value {
-    json!({
-        "id": zone.id.0,
-        "kind": kind_label(zone.kind),
-        "min": [zone.min.x, zone.min.y],
-        "max": [zone.max.x, zone.max.y],
-    })
-}
-
-/// `{zones, count, subject}`. `subject` is `null` when no subject is tracked; otherwise it holds
-/// the sampled point, whether the subject is inside and the zone it is in.
+/// `{zones, count, subject}`: the core's payload, with the subject read from its membership.
 #[must_use]
 pub fn zones_payload(
     zones: &[SpatialZone],
     subject: Option<(Vec2, &ZoneMembership)>,
     limit: usize,
 ) -> Value {
-    let subject = subject.map(|(p, m)| {
-        json!({
-            "point": [p.x, p.y],
-            "inside": m.tracker.inside(),
-            "zone": m.zone.map(|(id, kind)| json!({"id": id.0, "kind": kind_label(kind)})),
-        })
+    let subject = subject.map(|(point, m)| SubjectSample {
+        point,
+        inside: m.tracker.inside(),
+        zone: m.zone,
     });
-    json!({
-        "count": zones.len(),
-        "zones": zones.iter().take(limit).map(zone_json).collect::<Vec<_>>(),
-        "subject": subject,
-    })
+    opts_spatial_zones_core::query::zones_payload(zones, subject, limit)
 }
 
 #[cfg(test)]

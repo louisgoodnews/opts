@@ -1,11 +1,17 @@
 //! The 10 Hz membership sampler: for each subject, tests its ground point against the zones and
 //! feeds the result to its [`ZoneTracker`], emitting [`ZoneEntered`] / [`ZoneLeft`] on transitions.
+//! The step itself is pure and lives in `opts-spatial-zones-core` (ISS-092); this module is the
+//! Bevy wrapper that holds the components and writes the messages.
 
 use bevy::math::Vec2;
 use bevy::prelude::*;
 
-use super::model::{SpatialZone, ZoneEntered, ZoneId, ZoneKind, ZoneLeft};
-use super::tracker::{SampleGate, Transition, ZoneTracker};
+use super::model::{SpatialZone, ZoneEntered, ZoneLeft};
+use opts_spatial_zones_core::model::{ZoneId, ZoneKind};
+use opts_spatial_zones_core::sampler as core_sampler;
+use opts_spatial_zones_core::tracker::{SampleGate, ZoneTracker};
+
+pub use opts_spatial_zones_core::sampler::Emitted;
 
 /// Marks an entity whose zone membership is tracked (the player vehicle, the camera).
 #[derive(Component, Debug, Clone, Copy, Default)]
@@ -38,32 +44,16 @@ impl ZoneMembership {
     }
 }
 
-/// What one sample produced for a subject.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Emitted {
-    Entered(ZoneId, ZoneKind),
-    Left(ZoneId, ZoneKind),
-}
-
-/// Advances `membership` by one sample at ground point `p` against `zones`. Returns the
-/// transition, if this sample completes one. A subject that moves from one zone straight into
-/// another stays inside without a transition: zones that touch are one covered stretch.
+/// Advances `membership` by one sample at ground point `p` against `zones`. Delegates to the
+/// core's step, on the membership's fields.
 pub fn step(membership: &mut ZoneMembership, p: Vec2, zones: &[SpatialZone]) -> Option<Emitted> {
-    let hit = zones.iter().find(|z| z.contains(p));
-    let advance = membership.last.map_or(0.0, |last| last.distance(p));
-    membership.last = Some(p);
-    let transition = membership.tracker.update(hit.is_some(), advance)?;
-    match transition {
-        Transition::Entered => {
-            let zone = hit?;
-            membership.zone = Some((zone.id, zone.kind));
-            Some(Emitted::Entered(zone.id, zone.kind))
-        }
-        Transition::Left => {
-            let (id, kind) = membership.zone.take()?;
-            Some(Emitted::Left(id, kind))
-        }
-    }
+    core_sampler::step(
+        &mut membership.tracker,
+        &mut membership.last,
+        &mut membership.zone,
+        p,
+        zones,
+    )
 }
 
 /// Samples every subject at most [`SampleGate::RATE_HZ`] times per second.
