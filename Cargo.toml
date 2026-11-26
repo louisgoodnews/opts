@@ -43,6 +43,7 @@ members = [
     "crates/opts-scripted-drive",
     "crates/opts-scene-trace",
     "crates/opts-spatial-zones",
+    "crates/opts-spatial-zones-core",
     "crates/opts-stream-budget",
     "crates/opts-traffic-weather",
     "crates/opts-audio",
@@ -145,6 +146,7 @@ opts-signals = { path = "crates/opts-signals" }
 opts-scripted-drive = { path = "crates/opts-scripted-drive" }
 opts-scene-trace = { path = "crates/opts-scene-trace" }
 opts-spatial-zones = { path = "crates/opts-spatial-zones" }
+opts-spatial-zones-core = { path = "crates/opts-spatial-zones-core" }
 opts-stream-budget = { path = "crates/opts-stream-budget" }
 opts-traffic-weather = { path = "crates/opts-traffic-weather" }
 opts-audio = { path = "crates/opts-audio" }

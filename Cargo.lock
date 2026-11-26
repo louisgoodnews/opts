@@ -6017,10 +6017,15 @@ name = "opts-spatial-zones"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "opts-spatial-zones-core",
  "serde",
  "serde_json",
  "tracing",
 ]
+
+[[package]]
+name = "opts-spatial-zones-core"
+version = "0.1.0"
 
 [[package]]
 name = "opts-steam"

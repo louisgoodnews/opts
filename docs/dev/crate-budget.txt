@@ -46,7 +46,8 @@ opts-traffic-weather 106  # new 2026-11-25: the weather rules for AI drivers mov
 opts-scripted-drive 12  # new 2026-11-25: the near-vehicle drive (M-0103): pedals and script acceleration, pure Rust
 opts-stream-budget 657  # new 2026-11-25: the tile streaming budget (M-0089) moved out of opts-game (crate split); opts-game keeps its budget as room
 opts-scene-trace 1326  # new 2026-11-25: the scene trace moved out of opts-bevy (crate split)
-opts-spatial-zones 946  # new 2026-11-25: the spatial zones moved out of opts-bevy (crate split)
+opts-spatial-zones 816  # lowered 2026-11-26 to the measured total after the tracker split (ISS-092): the Bevy-free tracker and sample gate moved to opts-spatial-zones-core; was 946 (new 2026-11-25: the spatial zones moved out of opts-bevy, crate split)
+opts-spatial-zones-core 141  # new 2026-11-26 (ISS-092): the Bevy-free tracker, sample gate and their tests split out of opts-spatial-zones; measured
 opts-audio 707  # lowered 2026-11-26 to the measured total after the curves split (ISS-088): the gain curves moved to opts-audio-curves; was an ESTIMATE 812 (ISS-061) from the sound engine move out of opts-bevy
 opts-audio-curves 108  # new 2026-11-26 (ISS-088 stage 1): the gain curves (distance fade, dB, percent, semitones) split out of opts-audio; measured
 opts-light-quality 940  # lowered 2026-11-26 to the measured total (ISS-090): the Bevy-free levels moved to opts-light-quality-core; was an ESTIMATE 1030 (ISS-061) for the lighting quality, ladder and governor moved out of opts-bevy (crate split)

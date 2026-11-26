@@ -64,6 +64,7 @@ graph TD
         opts_scripted_drive["opts-scripted-drive<br/>• Pedals from the desired acceleration<br/>• Script torque back to acceleration<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_scene_trace["opts-scene-trace<br/>• Scene trace records and store<br/>• Bevy types, no OMSI"]:::bridge
         opts_spatial_zones["opts-spatial-zones<br/>• Ceilings and tunnels<br/>• Sampling, tracking, overlays"]:::bridge
+        opts_spatial_zones_core["opts-spatial-zones-core<br/>• Hysteresis tracker and 10 Hz sample gate<br/>• No dependencies · Zero Bevy · Zero File I/O"]:::bridge
         opts_stream_budget["opts-stream-budget<br/>• Tile-streaming frame budget<br/>• Wanted and evictable tiles<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_traffic_weather["opts-traffic-weather<br/>• Grip and fog for AI drivers<br/>• Car-following parameter rules<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_vehicle_traits["opts-vehicle-traits<br/>• Traffic traits of a vehicle type<br/>• Mapped onto the driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
@@ -144,6 +145,7 @@ graph TD
     opts_audio --> opts_audio_curves
     opts_bevy --> opts_scene_trace
     opts_bevy --> opts_spatial_zones
+    opts_spatial_zones --> opts_spatial_zones_core
     opts_bevy --> opts_sim
     opts_bevy --> opts_traffic
     opts_catalogue --> opts_core
@@ -300,6 +302,7 @@ graph TD
     opts_game --> opts_scripted_drive
     opts_bevy --> opts_scene_trace
     opts_bevy --> opts_spatial_zones
+    opts_spatial_zones --> opts_spatial_zones_core
     opts_traffic --> opts_core
 ```
 
@@ -342,7 +345,8 @@ graph TD
 | **`opts-signals`** | L2 | Traffic-light programs and the aspect each instant shows to a vehicle, split out of `opts-traffic` (crate split, M-0103) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-scripted-drive`** | L2 | The near-vehicle drive (M-0103): the desired acceleration as script pedals, and the script's wheel torque and brake force back as an acceleration | *None* | `opts-game` | Pure Rust |
 | **`opts-scene-trace`** | L2 | The scene trace: records, filters and the trace store of what is under the camera, split out of `opts-bevy` (crate split) | *None* | `opts-bevy` | Bevy |
-| **`opts-spatial-zones`** | L2 | Spatial zones (ceilings, tunnels) with their sampling, tracking and overlays, split out of `opts-bevy` (crate split) | *None* | `opts-bevy` | Bevy |
+| **`opts-spatial-zones`** | L2 | Spatial zones (ceilings, tunnels) with their sampling, tracking and overlays, split out of `opts-bevy` (crate split); the tracker and sample gate are re-exported from `opts-spatial-zones-core` (ISS-092) | `opts-spatial-zones-core` | `opts-bevy` | Bevy |
+| **`opts-spatial-zones-core`** | L2 | The Bevy-free part of the spatial zones: the hysteresis tracker and the 10 Hz sample gate, split out of `opts-spatial-zones` (ISS-092) | *None* | `opts-spatial-zones` | Pure Rust |
 | **`opts-challenge`** | L2 | Facade over `opts-challenge-model` and `opts-challenge-scorer`: re-exports them at the old paths (ISS-089) | `opts-challenge-model`, `opts-challenge-scorer` | *None* | Pure Rust |
 | **`opts-challenge-scorer`** | L2 | The scorer of M-0172: applies run events to a challenge and produces its result, split out of `opts-challenge` (ISS-089) | `opts-challenge-model` (external: `tracing`) | `opts-challenge` | Pure Rust |
 | **`opts-stream-budget`** | L2 | Tile-streaming frame budget and prioritisation (M-0089): wanted and evictable tiles, spreading and motion policy, split out of `opts-game` (crate split) | *None* | `opts-game` | Pure Rust |
