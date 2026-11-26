@@ -76,7 +76,8 @@ opts-fleet-number 38  # estimate 2026-11-25 (ISS-067 stage 1): fleet_number.rs m
 opts-mesh-dir 119  # estimate 2026-11-25 (ISS-067 stage 1): mesh_dir.rs moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
 opts-road-surf 289  # estimate 2026-11-25 (ISS-067 stage 1): road_surf.rs and road_surf/ (map, strip, tests) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
 opts-consist-plan 431  # new 2026-11-26 (ISS-093 step 1): the consist plan split out of opts-world-load, with FormationCar and coupling_joint from vehicle/trailers.rs; measured
-opts-world-load 18611  # lowered 2026-11-26 to the measured total after the consist plan moved out (ISS-093); was 19016 (ISS-064/067/068 split)
+opts-tree-foliage 89  # new 2026-11-26 (ISS-093 step 2): the foliage rule of scenery trees split out of opts-world-load; measured
+opts-world-load 18522  # lowered 2026-11-26 to the measured total after the consist plan and the foliage rule moved out (ISS-093); was 19016 (ISS-064/067/068 split)
 opts-world-session 27  # estimate 2026-11-25 (ISS-067 stage 1): session.rs (OmsiSessionConfig, SessionRequest) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
 opts-shell-calendar 345  # new 2026-11-25 (ISS-068 stage 1, estimate: non-blank non-comment lines counted by hand, not by the audit): the date and time steppers and choice frame split out of opts-game's shell
 opts-shell-dialog 187  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the confirmation dialog spec, spawn and answer systems split out of opts-game's shell

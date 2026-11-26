@@ -8,7 +8,7 @@ use opts_bevy::{tree_billboard_material, tree_billboard_mesh, ContentLoader, Til
 use opts_core::formats::map::MapObjectInstance;
 use opts_core::formats::scenery::ScoTree;
 
-mod foliage;
+use opts_tree_foliage as foliage;
 
 pub(super) use foliage::is_mesh_tree;
 
