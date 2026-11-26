@@ -1,6 +1,6 @@
 //! Unit tests of the hysteresis tracker and the sample gate (moved with the tracker, ISS-092).
 
-use super::*;
+use opts_spatial_zones_core::tracker::*;
 
 /// Feeds `n` samples of `advance_m` each in state `covered`, collecting the transitions.
 fn drive(t: &mut ZoneTracker, covered: bool, n: usize, advance_m: f32) -> Vec<Transition> {
