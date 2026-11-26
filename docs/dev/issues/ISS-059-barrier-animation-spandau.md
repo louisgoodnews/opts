@@ -5,7 +5,7 @@
 | **Issue** | ISS-059 (local register: [issues-2026-11-18](../../audit/issues-2026-11-18.md)) |
 | **Severity** | major (player) |
 | **Milestone** | to be triaged |
-| **Status** | open, reported 2026-11-24 |
+| **Status** | closed 2026-11-26: not reproduced as a bug. The barrier swing matches the model (delay as a rate, about 0.7 s to half-way; runtime check and a visual check from above show no 0.25 s snap); the earlier snap was an observation artifact. ISS-060 (Falkensee) is fixed separately. |
 
 ## Problem
 
