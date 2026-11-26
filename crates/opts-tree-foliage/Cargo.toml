@@ -1,0 +1,15 @@
+[package]
+name = "opts-tree-foliage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The foliage rule of scenery trees: which texture is a leaf texture, and which tree is modelled as a mesh (split out of opts-world-load, ISS-093)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-core = { workspace = true }

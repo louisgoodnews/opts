@@ -80,7 +80,7 @@ fn is_foliage_token(token: &str) -> bool {
 
 /// Whether a texture's name names foliage: one of its words (split at anything but letters)
 /// is a foliage word.
-pub(super) fn is_foliage_texture(texture: &str) -> bool {
+pub fn is_foliage_texture(texture: &str) -> bool {
     let name = Path::new(texture.trim())
         .file_stem()
         .map(|s| s.to_string_lossy().to_lowercase())
@@ -99,7 +99,7 @@ pub(super) fn is_foliage_texture(texture: &str) -> bool {
 /// hint OMSI's files give: a corpus scan finds 246 such objects next to 941 billboard trees, and
 /// the word rule keeps railings (`Lichtentanne_Gelaender`) and signs out. A building with a bush
 /// texture next to its window glass (`building401`) is no tree: its glass must not sway.
-pub(in crate) fn is_mesh_tree(sco: &SceneryObject) -> bool {
+pub fn is_mesh_tree(sco: &SceneryObject) -> bool {
     if sco.tree.is_some() {
         return false;
     }

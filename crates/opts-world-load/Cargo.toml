@@ -38,6 +38,7 @@ opts-stream-budget = { workspace = true }
 opts-tile-loading = { workspace = true }
 opts-traffic = { workspace = true }
 opts-traffic-schedule = { workspace = true }
+opts-tree-foliage = { workspace = true }
 opts-vehicle-script-texture = { workspace = true }
 opts-world-session = { workspace = true }
 opts-world-stats = { workspace = true }

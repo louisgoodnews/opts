@@ -65,6 +65,7 @@ members = [
     "crates/opts-mesh-dir",
     "crates/opts-road-surf",
     "crates/opts-consist-plan",
+    "crates/opts-tree-foliage",
     "crates/opts-vehicle-script-texture",
     "crates/opts-world-stats",
     "crates/opts-world-session",
@@ -197,6 +198,7 @@ opts-fleet-number = { path = "crates/opts-fleet-number" }
 opts-mesh-dir = { path = "crates/opts-mesh-dir" }
 opts-road-surf = { path = "crates/opts-road-surf" }
 opts-consist-plan = { path = "crates/opts-consist-plan" }
+opts-tree-foliage = { path = "crates/opts-tree-foliage" }
 opts-vehicle-script-texture = { path = "crates/opts-vehicle-script-texture" }
 opts-world-stats = { path = "crates/opts-world-stats" }
 opts-world-session = { path = "crates/opts-world-session" }
