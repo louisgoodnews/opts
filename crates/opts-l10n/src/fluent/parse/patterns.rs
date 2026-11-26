@@ -8,15 +8,6 @@ pub(super) struct PatternError {
     pub(super) offset: Option<usize>,
 }
 
-impl From<&str> for PatternError {
-    fn from(message: &str) -> Self {
-        Self {
-            message: message.to_string(),
-            offset: None,
-        }
-    }
-}
-
 pub(super) fn parse_pattern(text: &str) -> Result<Pattern, PatternError> {
     let mut parts = Vec::new();
     let mut buf = String::new();
