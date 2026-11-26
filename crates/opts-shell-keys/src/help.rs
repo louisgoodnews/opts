@@ -9,6 +9,8 @@ keys! {
     HELP_TAB_REPORT = "help-tab-report",
     /// Message `help-tab-about`.
     HELP_TAB_ABOUT = "help-tab-about",
+    /// Message `help-tab-credits`.
+    HELP_TAB_CREDITS = "help-tab-credits",
     /// Message `help-group-driving`.
     HELP_GROUP_DRIVING = "help-group-driving",
     /// Message `help-group-rail`.
@@ -105,6 +107,14 @@ keys! {
     HELP_ABOUT_CLEAN = "help-about-clean",
     /// Message `help-about-third`.
     HELP_ABOUT_THIRD = "help-about-third",
+    /// Message `help-credits-title`.
+    HELP_CREDITS_TITLE = "help-credits-title",
+    /// Message `help-credits-licence`.
+    HELP_CREDITS_LICENCE = "help-credits-licence",
+    /// Message `help-credits-scope`.
+    HELP_CREDITS_SCOPE = "help-credits-scope",
+    /// Message `help-credits-licence-files`.
+    HELP_CREDITS_LICENCE_FILES = "help-credits-licence-files",
     /// Message `help-close`.
     HELP_CLOSE = "help-close",
     /// Message `help-overlay-title`.
