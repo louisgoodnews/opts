@@ -72,6 +72,7 @@ members = [
     "crates/opts-omsi-scan",
     "crates/opts-omsi-timetable",
     "crates/opts-omsi-weather",
+    "crates/opts-omsi-sound",
     "crates/opts-omsi-binary",
     "crates/opts-omsi-vehicles",
     "crates/opts-omsi-map",
@@ -169,6 +170,7 @@ opts-omsi-text = { path = "crates/opts-omsi-text" }
 opts-omsi-scan = { path = "crates/opts-omsi-scan" }
 opts-omsi-timetable = { path = "crates/opts-omsi-timetable" }
 opts-omsi-weather = { path = "crates/opts-omsi-weather" }
+opts-omsi-sound = { path = "crates/opts-omsi-sound" }
 opts-omsi-binary = { path = "crates/opts-omsi-binary" }
 opts-omsi-vehicles = { path = "crates/opts-omsi-vehicles" }
 opts-omsi-map = { path = "crates/opts-omsi-map" }
