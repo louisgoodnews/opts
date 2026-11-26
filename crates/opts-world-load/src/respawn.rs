@@ -1,7 +1,8 @@
 //! Spawning session vehicles while a session runs (the in-game vehicle menu, the control protocol):
 //! the entry points of the map resolved to world positions, and the spawner that works down the
 //! spawn requests of the [`SessionVehicles`] registry and builds each vehicle at its entry point.
-//! Despawning, switching and respawning are in `crate::session_vehicles::ops`.
+//! Despawning, switching and respawning are in `opts-game`'s `session_vehicles::ops` (see
+//! [`crate::session_ops`] for the hooks it is called through).
 
 use super::vehicle::load_player_vehicle;
 use super::{LoadAssets, WorldLoadJob, WorldStats};
