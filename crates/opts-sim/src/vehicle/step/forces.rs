@@ -119,8 +119,21 @@ impl VehicleSimulation {
                 total += st.force_n;
             }
         }
-        // The driven axles of the following units (the driven axle of an articulated bus hangs
-        // in its second unit): the tyre carries the torque as far as its load allows.
+        self.add_trailer_forces(total, d, torque_each, head_brake_n, speed)
+    }
+
+    /// Adds the tyre forces of the following units to `total`: the driven axles of an articulated
+    /// bus hang in its second unit, and the tyre carries the torque as far as its load allows; the
+    /// units' brake share goes as far as their tyres carry it.
+    fn add_trailer_forces(
+        &self,
+        mut total: f32,
+        d: ScriptDrive,
+        torque_each: f32,
+        head_brake_n: f32,
+        speed: f32,
+    ) -> f32 {
+        let mu = self.road_friction;
         let r_unit = self
             .axles
             .first()
@@ -134,7 +147,6 @@ impl VehicleSimulation {
                 }
             }
         }
-        // The following units: their brake share, as far as their tyres carry it.
         let trailer_brake_n = d.brake_force_n - head_brake_n;
         if trailer_brake_n > 0.0 {
             let loads: f32 = self
