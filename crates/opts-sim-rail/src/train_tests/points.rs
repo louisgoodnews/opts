@@ -22,7 +22,7 @@ fn a_route_decides_at_the_point_and_the_shortest_path_finds_it() {
 /// Lanes 1 (straight on) and 2 (to the north-east) belong to the points `K` in positions 0
 /// and 1.
 fn gated_net() -> PedestrianNet {
-    use crate::pedestrian::Gate;
+    use opts_sim_pedestrian::Gate;
     let gate = |position| Gate {
         switch: 7,
         position,

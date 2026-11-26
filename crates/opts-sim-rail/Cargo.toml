@@ -1,0 +1,19 @@
+[package]
+name = "opts-sim-rail"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Rail-bound vehicles of OPTS: trains on the track network, bogie poses, longitudinal dynamics (split out of opts-sim, ISS-093)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Internal
+opts-sim-pedestrian = { workspace = true }
+
+# Math
+glam = { workspace = true }

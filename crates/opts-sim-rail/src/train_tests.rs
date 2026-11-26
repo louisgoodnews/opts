@@ -1,7 +1,7 @@
 //! Unit tests of `train.rs`.
 
 use super::*;
-use crate::pedestrian::{FootLane, Travel};
+use opts_sim_pedestrian::{FootLane, Travel};
 #[path = "train_tests/motion.rs"]
 mod motion;
 #[path = "train_tests/points.rs"]

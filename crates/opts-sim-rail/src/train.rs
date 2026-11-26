@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 
 use glam::Vec3;
 
-use crate::pedestrian::{End, LaneId, PedestrianNet};
+use opts_sim_pedestrian::{End, LaneId, PedestrianNet};
 
 mod motion;
 mod switches;
