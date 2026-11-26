@@ -8,9 +8,11 @@ pub mod humans;
 pub mod money;
 pub mod oft;
 pub mod org;
-pub mod sound;
-pub use opts_omsi_scan as text;
 pub mod ticketpack;
-pub use opts_omsi_timetable as timetable;
 pub mod varlist;
+
+// Split out (ISS-087): the same paths, re-exported from the crates that now hold them.
+pub use opts_omsi_scan as text;
+pub use opts_omsi_sound as sound;
+pub use opts_omsi_timetable as timetable;
 pub use opts_omsi_weather as weather;

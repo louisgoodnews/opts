@@ -1,3 +1,5 @@
+//! # OPTS OMSI sound configuration reader (`opts-omsi-sound`)
+//!
 //! Sound configuration files (`sound.cfg`, `docs/src/formats/text/vehicles/sound_cfg.md`): a flat
 //! list of `[sound]` and `[loopsound]` definitions with modifiers. Vehicles and scenery objects
 //! share the format; scenery uses `[sound]` only (census 2026-10-20: 345 definitions, no
@@ -6,6 +8,13 @@
 //! Rules of the spec: a keyword starts a line (`[` first, `]` last); its parameters follow one per
 //! line; everything else is a comment; modifiers attach to the most recent definition. Blank
 //! lines are skipped. Nothing here fails: what cannot be read is a warning.
+//!
+//! Split out of `opts-omsi-text` (ISS-087, stage 2). `opts-omsi-text` re-exports this crate as
+//! `formats::sound`, so the old paths keep working. Pure in-memory parser: no file I/O, no engine,
+//! no OMSI binaries (ADR-0002). It has its own line helpers and needs no other crate.
+
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
 
 /// How a definition plays.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
