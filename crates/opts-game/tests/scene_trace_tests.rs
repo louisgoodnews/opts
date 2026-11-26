@@ -18,7 +18,6 @@ use opts_game::{
 };
 use opts_gui::prelude::*;
 
-
 fn app_for(root: &std::path::Path, map: &str) -> App {
     let catalogue = GameCatalogue {
         maps: vec![MapItem {
