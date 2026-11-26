@@ -9,8 +9,8 @@
 use glam::DVec2;
 
 /// `.sco` `[path]` records write `-999.99…` for "straight": radii of object paths at or beyond
-/// this magnitude are read as straight ([`crate::source`]). Splines have no such marker: their
-/// mesh arcs for every radius, and so do their lanes.
+/// this magnitude are read as straight (the importer `source` of `opts-traffic`). Splines have no
+/// such marker: their mesh arcs for every radius, and so do their lanes.
 pub const SCO_STRAIGHT_RADIUS: f64 = 999.0;
 
 /// A straight line or circular arc.

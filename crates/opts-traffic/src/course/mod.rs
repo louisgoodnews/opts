@@ -7,7 +7,6 @@
 mod index;
 mod resolve;
 
+pub use opts_traffic_lanes::graph::{CourseLane, Resolution, ResolvedLane};
 pub use index::{ElementCache, ElementIndex, ElementKind, ElementRef, Lookup, TileKey};
-pub use resolve::{
-    course_from_trip, CourseDraft, CourseGap, CourseLane, Resolution, ResolvedLane,
-};
+pub use resolve::{course_from_trip, CourseDraft, CourseGap};

@@ -24,13 +24,13 @@ pub struct LaneSegment {
     /// Height profile.
     pub elevation: Elevation,
     /// The light that governs entering this lane (`[use_traffic_light]`), if any.
-    pub signal: Option<crate::signals::SignalKey>,
+    pub signal: Option<opts_signals::SignalKey>,
     /// The path belongs to a scenery object (junction, crossing): vehicles do not change lanes
     /// on it.
     pub junction: bool,
     /// The indicator a crossing path states (`.sco` `[path]` parameter 12: `0` none, `2` left,
     /// `3` right); `None` when it states none (splines, value `1`) and the turn heuristic applies.
-    pub indicator: Option<crate::agent::Blinker>,
+    pub indicator: Option<crate::Blinker>,
     /// Opaque tag for the host (object or spline id) so lanes can be traced back.
     pub source: u64,
 }

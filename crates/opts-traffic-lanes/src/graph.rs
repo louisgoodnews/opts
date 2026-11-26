@@ -18,6 +18,7 @@ use crate::rng::Rng;
 use build::angle_diff;
 
 mod build;
+mod course;
 mod ids;
 mod lane;
 mod lane_rules;
@@ -26,6 +27,7 @@ mod queries;
 mod segment;
 mod shortest;
 
+pub use course::{CourseLane, Resolution, ResolvedLane};
 pub use ids::{Direction, LaneId, LaneKind};
 pub use lane::{ConnectParams, Lane, SpawnError};
 pub use lane_rules::{Elevation, LaneRules};

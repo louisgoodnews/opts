@@ -22,11 +22,11 @@ pub struct Lane {
     /// Height profile in travel direction.
     pub elevation: Elevation,
     /// The light that governs entering this lane.
-    pub signal: Option<crate::signals::SignalKey>,
+    pub signal: Option<opts_signals::SignalKey>,
     /// The path belongs to a scenery object (see [`LaneSegment::junction`]).
     pub junction: bool,
     /// Indicator stated by the path (see [`LaneSegment::indicator`]).
-    pub indicator: Option<crate::agent::Blinker>,
+    pub indicator: Option<crate::Blinker>,
     /// The host's tag from the segment.
     pub source: u64,
     /// Stable identity across rebuilds: the segment's `source` and the number of lanes of that

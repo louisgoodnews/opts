@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 KNOWN = ROOT / "docs/dev/omsi-uses-known.txt"
-ENGINE = ["opts-bevy", "opts-sim", "opts-traffic", "opts-car-following", "opts-gui", "opts-catalogue"]
+ENGINE = ["opts-bevy", "opts-sim", "opts-traffic", "opts-traffic-lanes", "opts-car-following", "opts-gui", "opts-catalogue"]
 PATTERN = re.compile(r"\bopts_omsi\b|\bopts_core::(?:formats|setvars)\b|\bopts_core::\{[^}]*\b(?:formats|setvars)\b")
 
 

@@ -12,3 +12,13 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+# Internal
+opts-core = { workspace = true }
+opts-car-following = { workspace = true }
+opts-signals = { workspace = true }
+
+# Math
+glam = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }

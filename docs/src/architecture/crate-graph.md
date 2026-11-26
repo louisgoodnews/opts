@@ -64,7 +64,7 @@ graph TD
         opts_sim_passenger_model["opts-sim-passenger-model<br/>• Passenger data: cabin, paths, tickets<br/>• Path graph of a cabin and the random source<br/>• No dependencies · Zero Bevy · Zero File I/O"]:::bridge
         opts_sim_pedestrian["opts-sim-pedestrian<br/>• Footpath lanes & lane network<br/>• Walkers and gait (ISS-066, stage 2)<br/>• Zero Bevy · Zero File I/O"]:::domain
         opts_traffic["opts-traffic<br/>• Lane graph & car following<br/>• Conflict zones, right of way<br/>• Zero Bevy"]:::bridge
-        opts_traffic_lanes["opts-traffic-lanes<br/>• Lane graph, geometry, densities<br/>• Conflict zones, neighbour lanes<br/>• Zero Bevy · Zero File I/O"]:::bridge
+        opts_traffic_lanes["opts-traffic-lanes<br/>• Lane graph, geometry, densities<br/>• Conflict zones, neighbour lanes, course resolve<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_car_following["opts-car-following<br/>• Intelligent Driver Model<br/>• Vehicle classes & driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_signals["opts-signals<br/>• Traffic-light programs<br/>• Aspect shown to each vehicle<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_scripted_drive["opts-scripted-drive<br/>• Pedals from the desired acceleration<br/>• Script torque back to acceleration<br/>• Zero Bevy · Zero File I/O"]:::bridge
@@ -333,6 +333,9 @@ graph TD
     opts_traffic --> opts_signals
     opts_traffic --> opts_traffic_weather
     opts_traffic --> opts_traffic_lanes
+    opts_traffic_lanes --> opts_car_following
+    opts_traffic_lanes --> opts_core
+    opts_traffic_lanes --> opts_signals
     opts_traffic_weather --> opts_car_following
     opts_game --> opts_stream_budget
     opts_game --> opts_scripted_drive
@@ -379,8 +382,8 @@ graph TD
 | **`opts-importer`** | L1 | Turns legacy OMSI content into the native model; the only crate that knows both | `opts-model`, `opts-omsi` | *None yet* | Pure Rust |
 | **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-fleet-number`, `opts-game`, `opts-mesh-dir`, `opts-road-surf`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
-| **`opts-traffic`** | L2 | AI road traffic: lane graph, conflict zones, right of way, agents and lane changes | `opts-car-following`, `opts-core`, `opts-traffic-lanes`, `opts-vehicle-traits`, `opts-signals`, `opts-traffic-weather` | `opts-bevy`, `opts-game` | Pure Rust |
-| **`opts-traffic-lanes`** | L2 | The lane graph of AI traffic (lanes, geometry, densities, conflict zones, neighbour lanes, indicator state), split out of `opts-traffic` (ISS-085) | *None* | `opts-traffic` | Pure Rust |
+| **`opts-traffic`** | L2 | AI road traffic: agents, lane changes, course and right of way; the lane graph is in `opts-traffic-lanes` (ISS-085) | `opts-car-following`, `opts-core`, `opts-traffic-lanes`, `opts-vehicle-traits`, `opts-signals`, `opts-traffic-weather` | `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-traffic-lanes`** | L2 | The lane graph of AI traffic (lanes, geometry, densities, conflict zones, neighbour lanes, indicator state, course path lookup), split out of `opts-traffic` (ISS-085) | `opts-car-following`, `opts-core`, `opts-signals` | `opts-traffic` | Pure Rust |
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic`, `opts-vehicle-traits`, `opts-traffic-weather` | Pure Rust |
 | **`opts-vehicle-traits`** | L2 | Traffic traits of a vehicle type (class, length, mass, drive and brake force) mapped onto the car-following driver parameters, split out of `opts-traffic` (crate split, M-0103) | `opts-car-following` | `opts-traffic` | Pure Rust |
 | **`opts-signals`** | L2 | Traffic-light programs and the aspect each instant shows to a vehicle, split out of `opts-traffic` (crate split, M-0103) | *None* | `opts-traffic` | Pure Rust |
@@ -402,7 +405,7 @@ graph TD
 | **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, OMSI script VM; pedestrians are re-exported from `opts-sim-pedestrian` | `opts-core`, `opts-sim-passengers`, `opts-sim-pedestrian` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
 | **`opts-sim-pedestrian`** | L2 | Pedestrian model: footpath lanes from splines and objects, the lane network, walkers and the gait, split out of `opts-sim` (ISS-066, stage 2) | `opts-core` | `opts-sim` | Pure Rust |
-| **`opts-traffic`** | L2 | AI road traffic: lane graph, conflict zones, right of way, agents and lane changes | `opts-car-following`, `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-traffic`** | L2 | AI road traffic: agents, lane changes, course and right of way; the lane graph is in `opts-traffic-lanes` (ISS-085) | `opts-car-following`, `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-audio`** | L2 | Sound engine: decoded clips, emitters, the voice budget and the distance fade, split out of `opts-bevy` (crate split); the gain curves are re-exported from `opts-audio-curves` (ISS-088) | `opts-audio-curves`, `opts-main-camera` | `opts-bevy` | Bevy |
 | **`opts-audio-curves`** | L2 | Gain curves of the sound engine: the distance fade, decibel and percent gains and the semitone speed factor, split out of `opts-audio` (ISS-088) | *None* | `opts-audio` | Pure Rust |

@@ -27,16 +27,13 @@
 #![warn(missing_docs)]
 
 pub mod agent;
-pub mod conflict;
 pub mod course;
-pub mod density;
-pub mod geometry;
-pub mod graph;
 pub mod lanechange;
-pub mod neighbours;
 pub mod obstacles;
 pub mod rightofway;
-pub mod rng;
+// The lane graph lives in `opts-traffic-lanes`; these re-exports keep `opts_traffic::graph` and
+// the other lane paths.
+pub use opts_traffic_lanes::{conflict, density, geometry, graph, neighbours, rng};
 pub use opts_signals as signals;
 pub mod source;
 pub use opts_traffic_weather as weather;

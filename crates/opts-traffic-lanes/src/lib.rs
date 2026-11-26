@@ -8,4 +8,11 @@
 
 mod blinker;
 
+pub mod conflict;
+pub mod density;
+pub mod geometry;
+pub mod graph;
+pub mod neighbours;
+pub mod rng;
+
 pub use blinker::Blinker;

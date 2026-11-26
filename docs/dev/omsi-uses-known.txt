@@ -6,3 +6,4 @@ opts-catalogue 5
 opts-gui 0
 opts-sim 31
 opts-traffic 14
+opts-traffic-lanes 3
