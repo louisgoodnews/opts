@@ -21,6 +21,7 @@ mod build;
 mod ids;
 mod lane;
 mod lane_rules;
+mod locate;
 mod queries;
 mod segment;
 mod shortest;
@@ -28,6 +29,7 @@ mod shortest;
 pub use ids::{Direction, LaneId, LaneKind};
 pub use lane::{ConnectParams, Lane, SpawnError};
 pub use lane_rules::{Elevation, LaneRules};
+pub use locate::{CourseProgress, CourseState, LaneCandidate, LaneMatch, LaneMatcher, MatchParams};
 pub use segment::LaneSegment;
 
 /// Directed lanes with their successors.

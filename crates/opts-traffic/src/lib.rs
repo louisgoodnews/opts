@@ -55,7 +55,8 @@ pub use density::{
 };
 pub use geometry::PathGeometry;
 pub use graph::{
-    ConnectParams, Direction, Elevation, Lane, LaneGraph, LaneId, LaneKind, LaneRules, LaneSegment,
+    ConnectParams, CourseProgress, CourseState, Direction, Elevation, Lane, LaneCandidate,
+    LaneGraph, LaneId, LaneKind, LaneMatch, LaneMatcher, LaneRules, LaneSegment, MatchParams,
     SpawnError,
 };
 pub use idm::{IdmParams, VehicleClass};
