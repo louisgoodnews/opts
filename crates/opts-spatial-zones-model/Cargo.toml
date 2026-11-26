@@ -1,0 +1,16 @@
+[package]
+name = "opts-spatial-zones-model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The Bevy-free zone data of the spatial zones: the zone model, the covered-section (ceiling) rule, the tile bookkeeping, the overlay geometry and the zones.query payload (split out of opts-spatial-zones-core, ISS-092)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+glam = { workspace = true }
+serde_json = { workspace = true }

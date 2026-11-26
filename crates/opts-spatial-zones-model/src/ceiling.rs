@@ -1,6 +1,6 @@
 //! The covered-section rule (M-0115, option 1 of the decision brief): a spline whose graphical
 //! profile is a ceiling is a covered road. The zone is the spline's ground box, padded by the
-//! ceiling's half-width. Pure logic, no world access (ISS-092: moved to `opts-spatial-zones-core`).
+//! ceiling's half-width. Pure logic, no world access (ISS-092: moved to `opts-spatial-zones-model`).
 //!
 //! * A ceiling is a run of consecutive profile points at least [`MIN_CEILING_HEIGHT_M`] high that
 //!   spans at least [`MIN_CEILING_WIDTH_M`] across (a U-shaped tunnel profile has its roof run).
