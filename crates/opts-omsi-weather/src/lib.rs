@@ -1,11 +1,21 @@
+//! # OPTS OMSI weather readers (`opts-omsi-weather`)
+//!
 //! Weather files: presets (`Weather/*.owt`, scenario `*.osn.owt`), the cloud catalogue
 //! (`Weather/clouds.cfg`) and the localised names and descriptions (`<Name>_<LANG>.dsc`).
 //!
 //! Layout and evidence: `docs/src/formats/text/environment.md`; use in the game:
 //! `docs/src/architecture/weather.md`. The encoding differs per file (CP1252, UTF-8, UTF-16LE), so
 //! every file goes through [`decode_bytes`].
+//!
+//! Split out of `opts-omsi-text` (ISS-087, stage 2). `opts-omsi-text` re-exports this crate as
+//! `formats::weather`, so the old paths keep working. The parsers work on in-memory text; the
+//! folder reader (`folder`) is the one place that reads files (no engine, no OMSI binaries,
+//! ADR-0002).
 
-use crate::formats::text::{decode_bytes, parse_float, scan_blocks_with, OmsiBlock};
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+
+use opts_omsi_scan::{decode_bytes, parse_float, scan_blocks_with, OmsiBlock};
 
 mod folder;
 mod parse;

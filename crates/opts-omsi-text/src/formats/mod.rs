@@ -13,4 +13,4 @@ pub use opts_omsi_scan as text;
 pub mod ticketpack;
 pub use opts_omsi_timetable as timetable;
 pub mod varlist;
-pub mod weather;
+pub use opts_omsi_weather as weather;
