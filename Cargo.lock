@@ -5500,6 +5500,19 @@ dependencies = [
 name = "opts-challenge"
 version = "0.1.0"
 dependencies = [
+ "opts-challenge-model",
+ "opts-challenge-scorer",
+]
+
+[[package]]
+name = "opts-challenge-model"
+version = "0.1.0"
+
+[[package]]
+name = "opts-challenge-scorer"
+version = "0.1.0"
+dependencies = [
+ "opts-challenge-model",
  "tracing",
 ]
 
