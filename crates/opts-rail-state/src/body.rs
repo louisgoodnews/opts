@@ -1,6 +1,6 @@
 //! The box of a vehicle part: its footprint in its own frame, from the `.bus` `[boundingbox]`.
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 
 /// The footprint of a vehicle part in its own frame.
 #[derive(Debug, Clone, Copy, PartialEq)]

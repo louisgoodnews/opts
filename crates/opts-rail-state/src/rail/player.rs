@@ -1,7 +1,7 @@
 //! The player's rail vehicle: the [`RailPlayer`] component, its construction, its consist
 //! dynamics and the train it runs.
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 use opts_sim::rail::{RailDynamics, Train};
 
 use super::{DEFAULT_WHEEL_RADIUS_M, SNAP_MAX_M};

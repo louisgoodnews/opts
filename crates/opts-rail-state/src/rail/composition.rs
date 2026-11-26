@@ -1,6 +1,6 @@
 //! The units of a composed rail vehicle as the game keeps them.
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 
 use super::super::body::BodyBox;
 
