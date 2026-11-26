@@ -16,6 +16,10 @@
 
 #![deny(unsafe_code)]
 
+// The Bevy engine, re-exported so that the crates split out of `opts-game-state` (ISS-084)
+// import Bevy through this crate and not on their own.
+pub use bevy;
+
 pub mod action_keys;
 pub mod ai_variables;
 pub mod articulation;
