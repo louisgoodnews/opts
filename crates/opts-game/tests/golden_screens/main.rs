@@ -13,11 +13,15 @@
 //! `hud::minimap`), shadows, the focus ring, gradients. The loading screen needs an installation;
 //! it is an open item of `docs/src/roadmap/phase-9/accessibility-audit.md`.
 
-#[path = "../common/mod.rs"]
-mod common;
+#[path = "../common/layout.rs"]
+mod layout;
+#[path = "../common/screens/mod.rs"]
+mod screens;
+#[path = "../common/hud/mod.rs"]
+mod hud;
 
 use bevy::prelude::*;
-use common::screens::{build, Screen};
+use screens::{build, Screen};
 use opts_gui::interaction::Activated;
 use opts_gui::testing::golden::{check, paint, Tolerance};
 use opts_gui::theme::mode::ThemeKind;

@@ -5,7 +5,7 @@ use opts_bevy::{CameraMode, CameraState};
 use opts_game::hud::{build, HudProfiles, RaiseAlert, VehicleKind};
 use opts_game::AppState;
 
-use super::super::screens::resize;
+use crate::layout::resize;
 use super::setup::{hud_base, spawn_drive, Extras};
 
 /// Raises the alert, camera label, toast and editor panel that `extras` asks for.

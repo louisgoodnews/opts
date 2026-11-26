@@ -2,9 +2,7 @@
 //! out by Bevy's real UI layout in a headless app. Shared by the HUD matrix and the golden test.
 
 mod assemble;
-mod geometry;
 mod setup;
 
 pub use assemble::build_hud;
-pub use geometry::{hidden, overlap, rect};
 pub use setup::Extras;

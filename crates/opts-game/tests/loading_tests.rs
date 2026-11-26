@@ -2,6 +2,12 @@
 //! session, seeded failures that must stay visible, and the three outcomes.
 
 mod common;
+#[path = "common/loading.rs"]
+mod loading;
+#[path = "common/simple_map.rs"]
+mod simple_map;
+#[path = "loading_tests/helpers.rs"]
+mod helpers;
 
 use bevy::prelude::*;
 use opts_game::{
@@ -15,7 +21,8 @@ use opts_game::{
 use opts_gui::interaction::Activated;
 use opts_gui::ui_tree::find_entity;
 
-use common::loading::{args_for, has, loading_app, outcome, run, screen_count, texts};
+use helpers::{has, loading_app, outcome};
+use loading::{args_for, run, screen_count, texts};
 use common::{fresh_root, write_map, MiniMap};
 
 #[path = "loading_tests/accepted.rs"]

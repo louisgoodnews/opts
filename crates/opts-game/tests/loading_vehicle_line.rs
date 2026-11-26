@@ -1,6 +1,10 @@
 //! The vehicle line of the loading screen (M-0076) and the map-only start (M-0068).
 
 mod common;
+#[path = "common/loading.rs"]
+mod loading;
+#[path = "common/simple_map.rs"]
+mod simple_map;
 
 use bevy::prelude::*;
 use opts_game::{
@@ -8,7 +12,7 @@ use opts_game::{
     new_game_screen::types::{GameCatalogue, NewGameSetup, VehicleItem},
 };
 
-use common::loading::{args_for, catalogue, loading_app_with, run, screen_count, texts};
+use loading::{args_for, catalogue, loading_app_with, run, screen_count, texts};
 use common::{fresh_root, write_map, MiniMap};
 
 fn three_vehicles() -> GameCatalogue {

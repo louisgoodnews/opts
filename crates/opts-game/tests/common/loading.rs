@@ -3,17 +3,12 @@
 
 use bevy::prelude::*;
 use opts_game::{
-    app_state::AppState,
-    in_game::{
-        load_report::{LoadOutcome, LoadReport},
-        InGamePlugin, LoadingScreenRoot,
-    },
+    in_game::{InGamePlugin, LoadingScreenRoot},
     new_game_screen::types::{GameCatalogue, MapItem, NewGameSetup, VehicleItem},
     settings::GameSettings,
     AppArgs, CliArgs,
 };
 use opts_gui::prelude::*;
-use opts_gui::ui_tree::find_entity;
 
 pub fn catalogue(map: &str, vehicle: &str) -> GameCatalogue {
     GameCatalogue {
@@ -31,18 +26,7 @@ pub fn catalogue(map: &str, vehicle: &str) -> GameCatalogue {
     }
 }
 
-/// An app with the in-game plugin, a catalogue naming `map` and `vehicle`, and `args`.
-pub fn loading_app(map: &str, vehicle: &str, args: CliArgs) -> App {
-    let setup = NewGameSetup {
-        selected_map: map.into(),
-        selected_entry_point: "Mini start".into(),
-        selected_vehicle: vehicle.into(),
-        ..NewGameSetup::default()
-    };
-    loading_app_with(catalogue(map, vehicle), setup, args)
-}
-
-/// Like [`loading_app`], with the catalogue and the choices given.
+/// An app with the in-game plugin, the catalogue and the choices given, and `args`.
 pub fn loading_app_with(catalogue: GameCatalogue, setup: NewGameSetup, args: CliArgs) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -81,10 +65,6 @@ pub fn run(app: &mut App, frames: usize) {
     }
 }
 
-pub fn outcome(app: &App) -> LoadOutcome {
-    app.world().resource::<LoadReport>().outcome
-}
-
 pub fn texts(app: &mut App) -> Vec<String> {
     let mut q = app.world_mut().query::<&Text>();
     q.iter(app.world()).map(|t| t.0.clone()).collect()
@@ -97,6 +77,3 @@ pub fn screen_count(app: &mut App) -> usize {
         .count()
 }
 
-pub fn has(app: &mut App, id: &str) -> bool {
-    find_entity(app.world_mut(), id).is_some()
-}

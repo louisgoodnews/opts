@@ -1,7 +1,5 @@
 //! A self-authored miniature OMSI installation for loading tests (no OMSI content involved).
 
-pub mod loading;
-
 use std::path::{Path, PathBuf};
 
 use bevy::math::Vec3;
@@ -20,18 +18,6 @@ pub struct MiniMap {
     pub written: Vec<(i32, i32)>,
     /// Scenery objects that name a file that does not exist (failed assets).
     pub dangling_objects: usize,
-}
-
-impl MiniMap {
-    /// One tile, complete.
-    pub fn simple(name: &'static str) -> Self {
-        Self {
-            name,
-            listed: vec![(0, 0)],
-            written: vec![(0, 0)],
-            dangling_objects: 0,
-        }
-    }
 }
 
 fn object(sco: &str, id: u64, pos: Vec3) -> MapObjectInstance {
@@ -115,5 +101,3 @@ pub fn fresh_root(tag: &str) -> PathBuf {
     std::fs::create_dir_all(&root).expect("root");
     root
 }
-pub mod hud;
-pub mod screens;

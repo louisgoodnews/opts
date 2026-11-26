@@ -16,7 +16,7 @@ use opts_gui::testing::layout_base;
 use opts_gui::theme::mode::ThemeKind;
 use opts_gui::theme::AccentPreset;
 
-use super::super::screens::preferences;
+use crate::layout::preferences;
 
 /// What is on screen besides the permanent HUD.
 #[derive(Debug, Clone, Copy, Default)]
@@ -29,16 +29,6 @@ pub struct Extras {
     pub camera_label: bool,
     /// The viewpoint editor's panel.
     pub editor: bool,
-}
-
-impl Extras {
-    /// Everything at once.
-    pub const ALL: Self = Self {
-        alert: true,
-        toast: true,
-        camera_label: true,
-        editor: true,
-    };
 }
 
 /// The headless app with the HUD plugins and fixture resources, before any vehicle or layout.

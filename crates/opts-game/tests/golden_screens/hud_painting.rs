@@ -3,7 +3,7 @@
 use super::*;
 
 fn render_hud(w: u32, h: u32, backdrop: Color) -> image::RgbaImage {
-    use super::common::hud::{build_hud, Extras};
+    use super::hud::{build_hud, Extras};
     let extras = Extras {
         alert: true,
         ..Extras::default()

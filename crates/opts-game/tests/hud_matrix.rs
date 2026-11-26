@@ -4,12 +4,28 @@
 //! stay inside the window and never overlap, from 1024 x 640 to 2560 x 1440 at a UI scale of 75
 //! to 200 per cent, and the HUD passes the text rules.
 
-mod common;
+#[path = "common/hud/mod.rs"]
+mod hud;
+#[path = "hud_matrix/geometry.rs"]
+mod geometry;
+#[path = "common/layout.rs"]
+mod layout;
 
 use bevy::prelude::*;
-use common::hud::{build_hud, hidden, overlap, rect, Extras};
+use geometry::{hidden, overlap, rect};
+use hud::{build_hud, Extras};
 use opts_game::hud::VehicleKind;
 use opts_gui::testing::rules;
+
+impl Extras {
+    /// Everything at once.
+    pub const ALL: Self = Self {
+        alert: true,
+        toast: true,
+        camera_label: true,
+        editor: true,
+    };
+}
 
 const SIZES: [(u32, u32); 5] = [
     (1024, 640),
