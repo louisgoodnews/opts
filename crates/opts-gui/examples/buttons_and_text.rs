@@ -1,4 +1,3 @@
-#![allow(deprecated)]
 //! Example demonstrating Button, Label, and Icon widgets with reactive interactions.
 
 use bevy::prelude::*;

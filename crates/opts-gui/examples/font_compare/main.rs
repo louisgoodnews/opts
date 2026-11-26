@@ -45,7 +45,7 @@ fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
         .unwrap_or(14.0);
     let handles = load_font_handles(&mut fonts);
     // keep the handles alive for the whole run
-    commands.insert_resource(Keep(handles));
+    commands.insert_resource(Keep { _fonts: handles });
 
     let bg = Color::srgb(0.07, 0.07, 0.09);
     let fg = Color::srgb(0.89, 0.89, 0.90);
@@ -100,7 +100,10 @@ fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
 }
 
 #[derive(Resource)]
-struct Keep(#[allow(dead_code)] Vec<Handle<Font>>);
+struct Keep {
+    // Read by nothing: holding the handles keeps the fonts loaded (underscore = no dead-code lint).
+    _fonts: Vec<Handle<Font>>,
+}
 fn capture_then_exit(
     mut commands: Commands,
     mut frames: ResMut<Frames>,
