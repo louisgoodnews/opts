@@ -5541,6 +5541,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-consist-plan"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "opts-core",
+ "tracing",
+]
+
+[[package]]
 name = "opts-core"
 version = "0.1.0"
 dependencies = [
@@ -6204,6 +6213,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-tree-foliage"
+version = "0.1.0"
+dependencies = [
+ "opts-core",
+]
+
+[[package]]
 name = "opts-types"
 version = "0.1.0"
 dependencies = [
@@ -6248,6 +6264,7 @@ dependencies = [
  "opts-bevy",
  "opts-catalogue-service",
  "opts-collision",
+ "opts-consist-plan",
  "opts-core",
  "opts-fleet-number",
  "opts-game-state",
@@ -6267,6 +6284,7 @@ dependencies = [
  "opts-tile-loading",
  "opts-traffic",
  "opts-traffic-schedule",
+ "opts-tree-foliage",
  "opts-vehicle-script-texture",
  "opts-world-session",
  "opts-world-stats",
