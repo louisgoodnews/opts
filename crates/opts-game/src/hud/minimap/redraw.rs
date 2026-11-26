@@ -7,8 +7,8 @@ mod inputs;
 mod render;
 mod view;
 
-use inputs::{gather_scene, marker_pixels, road_lines, route_overlay};
-use render::{look_colors, record, upload};
+use inputs::{course_overlay, gather_scene, marker_pixels, road_lines, route_overlay};
+use render::{look_colors, look_course_color, record, upload};
 use view::choose_view;
 
 pub use avoid::avoid_viewpoint_panel;
@@ -82,15 +82,22 @@ pub fn redraw(
     let markers = marker_pixels(&scene.markers, centre);
     let (route_lines, route_stops, scheduled_px) =
         route_overlay(route.as_deref(), scheduled.as_deref(), centre, min_chord);
-    raster::render_routed(
+    let course_px = course_overlay(route.as_deref(), centre, min_chord);
+    raster::render_course(
         canvas,
         view,
         &lines,
-        MapRoute {
-            lines: &route_lines,
-            stops: &route_stops,
-            vehicles: &scheduled_px,
-        },
+        (
+            MapRoute {
+                lines: &route_lines,
+                stops: &route_stops,
+                vehicles: &scheduled_px,
+            },
+            MapCourse {
+                lines: &course_px,
+                color: look_course_color(&look),
+            },
+        ),
         &markers,
         &colors,
         (canvas.size as f32 / 176.0, true),

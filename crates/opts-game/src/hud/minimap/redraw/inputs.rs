@@ -37,6 +37,21 @@ pub(super) fn gather_scene(
     (scene, has_player)
 }
 
+/// The timetable course's chords around the centre, in map pixels (none without a course).
+pub(super) fn course_overlay(
+    route: Option<&crate::hud::route_path::PlayerRoutePath>,
+    centre: DVec2,
+    min_chord: f64,
+) -> Vec<MapLine> {
+    let mut lines = Vec::new();
+    if let Some(r) = route {
+        for road in &r.course {
+            push_chords(road, centre, min_chord, &mut lines);
+        }
+    }
+    lines
+}
+
 /// The route's lines, its stops and the scheduled vehicles in map pixels.
 pub(super) type RouteOverlay = (Vec<MapLine>, Vec<(Vec2, bool)>, Vec<(Vec2, f32)>);
 
