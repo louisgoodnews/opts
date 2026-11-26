@@ -1,0 +1,23 @@
+[package]
+name = "opts-debugger"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Development toolkit for OPTS: reads frame, timing and trace files and bundles a run for debugging (ISS-096 skeleton; no tool yet)."
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "opts-debugger"
+path = "src/main.rs"
+
+[dependencies]
+# CLI argument parsing; the binary parses no arguments yet, the tools of the later stages do.
+clap = { workspace = true }
+# Library error type.
+thiserror = { workspace = true }

@@ -123,6 +123,7 @@ members = [
     "crates/opts-sim-pedestrian",
     "crates/opts-sim-rail",
     "crates/opts-tools",
+    "crates/opts-debugger",
     "crates/opts-traffic",
     "crates/opts-traffic-lanes",
     "crates/opts-traffic-density",
@@ -242,6 +243,7 @@ opts-traffic-schedule = { path = "crates/opts-traffic-schedule" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-sim-rail = { path = "crates/opts-sim-rail" }
 opts-tools = { path = "crates/opts-tools" }
+opts-debugger = { path = "crates/opts-debugger" }
 opts-traffic = { path = "crates/opts-traffic" }
 opts-traffic-lanes = { path = "crates/opts-traffic-lanes" }
 opts-traffic-density = { path = "crates/opts-traffic-density" }
