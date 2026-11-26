@@ -5636,21 +5636,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-game-settings"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "opts-bevy",
+ "opts-gui",
+ "serde",
+]
+
+[[package]]
 name = "opts-game-state"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "chrono",
+ "opts-game-settings",
+ "opts-ground-height",
+ "opts-hud-keys",
+ "opts-in-game-types",
+ "opts-rail-state",
+ "opts-session-vehicles",
+]
+
+[[package]]
+name = "opts-ground-height"
+version = "0.1.0"
+dependencies = [
  "opts-bevy",
  "opts-collision",
  "opts-core",
- "opts-gui",
- "opts-hud-keys",
  "opts-road-surf",
- "opts-sim",
- "opts-world-stats",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -5696,6 +5711,13 @@ version = "0.1.0"
 dependencies = [
  "opts-model",
  "opts-omsi",
+]
+
+[[package]]
+name = "opts-in-game-types"
+version = "0.1.0"
+dependencies = [
+ "opts-bevy",
 ]
 
 [[package]]
@@ -5914,6 +5936,14 @@ name = "opts-position-tag"
 version = "0.1.0"
 
 [[package]]
+name = "opts-rail-state"
+version = "0.1.0"
+dependencies = [
+ "opts-bevy",
+ "opts-sim",
+]
+
+[[package]]
 name = "opts-repaints"
 version = "0.1.0"
 dependencies = [
@@ -5949,6 +5979,18 @@ dependencies = [
 [[package]]
 name = "opts-scripted-drive"
 version = "0.1.0"
+
+[[package]]
+name = "opts-session-vehicles"
+version = "0.1.0"
+dependencies = [
+ "opts-bevy",
+ "opts-core",
+ "opts-sim",
+ "opts-world-stats",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "opts-settings-io"
