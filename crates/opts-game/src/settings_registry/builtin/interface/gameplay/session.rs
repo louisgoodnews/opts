@@ -4,6 +4,13 @@ use super::*;
 
 /// Time scale, autosave, the door overlay and the passengers' weight.
 pub(super) fn session() -> Vec<D> {
+    let mut defs = clock_and_saves();
+    defs.extend(passengers_and_aids());
+    defs
+}
+
+/// The time scale, the autosave interval and the door overlay.
+fn clock_and_saves() -> Vec<D> {
     vec![
         D::new(
             "gameplay.time_scale",
@@ -52,6 +59,12 @@ pub(super) fn session() -> Vec<D> {
             "boarding",
         ])
         .since("0.3"),
+    ]
+}
+
+/// The passengers' weight and mass, and the driver aids (ABS, ASR).
+fn passengers_and_aids() -> Vec<D> {
+    vec![
         D::new(
             "gameplay.passenger_weight",
             K::Bool,
