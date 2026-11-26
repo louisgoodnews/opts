@@ -57,6 +57,7 @@ graph TD
     subgraph L2 ["Layer 2 — Simulation & Engine Presentation Bridges"]
         opts_sim["opts-sim<br/>• Vehicle physics & kinematics<br/>• Drivetrain, suspension, steering<br/>• Script VM bytecode interpreter<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_sim_passengers["opts-sim-passengers<br/>• Passenger model: boarding, tickets, seats<br/>• Standing places and getting off<br/>• Zero Bevy · Zero File I/O"]:::bridge
+        opts_sim_passenger_model["opts-sim-passenger-model<br/>• Passenger data: cabin, paths, tickets<br/>• Path graph of a cabin and the random source<br/>• No dependencies · Zero Bevy · Zero File I/O"]:::bridge
         opts_sim_pedestrian["opts-sim-pedestrian<br/>• Footpath lanes & lane network<br/>• Walkers and gait (ISS-066, stage 2)<br/>• Zero Bevy · Zero File I/O"]:::domain
         opts_traffic["opts-traffic<br/>• Lane graph & car following<br/>• Conflict zones, right of way<br/>• Zero Bevy"]:::bridge
         opts_car_following["opts-car-following<br/>• Intelligent Driver Model<br/>• Vehicle classes & driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
@@ -286,6 +287,7 @@ graph TD
     opts_sim --> opts_core
     opts_sim --> opts_sim_passengers
     opts_sim --> opts_sim_pedestrian
+    opts_sim_passengers --> opts_sim_passenger_model
     opts_sim_pedestrian --> opts_core
     opts_steam --> opts_vdf
     opts_theme_files --> opts_gui
@@ -355,7 +357,8 @@ graph TD
 | **`opts-world-load`** | L3 | The in-progress world load (ISS-067 stage 1, ISS-064 chain 3): `WorldLoadJob` and the closure it reaches, moved out of `opts-game` omsi_world in one atomic change; does not compile until the compile-fix phase | `opts-attachments`, `opts-bevy`, `opts-collision`, `opts-core`, `opts-fleet-number`, `opts-game-state`, `opts-gui`, `opts-logging`, `opts-mesh-dir`, `opts-repaints`, `opts-road-surf`, `opts-scripted-drive`, `opts-sim`, `opts-stream-budget`, `opts-tile-loading`, `opts-traffic`, `opts-traffic-schedule`, `opts-vehicle-script-texture`, `opts-world-session`, `opts-world-stats` | `opts-game` | Bevy Engine |
 | **`opts-vehicle-script-texture`** | L2 | Vehicle script texture canvases, colour maps and the per-frame GPU upload, split out of `opts-game` omsi_world (ISS-067 stage 1) | `opts-core` | `opts-game` | Bevy Engine |
 | **`opts-kinematic`** | L2 | Cheap kinematic acceleration of an AI vehicle from its measured drive torque over speed; the run-up law shared with the script census in `opts-sim` examples (M-0103) | *None* | *None* | Pure Rust |
-| **`opts-sim-passengers`** | L2 | The passengers of a vehicle: boarding through open doors, tickets, seats and standing places, getting off (split out of `opts-sim`, ISS-066 stage 1; [epic](../../dev/issues/ISS-066-epic-split-opts-sim.md)) | *None* | `opts-sim` | Pure Rust |
+| **`opts-sim-passengers`** | L2 | The passengers of a vehicle: boarding through open doors, tickets, seats and standing places, getting off (split out of `opts-sim`, ISS-066 stage 1; [epic](../../dev/issues/ISS-066-epic-split-opts-sim.md)) | `opts-sim-passenger-model` | `opts-sim` | Pure Rust |
+| **`opts-sim-passenger-model`** | L2 | The passenger model's data (cabin, paths, ticket types), the path graph of a cabin and the random source, split out of `opts-sim-passengers` (ISS-086 stage 1); re-exported by `opts-sim-passengers` | *None* | `opts-sim-passengers` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core`, `opts-sim-passengers` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
 | **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, OMSI script VM; pedestrians are re-exported from `opts-sim-pedestrian` | `opts-core`, `opts-sim-passengers`, `opts-sim-pedestrian` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
