@@ -2,8 +2,6 @@
 //! layout in a headless app (no window system, no OMSI content). Shared by the accessibility
 //! matrix and the golden-screenshot tests.
 
-#![allow(dead_code)]
-
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input::ButtonState;
 use bevy::prelude::*;
@@ -115,13 +113,9 @@ impl Screen {
     }
 }
 
-#[allow(dead_code)]
 mod input;
-#[allow(dead_code)]
 mod setup;
-#[allow(unused_imports)]
 pub use input::{set_locale, set_theme};
-#[allow(unused_imports)]
 pub use setup::build;
 
 /// Sets the primary window to `w` x `h` logical pixels.
