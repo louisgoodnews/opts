@@ -1,6 +1,7 @@
-//! Shared state types of OPTS: the application states, the persisted settings type and the
-//! in-game component and resource types. This is a Bevy-facing type crate: it holds types and
-//! pure helpers only. Systems, plugins, UI and file I/O stay in `opts-game`.
+//! Shared state types of OPTS: the application states, the alerts and the viewpoint keys. This is
+//! a Bevy-facing type crate: it holds types and pure helpers only. Systems, plugins, UI and file
+//! I/O stay in `opts-game`. The settings, the session registry, the in-game and rail state and
+//! the ground index live in their own crates (ISS-084) and are re-exported here at their old paths.
 
 pub mod alerts;
 pub mod app_state;
