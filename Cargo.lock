@@ -6026,6 +6026,10 @@ dependencies = [
 [[package]]
 name = "opts-spatial-zones-core"
 version = "0.1.0"
+dependencies = [
+ "glam",
+ "serde_json",
+]
 
 [[package]]
 name = "opts-steam"
