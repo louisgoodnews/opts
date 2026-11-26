@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::Vec3;
 use opts_core::formats::vehicles::BusManifest;
 
-use super::super::vehicle::coupling_joint;
+use crate::coupling_joint;
 use super::{Files, PlannedPart};
 
 /// A part in a unit's own frame.

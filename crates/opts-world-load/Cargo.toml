@@ -18,6 +18,7 @@ opts-attachments = { workspace = true }
 opts-bevy = { workspace = true }
 opts-catalogue-service = { workspace = true }
 opts-collision = { workspace = true }
+opts-consist-plan = { workspace = true }
 opts-core = { workspace = true }
 opts-fleet-number = { workspace = true }
 opts-game-state = { workspace = true }
