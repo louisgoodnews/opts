@@ -341,3 +341,7 @@ Each group is one issue or one commit. Nothing here is done yet.
 | C40 | The no-blocking-UI test is a test run; the path in the standard is wrong (rule 3 of section 7). |
 
 Figures from heuristic scans (C18, C19, C32, C37, C38, C01, C03, C02 counts) are approximate. The derive scan misses multi-line attribute blocks, and the doc scan counts `pub mod` declarations as public items.
+
+## Owner decisions on the audit (2026-11-26)
+
+- **Timing report (opts-logging, layer/timing.rs:124):** keep `eprintln!`, recorded as an exception. The report is an opt-in diagnostic that must print even when logging is off; routing it through `tracing` would hide it at the default level. Reason on record.
