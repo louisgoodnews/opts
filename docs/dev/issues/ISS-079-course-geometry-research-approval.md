@@ -5,7 +5,7 @@
 | **Issue** | ISS-079 (Phase 4 status audit, 2026-11-26) |
 | **Severity** | minor (research; no player-visible change yet) |
 | **Milestone** | [M-0105](../../src/roadmap/phase-4/M-0105.md) Course Geometry and Path Recognition |
-| **Status** | open, reported 2026-11-26 (Phase 4 status audit); awaiting owner approval |
+| **Status** | approved 2026-11-26 (owner): M-0105 goes ahead; implementation in progress on agent/m0105-course-geometry |
 
 ## Problem
 

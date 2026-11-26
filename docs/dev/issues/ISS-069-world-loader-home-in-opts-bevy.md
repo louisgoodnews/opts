@@ -5,7 +5,7 @@
 | **Issue** | ISS-069 (Phase 4 status audit, 2026-11-26) |
 | **Severity** | minor (structure; no player-visible effect) |
 | **Milestone** | [M-0046](../../src/roadmap/phase-4/M-0046.md) World Loader in `opts-bevy` |
-| **Status** | open, reported 2026-11-26 (Phase 4 status audit) |
+| **Status** | done, accepted resolution 2026-11-26 (owner): opts-world-load is the loader's home; the move into opts-bevy is not needed. M-0046 card to match. |
 
 ## Problem
 
