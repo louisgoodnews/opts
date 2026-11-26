@@ -47,9 +47,10 @@ opts-scripted-drive 12  # new 2026-11-25: the near-vehicle drive (M-0103): pedal
 opts-stream-budget 657  # new 2026-11-25: the tile streaming budget (M-0089) moved out of opts-game (crate split); opts-game keeps its budget as room
 opts-scene-trace 1326  # new 2026-11-25: the scene trace moved out of opts-bevy (crate split)
 opts-spatial-zones 946  # new 2026-11-25: the spatial zones moved out of opts-bevy (crate split)
-opts-light-quality 1030  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the lighting quality, ladder and governor moved out of opts-bevy (crate split)
 opts-audio 707  # lowered 2026-11-26 to the measured total after the curves split (ISS-088): the gain curves moved to opts-audio-curves; was an ESTIMATE 812 (ISS-061) from the sound engine move out of opts-bevy
 opts-audio-curves 108  # new 2026-11-26 (ISS-088 stage 1): the gain curves (distance fade, dB, percent, semitones) split out of opts-audio; measured
+opts-light-quality 940  # lowered 2026-11-26 to the measured total (ISS-090): the Bevy-free levels moved to opts-light-quality-core; was an ESTIMATE 1030 (ISS-061) for the lighting quality, ladder and governor moved out of opts-bevy (crate split)
+opts-light-quality-core 93  # new 2026-11-26 (ISS-090): the Bevy-free shafts, light mode and bloom levels split out of opts-light-quality; measured
 opts-main-camera 4  # ESTIMATE 2026-11-25 (ISS-061, not measured by the audit): the MainCamera marker moved out of opts-bevy so that opts-audio can use it
 opts-bevy-bus-stops 59  # new ISS-065 stage 2, ESTIMATE counted by hand (non-blank, non-comment lines; audit not run): the bus stop marker split out of opts-bevy
 opts-bevy-ground 277  # new ISS-065 stage 2, ESTIMATE counted by hand: the ground texture CPU image, BC decoder and tile composition split out of opts-bevy

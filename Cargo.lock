@@ -5411,6 +5411,7 @@ dependencies = [
  "opts-debounce",
  "opts-gui",
  "opts-light-quality",
+ "opts-light-quality-core",
  "opts-logging",
  "opts-main-camera",
  "opts-position-tag",
@@ -5714,8 +5715,13 @@ name = "opts-light-quality"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "opts-light-quality-core",
  "tracing",
 ]
+
+[[package]]
+name = "opts-light-quality-core"
+version = "0.1.0"
 
 [[package]]
 name = "opts-load-problem"
