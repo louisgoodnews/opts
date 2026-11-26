@@ -1,7 +1,8 @@
 //! Unit tests for neighbours.
 
-use super::*;
-use crate::graph::{ConnectParams, Direction, LaneKind, LaneSegment};
+use opts_traffic_lanes::graph::{LaneGraph, LaneId};
+use opts_traffic_lanes::neighbours::Side;
+use opts_traffic_lanes::graph::{ConnectParams, Direction, LaneKind, LaneSegment};
 use glam::DVec2;
 
 fn road(x: f64, y: f64, heading: f64, len: f64) -> LaneSegment {
@@ -48,7 +49,7 @@ fn opposing_far_or_diverging_lanes_are_not_neighbours() {
 
 #[test]
 fn curved_lanes_map_positions_by_arc() {
-    use crate::geometry::PathGeometry;
+    use opts_traffic_lanes::geometry::PathGeometry;
     // Concentric right-hand arcs, 3.5 m apart: the outer one is longer.
     let inner = PathGeometry {
         start: DVec2::new(0.0, 0.0),

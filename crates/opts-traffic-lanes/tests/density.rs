@@ -1,6 +1,7 @@
 //! Unit tests for density.
 
-use super::*;
+use opts_traffic_lanes::density::{group_targets, weighted_pick, DensityCurve, LaneDensity, MAX_DENSITY_GROUPS, MEDIUM_DENSITY};
+use opts_traffic_lanes::rng::Rng;
 
 #[test]
 fn curve_interpolates_and_wraps() {

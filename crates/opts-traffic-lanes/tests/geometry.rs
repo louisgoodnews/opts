@@ -1,6 +1,7 @@
 //! Unit tests for the path geometry (heading, arc length, point lookup).
 
-use super::*;
+use glam::DVec2;
+use opts_traffic_lanes::geometry::PathGeometry;
 use std::f64::consts::FRAC_PI_2;
 
 #[test]

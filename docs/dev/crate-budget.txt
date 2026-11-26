@@ -34,7 +34,7 @@ opts-sim-passenger-model 392  # new 2026-11-26 (ISS-086 stage 1): the pure passe
 opts-sim-pedestrian 1152  # new 2026-11-25: ESTIMATE from the stage-2 move (ISS-066): the crate src code lines counted by grep (module 1149 + lib.rs), not by the audit; re-measure with the audit before the next gate
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 4267  # lowered 2026-11-26 (ISS-085 stage 1): the lane graph, course resolver and density moved to opts-traffic-lanes; measured by the audit (src/ code)
-opts-traffic-lanes 1844  # new 2026-11-26 (ISS-085 stage 0, Blinker), set to the measured src/ total at stage 1 (lane graph, geometry, density, rng, conflict, neighbours, course resolve)
+opts-traffic-lanes 1333  # new 2026-11-26 (ISS-085 stage 0, Blinker), set to the measured src/ total at stage 1 (lane graph, geometry, density, rng, conflict, neighbours, course resolve); lowered 2026-11-26 (ISS-094): the in-source tests moved to tests/ (src/ code only)
 opts-types 461  # set 2026-11-22 to the current total
 opts-theme-files 59  # new 2026-11-23: the RON theme file loader split out of opts-game (docs/dev/crate-split-theme.md)
 opts-exhaust 333  # new 2026-11-24: the exhaust plume module moved out of opts-game (M-0117 nearest-N, docs/dev/crate-split-exhaust.md)

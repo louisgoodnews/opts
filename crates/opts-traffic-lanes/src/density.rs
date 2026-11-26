@@ -157,6 +157,3 @@ pub fn weighted_pick(weights: &[Option<f32>], rng: &mut Rng) -> Option<usize> {
     }
     Some(weights.len() - 1)
 }
-
-#[cfg(test)]
-mod tests;

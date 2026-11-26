@@ -1,6 +1,7 @@
 //! Degenerate-input tests for the path geometry (zero and negative lengths).
 
-use super::*;
+use glam::DVec2;
+use opts_traffic_lanes::geometry::PathGeometry;
 
 #[test]
 fn negative_or_zero_lengths_do_not_panic() {

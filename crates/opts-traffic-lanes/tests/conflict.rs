@@ -1,7 +1,8 @@
 //! Unit tests for conflict.
 
-use super::*;
-use crate::graph::{ConnectParams, Direction, LaneKind, LaneSegment};
+use glam::DVec2;
+use opts_traffic_lanes::graph::{LaneGraph, LaneId};
+use opts_traffic_lanes::graph::{ConnectParams, Direction, LaneKind, LaneSegment};
 use std::f64::consts::FRAC_PI_2;
 
 fn road(x: f64, y: f64, heading: f64, len: f64) -> LaneSegment {

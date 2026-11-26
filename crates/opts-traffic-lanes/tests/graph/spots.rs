@@ -1,6 +1,6 @@
 //! Tests of random and weighted spot selection and of shortest routes on the lane graph.
 
-use super::*;
+use opts_traffic_lanes::rng::Rng;
 
 /// Lanes are drawn in proportion to their weight; a lane weighing 0 never.
 #[test]
