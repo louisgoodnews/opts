@@ -8,6 +8,8 @@
 //! The screenshot goes to the reports directory; its path is printed.
 
 mod common;
+#[path = "common/exit.rs"]
+mod exit;
 
 use std::time::Duration;
 
@@ -23,7 +25,7 @@ fn main() {
     let mut c = common::connect();
     let mut call = |method: &str, params: Value| match c.call(method, params) {
         Ok(v) => v,
-        Err(e) => common::die(method, &e),
+        Err(e) => exit::die(method, &e),
     };
 
     println!("server: {}", call("version", Value::Null)["version"]);

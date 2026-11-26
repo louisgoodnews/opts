@@ -18,9 +18,3 @@ pub fn connect() -> Client {
         timeout: Duration::from_secs(150),
     })
 }
-
-/// Prints a failed call and exits with the client's exit code.
-pub fn die(context: &str, error: &opts_cli::client::ClientError) -> ! {
-    eprintln!("{context}: {error}");
-    std::process::exit(i32::from(error.exit_code()));
-}
