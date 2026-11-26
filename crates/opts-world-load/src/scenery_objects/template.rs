@@ -16,7 +16,9 @@ impl WorldLoadJob {
             return t.clone();
         }
         let dir = sco_path.parent().map(Path::to_path_buf).unwrap_or_default();
-        let set = load_scenery_scripts(sco, |rel| self.install.find_in(&dir, rel));
+        let set = load_scenery_scripts(sco, |rel| {
+            crate::script_file::read_script(self.install.find_in(&dir, rel))
+        });
         let bad = problems(&set.diagnostics);
         self.scenery.stats.script_sets += 1;
         if bad > 0 {

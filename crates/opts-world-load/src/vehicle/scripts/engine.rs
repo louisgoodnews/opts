@@ -97,7 +97,7 @@ pub(in super::super) fn attach_scripts(
             job.vehicle_dirs
                 .push(opts_bevy::hot_reload::cache::normalize(p));
         }
-        found
+        crate::script_file::read_script(found)
     });
     log_diagnostics(manifest, &diags);
     let mut engine = engine;

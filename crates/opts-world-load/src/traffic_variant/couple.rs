@@ -35,7 +35,9 @@ pub(super) fn measure_script(
     if manifest.scripts.is_empty() {
         return None;
     }
-    let (mut engine, _) = load_vehicle_scripts(manifest, |rel| job.install.find_in(dir, rel));
+    let (mut engine, _) = load_vehicle_scripts(manifest, |rel| {
+        crate::script_file::read_script(job.install.find_in(dir, rel))
+    });
     Some(measure_ai_response(&mut engine)).filter(AiResponse::is_live)
 }
 

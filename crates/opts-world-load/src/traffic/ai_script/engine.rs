@@ -17,8 +17,9 @@ pub(in crate) fn engine_for(
         .and_then(|b| BusManifest::parse_bytes(&b).ok())
         .filter(|m| !m.scripts.is_empty())?;
     let dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();
-    let (mut engine, _) =
-        opts_sim::script::load_vehicle_scripts(&manifest, |rel| job.install.find_in(&dir, rel));
+    let (mut engine, _) = opts_sim::script::load_vehicle_scripts(&manifest, |rel| {
+        crate::script_file::read_script(job.install.find_in(&dir, rel))
+    });
     let folder = job
         .config
         .map_dir
