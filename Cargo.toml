@@ -86,6 +86,7 @@ members = [
     "crates/opts-minimap-zoom-canvas",
     "crates/opts-save-error",
     "crates/opts-shell-keys",
+    "crates/opts-shell-keys-help",
     "crates/opts-vehicle-gears",
     "crates/opts-sim",
     "crates/opts-sim-passengers",
@@ -184,6 +185,7 @@ opts-load-problem = { path = "crates/opts-load-problem" }
 opts-minimap-zoom-canvas = { path = "crates/opts-minimap-zoom-canvas" }
 opts-save-error = { path = "crates/opts-save-error" }
 opts-shell-keys = { path = "crates/opts-shell-keys" }
+opts-shell-keys-help = { path = "crates/opts-shell-keys-help" }
 opts-vehicle-gears = { path = "crates/opts-vehicle-gears" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }

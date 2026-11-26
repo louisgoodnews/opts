@@ -72,7 +72,8 @@ opts-tile-loading 293  # measured 2026-11-26 at its size (ISS-064/067/068 split;
 opts-pause-report 8  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the report dialog state helper split out of opts-game's pause module
 opts-hud-widgets 439  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit; re-measure before the owner's review): the HUD widget vocabulary and registry split out of opts-game
 opts-hud-keys 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the HUD message key tables split out of opts-game
-opts-shell-keys 268  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the shell message key tables split out of opts-game
+opts-shell-keys 205  # measured 2026-11-26 at its size (ISS-091 split; was 268, the ISS-062 hand estimate): the shell message key tables; the help table moved to opts-shell-keys-help
+opts-shell-keys-help 73  # new 2026-11-26 (ISS-091 stage 1, measured by structure_audit): the help overlay key table and the keys! macro, split out of opts-shell-keys
 opts-minimap-zoom-canvas 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the mini map zoom filter and pixel canvas split out of opts-game
 opts-save-error 58  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the save container error type split out of opts-game
 opts-load-problem 55  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the load problem type split out of opts-game

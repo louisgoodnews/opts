@@ -1,5 +1,7 @@
 //! Saves overlay and save or load toast keys, and load error texts.
 
+use opts_shell_keys_help::keys;
+
 keys! {
     /// Saves overlay: title when saving.
     SAVES_TITLE_SAVE = "saves-title-save",

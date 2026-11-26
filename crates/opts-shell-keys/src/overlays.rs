@@ -1,5 +1,7 @@
 //! Pause, environment, leave and summary overlay keys.
 
+use opts_shell_keys_help::keys;
+
 keys! {
     /// Message `pause-title`.
     PAUSE_TITLE = "pause-title",

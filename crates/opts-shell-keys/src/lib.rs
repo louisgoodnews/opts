@@ -4,32 +4,23 @@
 //! `no_user_visible_literals_in_the_shell`). The keys sit in the group modules below; [`ALL`]
 //! joins their lists.
 
-macro_rules! keys {
-    ($($(#[$m:meta])* $name:ident = $text:literal),* $(,)?) => {
-        $($(#[$m])* pub const $name: &str = $text;)*
-        /// Every key above; the completeness tests iterate it.
-        pub const ALL: &[&str] = &[$($name),*];
-    };
-}
-
 mod chrome;
 mod firstrun;
-mod help;
 mod home;
 mod overlays;
 mod saves;
 
 pub use chrome::*;
 pub use firstrun::*;
-pub use help::*;
 pub use home::*;
 pub use overlays::*;
+pub use opts_shell_keys_help::*;
 pub use saves::*;
 
 const PARTS: &[&[&str]] = &[
     chrome::ALL,
     firstrun::ALL,
-    help::ALL,
+    opts_shell_keys_help::ALL,
     home::ALL,
     overlays::ALL,
     saves::ALL,

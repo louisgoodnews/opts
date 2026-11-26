@@ -1,5 +1,7 @@
 //! Shell chrome keys: the rail, its footer, the quit and despawn dialogs, and session vehicle toasts.
 
+use opts_shell_keys_help::keys;
+
 keys! {
     /// The brand line at the top of the rail.
     BRAND = "shell-brand",

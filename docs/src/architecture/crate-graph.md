@@ -25,7 +25,8 @@ graph TD
         opts_shell_icons["opts-shell-icons<br/>• Material Icons codepoints of the shell<br/>• No dependencies · Zero Bevy"]:::foundation
         opts_collision["opts-collision<br/>• Oriented-box contact (separating axes)<br/>• Velocity response & spatial grid<br/>• Zero Bevy · Zero File I/O"]:::foundation
         opts_hud_keys["opts-hud-keys<br/>• HUD message key tables<br/>• No dependencies · Zero Bevy"]:::foundation
-        opts_shell_keys["opts-shell-keys<br/>• Shell message key tables<br/>• No dependencies · Zero Bevy"]:::foundation
+        opts_shell_keys["opts-shell-keys<br/>• Shell message key tables<br/>• Depends on opts-shell-keys-help · Zero Bevy"]:::foundation
+        opts_shell_keys_help["opts-shell-keys-help<br/>• Help overlay message keys and the keys! macro<br/>• No dependencies · Zero Bevy"]:::foundation
         opts_minimap_zoom_canvas["opts-minimap-zoom-canvas<br/>• Mini map speed zoom filter<br/>• RGBA8 pixel canvas<br/>• No dependencies · Zero Bevy"]:::foundation
         opts_save_error["opts-save-error<br/>• Save container error type<br/>• No dependencies · Zero Bevy"]:::foundation
         opts_load_problem["opts-load-problem<br/>• Load problem type and severity table<br/>• No dependencies · Zero Bevy"]:::foundation
@@ -246,6 +247,7 @@ graph TD
     opts_game --> opts_minimap_zoom_canvas
     opts_game --> opts_save_error
     opts_game --> opts_shell_keys
+    opts_shell_keys --> opts_shell_keys_help
     opts_game --> opts_sim
     opts_game --> opts_steam
     opts_game --> opts_theme_files
@@ -306,7 +308,8 @@ graph TD
 | **`opts-cli`** | L0 | Control-protocol types and the command-line client that remote-controls a running game | *None* | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-collision`** | L0 | Planar oriented-box collision: separating-axis contact, velocity response and a spatial grid | *None* | `opts-game` | Pure Rust |
 | **`opts-hud-keys`** | L0 | HUD message key tables (split out of `opts-game`, ISS-062 stage 1; [issue](../../dev/issues/ISS-062-split-opts-game.md)) | *None* | `opts-game` | Pure Rust |
-| **`opts-shell-keys`** | L0 | Shell message key tables and their group modules (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |
+| **`opts-shell-keys`** | L0 | Shell message key tables and their group modules (split out of `opts-game`, ISS-062 stage 1); facade over `opts-shell-keys-help` (ISS-091) | `opts-shell-keys-help` | `opts-game` | Pure Rust |
+| **`opts-shell-keys-help`** | L0 | Help overlay message key table and the `keys!` macro (split out of `opts-shell-keys`, ISS-091 stage 1) | *None* | `opts-shell-keys` | Pure Rust |
 | **`opts-minimap-zoom-canvas`** | L0 | Mini map speed zoom filter and the RGBA8 pixel canvas (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |
 | **`opts-save-error`** | L0 | Save container error type (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |
 | **`opts-load-problem`** | L0 | Load problem type and its severity table (split out of `opts-game`, ISS-062 stage 1) | *None* | `opts-game` | Pure Rust |

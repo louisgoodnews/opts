@@ -5945,6 +5945,13 @@ version = "0.1.0"
 [[package]]
 name = "opts-shell-keys"
 version = "0.1.0"
+dependencies = [
+ "opts-shell-keys-help",
+]
+
+[[package]]
+name = "opts-shell-keys-help"
+version = "0.1.0"
 
 [[package]]
 name = "opts-shell-nav"

@@ -1,0 +1,15 @@
+[package]
+name = "opts-shell-keys-help"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Help overlay message keys (key tables only), split out of opts-shell-keys (ISS-091)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

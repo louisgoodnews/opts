@@ -1,5 +1,16 @@
 //! Help overlay keys: tabs, groups, key rows, and the about text.
 
+/// Declares message keys as `pub const NAME: &str = "message-id";` plus an `ALL` list of them.
+/// Exported so that `opts-shell-keys` can use it for its own key groups (ISS-091).
+#[macro_export]
+macro_rules! keys {
+    ($($(#[$m:meta])* $name:ident = $text:literal),* $(,)?) => {
+        $($(#[$m])* pub const $name: &str = $text;)*
+        /// Every key above; the completeness tests iterate it.
+        pub const ALL: &[&str] = &[$($name),*];
+    };
+}
+
 keys! {
     /// Message `help-tab-controls`.
     HELP_TAB_CONTROLS = "help-tab-controls",

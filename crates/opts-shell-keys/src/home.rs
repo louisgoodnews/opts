@@ -1,5 +1,7 @@
 //! Home screen keys: the welcome, continue, recent and status texts, and the new-drive and load buttons.
 
+use opts_shell_keys_help::keys;
+
 keys! {
     /// Home text `home-welcome-back`.
     HOME_WELCOME_BACK = "home-welcome-back",

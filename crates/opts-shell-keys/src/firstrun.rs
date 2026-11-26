@@ -1,5 +1,7 @@
 //! First-run keys: the language choice and the folder-picking flow.
 
+use opts_shell_keys_help::keys;
+
 keys! {
     /// Message `firstrun-quit`.
     FIRSTRUN_QUIT = "firstrun-quit",
