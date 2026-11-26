@@ -6172,8 +6172,13 @@ dependencies = [
  "opts-car-following",
  "opts-core",
  "opts-signals",
+ "opts-traffic-density",
  "thiserror 1.0.69",
 ]
+
+[[package]]
+name = "opts-traffic-density"
+version = "0.1.0"
 
 [[package]]
 name = "opts-traffic-schedule"
