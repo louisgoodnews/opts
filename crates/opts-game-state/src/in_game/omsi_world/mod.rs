@@ -3,6 +3,6 @@
 //! systems, plugins and file I/O stay in `opts-game` (`in_game::omsi_world`).
 
 pub mod body;
-pub mod ground_height;
-pub mod plate_surf;
+// The ground index lives in `opts-ground-height` (ISS-084); re-exported at the old paths.
+pub use opts_ground_height::{ground_height, plate_surf};
 pub mod rail;

@@ -57,6 +57,7 @@ members = [
     "crates/opts-fleet-number",
     "crates/opts-game",
     "crates/opts-game-state",
+    "crates/opts-ground-height",
     "crates/opts-hardware",
     "crates/opts-mesh-dir",
     "crates/opts-road-surf",
@@ -193,6 +194,7 @@ opts-world-session = { path = "crates/opts-world-session" }
 opts-world-load = { path = "crates/opts-world-load" }
 opts-gui = { path = "crates/opts-gui" }
 opts-game-state = { path = "crates/opts-game-state" }
+opts-ground-height = { path = "crates/opts-ground-height" }
 opts-map-advice = { path = "crates/opts-map-advice" }
 opts-hud-keys = { path = "crates/opts-hud-keys" }
 opts-hud-widgets = { path = "crates/opts-hud-widgets" }

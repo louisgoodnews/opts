@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 use opts_road_surf::SurfMap;
 
 /// A triangle of a surface plate in the session frame (x east, y north) with its heights, texture

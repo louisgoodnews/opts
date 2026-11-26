@@ -1,7 +1,7 @@
 //! The ground index of the resident tiles: road samples, terrain and surface plates by cell. The
 //! systems that fill and drop it stay in `opts-game`.
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 use opts_bevy::scenery::spline_pose;
 use opts_bevy::TileTerrain;
 use opts_collision::{ColliderGrid, Obb};

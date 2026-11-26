@@ -1,0 +1,19 @@
+[package]
+name = "opts-ground-height"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The ground index of the resident tiles: road samples, terrain and surface plates by cell (split out of opts-game-state, ISS-084)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Bevy is imported through opts-bevy's re-export (`opts_bevy::bevy`), not on its own.
+opts-bevy = { workspace = true }
+opts-collision = { workspace = true }
+opts-core = { workspace = true }
+opts-road-surf = { workspace = true }

@@ -18,9 +18,8 @@ opts-gui = { workspace = true, features = ["serde"] }
 opts-bevy = { workspace = true }
 opts-core = { workspace = true }
 opts-sim = { workspace = true }
-opts-collision = { workspace = true }
-opts-road-surf = { workspace = true }
 opts-world-stats = { workspace = true }
+opts-ground-height = { workspace = true }
 
 # Bevy Engine (Bevy-facing type crate, see docs/src/architecture/crate-graph.md, rule 4)
 bevy = { workspace = true }
