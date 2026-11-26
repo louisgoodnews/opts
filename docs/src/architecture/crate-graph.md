@@ -47,6 +47,7 @@ graph TD
         opts_steam["opts-steam<br/>• Steam library and OMSI install discovery<br/>• Reads libraryfolders.vdf and app manifests<br/>• No Bevy"]:::domain
         opts_position_tag["opts-position-tag<br/>• Player position text for log messages<br/>• Process-wide tile and world coordinates<br/>• No dependencies · Zero Bevy"]:::domain
         opts_model["opts-model<br/>• Native content model & TOML form<br/>• ContentSource trait<br/>• No OMSI knowledge"]:::domain
+        opts_challenge_model["opts-challenge-model<br/>• Challenge rules, challenge, run events and result<br/>• No dependencies · Zero Bevy · Zero File I/O"]:::domain
         opts_importer["opts-importer<br/>• opts-omsi to opts-model<br/>• The only crate that knows both"]:::domain
         opts_core["opts-core (temporary facade)<br/>• Re-exports opts-omsi and opts-l10n at the old paths<br/>• Removed when the last consumer is migrated"]:::domain
     end
@@ -66,6 +67,8 @@ graph TD
         opts_traffic_weather["opts-traffic-weather<br/>• Grip and fog for AI drivers<br/>• Car-following parameter rules<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_vehicle_traits["opts-vehicle-traits<br/>• Traffic traits of a vehicle type<br/>• Mapped onto the driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_kinematic["opts-kinematic<br/>• Cheap kinematic acceleration (M-0103)<br/>• Drive torque curve over speed<br/>• Zero Bevy · Zero File I/O"]:::bridge
+        opts_challenge["opts-challenge (facade)<br/>• Re-exports the challenge model and the scorer at the old paths<br/>• Zero Bevy"]:::bridge
+        opts_challenge_scorer["opts-challenge-scorer<br/>• Applies run events to a challenge<br/>• Produces the challenge result<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_audio["opts-audio<br/>• Sound engine: clips, emitters, voice budget<br/>• Distance fade and mix buses<br/>• Bevy types, no file formats"]:::bridge
         opts_light_quality["opts-light-quality<br/>• Effective lighting quality and fallback ladder<br/>• Automatic frame-time governor<br/>• Bevy types"]:::bridge
         opts_main_camera["opts-main-camera<br/>• MainCamera marker (the player's view)<br/>• Bevy types"]:::bridge
@@ -255,6 +258,9 @@ graph TD
     opts_importer --> opts_model
     opts_importer --> opts_omsi
     opts_model --> opts_types
+    opts_challenge --> opts_challenge_model
+    opts_challenge --> opts_challenge_scorer
+    opts_challenge_scorer --> opts_challenge_model
     opts_omsi --> opts_omsi_binary
     opts_omsi --> opts_omsi_map
     opts_omsi --> opts_omsi_scenery
@@ -318,6 +324,7 @@ graph TD
 | **`opts-steam`** | L1 | Steam library and OMSI 2 install discovery: reads `libraryfolders.vdf` and the app manifests through `opts-vdf` (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-steam.md)) | `opts-vdf` | `opts-game` | Pure Rust |
 | **`opts-position-tag`** | L1 | Player position text for log messages (tile, local and world coordinates; split out of `opts-bevy`, M-0122) | *None* | `opts-bevy` | Pure Rust |
 | **`opts-model`** | L1 | The native content model and its TOML form (stubs: `VehicleDefinition`, `ContentSource`) | `opts-types` | `opts-importer` | Pure Rust |
+| **`opts-challenge-model`** | L1 | The challenge model of M-0172: rules, challenge, run events and the result, split out of `opts-challenge` (ISS-089) | *None* | `opts-challenge`, `opts-challenge-scorer` | Pure Rust |
 | **`opts-importer`** | L1 | Turns legacy OMSI content into the native model; the only crate that knows both | `opts-model`, `opts-omsi` | *None yet* | Pure Rust |
 | **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-fleet-number`, `opts-game`, `opts-mesh-dir`, `opts-road-surf`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
@@ -328,6 +335,8 @@ graph TD
 | **`opts-scripted-drive`** | L2 | The near-vehicle drive (M-0103): the desired acceleration as script pedals, and the script's wheel torque and brake force back as an acceleration | *None* | `opts-game` | Pure Rust |
 | **`opts-scene-trace`** | L2 | The scene trace: records, filters and the trace store of what is under the camera, split out of `opts-bevy` (crate split) | *None* | `opts-bevy` | Bevy |
 | **`opts-spatial-zones`** | L2 | Spatial zones (ceilings, tunnels) with their sampling, tracking and overlays, split out of `opts-bevy` (crate split) | *None* | `opts-bevy` | Bevy |
+| **`opts-challenge`** | L2 | Facade over `opts-challenge-model` and `opts-challenge-scorer`: re-exports them at the old paths (ISS-089) | `opts-challenge-model`, `opts-challenge-scorer` | *None* | Pure Rust |
+| **`opts-challenge-scorer`** | L2 | The scorer of M-0172: applies run events to a challenge and produces its result, split out of `opts-challenge` (ISS-089) | `opts-challenge-model` (external: `tracing`) | `opts-challenge` | Pure Rust |
 | **`opts-stream-budget`** | L2 | Tile-streaming frame budget and prioritisation (M-0089): wanted and evictable tiles, spreading and motion policy, split out of `opts-game` (crate split) | *None* | `opts-game` | Pure Rust |
 | **`opts-traffic-weather`** | L2 | Weather for AI drivers: grip and fog visibility change the car-following parameters, split out of `opts-traffic` (M-0117) | `opts-car-following` | `opts-traffic` | Pure Rust |
 | **`opts-world-stats`** | L2 | Counters, positions and camera setup of the loaded world, split out of `opts-game` omsi_world (ISS-067 stage 1) | `opts-core` | `opts-game` | Bevy Engine |

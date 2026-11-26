@@ -2,9 +2,9 @@
 
 use tracing::{debug, info};
 
-use crate::challenge::Challenge;
-use crate::event::ChallengeEvent;
-use crate::outcome::{ChallengeResult, Outcome};
+use opts_challenge_model::challenge::Challenge;
+use opts_challenge_model::event::ChallengeEvent;
+use opts_challenge_model::outcome::{ChallengeResult, Outcome};
 
 /// Running score and tallies of one challenge run.
 #[derive(Debug, Clone, PartialEq)]

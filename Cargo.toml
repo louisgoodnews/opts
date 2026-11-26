@@ -33,6 +33,8 @@ members = [
     "crates/opts-car-following",
     "crates/opts-catalogue",
     "crates/opts-challenge",
+    "crates/opts-challenge-model",
+    "crates/opts-challenge-scorer",
     "crates/opts-cli",
     "crates/opts-collision",
     "crates/opts-kinematic",
@@ -203,6 +205,8 @@ opts-traffic-schedule = { path = "crates/opts-traffic-schedule" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }
+opts-challenge-model = { path = "crates/opts-challenge-model" }
+opts-challenge-scorer = { path = "crates/opts-challenge-scorer" }
 
 # --- Bevy Ecosystem ---
 # Bevy moves fast. Check the latest version before starting. 

@@ -1,0 +1,16 @@
+[package]
+name = "opts-challenge-scorer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The scorer for OPTS challenges: applies run events to a challenge and produces its result (pure Rust, split out of opts-challenge, ISS-089)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-challenge-model = { workspace = true }
+tracing = { workspace = true }

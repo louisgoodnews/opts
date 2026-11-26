@@ -1,0 +1,14 @@
+[package]
+name = "opts-challenge-model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The challenge model for OPTS scenarios: the rule set, the challenge, the run events and the result a run produces (pure Rust, split out of opts-challenge, ISS-089)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

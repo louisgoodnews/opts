@@ -4,7 +4,9 @@
 opts-benchmark 5607  # set 2026-11-22 to the current total
 opts-car-following 162  # set 2026-11-23 at its size after the split from opts-traffic (docs/dev/crate-split-traffic.md)
 opts-bevy 45830  # lowered 2026-11-24 to the measured total after the ISS-002 refusal log (one debug line replaces the unused token gate line)
-opts-challenge 230  # new 2026-11-25: the M-0172 challenge model and scorer (ISS-048); estimate, the owner sets it to the measured total
+opts-challenge 2  # lowered 2026-11-26 to the measured total: facade only (ISS-089); the model and the scorer moved to opts-challenge-model and opts-challenge-scorer
+opts-challenge-model 122  # new 2026-11-26 (ISS-089 stage 1): the challenge model (rules, challenge, events, outcome) split out of opts-challenge; measured
+opts-challenge-scorer 116  # new 2026-11-26 (ISS-089 stage 2): the scorer split out of opts-challenge; measured
 opts-catalogue 2066  # set 2026-11-22 to the current total
 opts-cli 3614  # raised 2026-11-22 from 3562 to the total after the control-server merge (owner decision)
 opts-collision 211  # set 2026-11-23 at its size after the split from opts-sim (ISS-034 budget room)

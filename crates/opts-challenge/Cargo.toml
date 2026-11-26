@@ -5,11 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Challenges and scoring for OPTS scenarios: the rule set, the scorer and the result a run produces (pure Rust, no Bevy, no OMSI)."
+description = "Facade for the OPTS challenge crates: re-exports opts-challenge-model and opts-challenge-scorer at the old paths (pure Rust, no Bevy, no OMSI)."
 repository.workspace = true
 
 [lints]
 workspace = true
 
 [dependencies]
-tracing = { workspace = true }
+opts-challenge-model = { workspace = true }
+opts-challenge-scorer = { workspace = true }
