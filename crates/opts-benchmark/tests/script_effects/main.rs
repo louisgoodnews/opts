@@ -13,12 +13,11 @@
 //! The tests need a GPU adapter for Bevy's renderer; without one they report "skipped" and pass.
 
 mod checks;
-#[path = "../common/mod.rs"]
-mod common;
 mod fixtures;
+mod helpers;
 
 use checks::{check_faults, check_slider_head_and_lamp, check_toggle};
-use common::config;
+use helpers::config;
 use fixtures::build_root;
 use opts_benchmark::logging;
 use opts_benchmark::scenery::worker::Harness;
