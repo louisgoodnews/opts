@@ -18,7 +18,6 @@ use opts_game::{
 };
 use opts_gui::prelude::*;
 
-use common::{fresh_root, write_map, MiniMap};
 
 fn app_for(root: &std::path::Path, map: &str) -> App {
     let catalogue = GameCatalogue {
@@ -68,104 +67,4 @@ fn app_for(root: &std::path::Path, map: &str) -> App {
     app
 }
 
-#[test]
-fn every_placed_object_has_a_record_and_off_leaves_no_state() {
-    // Off: loading a map leaves no trace state behind.
-    st::set_mode(st::Mode::Off);
-    let root = fresh_root("trace_off");
-    let mut map = MiniMap::simple("Mini");
-    map.dangling_objects = 3;
-    write_map(&root, &map);
-    let mut app = app_for(&root, "Mini");
-    for _ in 0..30 {
-        app.update();
-    }
-    assert!(!st::state_allocated(), "no trace state while off");
-    drop(app);
-    full_mode_records_each_object(&root);
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-/// Full mode: one record per placed object, a tile summary and a well-formed run file.
-fn full_mode_records_each_object(root: &std::path::Path) {
-    // Full: the entry point object and the three dangling objects each have a record.
-    let logs = std::env::temp_dir().join(format!("opts_trace_logs_{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&logs);
-    st::set_directory(logs.clone());
-    st::set_mode(st::Mode::Full);
-    let mut app = app_for(root, "Mini");
-    for _ in 0..30 {
-        app.update();
-    }
-    let objects = st::query(&st::Query {
-        kind: Some(st::kind::SCENERY.into()),
-        limit: 100,
-        ..st::Query::default()
-    });
-    assert_eq!(
-        objects.len(),
-        4,
-        "one record per placed object: {objects:#?}"
-    );
-    assert_object_records(&objects);
-    let files: Vec<&str> = objects.iter().map(|r| r.file.as_str()).collect();
-    assert!(
-        files.iter().any(|f| f.contains("missing_2.sco")),
-        "{files:?}"
-    );
-    let indexes: Vec<usize> = {
-        let mut v: Vec<usize> = objects.iter().filter_map(|r| r.index).collect();
-        v.sort_unstable();
-        v
-    };
-    assert_eq!(
-        indexes,
-        vec![0, 1, 2, 3],
-        "record indexes follow the .map order"
-    );
-    // The tile has a terrain record and a summary that counts the objects.
-    let tile = st::tile_summary((0, 0)).expect("tile summary");
-    assert_eq!(tile.kinds.get("scenery"), Some(&4));
-    assert_eq!(tile.issues.get("scenery"), Some(&4));
-    // The run file exists next to the logs, starts with a header and names the map.
-    let status = st::status();
-    let file = std::path::PathBuf::from(status.file.expect("trace file"));
-    assert!(file.starts_with(&logs));
-    drop(app);
-    st::set_mode(st::Mode::Off);
-    assert_run_file(&file, root);
-    let _ = std::fs::remove_dir_all(&logs);
-}
-
-/// Every object record is a failed scenery record with a reason and a position.
-fn assert_object_records(objects: &[st::TraceRecord]) {
-    for r in objects {
-        assert_eq!(r.tile, Some([0, 0]));
-        assert_eq!(r.list.as_deref(), Some("objects"));
-        assert_eq!(r.result, "failed", "{r:?}");
-        assert!(
-            r.warnings.iter().any(|w| w.contains("not found")),
-            "the reason is recorded: {r:?}"
-        );
-        assert!(r.pos.is_some() && r.world.is_some() && r.rot_deg.is_some());
-        assert!(r.is_issue());
-    }
-}
-
-/// The run file starts with a header, holds the records and leaks no absolute path.
-fn assert_run_file(file: &std::path::Path, root: &std::path::Path) {
-    let text = std::fs::read_to_string(file).unwrap();
-    let first: serde_json::Value = serde_json::from_str(text.lines().next().unwrap()).unwrap();
-    assert_eq!(first["type"], "header");
-    assert!(first["map"].as_str().unwrap().contains("Mini"));
-    assert!(
-        text.lines()
-            .filter(|l| l.contains("\"type\":\"record\""))
-            .count()
-            >= 4
-    );
-    assert!(
-        !text.contains(root.to_string_lossy().as_ref()),
-        "no absolute paths in the file"
-    );
-}
+mod records;
