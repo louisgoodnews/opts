@@ -1,7 +1,7 @@
 //! Moving the head of a train: forward along the network, and backwards over its trail.
 
 use super::{Moved, Train, MAX_TRAIL};
-use crate::pedestrian::{End, PedestrianNet};
+use opts_sim_pedestrian::{End, PedestrianNet};
 
 impl Train {
     /// Moves the head `distance` metres forward (never backwards: call [`Train::reverse`] first).
