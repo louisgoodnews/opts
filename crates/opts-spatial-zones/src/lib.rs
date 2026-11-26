@@ -22,7 +22,9 @@ pub mod overlay;
 pub mod query;
 pub mod registry;
 pub mod sampler;
-pub mod tracker;
+
+/// The Bevy-free tracker and sample gate, re-exported from `opts-spatial-zones-core` (ISS-092).
+pub use opts_spatial_zones_core::tracker;
 
 pub use model::{SpatialZone, ZoneEntered, ZoneId, ZoneKind, ZoneLeft};
 pub use overlay::ZoneOverlay;

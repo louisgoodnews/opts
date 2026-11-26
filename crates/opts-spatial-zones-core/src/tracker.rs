@@ -97,3 +97,7 @@ impl Default for SampleGate {
         Self::new()
     }
 }
+
+#[cfg(test)]
+#[path = "tracker_tests.rs"]
+mod tests;

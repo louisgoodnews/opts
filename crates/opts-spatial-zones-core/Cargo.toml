@@ -1,0 +1,14 @@
+[package]
+name = "opts-spatial-zones-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The Bevy-free part of the spatial zones: the hysteresis tracker and the 10 Hz sample gate (split out of opts-spatial-zones, ISS-092)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
