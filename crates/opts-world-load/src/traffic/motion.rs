@@ -43,6 +43,29 @@ fn retire_scheduled(
     }
 }
 
+/// Acts on the events of the traffic step: a stuck vehicle is logged, the schedule and the incident
+/// queue take each event, and a scheduled vehicle at the last stop of its run is set to retire.
+fn handle_events(
+    state: &mut TrafficState,
+    sched: &mut ScheduledTraffic,
+    incidents: &mut super::IncidentQueue,
+) {
+    for e in state.world.drain_events() {
+        if let opts_traffic::TrafficEvent::Stuck { id, lane } = e {
+            tracing::warn!(id = id.0, lane = lane.0, "AI vehicle stuck, despawned");
+        }
+        sched.on_event(&e);
+        incidents.on_event(&e);
+        // A scheduled vehicle at the last stop of its run is removed shortly after, when nobody
+        // can see it go (see `RETIRE_FAR_M`); in view it drives on as ordinary traffic.
+        if let opts_traffic::TrafficEvent::ArrivedAtStop { id, clock, .. } = e {
+            if state.world.agent(id).is_some_and(|a| a.stops.len() == 1) {
+                sched.finish_at(id, clock, RETIRE_AFTER_S);
+            }
+        }
+    }
+}
+
 /// Steps the agents, places the vehicle models and removes finished or distant ones.
 pub fn move_traffic(
     time: Res<Time>,
@@ -79,20 +102,7 @@ pub fn move_traffic(
         ms,
         u32::try_from(state.world.agents().len()).unwrap_or(u32::MAX),
     );
-    for e in state.world.drain_events() {
-        if let opts_traffic::TrafficEvent::Stuck { id, lane } = e {
-            tracing::warn!(id = id.0, lane = lane.0, "AI vehicle stuck, despawned");
-        }
-        sched.on_event(&e);
-        incidents.on_event(&e);
-        // A scheduled vehicle at the last stop of its run is removed shortly after, when nobody
-        // can see it go (see `RETIRE_FAR_M`); in view it drives on as ordinary traffic.
-        if let opts_traffic::TrafficEvent::ArrivedAtStop { id, clock, .. } = e {
-            if state.world.agent(id).is_some_and(|a| a.stops.len() == 1) {
-                sched.finish_at(id, clock, RETIRE_AFTER_S);
-            }
-        }
-    }
+    handle_events(&mut state, &mut sched, &mut incidents);
     retire_scheduled(&mut state, &mut sched, &camera);
     log_obstacles(&state.world);
     let cam = camera.single().ok().map(GlobalTransform::translation);
