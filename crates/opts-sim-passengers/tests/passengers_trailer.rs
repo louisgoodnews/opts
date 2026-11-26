@@ -3,7 +3,7 @@
 mod checks;
 mod fixtures;
 
-use super::*;
+use opts_sim_passengers::passengers::*;
 use checks::run_checked;
 use fixtures::{head, pack, rear};
 use glam::Vec3;

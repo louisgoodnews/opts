@@ -96,6 +96,3 @@ pub fn admits(dest: Option<&Destination>, bus: Option<&Destination>) -> bool {
         (None, _) => false,
     }
 }
-
-#[cfg(test)]
-mod tests;

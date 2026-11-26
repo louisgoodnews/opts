@@ -1,6 +1,6 @@
 //! Destinations: the admit rule, the weighted pick and the draw at a stop.
 
-use super::*;
+use opts_sim_passengers::passengers::*;
 
 fn dest(line: &str, title: &str) -> Destination {
     Destination::new(line, title)

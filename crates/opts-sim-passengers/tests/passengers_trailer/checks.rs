@@ -1,6 +1,6 @@
 //! The per-step checks of the trailer tests: passengers stay on the paths and do not jump.
 
-use super::super::*;
+use opts_sim_passengers::passengers::*;
 use super::fixtures::*;
 use glam::Vec3;
 

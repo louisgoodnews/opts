@@ -1,6 +1,7 @@
 //! passengers walking through the joint into the unit behind, and one-way links.
 
 use super::*;
+use opts_sim_passenger_model::graph;
 
 #[test]
 fn passengers_walk_through_the_joint_into_the_unit_behind_and_get_off_there() {
