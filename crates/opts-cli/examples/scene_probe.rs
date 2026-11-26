@@ -5,6 +5,8 @@
 //! ```
 
 mod common;
+#[path = "common/exit.rs"]
+mod exit;
 
 use serde_json::{json, Value};
 
@@ -12,7 +14,7 @@ fn main() {
     let mut c = common::connect();
     let mut get = |method: &str, params: Value| match c.call(method, params) {
         Ok(v) => v,
-        Err(e) => common::die(method, &e),
+        Err(e) => exit::die(method, &e),
     };
     let state = get("state", Value::Null);
     println!("app state : {}", state["app_state"]);
