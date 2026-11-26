@@ -1,5 +1,7 @@
 //! The route report and its helpers.
 
+use opts_sim::script::FileRead;
+
 use super::phases::Loop;
 use super::*;
 
@@ -8,6 +10,20 @@ pub(super) use report::route_report;
 
 /// System values the engine itself sets in every `run_frame` (`GetTime`, `Timegap`): never unfed.
 pub(super) const ENGINE_SET: &[&str] = &["gettime", "timegap"];
+
+/// Reads a script file that `find_ci` found: the loader only needs the outcome.
+pub(super) fn read_script(path: Option<PathBuf>) -> FileRead {
+    let Some(path) = path else {
+        return FileRead::NotFound;
+    };
+    match std::fs::read(&path) {
+        Ok(bytes) => FileRead::Loaded {
+            name: path.to_string_lossy().into_owned(),
+            bytes,
+        },
+        Err(e) => FileRead::Unreadable(e.to_string()),
+    }
+}
 
 pub(super) fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
     let mut cur = base.to_path_buf();

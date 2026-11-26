@@ -17,8 +17,9 @@ fn start_route_loop(
     if let Some((_, map_dir)) = timetable {
         route.set_timetables(opts_bevy::route::find_timetables(map_dir).map(std::sync::Arc::new));
     }
-    let (mut engine, _) =
-        load_vehicle_scripts(bus, |r| find_ci(dir, r).or_else(|| find_ci(root, r)));
+    let (mut engine, _) = load_vehicle_scripts(bus, |r| {
+        read_script(find_ci(dir, r).or_else(|| find_ci(root, r)))
+    });
     engine.seed_random(seed as u32);
     engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
         opts_bevy::host_callbacks::VehicleHostContext {

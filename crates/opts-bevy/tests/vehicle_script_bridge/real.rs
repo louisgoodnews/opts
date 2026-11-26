@@ -41,8 +41,9 @@ fn real_keyboard_cfg_and_sd77_triggers() {
     };
     let bus_dir = bus_path.parent().unwrap().to_path_buf();
     let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).unwrap()).unwrap();
-    let (mut engine, _) =
-        opts_sim::script::load_vehicle_scripts(&manifest, |rel| install.find_in(&bus_dir, rel));
+    let (mut engine, _) = opts_sim::script::load_vehicle_scripts(&manifest, |rel| {
+        super::read_script(install.find_in(&bus_dir, rel))
+    });
     engine.run_init();
     for name in [
         "bus_doorfront0",

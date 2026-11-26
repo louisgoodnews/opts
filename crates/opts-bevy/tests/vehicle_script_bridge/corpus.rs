@@ -32,8 +32,9 @@ fn vehicle_scripts_corpus_families_report_no_unimplemented_callbacks() {
         let Ok(manifest) = BusManifest::parse_bytes(&bytes) else {
             continue;
         };
-        let (mut engine, _) =
-            opts_sim::script::load_vehicle_scripts(&manifest, |r| install.find_in(&bus_dir, r));
+        let (mut engine, _) = opts_sim::script::load_vehicle_scripts(&manifest, |r| {
+            super::read_script(install.find_in(&bus_dir, r))
+        });
 
         let hof = corpus_support::find_hof(&bus_dir);
         let script_textures = corpus_support::script_textures(&install, &manifest, &bus_dir);

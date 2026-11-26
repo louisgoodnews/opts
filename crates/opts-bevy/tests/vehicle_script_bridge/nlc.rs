@@ -21,8 +21,9 @@ fn nlc_dash_and_matrix_script_textures_receive_drawing() {
     let Ok(manifest) = BusManifest::parse_bytes(&bytes) else {
         return;
     };
-    let (mut engine, _) =
-        opts_sim::script::load_vehicle_scripts(&manifest, |r| install.find_in(&bus_dir, r));
+    let (mut engine, _) = opts_sim::script::load_vehicle_scripts(&manifest, |r| {
+        super::read_script(install.find_in(&bus_dir, r))
+    });
 
     // Script textures: 128x32 and 1024x256
     let tex0 = opts_core::formats::script_texture::CpuScriptTexture::new(128, 32);

@@ -11,7 +11,21 @@ use std::time::Instant;
 use opts_bevy::scenery_runtime::{HostValues, SceneryVariableOverrides};
 use opts_bevy::{OmsiInstall, SceneryClock, SceneryScripts};
 use opts_core::formats::scenery::SceneryObject;
-use opts_sim::script::{load_scenery_scripts, Severity};
+use opts_sim::script::{load_scenery_scripts, FileRead, Severity};
+
+/// Reads a script file that the install lookup found: the loader only needs the outcome.
+fn read_script(path: Option<PathBuf>) -> FileRead {
+    let Some(path) = path else {
+        return FileRead::NotFound;
+    };
+    match std::fs::read(&path) {
+        Ok(bytes) => FileRead::Loaded {
+            name: path.to_string_lossy().into_owned(),
+            bytes,
+        },
+        Err(e) => FileRead::Unreadable(e.to_string()),
+    }
+}
 
 const DT: f32 = 1.0 / 60.0;
 const FRAMES_PER_SCENARIO: usize = 600;
@@ -96,7 +110,7 @@ fn main() {
             .unwrap_or_default()
             .to_lowercase();
         let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
-        let set = load_scenery_scripts(&sco, |rel| install.find_in(&dir, rel));
+        let set = load_scenery_scripts(&sco, |rel| read_script(install.find_in(&dir, rel)));
         let entry_key = key.clone();
         let entry = per.entry(key).or_default();
         entry.objects += 1;

@@ -10,9 +10,23 @@ use opts_bevy::{
 use opts_core::formats::engine_config::KeyboardConfig;
 use opts_core::formats::vehicles::bus::BusManifest;
 use opts_core::formats::vehicles::model::ModelConfig;
-use opts_sim::script::ScriptEngine;
+use opts_sim::script::{FileRead, ScriptEngine};
 
 use self::consts::{KEYBOARD, MODEL, SCRIPT};
+
+/// Reads a script file that the install lookup found: the loader only needs the outcome.
+fn read_script(path: Option<std::path::PathBuf>) -> FileRead {
+    let Some(path) = path else {
+        return FileRead::NotFound;
+    };
+    match std::fs::read(&path) {
+        Ok(bytes) => FileRead::Loaded {
+            name: path.to_string_lossy().into_owned(),
+            bytes,
+        },
+        Err(e) => FileRead::Unreadable(e.to_string()),
+    }
+}
 
 #[path = "vehicle_script_bridge/consts.rs"]
 mod consts;

@@ -54,7 +54,9 @@ mod phases;
 use phases::Startup;
 
 mod route;
-use route::{buses, depot_for, find_ci, route_report, seed_of, unconsumed, ENGINE_SET};
+use route::{
+    buses, depot_for, find_ci, read_script, route_report, seed_of, unconsumed, ENGINE_SET,
+};
 
 mod summary;
 use summary::{print_summary, write_or_check_golden, SummaryCounts};
@@ -104,7 +106,7 @@ fn main() {
         totals.with_scripts += 1;
         let dir = f.parent().expect("dir").to_path_buf();
         let (mut engine, load) = load_vehicle_scripts(&bus, |r| {
-            find_ci(&dir, r).or_else(|| find_ci(&args.root, r))
+            read_script(find_ci(&dir, r).or_else(|| find_ci(&args.root, r)))
         });
         let load_errors_here = load
             .iter()
