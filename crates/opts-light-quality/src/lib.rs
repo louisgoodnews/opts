@@ -104,6 +104,3 @@ impl LightQuality {
         self.with_mode(LightMode::Automatic, 0) == other.with_mode(LightMode::Automatic, 0)
     }
 }
-
-#[cfg(test)]
-mod tests;

@@ -1,6 +1,8 @@
 //! Unit tests of `light_quality`.
 
-use super::*;
+use bevy::prelude::*;
+use bevy::time::Real;
+use opts_light_quality::*;
 
 mod ladder;
 
