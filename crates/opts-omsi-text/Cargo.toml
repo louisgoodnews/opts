@@ -13,4 +13,5 @@ workspace = true
 
 [dependencies]
 glam = { workspace = true }
+opts-omsi-scan = { workspace = true }
 thiserror = { workspace = true }

@@ -1,0 +1,15 @@
+[package]
+name = "opts-omsi-scan"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OMSI 2 keyword-block scanner: the text decoding (UTF-16, cp1252), the [keyword] block scan and the positional value parsers shared by the text readers."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+glam = { workspace = true }
