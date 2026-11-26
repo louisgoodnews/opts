@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Issue** | ISS-051. Research item RG-10 in the [feature report](../../audit/feature-research-omsi-lotus-2026-11-22.md), section 4 |
 | **Severity** | minor |
-| **Milestone** | [Phase 6](../../src/roadmap/phase-6/README.md) Modding Ecosystem (existing; status planned) |
+| **Milestone** | [Phase 6](../../src/roadmap/phase-6/README.md) Modding Ecosystem; depends on [M-0051](../../src/roadmap/phase-6/M-0051.md) Editor Mode (E1 to E6 open, not started). Scheduled after the editor, per the owner 2026-11-26. |
 | **Status** | open (proposed 2026-11-22 from the feature research; planned under Phase 6) |
 
 ## Problem
