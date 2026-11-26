@@ -30,7 +30,7 @@ GAP-20 (editors) is planned under [M-0051](../phase-6/M-0051.md) and is not sche
 *Goal: close the remaining OMSI 2 parity gaps in the world, traffic, rail and vehicle systems. Status: proposed 2026-11-18 from the [OMSI parity matrix](../../../audit/omsi-parity-matrix-2026-11-18.md); the articulation, tunnel, traffic, pedestrian and snow items are owned by milestones already in progress and are listed here in gap order. Documents: [phase page](README.md).*
 
 - [ ] **🧩 Articulation seam (GAP-02)** — [M-0053](../phase-4/M-0053.md), in progress (existing)
-  - [ ] Multi-angle, multi-trailer live seam test with a pivot-at-H assertion; pitch and roll (ISS-011, ISS-037).
+  - [ ] Multi-angle, multi-trailer live seam test with a pivot-at-H assertion; pitch and roll (ISS-075; no issue file exists for the old ISS-011 and ISS-037 references).
 - [~] **🚇 Tunnel zones fed by the tile loader (GAP-04)** — [M-0115](../phase-11/M-0115.md), feed done 2026-11-22 and call-site test 2026-11-23 (ISS-012); thresholds, labelled maps and the overlay check stay open on M-0115
   - [ ] Feed the parsed splines; label one real tunnel (ISS-012).
 - [ ] **🔌 Battery-off path test (GAP-05)** — [M-0160](M-0160.md) (ISS-014)
