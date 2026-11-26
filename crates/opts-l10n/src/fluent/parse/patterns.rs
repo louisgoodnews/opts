@@ -8,18 +8,12 @@ pub(super) struct PatternError {
     pub(super) offset: Option<usize>,
 }
 
-impl From<String> for PatternError {
-    fn from(message: String) -> Self {
-        Self {
-            message,
-            offset: None,
-        }
-    }
-}
-
 impl From<&str> for PatternError {
     fn from(message: &str) -> Self {
-        message.to_string().into()
+        Self {
+            message: message.to_string(),
+            offset: None,
+        }
     }
 }
 
@@ -108,7 +102,10 @@ pub(super) fn parse_placeable(inner: &str) -> Result<Part, PatternError> {
     {
         return Ok(Part::Ref(inner.to_string()));
     }
-    Err(format!("unsupported placeable `{{ {inner} }}` (use `$variable`, a message id or a plural selector)").into())
+    Err(PatternError {
+        message: format!("unsupported placeable `{{ {inner} }}` (use `$variable`, a message id or a plural selector)"),
+        offset: None,
+    })
 }
 
 pub(super) fn parse_select(var: &str, body: &str) -> Result<Part, PatternError> {
