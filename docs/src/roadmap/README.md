@@ -221,7 +221,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **🚌 Script rig and callback safety net** — [M-0096](phase-4/M-0096.md)
 - [x] **🚌 Route, timetable and IBIS data layer** — [M-0099](phase-4/M-0099.md)
 - [x] **🚌 Consist script state: part engines, script share and control cables** — [M-0098](phase-4/M-0098.md)
-- [~] **🚌 Script chain and course geometry** (proposed 2026-10-14; M-0097 implemented, M-0100/M-0101/M-0102 first slices, M-0103 started through M-0112 (2026-11-25: census defect fixed, inputs and kinematic model open), M-0105 still proposed) — [M-0097](phase-4/M-0097.md) physics contract, [M-0100](phase-4/M-0100.md) script textures, [M-0101](phase-4/M-0101.md) doors, passengers, tickets and cash, [M-0102](phase-4/M-0102.md) sound events and force feedback, [M-0103](phase-4/M-0103.md) AI scripts near the player, [M-0105](phase-4/M-0105.md) course geometry (research)
+- [~] **🚌 Script chain and course geometry** (proposed 2026-10-14; M-0097 implemented, M-0100/M-0101/M-0102 first slices, M-0103 started through M-0112 (2026-11-26 code check: near-vehicle scripts wired as a cap on car following; the kinematic model is a census check; open: gate tests, scheduled listed vehicles, inert .ovh entries, in-game criteria), M-0105 code written 2026-11-26 (deliverables 3 to 5, 6 partial; not compiled or tested)) — [M-0097](phase-4/M-0097.md) physics contract, [M-0100](phase-4/M-0100.md) script textures, [M-0101](phase-4/M-0101.md) doors, passengers, tickets and cash, [M-0102](phase-4/M-0102.md) sound events and force feedback, [M-0103](phase-4/M-0103.md) AI scripts near the player, [M-0105](phase-4/M-0105.md) course geometry (research)
 
 ---
 
