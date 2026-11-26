@@ -15,6 +15,7 @@ workspace = true
 # Internal Crates
 opts-hud-keys = { workspace = true }
 opts-rail-state = { workspace = true }
+opts-in-game-types = { workspace = true }
 opts-ground-height = { workspace = true }
 opts-session-vehicles = { workspace = true }
 opts-game-settings = { workspace = true }

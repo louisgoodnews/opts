@@ -15,11 +15,12 @@ opts-core 4  # set 2026-11-22 to the current total
 opts-debounce 86  # new 2026-11-23: the hot-reload file-event debouncer split out of opts-bevy (docs/dev/crate-split-weather.md)
 opts-map-advice 121  # new 2026-11-23: the map load profile and advice engine split out of opts-game (docs/dev/crate-split-advice.md)
 opts-game 90578  # lowered 2026-11-24 to the measured total: the exhaust module moved to opts-exhaust (M-0117 nearest-N, docs/dev/crate-split-exhaust.md); the rail rule bridge (sync_exhaust, behind) added lines, paid by moving the VehicleComposition and road grip unit tests to crates/opts-game/tests
-opts-game-state 170  # lowered 2026-11-26 to the measured total (ISS-084): the ground index, session registry, settings and look, and the body and rail state moved to their own crates; was an ESTIMATE 504 (ISS-064 stage 2)
+opts-game-state 85  # lowered 2026-11-26 to the measured total (ISS-084): the ground index, session registry, settings and look, the body and rail state and the in-game types moved to their own crates; was an ESTIMATE 504 (ISS-064 stage 2). Left: AppState, the alerts vocabulary and the viewpoint keys
 opts-ground-height 469  # new 2026-11-26 (ISS-084 stage 1): the ground index and the surface plates split out of opts-game-state, measured by structure_audit
 opts-session-vehicles 394  # new 2026-11-26 (ISS-084 stage 2): the session registry types split out of opts-game-state, measured by structure_audit
 opts-game-settings 403  # new 2026-11-26 (ISS-084 stage 3): the settings and the look split out of opts-game-state, measured by structure_audit
 opts-rail-state 121  # new 2026-11-26 (ISS-084 stage 4): the vehicle part box and the rail state split out of opts-game-state, measured by structure_audit
+opts-in-game-types 85  # new 2026-11-26 (ISS-084 stage 5): the in-game components, resources and load stages split out of opts-game-state, measured by structure_audit
 opts-gui 18492  # raised 2026-11-23 from 18409 to the total after the ISS-056 disabled-label contrast fix (owner decision)
 opts-hardware 2642  # set 2026-11-22 to the current total
 opts-importer 60  # set 2026-11-22 to the current total

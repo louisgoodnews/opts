@@ -1,6 +1,7 @@
-//! ECS component, resource, and state definitions for the in-game simulation session.
+//! ECS component, resource, and state definitions for the in-game simulation session (split out
+//! of `opts-game-state`, ISS-084, which re-exports this crate as `in_game::types`).
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 
 /// Marker component attached to any entity spawned during an active in-game session.
 ///
