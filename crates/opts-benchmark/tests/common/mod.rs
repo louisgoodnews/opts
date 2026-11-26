@@ -1,8 +1,6 @@
 //! Shared helpers of the integration tests: a self-authored installation made of hand-written
 //! `.x` boxes, solid-colour textures, `.sco` files and `.osc` scripts. Nothing of OMSI is used.
 
-#![allow(dead_code)]
-
 use std::fs;
 use std::path::Path;
 
