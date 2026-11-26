@@ -10,8 +10,7 @@ use std::sync::Arc;
 
 use bevy::asset::{Assets, Handle};
 use bevy::image::Image;
-#[allow(unused_imports)] // `OftChar` is for the tests of `script_text`
-pub(crate) use opts_core::formats::oft::{OftChar, OftFile, OftFont};
+pub(crate) use opts_core::formats::oft::{OftFile, OftFont};
 
 use crate::install::OmsiInstall;
 

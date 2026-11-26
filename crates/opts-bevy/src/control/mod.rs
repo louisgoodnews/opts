@@ -54,9 +54,10 @@ pub struct ControlAddr(pub SocketAddr);
 
 /// Keeps the server alive for the lifetime of the app.
 #[derive(Resource)]
-// The allow stays: the field is never read, and dropping it would stop the server.
-#[allow(dead_code)]
-struct ServerGuard(ServerHandle);
+struct ServerGuard {
+    // Never read: holding the handle keeps the server running (underscore = no dead-code lint).
+    _handle: ServerHandle,
+}
 
 /// Adds the control server and its handlers. Without a port the plugin only registers the
 /// handler table (tests drive it through [`channel::dispatch`]).
@@ -103,7 +104,7 @@ impl Plugin for ControlPlugin {
             Ok(handle) => {
                 tracing::info!(target: "opts_bevy::control", addr = %handle.addr, "control server listening addr={}", handle.addr);
                 app.insert_resource(ControlAddr(handle.addr))
-                    .insert_resource(ServerGuard(handle))
+                    .insert_resource(ServerGuard { _handle: handle })
                     .insert_resource(state::ControlInbox(Mutex::new(rx)))
                     .add_systems(
                         PreUpdate,
@@ -112,8 +113,7 @@ impl Plugin for ControlPlugin {
             }
             Err(e) => {
                 // `--cli-port` asks for a server: a failed start ends the run (spec §1, ISS-002 outcome).
-                tracing::error!(target: "opts_bevy::control", "control server could not start: {e}");
-                eprintln!("opts: the control server could not start: {e}");
+                tracing::error!(target: "opts_bevy::control", "opts: the control server could not start: {e}");
                 std::process::exit(2);
             }
         }

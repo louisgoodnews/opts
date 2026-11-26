@@ -3,7 +3,8 @@ use std::collections::HashMap;
 
 use super::*;
 use crate::host_callbacks::CpuScriptTexture;
-use crate::text_texture::{FontBitmaps, OftChar};
+use crate::text_texture::FontBitmaps;
+use opts_core::formats::oft::OftChar;
 
 /// A font of one glyph `A`, 4 pixels wide and 3 high: the last column is not covered, the middle
 /// row is covered half.
