@@ -109,6 +109,7 @@ graph TD
         opts_rail_state["opts-rail-state<br/>• Vehicle part box, composed units and the player's rail vehicle<br/>• Bevy types over opts-bevy and opts-sim · No systems, no I/O"]:::app
         opts_fleet_number["opts-fleet-number<br/>• Vehicle fleet number from the .org registration list<br/>• Bevy systems over opts-bevy types"]:::app
         opts_mesh_dir["opts-mesh-dir<br/>• Base folder of a vehicle's mesh paths<br/>• Config folder or model folder, by resolved meshes"]:::app
+        opts_consist_plan["opts-consist-plan<br/>• Where each file of a consist goes: coupling chain and formation cars<br/>• Pure geometry over manifests (no entities)"]:::app
         opts_world_session["opts-world-session<br/>• Resolved content paths and the menu request for a world session"]:::app
         opts_shell_calendar["opts-shell-calendar<br/>• Date and time steppers and choice chips<br/>• Bevy UI over opts-bevy and opts-gui"]:::app
         opts_shell_dialog["opts-shell-dialog<br/>• Confirmation dialogs and their answer systems<br/>• Bevy UI over opts-gui"]:::app
@@ -164,6 +165,7 @@ graph TD
     opts_core --> opts_omsi
     opts_fleet_number --> opts_core
     opts_mesh_dir --> opts_core
+    opts_consist_plan --> opts_core
     opts_road_surf --> opts_core
     opts_world_stats --> opts_core
     opts_world_load --> opts_core
@@ -182,6 +184,7 @@ graph TD
     opts_world_load --> opts_vehicle_script_texture
     opts_world_load --> opts_fleet_number
     opts_world_load --> opts_mesh_dir
+    opts_world_load --> opts_consist_plan
     opts_world_load --> opts_collision
     opts_world_load --> opts_logging
     opts_world_load --> opts_gui
@@ -396,7 +399,7 @@ graph TD
 | **`opts-stream-budget`** | L2 | Tile-streaming frame budget and prioritisation (M-0089): wanted and evictable tiles, spreading and motion policy, split out of `opts-game` (crate split) | *None* | `opts-game` | Pure Rust |
 | **`opts-traffic-weather`** | L2 | Weather for AI drivers: grip and fog visibility change the car-following parameters, split out of `opts-traffic` (M-0117) | `opts-car-following` | `opts-traffic` | Pure Rust |
 | **`opts-world-stats`** | L2 | Counters, positions and camera setup of the loaded world, split out of `opts-game` omsi_world (ISS-067 stage 1) | `opts-core` | `opts-game` | Bevy Engine |
-| **`opts-world-load`** | L3 | The in-progress world load (ISS-067 stage 1, ISS-064 chain 3): `WorldLoadJob` and the closure it reaches, moved out of `opts-game` omsi_world in one atomic change; does not compile until the compile-fix phase | `opts-attachments`, `opts-bevy`, `opts-collision`, `opts-core`, `opts-fleet-number`, `opts-game-state`, `opts-gui`, `opts-logging`, `opts-mesh-dir`, `opts-repaints`, `opts-road-surf`, `opts-scripted-drive`, `opts-sim`, `opts-stream-budget`, `opts-tile-loading`, `opts-traffic`, `opts-traffic-schedule`, `opts-vehicle-script-texture`, `opts-world-session`, `opts-world-stats` | `opts-game` | Bevy Engine |
+| **`opts-world-load`** | L3 | The in-progress world load (ISS-067 stage 1, ISS-064 chain 3): `WorldLoadJob` and the closure it reaches, moved out of `opts-game` omsi_world in one atomic change; does not compile until the compile-fix phase | `opts-attachments`, `opts-bevy`, `opts-collision`, `opts-consist-plan`, `opts-core`, `opts-fleet-number`, `opts-game-state`, `opts-gui`, `opts-logging`, `opts-mesh-dir`, `opts-repaints`, `opts-road-surf`, `opts-scripted-drive`, `opts-sim`, `opts-stream-budget`, `opts-tile-loading`, `opts-traffic`, `opts-traffic-schedule`, `opts-vehicle-script-texture`, `opts-world-session`, `opts-world-stats` | `opts-game` | Bevy Engine |
 | **`opts-vehicle-script-texture`** | L2 | Vehicle script texture canvases, colour maps and the per-frame GPU upload, split out of `opts-game` omsi_world (ISS-067 stage 1) | `opts-core` | `opts-game` | Bevy Engine |
 | **`opts-kinematic`** | L2 | Cheap kinematic acceleration of an AI vehicle from its measured drive torque over speed; the run-up law shared with the script census in `opts-sim` examples (M-0103) | *None* | *None* | Pure Rust |
 | **`opts-sim-passengers`** | L2 | The passengers of a vehicle: boarding through open doors, tickets, seats and standing places, getting off (split out of `opts-sim`, ISS-066 stage 1; [epic](../../dev/issues/ISS-066-epic-split-opts-sim.md)) | `opts-sim-passenger-model` | `opts-sim` | Pure Rust |
@@ -444,6 +447,7 @@ graph TD
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-fleet-number`, `opts-game`, `opts-mesh-dir`, `opts-world-session` | Bevy Engine |
 | **`opts-fleet-number`** | L3 | Vehicle fleet number drawn from the `.org` registration list of a `.bus` with the script seed (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy`, `opts-core` | `opts-game` | Bevy Engine (via `opts-bevy`) |
 | **`opts-mesh-dir`** | L3 | Base folder of a vehicle's mesh paths: the config folder or the model folder, by the meshes each resolves (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy`, `opts-core` | `opts-game` | Bevy Engine (via `opts-bevy`) |
+| **`opts-consist-plan`** | L2 | Where every file of a consist goes: the head's `[couple_back]` chain and the cars of a train formation, placed along the train's axis; `FormationCar` and `coupling_joint` moved here from `opts-world-load` (ISS-093 step 1) | `opts-core` | `opts-world-load` | Bevy Engine (`Vec3`), `tracing` |
 | **`opts-world-session`** | L3 | Resolved content paths and the menu's request for a world session (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-bevy` | `opts-game` | Bevy Engine (via `opts-bevy`) |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-fleet-number`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-mesh-dir`, `opts-road-surf`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic`, `opts-traffic-schedule`, `opts-world-session` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game`, `opts-pause-report`, `opts-shell-calendar` | Bevy Engine |

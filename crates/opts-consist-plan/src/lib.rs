@@ -14,13 +14,26 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::Vec3;
 use opts_core::formats::vehicles::BusManifest;
 
-use super::vehicle::FormationCar;
+/// One car of a train formation behind the head: the vehicle file and whether it is turned
+/// around (see `opts_core::formats::trains`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FormationCar {
+    /// The resolved vehicle file.
+    pub path: PathBuf,
+    /// The car runs turned around in the train.
+    pub turned: bool,
+    /// Whether the car pulls: `None` lets the loader decide (a car made of several files does).
+    pub powered: Option<bool>,
+}
+
+mod coupling;
+pub use coupling::coupling_joint;
 
 mod unit;
 use unit::{place, walk, Local};
 
 /// Reads the installation: files named relative to a folder, and manifests.
-pub(super) trait Files {
+pub trait Files {
     /// The file `rel` relative to `base` (case-insensitive, backslashes).
     fn find_in(&self, base: &Path, rel: &str) -> Option<PathBuf>;
     /// The parsed manifest of a vehicle file.
@@ -29,7 +42,7 @@ pub(super) trait Files {
 
 /// One file of the consist behind the head.
 #[derive(Debug, Clone)]
-pub(super) struct PlannedPart {
+pub struct PlannedPart {
     pub path: PathBuf,
     pub dir: PathBuf,
     pub manifest: BusManifest,
@@ -46,13 +59,13 @@ pub(super) struct PlannedPart {
 
 /// The plan: the files behind the head, front to back.
 #[derive(Debug, Default)]
-pub(super) struct Plan {
+pub struct Plan {
     pub followers: Vec<PlannedPart>,
 }
 
 /// Plans the files behind the head: its own chain, then each car of `cars` with its chain, at most
 /// `limit` files in all (the head not counted).
-pub(super) fn plan(
+pub fn plan(
     head_dir: &Path,
     head: &BusManifest,
     cars: &[FormationCar],

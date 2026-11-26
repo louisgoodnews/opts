@@ -24,7 +24,7 @@ pub mod map_source;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 pub mod chrono;
 pub mod collision;
-pub mod consist_plan;
+pub use opts_consist_plan as consist_plan;
 pub mod crossing;
 pub mod ai_weather;
 pub mod dev_look;

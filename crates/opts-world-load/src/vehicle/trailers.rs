@@ -6,17 +6,7 @@ use super::*;
 mod finish;
 mod follower;
 
-/// One car of a train formation behind the head: the vehicle file and whether it is turned
-/// around (see `opts_core::formats::trains`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FormationCar {
-    /// The resolved vehicle file.
-    pub path: PathBuf,
-    /// The car runs turned around in the train.
-    pub turned: bool,
-    /// Whether the car pulls: `None` lets the loader decide (a car made of several files does).
-    pub powered: Option<bool>,
-}
+pub use opts_consist_plan::FormationCar;
 
 /// The most vehicle files one spawn follows: a single vehicle's `[couple_back]` chain, or a
 /// formation's cars with their own chains.
@@ -28,28 +18,7 @@ pub(super) fn max_parts(formation: bool) -> usize {
     }
 }
 
-/// The two coupling points that join a unit to the one in front of it, in the frame of the
-/// train (y forward): the rear point of the unit in front and the front point of the unit behind,
-/// each relative to its own vehicle's origin. A turned unit has its points negated and swapped
-/// (its model's front point faces the rear of the train). `None` when a point is missing.
-pub(crate) fn coupling_joint(
-    parent: &BusManifest,
-    parent_turned: bool,
-    own: &BusManifest,
-    own_turned: bool,
-) -> Option<(Vec3, Vec3)> {
-    let rear_of_parent = if parent_turned {
-        parent.coupling_front.map(|c| -c)
-    } else {
-        parent.coupling_back
-    }?;
-    let front_of_own = if own_turned {
-        own.coupling_back.map(|c| -c)
-    } else {
-        own.coupling_front
-    }?;
-    Some((rear_of_parent, front_of_own))
-}
+pub(crate) use opts_consist_plan::coupling_joint;
 
 /// The installation as the planner reads it.
 pub(super) struct JobFiles<'a>(&'a WorldLoadJob);

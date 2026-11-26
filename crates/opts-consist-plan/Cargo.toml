@@ -1,0 +1,17 @@
+[package]
+name = "opts-consist-plan"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Where every file of a consist goes: the head's coupling chain and the cars of a train formation, placed along the train's axis (split out of opts-world-load, ISS-093)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+opts-core = { workspace = true }
+tracing = { workspace = true }
