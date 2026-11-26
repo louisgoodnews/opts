@@ -89,7 +89,3 @@ impl ZoneRegistry {
         self.book.entity_count()
     }
 }
-
-#[cfg(test)]
-#[path = "registry_tests.rs"]
-mod tests;

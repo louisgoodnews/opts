@@ -82,7 +82,3 @@ pub fn sample_zone_subjects(
         }
     }
 }
-
-#[cfg(test)]
-#[path = "sampler_tests.rs"]
-mod tests;

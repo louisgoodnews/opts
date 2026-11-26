@@ -23,10 +23,3 @@ pub fn covered_zones(splines: &[SplineCandidate]) -> Vec<SpatialZone> {
         .map(SpatialZone::from)
         .collect()
 }
-
-#[cfg(test)]
-use super::model::ZoneKind;
-
-#[cfg(test)]
-#[path = "ceiling_tests.rs"]
-mod tests;

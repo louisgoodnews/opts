@@ -80,7 +80,3 @@ pub fn draw_zone_overlay(
         );
     }
 }
-
-#[cfg(test)]
-#[path = "overlay_tests.rs"]
-mod tests;
