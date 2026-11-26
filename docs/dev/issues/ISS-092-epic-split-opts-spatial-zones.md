@@ -46,6 +46,12 @@ is 946, from 2026-11-25 (crate split from `opts-bevy`). It is over by 6 lines an
    would be a cycle). Either `opts-bevy` depends on the view directly (a consumer path change) or the
    base keeps the view types in another form. Decision D4 in the research.
 
+## Owner decisions (2026-11-26)
+
+- **Tests (global):** every test that sits inside `src/` moves to its own `tests/` directory, relative to its module and crate (see ISS-094). The budget then counts only code under `src/`, and the split counts are re-measured after that move.
+- **Bevy routing:** a new crate that needs Bevy depends on `opts-bevy` and imports Bevy through `opts-bevy`'s re-export, not on `bevy` directly. No new exemption in the Bevy rule (ISS-063) is needed for these crates. `opts-bevy` gets a `pub use bevy;` re-export as its first step.
+- **Facade:** where a crate is split, the original crate stays as a facade with re-exports, so consumer paths do not change. This applies to every epic, without exception.
+
 ## Method
 
 1. Measure with the audit `json`.

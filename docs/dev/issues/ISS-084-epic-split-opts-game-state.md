@@ -52,6 +52,14 @@ After stages 1 to 3, `opts-game-state` keeps `alerts`, `app_state`, `viewpoint_k
    the split is the way to meet it.
 3. The name of the settings crate (`opts-game-settings` proposed) and whether `look` moves with it.
 
+## Owner decisions (2026-11-26)
+
+- **Tests (global):** every test that sits inside `src/` moves to its own `tests/` directory, relative to its module and crate (see ISS-094). The budget then counts only code under `src/`, and the split counts are re-measured after that move.
+- **Bevy routing:** a new crate that needs Bevy depends on `opts-bevy` and imports Bevy through `opts-bevy`'s re-export, not on `bevy` directly. No new exemption in the Bevy rule (ISS-063) is needed for these crates. `opts-bevy` gets a `pub use bevy;` re-export as its first step.
+- **Facade:** where a crate is split, the original crate stays as a facade with re-exports, so consumer paths do not change. This applies to every epic, without exception.
+
+- **Game state target:** split further. The 292 remaining lines in the plan are not the end point; the split continues until each remaining crate has a clear single concern and a budget at its measured size.
+
 ## Method
 
 1. Measure each candidate with `scripts/structure_audit.py json` (not by hand).

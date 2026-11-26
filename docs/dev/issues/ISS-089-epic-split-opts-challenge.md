@@ -47,6 +47,14 @@ gate. M-0172 (ISS-048) adds to the scorer and the rules, so the crate will grow 
    continues in `opts-challenge-scorer` and the model; the owner decides (decision D6 in the research).
 2. The name of the model crate: `opts-challenge-model` proposed.
 
+## Owner decisions (2026-11-26)
+
+- **Tests (global):** every test that sits inside `src/` moves to its own `tests/` directory, relative to its module and crate (see ISS-094). The budget then counts only code under `src/`, and the split counts are re-measured after that move.
+- **Bevy routing:** a new crate that needs Bevy depends on `opts-bevy` and imports Bevy through `opts-bevy`'s re-export, not on `bevy` directly. No new exemption in the Bevy rule (ISS-063) is needed for these crates. `opts-bevy` gets a `pub use bevy;` re-export as its first step.
+- **Facade:** where a crate is split, the original crate stays as a facade with re-exports, so consumer paths do not change. This applies to every epic, without exception.
+
+- **Timing:** split now, not after M-0172 merges. This is the first challenge epic stage to start.
+
 ## Method
 
 1. Measure with the audit `json`.
