@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use crate::common::{add_anchor, add_box, add_sco, add_script};
+use crate::helpers::{add_anchor, add_box, add_sco, add_script};
 
 const HEAD: &str = "[groups]\n1\nTest\n\n[friendlyname]\nt\n\n";
 
