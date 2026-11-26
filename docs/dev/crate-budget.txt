@@ -21,8 +21,7 @@ opts-l10n 2743  # set 2026-11-22 to the current total
 opts-logging 1288  # set 2026-11-22 to the current total
 opts-model 107  # set 2026-11-22 to the current total
 opts-omsi 31  # lowered 2026-11-24 from 3163 to the total after the scenery and train readers moved to opts-omsi-scenery; the facade only re-exports (docs/dev/crate-split-omsi.md, step 5)
-opts-sim 11295  # lowered 2026-11-25: AI response unit tests moved to crates/opts-sim/tests/ai_response.rs (M-0103)
-opts-sim 11331  # set 2026-11-22 to the current total
+opts-sim 8409  # measured 2026-11-26 at its size; lowered from 11295 (budgets only shrink)
 opts-sim-passengers 1897  # new 2026-11-25 (ISS-066 stage 1): the passenger module moved out of opts-sim; estimate, measured by an awk count of non-blank, non-comment lines (the audit's crate table is not run here)
 opts-sim-pedestrian 1152  # new 2026-11-25: ESTIMATE from the stage-2 move (ISS-066): the crate src code lines counted by grep (module 1149 + lib.rs), not by the audit; re-measure with the audit before the next gate
 opts-tools 1245  # set 2026-11-22 to the current total
@@ -58,16 +57,16 @@ opts-bevy-texture-sentinel 24  # new ISS-065 stage 2, ESTIMATE counted by hand: 
 opts-fleet-number 38  # estimate 2026-11-25 (ISS-067 stage 1): fleet_number.rs moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
 opts-mesh-dir 119  # estimate 2026-11-25 (ISS-067 stage 1): mesh_dir.rs moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
 opts-road-surf 289  # estimate 2026-11-25 (ISS-067 stage 1): road_surf.rs and road_surf/ (map, strip, tests) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
-opts-world-load TBD-measure  # new 2026-11-25 (ISS-064 chain 3): WorldLoadJob and its closure moved out of opts-game omsi_world in one atomic change; measured at the compile-fix phase
+opts-world-load 19016  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
 opts-world-session 27  # estimate 2026-11-25 (ISS-067 stage 1): session.rs (OmsiSessionConfig, SessionRequest) moved out of opts-game omsi_world, measured code lines before the move; the audit confirms it at its next run
 opts-shell-calendar 345  # new 2026-11-25 (ISS-068 stage 1, estimate: non-blank non-comment lines counted by hand, not by the audit): the date and time steppers and choice frame split out of opts-game's shell
 opts-shell-dialog 187  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the confirmation dialog spec, spawn and answer systems split out of opts-game's shell
 opts-shell-icons 19  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the shell's Material Icons codepoints split out of opts-game
-opts-shell-nav TBD-measure  # new 2026-11-25 (ISS-068 stage 2, estimate: the audit has not measured it yet): the shell navigation (registry, rail frame, back stack, Esc, banners) split out of opts-game; opts-game keeps its own budget until the audit measures it
-opts-notification TBD-measure  # new 2026-11-25 (ISS-068 remainder, estimate: the audit has not measured it yet): the notification service (toasts, durable error places, refused-navigation toast) split out of opts-game's shell/notify.rs
-opts-settings-io TBD-measure  # new 2026-11-25 (ISS-068 remainder, estimate: the audit has not measured it yet): the settings file I/O (settings.toml, settings.db, background writer) split out of opts-game's settings module
-opts-attachments TBD-measure  # new 2026-11-25 (ISS-067 stage 1, estimate: the audit has not measured it yet): spline attachments (placements along splines and the map-wide spline index) split out of opts-game omsi_world/in_game
-opts-tile-loading TBD-measure  # new 2026-11-25 (ISS-067 stage 1, estimate: the audit has not measured it yet): the tile load-all and radius decisions and residency (M-0080) split out of opts-game in_game
+opts-shell-nav 1050  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-notification 86  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-settings-io 229  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-attachments 553  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-tile-loading 293  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
 opts-pause-report 8  # new 2026-11-25 (ISS-068 stage 1, estimate: counted by hand, not by the audit): the report dialog state helper split out of opts-game's pause module
 opts-hud-widgets 439  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit; re-measure before the owner's review): the HUD widget vocabulary and registry split out of opts-game
 opts-hud-keys 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the HUD message key tables split out of opts-game
@@ -76,10 +75,11 @@ opts-minimap-zoom-canvas 109  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code 
 opts-save-error 58  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the save container error type split out of opts-game
 opts-load-problem 55  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the load problem type split out of opts-game
 opts-vehicle-gears 45  # new 2026-11-25 (ISS-062 stage 1, ESTIMATE: code lines counted by hand, not by structure_audit): the AI engine gear model split out of opts-game
-opts-world-stats TBD-measure  # new 2026-11-25 (ISS-067 stage 1): the world counters, positions and camera setup moved out of opts-game omsi_world; the audit has not been run, measure before the next gate
-opts-vehicle-script-texture TBD-measure  # new 2026-11-25 (ISS-067 stage 1): the vehicle script texture canvases and colour maps moved out of opts-game omsi_world; the audit has not been run, measure before the next gate
-opts-new-game-types TBD-measure  # new 2026-11-25 (ISS-064 stage 3, estimate: the audit has not measured it yet): the wizard's catalogue and choice types, the trip choice and the planner date arithmetic split out of opts-game's new_game_screen
-opts-repaints TBD-measure  # new 2026-11-25 (ISS-064 stage 3, estimate: the audit has not measured it yet): the vehicle repaint discovery (.bus, model.cfg, .cti chain) split out of opts-game's new_game_screen
-opts-app-args TBD-measure  # new 2026-11-25 (ISS-064 stage 3, estimate: the audit has not measured it yet): the AppArgs resource (the parsed command line) split out of opts-game's app module
-opts-catalogue-service TBD-measure  # new 2026-11-25 (ISS-064 stage 3, estimate: the audit has not measured it yet): the catalogue service (startup, discovery thread, selection reconciliation) split out of opts-game; test-support feature passes through to opts-game
-opts-traffic-schedule TBD-measure  # new 2026-11-25 (ISS-064 stage 3, estimate: the audit has not measured it yet): the timetable run logic (run phase, line_runs_on, active_runs) split out of opts-game's omsi_world traffic; the audit confirms it at its next run
+opts-world-stats 45  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-vehicle-script-texture 219  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-new-game-types 196  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-repaints 517  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-app-args 4  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-catalogue-service 364  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-traffic-schedule 190  # measured 2026-11-26 at its size (ISS-064/067/068 split; the audit had not run)
+opts-passenger-spec 69  # new 2026-11-26 (ISS-064): the passenger unit and ticket specs (convert.rs) moved out of opts-game; measured at its size
