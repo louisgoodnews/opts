@@ -16,6 +16,7 @@ workspace = true
 opts-core = { workspace = true }
 opts-sim-passengers = { workspace = true }
 opts-sim-pedestrian = { workspace = true }
+opts-sim-rail = { workspace = true }
 
 # Math & Data
 glam = { workspace = true, features = ["serde"] }

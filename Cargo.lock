@@ -6062,6 +6062,7 @@ dependencies = [
  "opts-kinematic",
  "opts-sim-passengers",
  "opts-sim-pedestrian",
+ "opts-sim-rail",
  "serde",
  "serde_json",
  "tracing",
@@ -6089,6 +6090,14 @@ version = "0.1.0"
 dependencies = [
  "glam",
  "opts-core",
+]
+
+[[package]]
+name = "opts-sim-rail"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "opts-sim-pedestrian",
 ]
 
 [[package]]

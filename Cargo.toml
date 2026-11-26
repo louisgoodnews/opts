@@ -118,6 +118,7 @@ members = [
     "crates/opts-catalogue-service",
     "crates/opts-traffic-schedule",
     "crates/opts-sim-pedestrian",
+    "crates/opts-sim-rail",
     "crates/opts-tools",
     "crates/opts-traffic",
     "crates/opts-traffic-lanes",
@@ -232,6 +233,7 @@ opts-app-args = { path = "crates/opts-app-args" }
 opts-catalogue-service = { path = "crates/opts-catalogue-service" }
 opts-traffic-schedule = { path = "crates/opts-traffic-schedule" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
+opts-sim-rail = { path = "crates/opts-sim-rail" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }
 opts-traffic-lanes = { path = "crates/opts-traffic-lanes" }
