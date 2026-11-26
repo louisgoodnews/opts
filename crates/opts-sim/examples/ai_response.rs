@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 #[path = "ai_response/lookup.rs"]
 mod lookup;
-use lookup::{engine_const, find_ci};
+use lookup::{engine_const, find_ci, read_script};
 
 use opts_core::formats::map::AiLists;
 use opts_core::formats::vehicles::BusManifest;
@@ -33,8 +33,9 @@ fn evaluate_vehicle(
         return;
     }
     let dir = path.parent().unwrap_or(root).to_path_buf();
-    let (mut engine, _) =
-        load_vehicle_scripts(bus, |rel| find_ci(&dir, rel).or_else(|| find_ci(root, rel)));
+    let (mut engine, _) = load_vehicle_scripts(bus, |rel| {
+        read_script(find_ci(&dir, rel).or_else(|| find_ci(root, rel)))
+    });
     let r = fed::response(
         &mut engine,
         agreement::has_ai_frame(bus, &dir, root),

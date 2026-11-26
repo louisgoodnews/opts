@@ -3,7 +3,21 @@
 use std::path::{Path, PathBuf};
 
 use opts_core::formats::vehicles::BusManifest;
-use opts_sim::script::load_vehicle_scripts;
+use opts_sim::script::{load_vehicle_scripts, FileRead};
+
+/// Reads a script file that the lookup found: the loader only needs the outcome.
+fn read_script(path: Option<PathBuf>) -> FileRead {
+    let Some(path) = path else {
+        return FileRead::NotFound;
+    };
+    match std::fs::read(&path) {
+        Ok(bytes) => FileRead::Loaded {
+            name: path.to_string_lossy().into_owned(),
+            bytes,
+        },
+        Err(e) => FileRead::Unreadable(e.to_string()),
+    }
+}
 
 fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
     let mut cur = base.to_path_buf();
@@ -33,7 +47,7 @@ fn main() {
     let bus = BusManifest::parse_bytes(&std::fs::read(&bus_path).expect("read")).expect("parse");
     let dir = bus_path.parent().expect("dir").to_path_buf();
     let (mut engine, diags) = load_vehicle_scripts(&bus, |rel| {
-        find_ci(&dir, rel).or_else(|| find_ci(&root, rel))
+        read_script(find_ci(&dir, rel).or_else(|| find_ci(&root, rel)))
     });
     for d in &diags {
         println!("load: {:?} {}:{} {}", d.severity, d.file, d.line, d.message);

@@ -7,7 +7,7 @@ use super::BusManifest;
 use opts_kinematic::run_up_with;
 use opts_sim::script::{load_vehicle_scripts, AiResponse, ScriptEngine};
 
-use super::find_ci;
+use super::{find_ci, read_script};
 
 /// Reference mass (kg) and wheel radius (m): both models scale by the same factor, so the
 /// agreement does not depend on them.
@@ -37,8 +37,9 @@ pub fn has_ai_frame(bus: &BusManifest, dir: &Path, root: &Path) -> bool {
 /// Closed-loop run-up of the vehicle's own script: each frame it gets the current speed and
 /// its `M_Wheel` drives the speed, warmed up at standstill as the measurement is.
 fn scripted_run_up(bus: &BusManifest, dir: &Path, root: &Path) -> Option<(f32, f32)> {
-    let (mut engine, _) =
-        load_vehicle_scripts(bus, |rel| find_ci(dir, rel).or_else(|| find_ci(root, rel)));
+    let (mut engine, _) = load_vehicle_scripts(bus, |rel| {
+        read_script(find_ci(dir, rel).or_else(|| find_ci(root, rel)))
+    });
     let ai = has_ai_frame(bus, dir, root);
     engine.set("AI", 1.0);
     engine.set("AI_Engine", 1.0);

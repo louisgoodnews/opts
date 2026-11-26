@@ -25,7 +25,7 @@ pub use compiler::{
     BinOp, Block, Compiler, Diagnostic, EventKind, Names, Op, Program, Severity, StrOp, UnOp,
 };
 pub use lexer::{tokenize, Token};
-pub use load::{load_scenery_scripts, load_script_files, SceneryScriptSet, ScriptFiles};
+pub use load::{load_scenery_scripts, load_script_files, FileRead, SceneryScriptSet, ScriptFiles};
 pub use strings::Stacks;
 pub use variables::{ConstTable, Curve, Interner, VariableStore};
 pub use vehicle::load_vehicle_scripts;

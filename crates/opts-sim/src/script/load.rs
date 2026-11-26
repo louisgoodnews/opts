@@ -1,8 +1,7 @@
 //! Builds a [`ScriptEngine`] from a script set: script, variable-list and constant files as
 //! listed by a `.bus` or a `.sco` (`[script]`, `[varnamelist]`, `[stringvarnamelist]`,
-//! `[constfile]`).
-
-use std::path::PathBuf;
+//! `[constfile]`). The loaders do no file I/O: the caller resolves and reads each file and
+//! reports the outcome as a [`FileRead`].
 
 use opts_core::formats::constfile::ConstFile;
 use opts_core::formats::scenery::SceneryObject;
@@ -11,6 +10,23 @@ use opts_core::formats::varlist::VarList;
 
 use super::compiler::{Compiler, Diagnostic, Severity};
 use super::ScriptEngine;
+
+/// The outcome of the caller's attempt to read one file of a script set. The caller resolves the
+/// path as written and reads the file; the loader turns a failure into a warning.
+#[derive(Debug, Clone)]
+pub enum FileRead {
+    /// The file was read. `name` is the resolved path, used as the diagnostic file name.
+    Loaded {
+        /// The resolved path, as a diagnostic file name.
+        name: String,
+        /// The file contents.
+        bytes: Vec<u8>,
+    },
+    /// The path does not resolve to a file.
+    NotFound,
+    /// The file was found but could not be read; the text is the error message.
+    Unreadable(String),
+}
 
 /// The files of one script set, as written in the owning file (relative paths).
 #[derive(Debug, Clone, Copy)]
@@ -45,22 +61,22 @@ fn warning(file: &str, message: String) -> Diagnostic {
     }
 }
 
-/// Loads a script set. `resolve` maps a path as written to a file; unresolvable or unreadable
-/// files become warnings and are skipped. Returns the engine, the diagnostics and the string
-/// variable names in list order.
+/// Loads a script set. `fetch` maps a path as written to its [`FileRead`]; files that are not
+/// found or unreadable become warnings and are skipped. Returns the engine, the diagnostics and
+/// the string variable names in list order.
 pub fn load_script_files(
     files: ScriptFiles<'_>,
-    mut resolve: impl FnMut(&str) -> Option<PathBuf>,
+    mut fetch: impl FnMut(&str) -> FileRead,
 ) -> (ScriptEngine, Vec<Diagnostic>, Vec<String>) {
     let mut diags = Vec::new();
     let mut read = |rel: &str, diags: &mut Vec<Diagnostic>| -> Option<(String, Vec<u8>)> {
-        let Some(path) = resolve(rel) else {
-            diags.push(warning(rel, "file not found".into()));
-            return None;
-        };
-        match std::fs::read(&path) {
-            Ok(bytes) => Some((path.to_string_lossy().into_owned(), bytes)),
-            Err(e) => {
+        match fetch(rel) {
+            FileRead::Loaded { name, bytes } => Some((name, bytes)),
+            FileRead::NotFound => {
+                diags.push(warning(rel, "file not found".into()));
+                None
+            }
+            FileRead::Unreadable(e) => {
                 diags.push(warning(rel, format!("unreadable: {e}")));
                 None
             }
@@ -108,11 +124,12 @@ pub fn load_script_files(
     (engine, diags, string_names)
 }
 
-/// Loads the scripts of a scenery object (`docs/src/architecture/scenery-runtime.md`). `resolve`
-/// maps a path as written in the `.sco` (relative to its folder, `..` allowed) to a file.
+/// Loads the scripts of a scenery object (`docs/src/architecture/scenery-runtime.md`). `fetch`
+/// maps a path as written in the `.sco` (relative to its folder, `..` allowed) to its
+/// [`FileRead`].
 pub fn load_scenery_scripts(
     sco: &SceneryObject,
-    resolve: impl FnMut(&str) -> Option<PathBuf>,
+    fetch: impl FnMut(&str) -> FileRead,
 ) -> SceneryScriptSet {
     let (engine, diagnostics, string_names) = load_script_files(
         ScriptFiles {
@@ -121,7 +138,7 @@ pub fn load_scenery_scripts(
             stringvarnamelists: &sco.stringvarnamelists,
             constfiles: &sco.constfiles,
         },
-        resolve,
+        fetch,
     );
     SceneryScriptSet {
         engine,

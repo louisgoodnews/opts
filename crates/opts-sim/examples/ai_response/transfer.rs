@@ -11,7 +11,7 @@ use super::BusManifest;
 use opts_kinematic::{run_up_with, DriveCurve};
 use opts_sim::script::{load_vehicle_scripts, AiResponse, ScriptEngine};
 
-use super::find_ci;
+use super::{find_ci, read_script};
 
 /// Writes the vehicles that keep their script to the file named by `FALLBACK`, if set.
 pub fn write_fallback(counts: &super::Counts) {
@@ -31,8 +31,9 @@ const OTHER_MASS_KG: f32 = 8_000.0;
 
 /// The vehicle's script engine after its standstill warm-up, with the AI flag it needs.
 fn warmed(bus: &BusManifest, dir: &Path, root: &Path) -> (ScriptEngine, bool) {
-    let (mut engine, _) =
-        load_vehicle_scripts(bus, |rel| find_ci(dir, rel).or_else(|| find_ci(root, rel)));
+    let (mut engine, _) = load_vehicle_scripts(bus, |rel| {
+        read_script(find_ci(dir, rel).or_else(|| find_ci(root, rel)))
+    });
     let ai = has_ai_frame(bus, dir, root);
     engine.set("AI", 1.0);
     engine.set("AI_Engine", 1.0);

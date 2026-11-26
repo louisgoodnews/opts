@@ -2,7 +2,23 @@
 
 use std::path::{Path, PathBuf};
 
+use opts_sim::script::FileRead;
+
 use super::BusManifest;
+
+/// Reads a script file that the lookup found: the loader only needs the outcome.
+pub fn read_script(path: Option<PathBuf>) -> FileRead {
+    let Some(path) = path else {
+        return FileRead::NotFound;
+    };
+    match std::fs::read(&path) {
+        Ok(bytes) => FileRead::Loaded {
+            name: path.to_string_lossy().into_owned(),
+            bytes,
+        },
+        Err(e) => FileRead::Unreadable(e.to_string()),
+    }
+}
 
 pub fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
     let mut cur = base.to_path_buf();

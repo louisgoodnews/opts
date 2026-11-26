@@ -7,7 +7,7 @@ use std::time::Instant;
 use opts_core::formats::vehicles::BusManifest;
 use opts_sim::script::load_vehicle_scripts;
 
-use super::discovery::find_ci;
+use super::discovery::{find_ci, read_script};
 use super::Tally;
 
 /// Writes one tab-separated diagnostic line to the `CORPUS_REPORT` file, when there is one.
@@ -50,7 +50,7 @@ pub(crate) fn run_vehicle(
     tally.with_scripts += 1;
     let dir = f.parent().expect("dir").to_path_buf();
     let (mut engine, diags) = load_vehicle_scripts(&bus, |rel| {
-        find_ci(&dir, rel).or_else(|| find_ci(root, rel))
+        read_script(find_ci(&dir, rel).or_else(|| find_ci(root, rel)))
     });
     tally.missing += diags
         .iter()

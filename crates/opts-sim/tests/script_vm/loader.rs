@@ -5,7 +5,7 @@ use super::*;
 #[test]
 fn vehicle_loader_reads_scripts_varlists_and_constfiles() {
     use opts_core::formats::vehicles::BusManifest;
-    use opts_sim::script::load_vehicle_scripts;
+    use opts_sim::script::{load_vehicle_scripts, FileRead};
 
     let dir = std::env::temp_dir().join(format!("opts-script-load-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("mkdir");
@@ -22,7 +22,13 @@ fn vehicle_loader_reads_scripts_varlists_and_constfiles() {
     .expect("bus");
     let (mut e, diags) = load_vehicle_scripts(&bus, |rel| {
         let p = dir.join(rel);
-        p.exists().then_some(p)
+        match p.exists().then_some(p) {
+            None => FileRead::NotFound,
+            Some(p) => FileRead::Loaded {
+                name: p.to_string_lossy().into_owned(),
+                bytes: std::fs::read(&p).expect("fixture"),
+            },
+        }
     });
     assert_eq!(
         diags

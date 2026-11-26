@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use opts_core::formats::scenery::SceneryObject;
-use opts_sim::script::{load_scenery_scripts, Severity};
+use opts_sim::script::{load_scenery_scripts, FileRead, Severity};
 
 /// A lamp that is lit between 18:00 and 06:00 (`Time`) and a hand that follows `knob`.
 const LAMP_OSC: &str = "\
@@ -47,10 +47,24 @@ fn fixture_dir(tag: &str) -> PathBuf {
     dir
 }
 
-fn resolver(dir: &Path) -> impl FnMut(&str) -> Option<PathBuf> + '_ {
+/// Reads a fixture file the resolver found: the loader only needs the outcome.
+fn read_script(path: Option<PathBuf>) -> FileRead {
+    let Some(path) = path else {
+        return FileRead::NotFound;
+    };
+    match std::fs::read(&path) {
+        Ok(bytes) => FileRead::Loaded {
+            name: path.to_string_lossy().into_owned(),
+            bytes,
+        },
+        Err(e) => FileRead::Unreadable(e.to_string()),
+    }
+}
+
+fn resolver(dir: &Path) -> impl FnMut(&str) -> FileRead + '_ {
     move |rel: &str| {
         let p = dir.join(rel.replace('\\', "/"));
-        p.exists().then_some(p)
+        read_script(p.exists().then_some(p))
     }
 }
 
@@ -105,7 +119,7 @@ fn forked_engines_share_the_program_but_not_the_variables() {
 #[test]
 fn missing_files_are_warnings() {
     let sco = SceneryObject::from_text(SCO).expect("sco parses");
-    let set = load_scenery_scripts(&sco, |_| None);
+    let set = load_scenery_scripts(&sco, |_| FileRead::NotFound);
     assert_eq!(set.diagnostics.len(), 3, "{:?}", set.diagnostics);
     assert!(set
         .diagnostics
