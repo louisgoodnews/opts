@@ -13,7 +13,7 @@
 pub mod exhaust;
 pub use opts_sim_passengers::passengers;
 pub use opts_sim_pedestrian::pedestrian;
-pub mod rail;
+pub use opts_sim_rail as rail;
 pub mod script;
 pub mod surface_grip;
 pub mod vehicle;
