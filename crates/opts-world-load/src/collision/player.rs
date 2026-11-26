@@ -36,6 +36,27 @@ const FRICTION: f32 = 0.08;
 /// Bounce off an obstacle.
 const RESTITUTION: f32 = 0.05;
 
+/// The AI vehicles' boxes at their current poses, for the pass.
+fn traffic_boxes(
+    traffic: &Query<(&GlobalTransform, &VehicleCollider), With<TrafficVehicle>>,
+) -> Vec<Obb> {
+    traffic
+        .iter()
+        .map(|(g, c)| obb_of(g, c.centre, c.half))
+        .collect()
+}
+
+/// The length of the push out of an overlap this step: the depth plus a margin, limited by the
+/// cap of the obstacle's kind (AI vehicles cap lower) less what was already pushed, never negative.
+fn push_amount(push_total: Vec2, depth: f32, is_traffic: bool) -> f32 {
+    let cap = if is_traffic {
+        MAX_TRAFFIC_PUSH_M
+    } else {
+        MAX_PUSH_M
+    };
+    (depth + 0.01).min(cap - push_total.length()).max(0.0)
+}
+
 /// Pushes the player's vehicle out of everything it overlaps (fixed step, after the physics).
 pub fn player_collisions(
     mut logged: Local<u32>,
@@ -61,10 +82,7 @@ pub fn player_collisions(
         let part_boxes: Vec<BodyBox> = composition
             .map(|c| c.followers.iter().filter_map(|p| p.body).collect())
             .unwrap_or_default();
-        let dynamic: Vec<Obb> = traffic
-            .iter()
-            .map(|(g, c)| obb_of(g, c.centre, c.half))
-            .collect();
+        let dynamic: Vec<Obb> = traffic_boxes(&traffic);
         let mut push_total = Vec2::ZERO;
         let mut normals = Vec::new();
         for _ in 0..4 {
@@ -101,12 +119,7 @@ pub fn player_collisions(
                 worst_other,
                 depth,
             );
-            let cap = if worst_is_traffic {
-                MAX_TRAFFIC_PUSH_M
-            } else {
-                MAX_PUSH_M
-            };
-            let push = (depth + 0.01).min(cap - push_total.length()).max(0.0);
+            let push = push_amount(push_total, depth, worst_is_traffic);
             if push <= 0.0 {
                 break;
             }
