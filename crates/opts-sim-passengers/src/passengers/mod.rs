@@ -22,8 +22,3 @@ pub use graph::CabinGraph;
 pub use rng::Rng;
 pub use sim::{Doors, Event, Passenger, PassengerSim, Phase, WALK_SPEED_M_S};
 pub use spec::{chain, Behaviour, Cabin, Paths, Place, Ticket, TicketBook, Unit};
-
-#[cfg(test)]
-mod tests;
-#[cfg(test)]
-mod tests_trailer;

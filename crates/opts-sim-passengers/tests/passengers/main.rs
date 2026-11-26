@@ -1,6 +1,6 @@
 //! Unit tests for passenger boarding, ticket sales, seating, alighting and cabin path routing.
 
-use super::*;
+use opts_sim_passengers::passengers::*;
 use glam::Vec3;
 
 mod boarding;

@@ -1,6 +1,6 @@
 //! The head unit, the rear unit behind a joint and the ticket book of the trailer tests.
 
-use super::super::*;
+use opts_sim_passengers::passengers::*;
 use glam::Vec3;
 
 pub(super) const DT: f32 = 0.05;
