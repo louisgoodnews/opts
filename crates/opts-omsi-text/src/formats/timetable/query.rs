@@ -2,7 +2,7 @@
 
 use super::{
     station_times, ActiveSchedule, Interpolation, ScheduledStop, StnLink, Timetables, TtBusStop,
-    TtTour, TtTrip,
+    TtTour, TtTrackEntry, TtTrip,
 };
 
 impl Timetables {
@@ -32,6 +32,15 @@ impl Timetables {
     #[must_use]
     pub fn trip(&self, name: &str) -> Option<&TtTrip> {
         self.trips.get(&name.to_ascii_lowercase())
+    }
+
+    /// The track entries of a `.ttr` file by stem (case-insensitive); `None` when the folder has
+    /// no such file.
+    #[must_use]
+    pub fn track(&self, name: &str) -> Option<&[TtTrackEntry]> {
+        self.tracks
+            .get(&name.to_ascii_lowercase())
+            .map(Vec::as_slice)
     }
 
     /// The tour `tour` of line file `line_file` (case-insensitive stem).

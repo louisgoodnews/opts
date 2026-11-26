@@ -28,6 +28,7 @@
 
 pub mod agent;
 pub mod conflict;
+pub mod course;
 pub mod density;
 pub mod geometry;
 pub mod graph;
@@ -45,6 +46,7 @@ pub use agent::{
     HARD_BRAKE, LANE_CHANGE_DURATION_S,
 };
 pub use conflict::{Conflict, ConflictKind};
+pub use course::{ElementIndex, ElementKind, Lookup};
 pub use density::{
     group_targets, weighted_pick, DensityCurve, LaneDensity, MAX_DENSITY_GROUPS, MEDIUM_DENSITY,
 };
