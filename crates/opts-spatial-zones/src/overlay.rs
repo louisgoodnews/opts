@@ -1,20 +1,19 @@
 //! The spatial-zone debug overlay (M-0115): the box of each resident zone as gizmo lines and a
 //! marker at each tracked subject. Off by default; the game switches it with the
 //! `spatial_zone_overlay` action. The zones are read from the components the registry spawned, so
-//! only resident tiles are drawn.
+//! only resident tiles are drawn. The geometry is pure and lives in `opts-spatial-zones-core`
+//! (ISS-092); this module keeps the Bevy resource, the colours and the draw.
 
-use bevy::math::{Isometry3d, Vec2, Vec3};
+use bevy::math::{Isometry3d, Vec3};
 use bevy::prelude::*;
 
 use super::model::SpatialZone;
 use super::sampler::{ZoneMembership, ZoneSubject};
 
-/// The floor of a zone box (m above the ground reference).
-pub const ZONE_BOTTOM_M: f32 = 0.0;
-/// The roof of a zone box drawn for orientation (m); zones have no height in the model.
-pub const ZONE_TOP_M: f32 = 4.0;
-/// Radius of the subject marker (m).
-pub const SUBJECT_RADIUS_M: f32 = 0.6;
+pub use opts_spatial_zones_core::overlay::{
+    ground_corners, SUBJECT_RADIUS_M, ZONE_BOTTOM_M, ZONE_TOP_M,
+};
+
 const ZONE_COLOUR: Color = Color::srgb(0.9, 0.6, 0.2);
 const ZONE_OCCUPIED_COLOUR: Color = Color::srgb(0.3, 1.0, 0.4);
 const SUBJECT_OUTSIDE_COLOUR: Color = Color::srgb(0.7, 0.7, 0.7);
@@ -39,33 +38,10 @@ impl ZoneOverlay {
     }
 }
 
-/// The four ground corners of the box `min`..`max` at height `y`, in the order south-west,
-/// south-east, north-east, north-west. The ground point of a zone is `(x, z)` of the Bevy
-/// transform, the same point the sampler tests, so a corner `c` satisfies
-/// `zone.contains(Vec2::new(c.x, c.z))` for the zone that owns it.
-#[must_use]
-pub fn ground_corners(min: Vec2, max: Vec2, y: f32) -> [Vec3; 4] {
-    [
-        Vec3::new(min.x, y, min.y),
-        Vec3::new(max.x, y, min.y),
-        Vec3::new(max.x, y, max.y),
-        Vec3::new(min.x, y, max.y),
-    ]
-}
-
 /// The twelve edges of the zone box: the floor and the roof rectangles and the four verticals.
 #[must_use]
 pub fn box_edges(zone: &SpatialZone) -> [(Vec3, Vec3); 12] {
-    let floor = ground_corners(zone.min, zone.max, ZONE_BOTTOM_M);
-    let roof = ground_corners(zone.min, zone.max, ZONE_TOP_M);
-    let mut edges = [(Vec3::ZERO, Vec3::ZERO); 12];
-    for i in 0..4 {
-        let next = (i + 1) % 4;
-        edges[i] = (floor[i], floor[next]);
-        edges[4 + i] = (roof[i], roof[next]);
-        edges[8 + i] = (floor[i], roof[i]);
-    }
-    edges
+    opts_spatial_zones_core::overlay::box_edges(zone.min, zone.max)
 }
 
 /// Draws every resident zone (green when a subject is inside it) and a marker per subject.
