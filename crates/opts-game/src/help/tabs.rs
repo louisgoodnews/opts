@@ -10,7 +10,7 @@ use opts_gui::prelude::*;
 
 use crate::shell::keys;
 
-use super::{about, controls, HelpPane, HelpState, HelpTab, ReportButton};
+use super::{about, controls, credits, HelpPane, HelpState, HelpTab, ReportButton};
 
 pub(super) fn tab_clicks(
     mut activated: MessageReader<Activated>,
@@ -102,6 +102,7 @@ pub(super) fn sync_pane(
                 ));
             }
             HelpTab::About => about::spawn_about(p),
+            HelpTab::Credits => credits::spawn_credits(p),
         });
     }
 }
