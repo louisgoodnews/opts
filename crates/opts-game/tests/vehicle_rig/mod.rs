@@ -2,7 +2,21 @@
 //! callbacks of a headless run, driven by frames, clicks and key presses (M-0141).
 
 use opts_core::formats::vehicles::bus::BusManifest;
-use opts_sim::script::ScriptEngine;
+use opts_sim::script::{FileRead, ScriptEngine};
+
+/// Reads a script file that the install lookup found: the loader only needs the outcome.
+fn read_script(path: Option<std::path::PathBuf>) -> FileRead {
+    let Some(path) = path else {
+        return FileRead::NotFound;
+    };
+    match std::fs::read(&path) {
+        Ok(bytes) => FileRead::Loaded {
+            name: path.to_string_lossy().into_owned(),
+            bytes,
+        },
+        Err(e) => FileRead::Unreadable(e.to_string()),
+    }
+}
 
 /// The scripts of a vehicle, initialised, with the host callbacks of a headless run.
 pub fn load(rel: &str) -> Option<ScriptEngine> {
@@ -11,8 +25,9 @@ pub fn load(rel: &str) -> Option<ScriptEngine> {
     let bus_path = install.find_file(rel)?;
     let bus_dir = bus_path.parent()?.to_path_buf();
     let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).ok()?).ok()?;
-    let (mut engine, _) =
-        opts_sim::script::load_vehicle_scripts(&manifest, |r| install.find_in(&bus_dir, r));
+    let (mut engine, _) = opts_sim::script::load_vehicle_scripts(&manifest, |r| {
+        read_script(install.find_in(&bus_dir, r))
+    });
     let ctx = opts_bevy::host_callbacks::VehicleHostContext {
         seed: 42,
         route: opts_bevy::route::RouteHandle::new(None),
