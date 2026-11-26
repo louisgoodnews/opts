@@ -8,6 +8,14 @@ pub(super) struct PatternError {
     pub(super) offset: Option<usize>,
 }
 
+/// A pattern problem with no offset, from a fixed message.
+fn pattern_error(message: &str) -> PatternError {
+    PatternError {
+        message: message.to_string(),
+        offset: None,
+    }
+}
+
 pub(super) fn parse_pattern(text: &str) -> Result<Pattern, PatternError> {
     let mut parts = Vec::new();
     let mut buf = String::new();
@@ -76,7 +84,7 @@ pub(super) fn parse_placeable(inner: &str) -> Result<Part, PatternError> {
         let var = head
             .trim()
             .strip_prefix('$')
-            .ok_or("selector must be a $variable")?;
+            .ok_or_else(|| pattern_error("selector must be a $variable"))?;
         return parse_select(var.trim(), body);
     }
     if let Some(var) = inner.strip_prefix('$') {
@@ -109,7 +117,7 @@ pub(super) fn parse_select(var: &str, body: &str) -> Result<Part, PatternError> 
             None => (false, t),
         };
         if let Some(r) = rest.strip_prefix('[') {
-            let (key, text) = r.split_once(']').ok_or("`[` without `]`")?;
+            let (key, text) = r.split_once(']').ok_or_else(|| pattern_error("`[` without `]`"))?;
             if star {
                 default = Some(variants.len());
             }
@@ -120,10 +128,10 @@ pub(super) fn parse_select(var: &str, body: &str) -> Result<Part, PatternError> 
                 last.1.push_str(t);
             }
         } else if !t.is_empty() {
-            return Err("text before the first variant".into());
+            return Err(pattern_error("text before the first variant"));
         }
     }
-    let default = default.ok_or("selector needs a `*[default]` variant")?;
+    let default = default.ok_or_else(|| pattern_error("selector needs a `*[default]` variant"))?;
     let variants = variants
         .into_iter()
         .map(|(k, v)| parse_pattern(&v).map(|p| (k, p)))
