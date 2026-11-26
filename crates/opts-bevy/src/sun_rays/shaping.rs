@@ -2,7 +2,7 @@
 //! and the choice of the carrier light.
 
 use super::*;
-use crate::light_quality::Shafts;
+use opts_light_quality_core::Shafts;
 
 /// The `density_factor` of the haze for a visibility in metres: the larger of the baseline
 /// [`HAZE_BASE`] and the weather's extinction (`β = 3.912 / V`, Koschmieder) times

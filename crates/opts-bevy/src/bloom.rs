@@ -16,7 +16,8 @@ use bevy::camera::Hdr;
 use bevy::post_process::bloom::{Bloom, BloomPrefilter};
 use bevy::prelude::*;
 
-use crate::light_quality::{BloomLevel, LightQuality, LightQualitySet};
+use crate::light_quality::{LightQuality, LightQualitySet};
+use opts_light_quality_core::BloomLevel;
 use crate::MainCamera;
 
 /// The bloom intensity of a level (`0.0` when off; Bevy's default is `0.15`).

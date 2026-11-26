@@ -10,7 +10,8 @@ use super::shape::{
 };
 use super::*;
 
-use crate::light_quality::{ladder_preset, LightMode, LightQualityInput};
+use crate::light_quality::{ladder_preset, LightQualityInput};
+use opts_light_quality_core::LightMode;
 
 /// The input that makes the effective quality exactly `q` (the plugin's resolver rewrites
 /// `LightQuality` every frame from the input and the governor).

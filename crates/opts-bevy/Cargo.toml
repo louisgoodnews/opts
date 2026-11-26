@@ -23,6 +23,7 @@ opts-debounce = { workspace = true }
 opts-position-tag = { workspace = true }
 opts-audio = { workspace = true }
 opts-light-quality = { workspace = true }
+opts-light-quality-core = { workspace = true }
 opts-main-camera = { workspace = true }
 opts-scene-trace = { workspace = true }
 opts-spatial-zones = { workspace = true }

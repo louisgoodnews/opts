@@ -26,11 +26,10 @@ pub const MAX_LEVEL: u8 = 5;
 /// The most simultaneous cones any setting can ask for.
 pub const MAX_CONE_CAP: u32 = 96;
 mod ladder;
-mod levels;
 mod resolve;
 
 pub use ladder::*;
-pub use levels::*;
+pub use opts_light_quality_core::*;
 pub use resolve::*;
 
 /// The effective lighting quality. The default is ladder level 0 in automatic mode.

@@ -12,5 +12,6 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+opts-light-quality-core = { workspace = true }
 bevy = { workspace = true }
 tracing = { workspace = true }

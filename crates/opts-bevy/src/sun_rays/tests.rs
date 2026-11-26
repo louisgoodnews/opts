@@ -1,7 +1,8 @@
 //! Unit tests of `sun_rays`.
 
 use super::*;
-use crate::light_quality::{LightQuality, Shafts};
+use crate::light_quality::LightQuality;
+use opts_light_quality_core::Shafts;
 use bevy::camera::Hdr;
 use bevy::light::{FogVolume, VolumetricFog, VolumetricLight};
 
