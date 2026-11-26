@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use super::{StnLink, TtBusStop, TtLine, TtTrip};
+use super::{StnLink, TtBusStop, TtLine, TtTrackEntry, TtTrip};
 
 /// Everything a map's `TTData` folder holds that buses use: the stop list, the line files with
 /// their tours and the trip files.
@@ -13,6 +13,8 @@ pub struct Timetables {
     /// `(file stem, line file)` in name order.
     pub lines: Vec<(String, TtLine)>,
     pub(super) trips: HashMap<String, TtTrip>,
+    /// `.ttr` track files by stem (lower case): the rail path of a trip (`[track_entry]`).
+    pub(super) tracks: HashMap<String, Vec<TtTrackEntry>>,
     pub(super) stop_by_id: HashMap<u32, usize>,
     /// `StnLinks.cfg`: the links between stations with their lengths.
     pub links: Vec<StnLink>,

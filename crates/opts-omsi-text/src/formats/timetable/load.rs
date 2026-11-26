@@ -5,8 +5,8 @@ use std::path::Path;
 use std::collections::HashMap;
 
 use super::{
-    parse_busstops, parse_line, parse_stn_links, parse_trip, StnLink, Timetables, TtBusStop,
-    TtLine, TtTrip,
+    parse_busstops, parse_line, parse_stn_links, parse_track, parse_trip, StnLink, Timetables,
+    TtBusStop, TtLine, TtTrackEntry, TtTrip,
 };
 
 fn find_ci(dir: &Path, name: &str) -> Option<std::path::PathBuf> {
@@ -57,6 +57,10 @@ impl Timetables {
                     t.trips
                         .insert(stem.to_ascii_lowercase(), parse_trip(&bytes));
                 }
+                "ttr" => {
+                    t.tracks
+                        .insert(stem.to_ascii_lowercase(), parse_track(&bytes));
+                }
                 _ => {}
             }
         }
@@ -83,6 +87,7 @@ impl Timetables {
                 .into_iter()
                 .map(|(n, tr)| (n.to_ascii_lowercase(), tr))
                 .collect(),
+            tracks: HashMap::new(),
             stop_by_id: HashMap::new(),
             links: Vec::new(),
             link_by_pair: HashMap::new(),
