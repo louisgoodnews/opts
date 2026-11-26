@@ -23,6 +23,8 @@ the game.
 
 ## Stages
 
+Research: `docs/dev/research/opts-debugger-2026-11-26.md` (merged). The stages below follow it.
+
 1. **Research (this stage):** inventory the existing development tools and their overlap; decide
    the scope of the toolkit; decide the placement (the crate graph rule, the Bevy routing rule of
    ISS-095, and whether it is a binary, a library, or both); write the research document
@@ -32,12 +34,13 @@ the game.
    graph row, in the style of the other split crates.
 4. **Tools:** the remaining tools, one per issue, as the research orders them.
 
-## Decisions needed (after the research)
+## Decisions (2026-11-26, owner)
 
-- The first set of tools (the research proposes a short list, ordered by value).
-- A binary, a library, or both.
-- Whether the toolkit may depend on Bevy (routed through `opts-bevy`, per ISS-095) or stays free of it.
-- Whether tools that touch the control server reuse the existing client code or own one.
+1. **Placement:** a new crate, `opts-debugger` (not subcommands of `opts-tools`).
+2. **Trace tool and Bevy:** the trace tool routes through `opts-bevy` for the trace types, as the Bevy rule allows.
+3. **Client:** an own client inside `opts-debugger`; `opts-cli` is not reused. The protocol code is duplicated and must be kept in step with the server.
+4. **Server work:** the entity, resource and asset dump commands are part of this epic, as a later stage. They change the game's control server, so each such change needs a review before it merges.
+5. **Bundle contents:** logs, crash reports, timing and frame files, and screenshots. The control token is never included. Screenshots can show personal data, so the bundle must say so in its manifest.
 
 ## Done when
 
