@@ -5562,6 +5562,14 @@ name = "opts-debounce"
 version = "0.1.0"
 
 [[package]]
+name = "opts-debugger"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "opts-exhaust"
 version = "0.1.0"
 dependencies = [
