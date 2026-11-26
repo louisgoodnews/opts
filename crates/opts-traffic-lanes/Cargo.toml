@@ -1,0 +1,14 @@
+[package]
+name = "opts-traffic-lanes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The lane graph of OPTS AI traffic: lanes, geometry, densities, conflict zones and neighbour lanes (pure Rust, no Bevy)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

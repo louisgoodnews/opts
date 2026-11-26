@@ -18,6 +18,7 @@ opts-car-following = { workspace = true }
 opts-vehicle-traits = { workspace = true }
 opts-signals = { workspace = true }
 opts-traffic-weather = { workspace = true }
+opts-traffic-lanes = { workspace = true }
 
 # Math
 glam = { workspace = true }

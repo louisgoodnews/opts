@@ -29,17 +29,8 @@ pub use stops::{StopPoint, ARRIVED_SPEED, ARRIVE_WITHIN_M};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AgentId(pub u64);
 
-/// Indicator request.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Blinker {
-    /// Off.
-    #[default]
-    Off,
-    /// Left indicator (`AI_Blinker_L`).
-    Left,
-    /// Right indicator (`AI_Blinker_R`).
-    Right,
-}
+/// The indicator request lives in `opts-traffic-lanes`; this re-export keeps `agent::Blinker`.
+pub use opts_traffic_lanes::Blinker;
 
 /// What the AI "driver" asks of a vehicle this step.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
