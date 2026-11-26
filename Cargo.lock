@@ -5831,6 +5831,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-omsi-scan"
+version = "0.1.0"
+dependencies = [
+ "glam",
+]
+
+[[package]]
 name = "opts-omsi-scenery"
 version = "0.1.0"
 dependencies = [
@@ -5845,11 +5852,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-omsi-sound"
+version = "0.1.0"
+
+[[package]]
 name = "opts-omsi-text"
 version = "0.1.0"
 dependencies = [
  "glam",
+ "opts-omsi-scan",
+ "opts-omsi-sound",
+ "opts-omsi-timetable",
+ "opts-omsi-weather",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opts-omsi-timetable"
+version = "0.1.0"
+dependencies = [
+ "opts-omsi-scan",
 ]
 
 [[package]]
@@ -5862,6 +5884,13 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opts-omsi-weather"
+version = "0.1.0"
+dependencies = [
+ "opts-omsi-scan",
 ]
 
 [[package]]
