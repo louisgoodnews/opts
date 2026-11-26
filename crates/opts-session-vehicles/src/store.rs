@@ -4,7 +4,7 @@
 //! (`store/section.rs`) are further `impl SessionVehicles` blocks of this type. The systems that
 //! drive the registry stay in `opts-game`.
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::types::{Lifecycle, SessionVehicleRecord, VehicleId};

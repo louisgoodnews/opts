@@ -96,6 +96,7 @@ members = [
     "crates/opts-shell-keys",
     "crates/opts-shell-keys-help",
     "crates/opts-vehicle-gears",
+    "crates/opts-session-vehicles",
     "crates/opts-sim",
     "crates/opts-sim-passengers",
     "crates/opts-sim-passenger-model",
@@ -205,6 +206,7 @@ opts-shell-keys = { path = "crates/opts-shell-keys" }
 opts-shell-keys-help = { path = "crates/opts-shell-keys-help" }
 opts-vehicle-gears = { path = "crates/opts-vehicle-gears" }
 opts-logging = { path = "crates/opts-logging" }
+opts-session-vehicles = { path = "crates/opts-session-vehicles" }
 opts-sim = { path = "crates/opts-sim" }
 opts-sim-passengers = { path = "crates/opts-sim-passengers" }
 opts-sim-passenger-model = { path = "crates/opts-sim-passenger-model" }

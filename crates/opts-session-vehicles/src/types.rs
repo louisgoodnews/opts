@@ -1,7 +1,7 @@
 //! The value types of the session registry: ids, lifecycle, spawn requests and the record of one
 //! session vehicle (with its live-state fields).
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 

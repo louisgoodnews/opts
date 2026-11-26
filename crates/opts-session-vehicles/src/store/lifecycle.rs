@@ -1,11 +1,11 @@
 //! Spawn requests and the transitions of a vehicle's lifecycle (queued, alive, failed, gone).
 
-use bevy::prelude::*;
+use opts_bevy::bevy::prelude::*;
 
 use opts_world_stats::CameraSetup;
 
 use super::SessionVehicles;
-use crate::session_vehicles::types::{
+use crate::types::{
     DespawnReason, Lifecycle, SessionVehicleRecord, SpawnParams, SpawnPoint, VehicleId,
 };
 
