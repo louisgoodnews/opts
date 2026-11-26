@@ -13,9 +13,9 @@
 //!
 //! The counting allocator (`fuzz_parsers/alloc.rs`) needs `unsafe` (the workspace denies
 //! `unsafe_code`); it only forwards to `System` and records the largest request.
-#![allow(unsafe_code)]
 
 #[path = "fuzz_parsers/alloc.rs"]
+#[allow(unsafe_code)] // the counting allocator is the only unsafe code in the test
 mod alloc;
 #[path = "fuzz_parsers/mutate.rs"]
 mod mutate;
