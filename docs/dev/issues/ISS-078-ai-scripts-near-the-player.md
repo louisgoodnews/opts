@@ -5,7 +5,7 @@
 | **Issue** | ISS-078 (Phase 4 status audit, 2026-11-26) |
 | **Severity** | minor |
 | **Milestone** | [M-0103](../../src/roadmap/phase-4/M-0103.md) AI Scripts Near the Player |
-| **Status** | open, reported 2026-11-26 (Phase 4 status audit) |
+| **Status** | open, narrowed 2026-11-26 by the code check: near-vehicle scripts are wired; the open parts are the items in Next and on the M-0103 card |
 
 ## Problem
 
@@ -28,9 +28,11 @@ answer:
 
 ## Next
 
-1. Decide whether the kinematic model drives the pedal path, or stays a census check.
-2. Build the load-time gate that reads the fallback list, with a test.
-3. Extend the near-vehicle scripts to unscheduled AI, or record that they stay out.
+1. Done by the code check (2026-11-26): the kinematic model stays a census check; the traffic agent drives speed and position, and the script only caps acceleration. Recorded on the M-0103 card.
+2. Add a test that fails without the load-time gate wiring (`crates/opts-world-load/src/traffic/spawn/agent/place.rs:92`), which no test checks today.
+3. Decide scheduled listed vehicles: give them a script drive (`place.rs:79-92`), or record that they stay out.
+4. Fix or remove the six `.ovh` entries in `docs/dev/ai-response-fallback.txt`, which the gate ignores (`fallback.rs:21-23`).
+5. In-game check of criterion 1 (step time, speed jump at the switch) and criterion 2. Needs a game run.
 
 ## Done when
 

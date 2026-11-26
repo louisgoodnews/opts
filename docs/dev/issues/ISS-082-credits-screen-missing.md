@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Issue** | ISS-082 (Phase 4 status audit, 2026-11-26) |
 | **Severity** | minor |
-| **Milestone** | none (Phase 4 checklist item "The Game Binary" only; no milestone card owns it) |
+| **Milestone** | Phase 4 checklist item "The Game Binary" (decided 2026-11-26 on the owner's deferral; no new milestone card) |
 | **Status** | open, in scope (owner 2026-11-26); milestone to be assigned by the owner; not started |
 
 ## Problem
