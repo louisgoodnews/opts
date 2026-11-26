@@ -19,7 +19,6 @@ pub fn connect() -> Client {
     })
 }
 
-#[allow(dead_code)] // not every example needs it
 /// Prints a failed call and exits with the client's exit code.
 pub fn die(context: &str, error: &opts_cli::client::ClientError) -> ! {
     eprintln!("{context}: {error}");
