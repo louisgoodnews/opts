@@ -25,7 +25,3 @@ pub fn zones_payload(
     });
     opts_spatial_zones_core::query::zones_payload(zones, subject, limit)
 }
-
-#[cfg(test)]
-#[path = "query_tests.rs"]
-mod tests;

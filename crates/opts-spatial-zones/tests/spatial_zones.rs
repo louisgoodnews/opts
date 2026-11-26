@@ -4,7 +4,7 @@
 use bevy::math::Vec2;
 use bevy::prelude::*;
 
-use super::*;
+use opts_spatial_zones::*;
 
 fn tunnel() -> SpatialZone {
     SpatialZone {

@@ -44,6 +44,3 @@ impl Plugin for SpatialZonesPlugin {
             .add_systems(Update, sampler::sample_zone_subjects);
     }
 }
-
-#[cfg(test)]
-mod tests;

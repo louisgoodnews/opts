@@ -4,8 +4,8 @@
 use bevy::math::Vec2;
 use bevy::prelude::*;
 
-use super::super::model::{SpatialZone, ZoneId, ZoneKind};
-use super::{TileKey, ZoneRegistry};
+use opts_spatial_zones::model::{SpatialZone, ZoneId, ZoneKind};
+use opts_spatial_zones::registry::{TileKey, ZoneRegistry};
 
 fn zone(id: u32) -> SpatialZone {
     SpatialZone {

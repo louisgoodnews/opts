@@ -3,7 +3,8 @@
 
 use bevy::math::Vec2;
 
-use super::*;
+use opts_spatial_zones::ceiling::*;
+use opts_spatial_zones::model::{ZoneId, ZoneKind};
 
 const ROOF: &str = "Splines/Ruede/rail_wood_S49_tunnel.sli";
 const WIRE: &str = "Splines/ADDON_Gladbeck_NF6D/Meterspur_normal_OL_408.sli";

@@ -2,9 +2,9 @@
 
 use bevy::math::Vec2;
 
-use super::super::model::{SpatialZone, ZoneId, ZoneKind};
-use super::super::sampler::{step, ZoneMembership};
-use super::zones_payload;
+use opts_spatial_zones::model::{SpatialZone, ZoneId, ZoneKind};
+use opts_spatial_zones::query::zones_payload;
+use opts_spatial_zones::sampler::{step, ZoneMembership};
 
 fn tunnel(id: u32) -> SpatialZone {
     SpatialZone {

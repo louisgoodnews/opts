@@ -2,8 +2,8 @@
 
 use bevy::math::{Vec2, Vec3};
 
-use super::super::model::{SpatialZone, ZoneId, ZoneKind};
-use super::*;
+use opts_spatial_zones::model::{SpatialZone, ZoneId, ZoneKind};
+use opts_spatial_zones::overlay::*;
 
 fn tunnel() -> SpatialZone {
     SpatialZone {
