@@ -74,9 +74,6 @@ pub mod text_texture;
 pub mod texture;
 pub mod texture_filter;
 pub use opts_bevy_texture_sentinel as texture_sentinel;
-// Routing point for the split crates that need Bevy (ISS-090, owner decision 2026-11-26): they
-// import Bevy through `opts_bevy::bevy` instead of depending on `bevy` directly.
-pub use bevy;
 pub mod tree_wind;
 pub mod vehicle;
 pub mod vehicle_anim;
