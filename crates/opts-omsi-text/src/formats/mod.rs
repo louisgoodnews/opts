@@ -11,6 +11,6 @@ pub mod org;
 pub mod sound;
 pub use opts_omsi_scan as text;
 pub mod ticketpack;
-pub mod timetable;
+pub use opts_omsi_timetable as timetable;
 pub mod varlist;
 pub mod weather;
