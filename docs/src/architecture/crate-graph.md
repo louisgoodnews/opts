@@ -43,6 +43,7 @@ graph TD
         opts_omsi_map["opts-omsi-map<br/>• OMSI map readers: global.cfg, tiles, terrain, water<br/>• Chronology overlay and map writers<br/>• No Bevy · Zero File I/O"]:::domain
         opts_omsi_scenery["opts-omsi-scenery<br/>• OMSI scenery readers: .sco, .sli, crossings<br/>• Train consist reader<br/>• No Bevy · Zero File I/O"]:::domain
         opts_omsi_text["opts-omsi-text<br/>• OMSI text readers: keyword blocks, .cfg, .cti, .oft, .org<br/>• Timetables, weather, sound lists<br/>• No Bevy · Zero File I/O"]:::domain
+        opts_omsi_scan["opts-omsi-scan<br/>• OMSI keyword-block scanner and text decoding<br/>• Positional value parsers<br/>• No Bevy · Zero File I/O"]:::domain
         opts_wav["opts-wav<br/>• RIFF/WAVE decoder (PCM 8/16/24, float 32)<br/>• Samples to interleaved f32<br/>• No dependencies · Zero Bevy"]:::domain
         opts_vdf["opts-vdf<br/>• Valve KeyValues (VDF) parser<br/>• Steam library and app manifest text<br/>• No dependencies · Zero Bevy"]:::domain
         opts_steam["opts-steam<br/>• Steam library and OMSI install discovery<br/>• Reads libraryfolders.vdf and app manifests<br/>• No Bevy"]:::domain
@@ -283,6 +284,7 @@ graph TD
     opts_omsi_scenery --> opts_omsi_text
     opts_omsi_scenery --> opts_omsi_vehicles
     opts_omsi_vehicles --> opts_omsi_text
+    opts_omsi_text --> opts_omsi_scan
     opts_sim --> opts_core
     opts_sim --> opts_sim_passengers
     opts_sim --> opts_sim_pedestrian
@@ -329,7 +331,8 @@ graph TD
 | **`opts-omsi-vehicles`** | L1 | OMSI vehicle readers (`.bus`, `model.cfg`, `paths.cfg`, `.hof`, script textures), the setvar catalogue and the `.sco` light reader, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-text` | `opts-omsi`, `opts-omsi-scenery` | Pure Rust |
 | **`opts-omsi-map`** | L1 | OMSI map readers and writers (`global.cfg`, `tile_*.map`, `.map.terrain`, `.water`, OSN times) and the `chrono` overlay, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-text`, `opts-types` | `opts-omsi` | Pure Rust |
 | **`opts-omsi-scenery`** | L1 | OMSI scenery readers (`.sco`, `.sli`, crossings) and the train consist reader, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-binary`, `opts-omsi-text`, `opts-omsi-vehicles` | `opts-omsi` | Pure Rust |
-| **`opts-omsi-text`** | L1 | OMSI text readers: the keyword-block scanner and the text-only parsers (`.cfg`, `.cti`, `.oft`, `.org`, timetables, weather, sound lists) split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | *None* | `opts-omsi`, `opts-omsi-binary`, `opts-omsi-map`, `opts-omsi-scenery`, `opts-omsi-vehicles` | Pure Rust |
+| **`opts-omsi-text`** | L1 | OMSI text readers: the text-only parsers (`.cfg`, `.cti`, `.oft`, `.org`, timetables, weather, sound lists) split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)); re-exports the scanner as `formats::text` | `opts-omsi-scan` | `opts-omsi`, `opts-omsi-binary`, `opts-omsi-map`, `opts-omsi-scenery`, `opts-omsi-vehicles` | Pure Rust |
+| **`opts-omsi-scan`** | L1 | OMSI keyword-block scanner: text decoding, the `[keyword]` block scan and the positional value parsers, split out of `opts-omsi-text` (ISS-087 stage 0; [plan](../../dev/issues/ISS-087-epic-split-opts-omsi-text.md)) | *None* | `opts-omsi-text` | Pure Rust (external: `glam`)
 | **`opts-wav`** | L1 | RIFF/WAVE sound decoder (PCM 8/16/24 bit, IEEE float 32 bit) to interleaved `f32` samples (split out of `opts-omsi`, M-0117 budget room; [plan](../../dev/crate-split-weather.md)) | *None* | `opts-omsi` | Pure Rust |
 | **`opts-vdf`** | L1 | Valve KeyValues (VDF) text parser for Steam library and app manifest files (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-game.md)) | *None* | `opts-steam` | Pure Rust |
 | **`opts-steam`** | L1 | Steam library and OMSI 2 install discovery: reads `libraryfolders.vdf` and the app manifests through `opts-vdf` (split out of `opts-game`, ISS-034 budget room; [plan](../../dev/crate-split-steam.md)) | `opts-vdf` | `opts-game` | Pure Rust |
