@@ -7,7 +7,9 @@ mod inputs;
 mod render;
 mod view;
 
-use inputs::{course_overlay, gather_scene, marker_pixels, road_lines, route_overlay};
+use inputs::{
+    course_overlay, gather_scene, marker_pixels, road_lines, route_overlay, RouteOverlay,
+};
 use render::{look_colors, look_course_color, record, upload};
 use view::choose_view;
 
@@ -23,6 +25,20 @@ pub struct Scene {
     pub heading: f32,
     /// All markers: (position, heading, active).
     pub markers: Vec<(DVec2, f32, bool)>,
+}
+
+/// The route's overlay (its lines, stops and scheduled vehicles) and the course's lines, in map
+/// pixels. The route is laid out first, as the redraw always did.
+fn overlay_layers(
+    route: Option<&crate::hud::route_path::PlayerRoutePath>,
+    scheduled: Option<&crate::hud::route_path::ScheduledVehicles>,
+    centre: DVec2,
+    min_chord: f64,
+) -> (RouteOverlay, Vec<MapLine>) {
+    (
+        route_overlay(route, scheduled, centre, min_chord),
+        course_overlay(route, centre, min_chord),
+    )
 }
 
 /// Redraws the map at most 10 times per second.
@@ -80,9 +96,8 @@ pub fn redraw(
         (f64::from(view.radius_m), min_chord),
     );
     let markers = marker_pixels(&scene.markers, centre);
-    let (route_lines, route_stops, scheduled_px) =
-        route_overlay(route.as_deref(), scheduled.as_deref(), centre, min_chord);
-    let course_px = course_overlay(route.as_deref(), centre, min_chord);
+    let ((route_lines, route_stops, scheduled_px), course_px) =
+        overlay_layers(route.as_deref(), scheduled.as_deref(), centre, min_chord);
     raster::render_course(
         canvas,
         view,
