@@ -39,3 +39,16 @@ pub(super) fn look_colors(look: &super::super::params::MapLook) -> MapColors {
             }),
     )
 }
+
+/// The stroke colour of the timetable course: the needle token of the current theme and variant,
+/// which is neither the route's `ok` green nor the other vehicles' `warning`.
+pub(super) fn look_course_color(look: &super::super::params::MapLook) -> [u8; 4] {
+    let needle = look
+        .theme
+        .as_ref()
+        .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
+            t.instrument(*look.variant)
+        })
+        .needle;
+    needle.to_srgba().to_u8_array()
+}

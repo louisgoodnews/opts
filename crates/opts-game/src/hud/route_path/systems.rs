@@ -16,6 +16,39 @@ pub(super) fn scheduled_stops(
     })
 }
 
+/// The lanes of the player's timetable trip as road pieces (M-0105 course). The trip comes from
+/// the route's timetables and schedule; its entries are looked up on the resident lane graph, so
+/// entries on tiles that are not resident are left out here (they are reported by the resolver).
+pub(super) fn course_roads(
+    player: &Query<&VehicleRoute, With<PlayerVehicle>>,
+    graph: Option<&opts_traffic::LaneGraph>,
+) -> Vec<MapRoad> {
+    let Some(graph) = graph else {
+        return Vec::new();
+    };
+    let draft = player.iter().find_map(|r| {
+        r.handle.with(|s| {
+            let schedule = s.schedule.as_ref()?;
+            let timetables = s.timetables.as_ref()?;
+            let trip = timetables.trip(&schedule.trip)?;
+            Some(opts_traffic::course_from_trip(timetables, trip))
+        })
+    });
+    let Some(draft) = draft else {
+        return Vec::new();
+    };
+    graph
+        .resolve_course(&draft.lanes)
+        .resolved
+        .iter()
+        .filter_map(|r| graph.lane(r.lane))
+        .map(|lane| MapRoad {
+            geometry: lane.geometry.clone(),
+            width: lane.width,
+        })
+        .collect()
+}
+
 /// The stop markers in the world give the exact position and heading of their stops.
 pub(super) fn remember_markers(
     path: &mut PlayerRoutePath,
@@ -74,6 +107,7 @@ pub(super) fn update_route_path(
         if path.active() {
             path.roads.clear();
             path.stops.clear();
+            path.course.clear();
             path.generation += 1;
         }
         return;
@@ -95,6 +129,7 @@ pub(super) fn update_route_path(
     let ahead: Vec<&u32> = ids.iter().skip(index).take(STOPS_AHEAD).collect();
     let stops = route_stops(&path, &ahead, graph);
     let roads = graph.map_or_else(Vec::new, |g| path_between(g, &stops));
+    let course = course_roads(&player, graph);
     let first_known = ahead
         .first()
         .is_some_and(|i| path.known.contains_key(&u64::from(**i)));
@@ -103,9 +138,11 @@ pub(super) fn update_route_path(
         .enumerate()
         .map(|(i, s)| (s.pos, i == 0 && first_known))
         .collect();
-    if drawn != path.stops || roads.len() != path.roads.len() {
+    if drawn != path.stops || roads.len() != path.roads.len() || course.len() != path.course.len()
+    {
         path.generation += 1;
     }
+    path.course = course;
     path.stops = drawn;
     path.roads = roads;
 }

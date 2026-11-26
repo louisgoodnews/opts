@@ -31,7 +31,7 @@ pub use config::{
     step_zoom, MiniMapConfig, Orientation, ZoomMode, BUDGET_US, DEFAULT_ZOOM_M, SETTING_ENABLED,
     SETTING_ORIENTATION, SETTING_ZOOM, SETTING_ZOOM_MODE, UPDATE_INTERVAL, ZOOM_STEPS_M,
 };
-pub use raster::{Canvas, MapColors, MapLine, MapMarker, MapRoute, MapView};
+pub use raster::{Canvas, MapColors, MapCourse, MapLine, MapMarker, MapRoute, MapView};
 pub use source::{may_touch, push_chords, FixtureRoads, MapRoad, MapSource};
 pub use zoom::ZoomFilter;
 

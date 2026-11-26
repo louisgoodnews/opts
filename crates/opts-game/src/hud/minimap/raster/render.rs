@@ -5,7 +5,7 @@ use bevy::math::Vec2;
 use super::canvas::Canvas;
 use super::lines::{draw_line, Projection};
 use super::shapes::{arrow, draw_ring, fill_triangle};
-use super::{MapColors, MapLine, MapMarker, MapRoute, MapView};
+use super::{MapColors, MapCourse, MapLine, MapMarker, MapRoute, MapView};
 
 /// Draws the whole map into `canvas` (which is cleared first). Marker and line sizes scale with
 /// the canvas (176 px is one unit, the size of the mini map).
@@ -53,11 +53,37 @@ pub fn render_routed(
     colors: &MapColors,
     (unit, north_mark): (f32, bool),
 ) {
+    render_course(
+        canvas,
+        view,
+        lines,
+        (route, MapCourse::default()),
+        markers,
+        colors,
+        (unit, north_mark),
+    );
+}
+
+/// [`render_routed`] with the timetable course drawn over the roads, under the route's stroke and
+/// the markers. With no course lines the picture is the one `render_routed` draws.
+pub fn render_course(
+    canvas: &mut Canvas,
+    view: MapView,
+    lines: &[MapLine],
+    (route, course): (MapRoute, MapCourse),
+    markers: &[MapMarker],
+    colors: &MapColors,
+    (unit, north_mark): (f32, bool),
+) {
     canvas.clear(colors.ground);
     let proj = Projection::new(canvas.size, view);
     for l in lines {
         let width = (l.width_m * proj.px_per_m).max(1.6 * unit.max(0.75));
         draw_line(canvas, proj.point(l.a), proj.point(l.b), width, colors.road);
+    }
+    for l in course.lines {
+        let (a, b) = (proj.point(l.a), proj.point(l.b));
+        draw_line(canvas, a, b, 2.6 * unit.max(0.75), course.color);
     }
     for l in route.lines {
         let (a, b) = (proj.point(l.a), proj.point(l.b));

@@ -14,7 +14,7 @@ mod shapes;
 use bevy::math::Vec2;
 
 pub use canvas::Canvas;
-pub use render::{render, render_routed, render_with_unit};
+pub use render::{render, render_course, render_routed, render_with_unit};
 
 /// What the map shows of the world: visible radius and orientation.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -75,4 +75,15 @@ pub struct MapRoute<'a> {
     pub stops: &'a [(Vec2, bool)],
     /// The scheduled vehicles on the road: position and compass heading.
     pub vehicles: &'a [(Vec2, f32)],
+}
+
+/// The timetable course of the player (M-0105): the chords of its resolved lanes, in their own
+/// stroke colour (an instrument token, distinct from the route's). The default, no lines, draws
+/// nothing, so a map without a course is unchanged.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct MapCourse<'a> {
+    /// The course's chords, relative to the centre.
+    pub lines: &'a [MapLine],
+    /// Stroke colour as RGBA8.
+    pub color: [u8; 4],
 }
