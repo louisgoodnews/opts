@@ -5,8 +5,9 @@
 pub mod alerts;
 pub mod app_state;
 pub mod in_game;
-pub mod look;
-// The session registry types live in `opts-session-vehicles` (ISS-084); re-exported at the old path.
-pub use opts_session_vehicles as session_vehicles;
-pub mod settings;
 pub mod viewpoint_keys;
+
+// The settings, the look and the session registry live in `opts-game-settings` and
+// `opts-session-vehicles` (ISS-084); re-exported at their old paths.
+pub use opts_game_settings::{look, settings};
+pub use opts_session_vehicles as session_vehicles;

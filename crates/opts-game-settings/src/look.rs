@@ -6,7 +6,7 @@
 //!
 //! Spec: `docs/src/architecture/texture-quality.md` §3.2 and `docs/src/roadmap/phase-8/M-0060.md`.
 
-use bevy::render::view::Tonemapping;
+use opts_bevy::bevy::render::view::Tonemapping;
 use serde::{Deserialize, Serialize};
 
 /// A named colour look.

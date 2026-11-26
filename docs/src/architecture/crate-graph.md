@@ -103,6 +103,7 @@ graph TD
         opts_game_state["opts-game-state<br/>• App states, settings types & defaults<br/>• In-game component and resource types<br/>• Bevy-facing type crate: no systems, no I/O"]:::app
         opts_ground_height["opts-ground-height<br/>• Ground index of the resident tiles<br/>• Road samples, terrain and surface plates by cell<br/>• Bevy types over opts-bevy · No systems, no I/O"]:::app
         opts_session_vehicles["opts-session-vehicles<br/>• Session registry types: ids, lifecycle, spawn requests<br/>• The vehicle record and its saved state<br/>• Bevy types over opts-bevy · No systems, no I/O"]:::app
+        opts_game_settings["opts-game-settings<br/>• GameSettings with defaults, session overlay and baseline<br/>• The colour look types<br/>• Bevy types over opts-bevy and opts-gui · No file I/O"]:::app
         opts_fleet_number["opts-fleet-number<br/>• Vehicle fleet number from the .org registration list<br/>• Bevy systems over opts-bevy types"]:::app
         opts_mesh_dir["opts-mesh-dir<br/>• Base folder of a vehicle's mesh paths<br/>• Config folder or model folder, by resolved meshes"]:::app
         opts_world_session["opts-world-session<br/>• Resolved content paths and the menu request for a world session"]:::app
@@ -224,12 +225,13 @@ graph TD
     opts_game --> opts_catalogue_service
     opts_game --> opts_bevy
     opts_game --> opts_game_state
-    opts_game_state --> opts_bevy
-    opts_game_state --> opts_gui
     opts_game_state --> opts_hud_keys
     opts_game_state --> opts_sim
     opts_game_state --> opts_ground_height
     opts_game_state --> opts_session_vehicles
+    opts_game_state --> opts_game_settings
+    opts_game_settings --> opts_bevy
+    opts_game_settings --> opts_gui
     opts_session_vehicles --> opts_bevy
     opts_session_vehicles --> opts_core
     opts_session_vehicles --> opts_sim
@@ -418,9 +420,10 @@ graph TD
 | **`opts-exhaust`** | L3 | Engine exhaust plumes of the player and the nearest vehicles: puff emission, the model outlet, the distance fade (split out of `opts-game`, M-0117 budget room; [plan](../../dev/crate-split-exhaust.md)) | `opts-bevy`, `opts-sim` | `opts-game` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-scripted-drive`, `opts-sim`, `opts-steam`, `opts-stream-budget`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-debounce`, `opts-gui`, `opts-logging`, `opts-position-tag`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-exhaust`, `opts-game`, `opts-game-state` | Bevy Engine |
-| **`opts-game-state`** | L3 | Shared state types of the game: `AppState`, `GameSettings` with its defaults, session overlay and baseline, `Look` and `LookParams`, the in-game components and resources (split out of `opts-game`, ISS-064 stage 2). Types and pure helpers only; file I/O and systems stay in `opts-game`. The ground index and the session registry are re-exported from `opts-ground-height` and `opts-session-vehicles` (ISS-084) | `opts-bevy`, `opts-ground-height`, `opts-gui`, `opts-hud-keys`, `opts-session-vehicles`, `opts-sim` | `opts-catalogue-service`, `opts-game`, `opts-settings-io`, `opts-shell-nav`, `opts-tile-loading`, `opts-world-load` | Bevy Engine |
+| **`opts-game-state`** | L3 | Shared state types of the game: `AppState`, the in-game components and resources, the alerts and viewpoint keys (split out of `opts-game`, ISS-064 stage 2). Types and pure helpers only; file I/O and systems stay in `opts-game`. The ground index, the session registry, the settings and the look are re-exported from `opts-ground-height`, `opts-session-vehicles` and `opts-game-settings` (ISS-084) | `opts-game-settings`, `opts-ground-height`, `opts-hud-keys`, `opts-session-vehicles`, `opts-sim` | `opts-catalogue-service`, `opts-game`, `opts-settings-io`, `opts-shell-nav`, `opts-tile-loading`, `opts-world-load` | Bevy Engine |
 | **`opts-ground-height`** | L3 | The ground index of the resident tiles: road samples, terrain and surface plates by cell, split out of `opts-game-state` (ISS-084 stage 1). Bevy types through `opts-bevy`'s re-export of Bevy | `opts-bevy`, `opts-collision`, `opts-core`, `opts-road-surf` | `opts-game-state` | Bevy Engine |
 | **`opts-session-vehicles`** | L3 | The session registry types: ids, lifecycle, spawn requests, the vehicle record and its saved state, split out of `opts-game-state` (ISS-084 stage 2). Bevy types through `opts-bevy`'s re-export of Bevy | `opts-bevy`, `opts-core`, `opts-sim`, `opts-world-stats` (external: `serde`, `serde_json`) | `opts-game-state` | Bevy Engine |
+| **`opts-game-settings`** | L3 | The persisted game settings (`GameSettings` with its defaults, session overlay and baseline) and the colour look (`Look`), split out of `opts-game-state` (ISS-084 stage 3). File I/O stays in `opts-settings-io`. Bevy types through `opts-bevy`'s re-export of Bevy | `opts-bevy`, `opts-gui` (external: `serde`, `chrono`) | `opts-game-state` | Bevy Engine |
 | **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-collision`, `opts-core`, `opts-exhaust`, `opts-game-state`, `opts-gui`, `opts-hardware`, `opts-l10n`, `opts-logging`, `opts-map-advice`, `opts-sim`, `opts-steam`, `opts-theme-files`, `opts-traffic` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-l10n` | `opts-bevy`, `opts-game`, `opts-theme-files` | Bevy UI |
 | **`opts-road-surf`** | L2 | Fine road-texture unevenness: the `.surf` height maps, texture strips and the synthetic roughness per surface type (split out of `opts-game`'s `omsi_world`, ISS-067 stage 1) | `opts-core` | `opts-game` | Pure Rust (external: `image`) |

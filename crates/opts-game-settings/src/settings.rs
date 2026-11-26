@@ -17,7 +17,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use bevy::prelude::Resource;
+use opts_bevy::bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
 
 use crate::look::Look;
