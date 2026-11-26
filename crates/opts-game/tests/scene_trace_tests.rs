@@ -4,6 +4,8 @@
 //! everything lives in one test.
 
 mod common;
+#[path = "common/simple_map.rs"]
+mod simple_map;
 
 use bevy::prelude::*;
 use opts_bevy::scene_trace as st;

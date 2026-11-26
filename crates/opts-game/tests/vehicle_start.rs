@@ -4,10 +4,13 @@
 //!
 //! Needs an OMSI installation (`OMSI_PATH`); skips without one.
 
+#[path = "vehicle_start/rig.rs"]
+mod rig;
 mod vehicle_rig;
 
 use opts_core::formats::vehicles::bus::BusManifest;
-use vehicle_rig::{click, load, run, start_with_setup, tap};
+use rig::{click, start_with_setup, tap};
+use vehicle_rig::{load, run};
 
 #[path = "vehicle_start/census.rs"]
 mod census;
