@@ -5355,8 +5355,13 @@ name = "opts-audio"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "opts-audio-curves",
  "opts-main-camera",
 ]
+
+[[package]]
+name = "opts-audio-curves"
+version = "0.1.0"
 
 [[package]]
 name = "opts-benchmark"

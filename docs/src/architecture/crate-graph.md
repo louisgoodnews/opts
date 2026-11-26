@@ -70,6 +70,7 @@ graph TD
         opts_challenge["opts-challenge (facade)<br/>• Re-exports the challenge model and the scorer at the old paths<br/>• Zero Bevy"]:::bridge
         opts_challenge_scorer["opts-challenge-scorer<br/>• Applies run events to a challenge<br/>• Produces the challenge result<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_audio["opts-audio<br/>• Sound engine: clips, emitters, voice budget<br/>• Distance fade and mix buses<br/>• Bevy types, no file formats"]:::bridge
+        opts_audio_curves["opts-audio-curves<br/>• Gain curves: distance fade, dB, percent, semitones<br/>• No dependencies · Zero Bevy · Zero File I/O"]:::bridge
         opts_light_quality["opts-light-quality<br/>• Effective lighting quality and fallback ladder<br/>• Automatic frame-time governor<br/>• Bevy types"]:::bridge
         opts_main_camera["opts-main-camera<br/>• MainCamera marker (the player's view)<br/>• Bevy types"]:::bridge
         opts_catalogue["opts-catalogue<br/>• Installation scan into a catalogue<br/>• Map & vehicle lists"]:::bridge
@@ -136,6 +137,7 @@ graph TD
     opts_bevy --> opts_light_quality
     opts_bevy --> opts_main_camera
     opts_audio --> opts_main_camera
+    opts_audio --> opts_audio_curves
     opts_bevy --> opts_scene_trace
     opts_bevy --> opts_spatial_zones
     opts_bevy --> opts_sim
@@ -350,7 +352,8 @@ graph TD
 | **`opts-sim-pedestrian`** | L2 | Pedestrian model: footpath lanes from splines and objects, the lane network, walkers and the gait, split out of `opts-sim` (ISS-066, stage 2) | `opts-core` | `opts-sim` | Pure Rust |
 | **`opts-traffic`** | L2 | AI road traffic: lane graph, conflict zones, right of way, agents and lane changes | `opts-car-following`, `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic` | Pure Rust |
-| **`opts-audio`** | L2 | Sound engine: decoded clips, emitters, gain curves, the voice budget and the distance fade, split out of `opts-bevy` (crate split) | `opts-main-camera` | `opts-bevy` | Bevy |
+| **`opts-audio`** | L2 | Sound engine: decoded clips, emitters, the voice budget and the distance fade, split out of `opts-bevy` (crate split); the gain curves are re-exported from `opts-audio-curves` (ISS-088) | `opts-audio-curves`, `opts-main-camera` | `opts-bevy` | Bevy |
+| **`opts-audio-curves`** | L2 | Gain curves of the sound engine: the distance fade, decibel and percent gains and the semitone speed factor, split out of `opts-audio` (ISS-088) | *None* | `opts-audio` | Pure Rust |
 | **`opts-light-quality`** | L2 | Lighting quality: the effective light state, the fallback ladder and the automatic frame-time governor, split out of `opts-bevy` (crate split) | *None* | `opts-bevy` | Bevy |
 | **`opts-main-camera`** | L2 | The `MainCamera` marker, the one camera that shows the player's view, split out of `opts-bevy` so that `opts-audio` can query it (crate split) | *None* | `opts-audio`, `opts-bevy` | Bevy |
 | **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-benchmark`, `opts-game` | Pure Rust |

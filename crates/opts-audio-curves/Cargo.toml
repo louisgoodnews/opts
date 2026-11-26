@@ -1,0 +1,14 @@
+[package]
+name = "opts-audio-curves"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Gain curves of the sound engine: the distance fade, decibel and percent gains and the semitone speed factor (pure Rust, split out of opts-audio, ISS-088)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
