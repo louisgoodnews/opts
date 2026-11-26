@@ -1,7 +1,7 @@
 //! Weather in the traffic world (M-0117): grip and fog as the drivers feel them.
 
 use super::*;
-use crate::weather::grip_adjusted;
+use opts_traffic::weather::grip_adjusted;
 use opts_car_following::IdmParams;
 
 /// Mean speed (m/s) of a lone car over the second minute on a straight road with `grip`.
@@ -50,7 +50,7 @@ fn a_driver_never_brakes_harder_than_the_reduced_limit() {
 #[test]
 fn dry_clear_weather_is_the_default() {
     let w = world(&[straight(0.0, 100.0)]);
-    assert_eq!(w.weather(), crate::weather::WeatherState::default());
+    assert_eq!(w.weather(), opts_traffic::weather::WeatherState::default());
 }
 
 /// Steady gap (m) of a follower behind a lead car on a straight road with visibility `vis_m`.

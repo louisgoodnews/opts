@@ -126,7 +126,7 @@ fn the_speed_cap_is_not_carried_over_from_the_spawn_lane() {
 /// A 200 m road that climbs 10 % from a start at 5 m.
 fn hill() -> TrafficWorld {
     let climb = LaneSegment {
-        elevation: crate::graph::Elevation {
+        elevation: opts_traffic::graph::Elevation {
             z0: 5.0,
             grad_start: 0.1,
             grad_end: 0.1,

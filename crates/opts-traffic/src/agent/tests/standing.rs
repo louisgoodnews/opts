@@ -113,5 +113,3 @@ fn the_deadlock_breaker_does_not_drive_through_a_standing_vehicle_in_a_junction(
         a.s
     );
 }
-
-mod clearance;

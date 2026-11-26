@@ -5,7 +5,6 @@ use super::*;
 mod announce;
 mod overtake;
 mod rules;
-mod strategic;
 
 /// Two parallel north-bound lanes 3.5 m apart: lane 0 (left) and lane 1 (right, east).
 pub(super) fn two_lanes() -> TrafficWorld {

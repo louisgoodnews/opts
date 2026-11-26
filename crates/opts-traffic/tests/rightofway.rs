@@ -1,9 +1,10 @@
 //! Unit tests for rightofway.
 
-use super::*;
-use crate::geometry::PathGeometry;
-use crate::graph::{ConnectParams, LaneKind, LaneRules, LaneSegment};
 use glam::DVec2;
+use opts_traffic::conflict::ConflictKind;
+use opts_traffic::geometry::PathGeometry;
+use opts_traffic::graph::{ConnectParams, LaneGraph, LaneId, LaneKind, LaneRules, LaneSegment};
+use opts_traffic::rightofway::{precedence, Precedence};
 use std::f64::consts::{FRAC_PI_2, PI};
 
 fn seg(g: PathGeometry) -> LaneSegment {

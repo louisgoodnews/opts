@@ -4,10 +4,11 @@ mod objects;
 mod roads;
 mod rules;
 
-use super::*;
-use crate::graph::{ConnectParams, LaneGraph};
-use glam::Vec3;
-use opts_core::formats::map::MapSplineInstance;
+use glam::{DVec2, Vec3};
+use opts_core::formats::map::{MapObjectInstance, MapSplineInstance, MapTile, MapTrafficRule, RuleOwner, TileGrid};
+use opts_core::formats::scenery::{ScoPath, SplinePath};
+use opts_traffic::graph::{ConnectParams, LaneGraph};
+use opts_traffic::source::{segments_from_tile, tile_origin, PathSource};
 
 struct Fixed {
     sli: Vec<SplinePath>,

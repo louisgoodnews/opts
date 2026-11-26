@@ -120,6 +120,3 @@ fn rules_for(
 
 mod segments;
 pub use segments::segments_from_tile;
-
-#[cfg(test)]
-mod tests;

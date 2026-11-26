@@ -93,6 +93,3 @@ pub fn precedence(graph: &LaneGraph, lane: LaneId, c: &Conflict) -> Precedence {
         Precedence::First
     }
 }
-
-#[cfg(test)]
-mod tests;

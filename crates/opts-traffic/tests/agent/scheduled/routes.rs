@@ -29,7 +29,7 @@ fn a_fixed_route_wins_over_the_random_choice_at_a_fork() {
 fn the_nearest_place_respects_the_direction_and_the_distance() {
     let w = line();
     let g = w.graph();
-    let any = |_: &crate::graph::Lane| true;
+    let any = |_: &opts_traffic::graph::Lane| true;
     let found = g.nearest_place(DVec2::new(1.5, 250.0), 0.0, 0.5, 5.0, any);
     let (lane, s, d) = found.expect("a lane runs here");
     assert_eq!(lane, LaneId(1));

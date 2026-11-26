@@ -1,7 +1,7 @@
 //! Object paths (junction `.sco` arms): straight markers, arcs, indicators and skipped lengths.
 
 use super::*;
-use crate::agent::Blinker;
+use opts_traffic::agent::Blinker;
 
 #[test]
 fn object_paths_read_the_straight_marker_and_arc_otherwise() {

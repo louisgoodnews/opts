@@ -1,7 +1,7 @@
 //! Road lanes built from splines: junction arms, arcs, mirrored and height-profiled lanes.
 
 use super::*;
-use crate::graph::Direction;
+use opts_traffic::graph::Direction;
 
 #[test]
 fn a_two_lane_road_runs_into_a_junction_object_rotated_with_the_object() {
@@ -39,10 +39,10 @@ fn a_two_lane_road_runs_into_a_junction_object_rotated_with_the_object() {
     let g = LaneGraph::build(&segs, &ConnectParams::default());
     // 0 (forward lane) → 2 (junction arm); the reverse lane flows the other way.
     assert_eq!(
-        g.successors(crate::graph::LaneId(0)),
-        &[crate::graph::LaneId(2)]
+        g.successors(opts_traffic::graph::LaneId(0)),
+        &[opts_traffic::graph::LaneId(2)]
     );
-    assert!(g.successors(crate::graph::LaneId(1)).is_empty());
+    assert!(g.successors(opts_traffic::graph::LaneId(1)).is_empty());
 }
 
 #[test]
@@ -84,7 +84,7 @@ fn mirrored_splines_put_their_lanes_on_the_other_side() {
         .abs_diff_eq(DVec2::new(-1.75, 0.0), 1e-9));
     assert_eq!(segs[0].direction, Direction::Reverse);
     let g = LaneGraph::build(&segs, &ConnectParams::default());
-    let lane = g.lane(crate::graph::LaneId(0)).unwrap();
+    let lane = g.lane(opts_traffic::graph::LaneId(0)).unwrap();
     assert!(lane
         .geometry
         .start
