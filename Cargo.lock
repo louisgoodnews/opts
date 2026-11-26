@@ -5997,10 +5997,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-sim-passenger-model"
+version = "0.1.0"
+dependencies = [
+ "glam",
+]
+
+[[package]]
 name = "opts-sim-passengers"
 version = "0.1.0"
 dependencies = [
  "glam",
+ "opts-sim-passenger-model",
  "tracing",
 ]
 

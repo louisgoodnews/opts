@@ -9,11 +9,11 @@
 mod crowd;
 mod destination;
 mod fare;
-mod graph;
-mod rng;
 mod sim;
-mod spec;
 mod state;
+
+// The pure data, graph and random source live in `opts-sim-passenger-model` (ISS-086).
+use opts_sim_passenger_model::{graph, rng, spec};
 
 pub use crowd::standing_room;
 pub use destination::{admits, pick, Destination, DestinationTable};

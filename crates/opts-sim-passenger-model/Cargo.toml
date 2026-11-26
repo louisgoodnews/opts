@@ -1,0 +1,16 @@
+[package]
+name = "opts-sim-passenger-model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The passenger model's data: the cabin, paths and ticket types, the path graph of a cabin and the random source (pure Rust, split out of opts-sim-passengers, ISS-086)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Math
+glam = { workspace = true }

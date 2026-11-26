@@ -12,6 +12,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+# Internal
+opts-sim-passenger-model = { workspace = true }
 # Math
 glam = { workspace = true }
 tracing = { workspace = true }
