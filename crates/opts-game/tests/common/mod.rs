@@ -1,7 +1,5 @@
 //! A self-authored miniature OMSI installation for loading tests (no OMSI content involved).
 
-#![allow(dead_code)]
-
 pub mod loading;
 
 use std::path::{Path, PathBuf};

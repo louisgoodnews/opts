@@ -1,8 +1,6 @@
 //! The headless vehicle rig shared by the start tests: a vehicle's own scripts with the host
 //! callbacks of a headless run, driven by frames, clicks and key presses (M-0141).
 
-#![allow(dead_code)]
-
 use opts_core::formats::vehicles::bus::BusManifest;
 use opts_sim::script::ScriptEngine;
 
