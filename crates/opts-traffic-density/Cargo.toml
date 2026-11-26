@@ -1,0 +1,14 @@
+[package]
+name = "opts-traffic-density"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The lane density model of AI traffic (density curves, per-lane vehicle-group densities) and its deterministic random generator (pure Rust, no Bevy)."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

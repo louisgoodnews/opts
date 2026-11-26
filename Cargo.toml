@@ -121,6 +121,7 @@ members = [
     "crates/opts-tools",
     "crates/opts-traffic",
     "crates/opts-traffic-lanes",
+    "crates/opts-traffic-density",
 ]
 
 [workspace.package]
@@ -235,6 +236,7 @@ opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-tools = { path = "crates/opts-tools" }
 opts-traffic = { path = "crates/opts-traffic" }
 opts-traffic-lanes = { path = "crates/opts-traffic-lanes" }
+opts-traffic-density = { path = "crates/opts-traffic-density" }
 opts-challenge-model = { path = "crates/opts-challenge-model" }
 opts-challenge-scorer = { path = "crates/opts-challenge-scorer" }
 

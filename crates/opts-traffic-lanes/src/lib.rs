@@ -9,10 +9,11 @@
 mod blinker;
 
 pub mod conflict;
-pub mod density;
 pub mod geometry;
 pub mod graph;
 pub mod neighbours;
-pub mod rng;
+
+/// The density model and its generator, moved to `opts-traffic-density` (ISS-093).
+pub use opts_traffic_density::{density, rng};
 
 pub use blinker::Blinker;
