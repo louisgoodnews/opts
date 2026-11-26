@@ -28,10 +28,11 @@ opts-l10n 2743  # set 2026-11-22 to the current total
 opts-logging 1288  # set 2026-11-22 to the current total
 opts-model 107  # set 2026-11-22 to the current total
 opts-omsi 31  # lowered 2026-11-24 from 3163 to the total after the scenery and train readers moved to opts-omsi-scenery; the facade only re-exports (docs/dev/crate-split-omsi.md, step 5)
-opts-sim 8409  # measured 2026-11-26 at its size; lowered from 11295 (budgets only shrink)
+opts-sim 7582  # lowered 2026-11-26 to the measured total after the ISS-093 rail split (opts-sim-rail, 840); was 8409 (budgets only shrink)
 opts-sim-passengers 1584  # lowered 2026-11-26 to the measured total after the ISS-086 stage 1 split: spec, graph and rng moved to opts-sim-passenger-model (was an estimate of 1897 from 2026-11-25)
 opts-sim-passenger-model 392  # new 2026-11-26 (ISS-086 stage 1): the pure passenger model (spec, graph, rng) split out of opts-sim-passengers; measured
 opts-sim-pedestrian 1152  # new 2026-11-25: ESTIMATE from the stage-2 move (ISS-066): the crate src code lines counted by grep (module 1149 + lib.rs), not by the audit; re-measure with the audit before the next gate
+opts-sim-rail 840  # new 2026-11-26 (ISS-093): the rail module (trains, dynamics, track switches) split out of opts-sim; measured by the audit
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-traffic 4267  # lowered 2026-11-26 (ISS-085 stage 1): the lane graph, course resolver and density moved to opts-traffic-lanes; measured by the audit (src/ code)
 opts-traffic-lanes 1844  # new 2026-11-26 (ISS-085 stage 0, Blinker), set to the measured src/ total at stage 1 (lane graph, geometry, density, rng, conflict, neighbours, course resolve)

@@ -63,6 +63,7 @@ graph TD
         opts_sim_passengers["opts-sim-passengers<br/>• Passenger model: boarding, tickets, seats<br/>• Standing places and getting off<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_sim_passenger_model["opts-sim-passenger-model<br/>• Passenger data: cabin, paths, tickets<br/>• Path graph of a cabin and the random source<br/>• No dependencies · Zero Bevy · Zero File I/O"]:::bridge
         opts_sim_pedestrian["opts-sim-pedestrian<br/>• Footpath lanes & lane network<br/>• Walkers and gait (ISS-066, stage 2)<br/>• Zero Bevy · Zero File I/O"]:::domain
+        opts_sim_rail["opts-sim-rail<br/>• Trains on the track network<br/>• Bogie poses, longitudinal dynamics<br/>• Zero Bevy · Zero File I/O"]:::domain
         opts_traffic["opts-traffic<br/>• Lane graph & car following<br/>• Conflict zones, right of way<br/>• Zero Bevy"]:::bridge
         opts_traffic_lanes["opts-traffic-lanes<br/>• Lane graph, geometry, densities<br/>• Conflict zones, neighbour lanes, course resolve<br/>• Zero Bevy · Zero File I/O"]:::bridge
         opts_car_following["opts-car-following<br/>• Intelligent Driver Model<br/>• Vehicle classes & driver parameters<br/>• Zero Bevy · Zero File I/O"]:::bridge
@@ -320,8 +321,10 @@ graph TD
     opts_sim --> opts_core
     opts_sim --> opts_sim_passengers
     opts_sim --> opts_sim_pedestrian
+    opts_sim --> opts_sim_rail
     opts_sim_passengers --> opts_sim_passenger_model
     opts_sim_pedestrian --> opts_core
+    opts_sim_rail --> opts_sim_pedestrian
     opts_steam --> opts_vdf
     opts_theme_files --> opts_gui
     opts_tools --> opts_core
@@ -403,8 +406,9 @@ graph TD
 | **`opts-sim-passenger-model`** | L2 | The passenger model's data (cabin, paths, ticket types), the path graph of a cabin and the random source, split out of `opts-sim-passengers` (ISS-086 stage 1); re-exported by `opts-sim-passengers` | *None* | `opts-sim-passengers` | Pure Rust |
 | **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core`, `opts-sim-passengers` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
 | **`opts-core`** | L1 | Temporary facade: re-exports `opts-omsi` and `opts-l10n` at the old paths until the last consumer is migrated | `opts-l10n`, `opts-omsi` | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
-| **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, OMSI script VM; pedestrians are re-exported from `opts-sim-pedestrian` | `opts-core`, `opts-sim-passengers`, `opts-sim-pedestrian` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
-| **`opts-sim-pedestrian`** | L2 | Pedestrian model: footpath lanes from splines and objects, the lane network, walkers and the gait, split out of `opts-sim` (ISS-066, stage 2) | `opts-core` | `opts-sim` | Pure Rust |
+| **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, OMSI script VM; pedestrians are re-exported from `opts-sim-pedestrian`, rail vehicles from `opts-sim-rail` | `opts-core`, `opts-sim-passengers`, `opts-sim-pedestrian`, `opts-sim-rail` | `opts-benchmark`, `opts-bevy`, `opts-exhaust`, `opts-game` | Pure Rust |
+| **`opts-sim-pedestrian`** | L2 | Pedestrian model: footpath lanes from splines and objects, the lane network, walkers and the gait, split out of `opts-sim` (ISS-066, stage 2) | `opts-core` | `opts-sim`, `opts-sim-rail` | Pure Rust |
+| **`opts-sim-rail`** | L2 | Rail-bound vehicles: trains on the track network, bogie poses, longitudinal dynamics and track switches, split out of `opts-sim` (ISS-093); re-exported by `opts-sim` as `opts_sim::rail` | `opts-sim-pedestrian` (external: `glam`) | `opts-sim` | Pure Rust |
 | **`opts-traffic`** | L2 | AI road traffic: agents, lane changes, course and right of way; the lane graph is in `opts-traffic-lanes` (ISS-085) | `opts-car-following`, `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-car-following`** | L2 | The Intelligent Driver Model car-following law, vehicle classes and driver parameters, split from `opts-traffic` ([plan](../../dev/crate-split-traffic.md)) | *None* | `opts-traffic` | Pure Rust |
 | **`opts-audio`** | L2 | Sound engine: decoded clips, emitters, the voice budget and the distance fade, split out of `opts-bevy` (crate split); the gain curves are re-exported from `opts-audio-curves` (ISS-088) | `opts-audio-curves`, `opts-main-camera` | `opts-bevy` | Bevy |
