@@ -6125,6 +6125,14 @@ name = "opts-spatial-zones-core"
 version = "0.1.0"
 dependencies = [
  "glam",
+ "opts-spatial-zones-model",
+]
+
+[[package]]
+name = "opts-spatial-zones-model"
+version = "0.1.0"
+dependencies = [
+ "glam",
  "serde_json",
 ]
 
