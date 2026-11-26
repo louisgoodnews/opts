@@ -1,7 +1,7 @@
 //! Shared text helpers of the timetable parsers: the lines of a file, the keyword of a record and
 //! its positional values.
 
-use crate::formats::text::decode_bytes;
+use opts_omsi_scan::decode_bytes;
 
 /// The lines of a file without carriage returns.
 pub(super) fn lines_of(bytes: &[u8]) -> Vec<String> {

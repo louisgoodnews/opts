@@ -1,0 +1,15 @@
+[package]
+name = "opts-omsi-timetable"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OMSI 2 timetable readers: the stop list (Busstops.cfg), trip (.ttp), line (.ttl) and rail track (.ttr) files and the timetable query model."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+opts-omsi-scan = { workspace = true }
