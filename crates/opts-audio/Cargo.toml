@@ -13,4 +13,5 @@ workspace = true
 
 [dependencies]
 bevy = { workspace = true }
+opts-audio-curves = { workspace = true }
 opts-main-camera = { workspace = true }

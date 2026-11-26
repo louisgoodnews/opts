@@ -22,7 +22,7 @@ The engine is the layer every sound goes through. It does not know what a bus en
 | :--- | :--- | :--- |
 | `PcmClip` | `audio/clip.rs` | Decoded audio (interleaved `f32`, 1 or 2 channels) as a Bevy asset with a `Decodable` implementation, so Bevy's output plays it without any optional decoder feature. |
 | `SoundEmitter` | `audio/emitter.rs` | The component a game system puts on an entity: clip, bus, gain, speed, looping, an optional distance curve (spatial), mute, despawn-when-done. The game keeps `gain` and `speed` true to what the thing does; the engine does the rest. |
-| `Distance` | `audio/curves.rs` | Reference distance (full level inside), maximum distance (silent beyond, costs nothing), rolloff; inverse distance law with a smooth fade over the last 15 % of the range. |
+| `Distance` | `crates/opts-audio-curves/src/lib.rs` (re-exported by `opts-audio`) | Reference distance (full level inside), maximum distance (silent beyond, costs nothing), rolloff; inverse distance law with a smooth fade over the last 15 % of the range. |
 | `AudioSettings` | `audio/engine.rs` | Master and bus volumes (percent) and the voice budget. |
 | systems | `audio/engine.rs` | `ensure_listener`, `select_voices`, `sync_voice_levels`, in `PostUpdate` after transform propagation. |
 | `AudioStats` | `audio/engine.rs` | What the engine did last frame; `audio.state` reports it. |

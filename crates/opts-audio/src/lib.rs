@@ -10,7 +10,7 @@
 //! vehicle).
 
 pub mod clip;
-pub mod curves;
+pub use opts_audio_curves as curves;
 pub mod emitter;
 pub mod engine;
 

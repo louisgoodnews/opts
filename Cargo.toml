@@ -46,6 +46,7 @@ members = [
     "crates/opts-stream-budget",
     "crates/opts-traffic-weather",
     "crates/opts-audio",
+    "crates/opts-audio-curves",
     "crates/opts-light-quality",
     "crates/opts-main-camera",
     "crates/opts-core",
@@ -146,6 +147,7 @@ opts-spatial-zones = { path = "crates/opts-spatial-zones" }
 opts-stream-budget = { path = "crates/opts-stream-budget" }
 opts-traffic-weather = { path = "crates/opts-traffic-weather" }
 opts-audio = { path = "crates/opts-audio" }
+opts-audio-curves = { path = "crates/opts-audio-curves" }
 opts-light-quality = { path = "crates/opts-light-quality" }
 opts-main-camera = { path = "crates/opts-main-camera" }
 opts-core = { path = "crates/opts-core" }
