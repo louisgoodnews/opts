@@ -62,21 +62,7 @@ impl ContentLoader<'_> {
             .filter(|_| model.version != 0)
             .map(crate::vehicle_anim::MeshPivot::from_o3d_transform);
         let material = self.cache.pool.material(self.materials, material);
-        if let Some(m) = self.materials.get(&material) {
-            crate::glass::note_surface(&material, res.tex_name.as_deref(), m, false);
-            let moisture = self.texture_takes_wetness(res.tex_name.as_deref());
-            let tyre = self.cache.vehicle_part
-                && res
-                    .tex_name
-                    .as_deref()
-                    .is_some_and(crate::reflections::is_tyre_texture);
-            crate::reflections::note_material(
-                &material,
-                res.tex_name.as_deref(),
-                (moisture, tyre),
-                m,
-            );
-        }
+        self.note_part_material(&material, res.tex_name.as_deref());
         let part = ModelPart {
             mesh: self.cache.pool.mesh(self.meshes, mesh),
             material,
@@ -92,6 +78,22 @@ impl ContentLoader<'_> {
             pivot,
         };
         self.push_assembled_part(part, glass_material, res.tex_name.as_deref(), parts);
+    }
+
+    /// Notes a slot's material for the glass, wetness and tyre passes (`note_surface` and
+    /// `note_material`). The tyre test applies only to a vehicle part.
+    fn note_part_material(
+        &self,
+        material: &bevy::prelude::Handle<StandardMaterial>,
+        tex_name: Option<&str>,
+    ) {
+        if let Some(m) = self.materials.get(material) {
+            crate::glass::note_surface(material, tex_name, m, false);
+            let moisture = self.texture_takes_wetness(tex_name);
+            let tyre = self.cache.vehicle_part
+                && tex_name.is_some_and(crate::reflections::is_tyre_texture);
+            crate::reflections::note_material(material, tex_name, (moisture, tyre), m);
+        }
     }
 
     fn push_assembled_part(
