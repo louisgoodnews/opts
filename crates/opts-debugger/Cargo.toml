@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Development toolkit for OPTS: reads frame, timing and trace files and bundles a run for debugging (ISS-096 skeleton; no tool yet)."
+description = "Development toolkit for OPTS: reads frame, timing and trace files and bundles a run for debugging (ISS-096; the frames tool is implemented)."
 repository.workspace = true
 publish = false
 
@@ -17,7 +17,7 @@ name = "opts-debugger"
 path = "src/main.rs"
 
 [dependencies]
-# CLI argument parsing; the binary parses no arguments yet, the tools of the later stages do.
+# CLI argument parsing of the binary's subcommands.
 clap = { workspace = true }
 # Library error type.
 thiserror = { workspace = true }

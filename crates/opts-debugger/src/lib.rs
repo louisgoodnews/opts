@@ -11,14 +11,14 @@
 //! - [`trace`]: an offline reader of a `scene-trace-*.jsonl` file.
 //! - [`client`]: the crate's own client to the control protocol.
 //!
-//! This is the skeleton (ISS-096 stage 3): no tool is implemented yet.
+//! The `frames` tool is implemented (ISS-096 stage 4); the other tools are still skeletons.
 
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
 pub(crate) mod bundle;
 pub(crate) mod client;
-pub(crate) mod frames;
+pub mod frames;
 pub(crate) mod timing;
 pub(crate) mod trace;
 

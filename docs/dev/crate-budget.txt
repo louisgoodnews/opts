@@ -34,7 +34,7 @@ opts-sim-passenger-model 392  # new 2026-11-26 (ISS-086 stage 1): the pure passe
 opts-sim-pedestrian 1152  # new 2026-11-25: ESTIMATE from the stage-2 move (ISS-066): the crate src code lines counted by grep (module 1149 + lib.rs), not by the audit; re-measure with the audit before the next gate
 opts-sim-rail 840  # new 2026-11-26 (ISS-093): the rail module (trains, dynamics, track switches) split out of opts-sim; measured by the audit
 opts-tools 1245  # set 2026-11-22 to the current total
-opts-debugger 23  # new 2026-11-26 (ISS-096 skeleton): the development toolkit; measured at its size
+opts-debugger 356  # new 2026-11-26 (ISS-096 skeleton, was 23); re-measured 2026-11-27 at the frames tool (ISS-096 stage 4): the src/ code total by structure_audit.py json
 opts-traffic 3130  # lowered 2026-11-26 (ISS-085 stage 1): the lane graph, course resolver and density moved to opts-traffic-lanes; lowered again 2026-11-26 (ISS-094): the in-source tests that use only the public API moved to tests/; the audit (src/ code) measures 3130
 opts-traffic-lanes 1199  # new 2026-11-26 (ISS-085 stage 0, Blinker), set to the measured src/ total at stage 1 (lane graph, geometry, density, rng, conflict, neighbours, course resolve); lowered 2026-11-26 (ISS-094): the in-source tests moved to tests/ (src/ code only)
 opts-traffic-density 140  # new 2026-11-26 (ISS-093): the density curves, per-lane densities and the rng moved out of opts-traffic-lanes; measured by the audit (src/ code)
