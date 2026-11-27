@@ -49,6 +49,7 @@ pub mod light_cones;
 pub use opts_light_quality as light_quality;
 pub mod light_rooms;
 pub mod loader;
+pub mod map_stream;
 pub mod material;
 pub mod mesh;
 pub mod mirrors;
