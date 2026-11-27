@@ -17,6 +17,7 @@ use opts_sim::pedestrian::{
 };
 
 use opts_game_state::in_game::types::InGameEntity;
+use opts_holidays::Holidays;
 use opts_traffic::SignalKey;
 
 use super::vehicle::load_human_parts;
@@ -75,6 +76,8 @@ pub struct PedestrianPool {
     pub(super) wanted: bool,
     pub(super) rng: u32,
     pub(super) frames: u32,
+    /// The map's holidays (`Holidays.txt`); the default when the file is missing.
+    pub(super) holidays: Holidays,
 }
 
 /// Component of a living pedestrian.

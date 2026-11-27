@@ -25,6 +25,17 @@ pub(super) fn start_pool(job: &WorldLoadJob, pool: &mut PedestrianPool) {
         }
     }
     pool.slots = distinct.into_iter().map(|d| (d, None, 0)).collect();
+    pool.holidays = job
+        .install
+        .find_in(&job.config.map_dir, "Holidays.txt")
+        .and_then(|p| std::fs::read(p).ok())
+        .map(|b| opts_core::formats::text::decode_bytes(&b))
+        .map(|t| Holidays::parse(&t))
+        .unwrap_or_else(|| {
+            // No file: every day is judged by its weekday alone, as before holidays were read.
+            tracing::debug!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no Holidays.txt; holidays unknown");
+            Holidays::default()
+        });
     if pool.slots.is_empty() {
         tracing::error!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no characters in humans.txt; no pedestrians");
     }

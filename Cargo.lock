@@ -6303,6 +6303,7 @@ dependencies = [
  "opts-fleet-number",
  "opts-game-state",
  "opts-gui",
+ "opts-holidays",
  "opts-hud-keys",
  "opts-logging",
  "opts-mesh-dir",
