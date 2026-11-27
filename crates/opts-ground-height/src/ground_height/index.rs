@@ -2,6 +2,16 @@
 
 use super::*;
 
+impl GroundIndex {
+    /// Sets the session frame: the start tile and the grid its positions are measured with. The
+    /// terrain service follows, so it is set before the first tile is inserted.
+    pub fn set_frame(&mut self, start_tile: (i32, i32), grid: TileGrid) {
+        self.start_tile = start_tile;
+        self.grid = grid;
+        self.terrain.set_frame(grid, start_tile);
+    }
+}
+
 /// A surface plate's triangle with the tile it came from.
 pub(super) type TilePlateTri = (
     (i32, i32),
@@ -18,7 +28,8 @@ pub struct GroundIndex {
     /// The drivable surfaces of `[surface]` objects (junction and street plates): boxes whose top
     /// is the ground, per tile.
     pub(super) plates: ColliderGrid<(i32, i32)>,
-    pub(super) terrain: HashMap<(i32, i32), TileTerrain>,
+    /// The terrain of the resident tiles: the one height service the game samples (ISS-071).
+    pub(super) terrain: GroundElevationQuery,
     pub(super) cells: HashMap<(i32, i32), Vec<TileSample>>,
     pub start_tile: (i32, i32),
     pub grid: TileGrid,
@@ -32,7 +43,7 @@ impl Default for GroundIndex {
     fn default() -> Self {
         Self {
             plates: ColliderGrid::new(CELL_M),
-            terrain: HashMap::new(),
+            terrain: GroundElevationQuery::default(),
             cells: HashMap::new(),
             start_tile: (0, 0),
             grid: TileGrid::default(),

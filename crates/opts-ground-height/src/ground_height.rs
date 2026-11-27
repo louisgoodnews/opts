@@ -3,7 +3,7 @@
 
 use opts_bevy::bevy::prelude::*;
 use opts_bevy::scenery::spline_pose;
-use opts_bevy::TileTerrain;
+use opts_bevy::{GroundElevationQuery, TileTerrain};
 use opts_collision::{ColliderGrid, Obb};
 use opts_core::formats::map::{MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::SplineProfile;

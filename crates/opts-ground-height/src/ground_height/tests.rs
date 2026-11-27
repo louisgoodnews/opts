@@ -116,8 +116,9 @@ fn a_deck_over_the_apron_is_not_climbed_but_is_driven_on() {
 fn a_surface_plate_is_the_ground_and_a_high_deck_is_not() {
     use opts_bevy::TileTerrain;
     use opts_core::formats::map::MapTerrain;
-    let flat = || GroundIndex {
-        terrain: HashMap::from([(
+    let flat = || {
+        let mut terrain = GroundElevationQuery::default();
+        terrain.insert(
             (0, 0),
             TileTerrain::new(
                 MapTerrain {
@@ -126,8 +127,11 @@ fn a_surface_plate_is_the_ground_and_a_high_deck_is_not() {
                 },
                 5.0,
             ),
-        )]),
-        ..GroundIndex::default()
+        );
+        GroundIndex {
+            terrain,
+            ..GroundIndex::default()
+        }
     };
     let mut index = flat();
     let plate =

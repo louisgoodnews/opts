@@ -24,8 +24,7 @@ pub(super) fn register(
 ) {
     commands.queue(move |world: &mut World| {
         if let Some(mut g) = world.get_resource_mut::<GroundIndex>() {
-            g.start_tile = start_tile;
-            g.grid = grid;
+            g.set_frame(start_tile, grid);
             g.insert_tile(key, origin, terrain, &roads);
         }
     });

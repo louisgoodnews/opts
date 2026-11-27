@@ -13,11 +13,8 @@ impl GroundIndex {
         start_tile: (i32, i32),
         grid: TileGrid,
     ) -> Self {
-        let mut g = Self {
-            start_tile,
-            grid,
-            ..Self::default()
-        };
+        let mut g = Self::default();
+        g.set_frame(start_tile, grid);
         g.insert_tile(key, origin, terrain, roads);
         g
     }
@@ -106,7 +103,7 @@ impl GroundIndex {
     /// Forgets a tile.
     pub fn remove_tile(&mut self, key: (i32, i32)) {
         self.plates.remove(&key);
-        self.terrain.remove(&key);
+        self.terrain.remove(key);
         self.plate_tris.retain(|_, v| {
             v.retain(|(k, _)| *k != key);
             !v.is_empty()
