@@ -71,6 +71,7 @@ pub(super) fn add_frame_systems(app: &mut App) {
             ),
             (
                 omsi_world::load_variants,
+                omsi_world::set_crossing_aspects,
                 omsi_world::spawn_pedestrians,
                 omsi_world::move_pedestrians,
             )
