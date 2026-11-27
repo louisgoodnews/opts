@@ -1,6 +1,6 @@
-//! Unit tests of `bus.rs` (moved out of the file to keep it under the 500-line limit, refactoring cycle 1).
+//! Tests of the `.bus` manifest reader through its public path (moved out of `src/` by ISS-094).
 
-use super::*;
+use opts_omsi_vehicles::formats::vehicles::bus::{parse_bus, BusManifest, FriendlyName};
 
 #[test]
 fn coupling_front_character_is_parsed() {

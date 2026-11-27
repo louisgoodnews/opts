@@ -206,6 +206,3 @@ pub use extras::{ControlCable, VehicleExtras};
 pub fn parse_bus(text: &str) -> Result<BusManifest, BusParseError> {
     BusManifest::parse(text)
 }
-
-#[cfg(test)]
-mod tests;
