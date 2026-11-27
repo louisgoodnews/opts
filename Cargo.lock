@@ -5850,6 +5850,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-omsi-ailist"
+version = "0.1.0"
+
+[[package]]
 name = "opts-omsi-binary"
 version = "0.1.0"
 dependencies = [
@@ -5864,6 +5868,7 @@ name = "opts-omsi-map"
 version = "0.1.0"
 dependencies = [
  "glam",
+ "opts-omsi-ailist",
  "opts-omsi-text",
  "opts-types",
  "thiserror 1.0.69",

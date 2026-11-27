@@ -8,35 +8,12 @@
 
 use crate::formats::text::{decode_bytes, scan_blocks};
 
+use opts_omsi_ailist::legacy;
+
 mod depot;
-mod legacy;
 pub use depot::{DepotGroup, FleetEntry};
-
-/// One vehicle of an AI group.
-#[derive(Debug, Clone, PartialEq)]
-pub struct AiEntry {
-    /// Vehicle file as written (`.bus`, `.ovh` or `.zug`; backslashes, relative to the OMSI root).
-    pub vehicle: String,
-    /// Relative spawn frequency; `None` when the line carries no weight (the default share ❓).
-    pub weight: Option<f32>,
-}
-
-/// A named set of AI vehicles (`[aigroup_2]` … `[end]`).
-#[derive(Debug, Clone, PartialEq)]
-pub struct AiGroup {
-    /// Group name (`NormalCars`, `Trucks`, …); referenced by name from `unsched_*.txt`.
-    pub name: String,
-    /// Vehicles in file order.
-    pub entries: Vec<AiEntry>,
-}
-
-impl AiGroup {
-    /// Sum of the weights, counting a missing weight as `1`.
-    #[must_use]
-    pub fn total_weight(&self) -> f32 {
-        self.entries.iter().map(|e| e.weight.unwrap_or(1.0)).sum()
-    }
-}
+/// The AI group types live in `opts-omsi-ailist` (with the legacy parser); re-exported here.
+pub use opts_omsi_ailist::{AiEntry, AiGroup};
 
 /// Parsed `ailists.cfg` (current `_2` syntax only).
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -144,6 +121,8 @@ pub fn parse_unsched_vehgroups(bytes: &[u8]) -> Vec<UnschedGroup> {
 
 pub use density::*;
 mod density;
+
+mod legacy_tests;
 
 #[cfg(test)]
 mod tests;

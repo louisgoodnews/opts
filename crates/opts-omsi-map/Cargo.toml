@@ -15,4 +15,5 @@ workspace = true
 glam = { workspace = true }
 thiserror = { workspace = true }
 opts-types = { workspace = true }
+opts-omsi-ailist = { workspace = true }
 opts-omsi-text = { workspace = true }

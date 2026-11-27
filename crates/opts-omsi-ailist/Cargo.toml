@@ -1,0 +1,14 @@
+[package]
+name = "opts-omsi-ailist"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OMSI 2 legacy AI lists: the [ailist] vehicle table and the [aigroup] groups that index it, with the AI group types they produce."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

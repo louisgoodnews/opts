@@ -43,6 +43,7 @@ graph TD
         opts_omsi_map["opts-omsi-map<br/>• OMSI map readers: global.cfg, tiles, terrain, water<br/>• Chronology overlay and map writers<br/>• No Bevy · Zero File I/O"]:::domain
         opts_omsi_scenery["opts-omsi-scenery<br/>• OMSI scenery readers: .sco, .sli, crossings<br/>• Train consist reader<br/>• No Bevy · Zero File I/O"]:::domain
         opts_omsi_text["opts-omsi-text (facade)<br/>• .cfg, .cti, .oft, .org, ticketpack, money, humans<br/>• Re-exports scan, timetable, weather and sound<br/>• No Bevy · Zero File I/O"]:::domain
+        opts_omsi_ailist["opts-omsi-ailist<br/>• Legacy [ailist]/[aigroup] AI lists<br/>• AI group and entry types<br/>• No dependencies · Zero Bevy · Zero File I/O"]:::domain
         opts_omsi_scan["opts-omsi-scan<br/>• OMSI keyword-block scanner and text decoding<br/>• Positional value parsers<br/>• No Bevy · Zero File I/O"]:::domain
         opts_omsi_timetable["opts-omsi-timetable<br/>• OMSI timetable readers: Busstops.cfg, .ttp, .ttl, .ttr<br/>• Timetable query model and interpolation<br/>• No Bevy · Zero File I/O (folder loader excepted)"]:::domain
         opts_omsi_weather["opts-omsi-weather<br/>• OMSI weather readers: .owt presets, clouds.cfg, .dsc names<br/>• Weather folder loader<br/>• No Bevy · Zero File I/O (folder loader excepted)"]:::domain
@@ -316,6 +317,7 @@ graph TD
     opts_omsi --> opts_omsi_vehicles
     opts_omsi --> opts_wav
     opts_omsi_binary --> opts_omsi_text
+    opts_omsi_map --> opts_omsi_ailist
     opts_omsi_map --> opts_omsi_text
     opts_omsi_map --> opts_types
     opts_omsi_scenery --> opts_omsi_binary
@@ -381,7 +383,8 @@ graph TD
 | **`opts-omsi`** | L1 | Facade over the OMSI reader crates (`opts-omsi-text`, `-binary`, `-vehicles`, `-map`, `-scenery`): re-exports them at the old `opts_omsi::formats::...` paths, so callers are unchanged ([plan](../../dev/crate-split-omsi.md)); a leaf adapter | `opts-omsi-binary`, `opts-omsi-map`, `opts-omsi-scenery`, `opts-omsi-text`, `opts-omsi-vehicles`, `opts-wav` | `opts-core`, `opts-importer` | Pure Rust |
 | **`opts-omsi-binary`** | L1 | OMSI binary mesh readers (`.o3d`, `.x`) split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-text` | `opts-omsi`, `opts-omsi-scenery` | Pure Rust |
 | **`opts-omsi-vehicles`** | L1 | OMSI vehicle readers (`.bus`, `model.cfg`, `paths.cfg`, `.hof`, script textures), the setvar catalogue and the `.sco` light reader, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-text` | `opts-omsi`, `opts-omsi-scenery` | Pure Rust |
-| **`opts-omsi-map`** | L1 | OMSI map readers and writers (`global.cfg`, `tile_*.map`, `.map.terrain`, `.water`, OSN times) and the `chrono` overlay, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-text`, `opts-types` | `opts-omsi` | Pure Rust |
+| **`opts-omsi-map`** | L1 | OMSI map readers and writers (`global.cfg`, `tile_*.map`, `.map.terrain`, `.water`, OSN times) and the `chrono` overlay, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-ailist`, `opts-omsi-text`, `opts-types` | `opts-omsi` | Pure Rust |
+| **`opts-omsi-ailist`** | L1 | Legacy AI lists: the `[ailist]` vehicle table and the `[aigroup]` groups that index it (`docs/src/formats/map/lists.md`, "Legacy syntax"), with the `AiEntry` and `AiGroup` types, split out of `opts-omsi-map` (ISS-072) so the legacy reader has its own budget | *None* | `opts-omsi-map` | Pure Rust |
 | **`opts-omsi-scenery`** | L1 | OMSI scenery readers (`.sco`, `.sli`, crossings) and the train consist reader, split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)) | `opts-omsi-binary`, `opts-omsi-text`, `opts-omsi-vehicles` | `opts-omsi` | Pure Rust |
 | **`opts-omsi-text`** | L1 | OMSI text readers: the text-only parsers (`.cfg`, `.cti`, `.oft`, `.org`) split out of `opts-omsi` ([plan](../../dev/crate-split-omsi.md)); re-exports the scanner, the timetable, the weather and the sound readers as `formats::text`, `formats::timetable`, `formats::weather` and `formats::sound` | `opts-omsi-scan`, `opts-omsi-sound`, `opts-omsi-timetable`, `opts-omsi-weather` | `opts-omsi`, `opts-omsi-binary`, `opts-omsi-map`, `opts-omsi-scenery`, `opts-omsi-vehicles` | Pure Rust |
 | **`opts-omsi-scan`** | L1 | OMSI keyword-block scanner: text decoding, the `[keyword]` block scan and the positional value parsers, split out of `opts-omsi-text` (ISS-087 stage 0; [plan](../../dev/issues/ISS-087-epic-split-opts-omsi-text.md)) | *None* | `opts-omsi-text`, `opts-omsi-timetable`, `opts-omsi-weather` | Pure Rust (external: `glam`)
