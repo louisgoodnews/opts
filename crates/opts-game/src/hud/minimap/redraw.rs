@@ -3,10 +3,12 @@
 use super::*;
 mod avoid;
 mod caption;
+mod course;
 mod inputs;
 mod render;
 mod view;
 
+use course::follow_course;
 use inputs::{
     course_overlay, gather_scene, marker_pixels, road_lines, route_overlay, RouteOverlay,
 };
@@ -30,14 +32,18 @@ pub struct Scene {
 /// The route's overlay (its lines, stops and scheduled vehicles) and the course's lines, in map
 /// pixels. The route is laid out first, as the redraw always did.
 fn overlay_layers(
-    route: Option<&crate::hud::route_path::PlayerRoutePath>,
-    scheduled: Option<&crate::hud::route_path::ScheduledVehicles>,
-    centre: DVec2,
-    min_chord: f64,
+    state: &mut MiniMapState,
+    (traffic, route, scheduled): (
+        Option<&TrafficState>,
+        Option<&crate::hud::route_path::PlayerRoutePath>,
+        Option<&crate::hud::route_path::ScheduledVehicles>,
+    ),
+    (pose, (centre, min_chord)): (Option<(DVec2, f32)>, (DVec2, f64)),
 ) -> (RouteOverlay, Vec<MapLine>) {
+    let course = follow_course(state, traffic.map(|t| t.lane_graph()), route, pose);
     (
         route_overlay(route, scheduled, centre, min_chord),
-        course_overlay(route, centre, min_chord),
+        course_overlay(&course, centre, min_chord),
     )
 }
 
@@ -71,15 +77,10 @@ pub fn redraw(
         return;
     };
     let started = std::time::Instant::now();
-    let tick_dt = state.since;
-    state.since = 0.0;
+    let tick_dt = std::mem::take(&mut state.since);
 
     let (scene, has_player) = gather_scene(&vehicles, &cameras);
-    let Some(centre) = scene.centre else {
-        return;
-    };
-
-    let colors = look_colors(&look);
+    let Some(centre) = scene.centre else { return; };
 
     let view = choose_view(
         &mut state,
@@ -96,8 +97,12 @@ pub fn redraw(
         (f64::from(view.radius_m), min_chord),
     );
     let markers = marker_pixels(&scene.markers, centre);
-    let ((route_lines, route_stops, scheduled_px), course_px) =
-        overlay_layers(route.as_deref(), scheduled.as_deref(), centre, min_chord);
+    let pose = (has_player.then_some((centre, scene.heading)), (centre, min_chord));
+    let ((route_lines, route_stops, scheduled_px), course_px) = overlay_layers(
+        &mut state,
+        (traffic.as_deref(), route.as_deref(), scheduled.as_deref()),
+        pose,
+    );
     raster::render_course(
         canvas,
         view,
@@ -114,7 +119,7 @@ pub fn redraw(
             },
         ),
         &markers,
-        &colors,
+        &look_colors(&look),
         (canvas.size as f32 / 176.0, true),
     );
     upload(&mut images, handle, canvas);
