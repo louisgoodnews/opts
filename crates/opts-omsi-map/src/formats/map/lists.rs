@@ -122,7 +122,6 @@ pub fn parse_unsched_vehgroups(bytes: &[u8]) -> Vec<UnschedGroup> {
 pub use density::*;
 mod density;
 
-mod legacy_tests;
 
 #[cfg(test)]
 mod tests;
