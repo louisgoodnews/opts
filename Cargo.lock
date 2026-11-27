@@ -5711,6 +5711,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-holidays"
+version = "0.1.0"
+
+[[package]]
 name = "opts-hud-keys"
 version = "0.1.0"
 
@@ -5954,6 +5958,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-pedestrian-rules"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "opts-signals",
+ "opts-sim-pedestrian",
+]
+
+[[package]]
 name = "opts-position-tag"
 version = "0.1.0"
 
@@ -6073,19 +6086,6 @@ dependencies = [
 [[package]]
 name = "opts-signals"
 version = "0.1.0"
-
-[[package]]
-name = "opts-holidays"
-version = "0.1.0"
-
-[[package]]
-name = "opts-pedestrian-rules"
-version = "0.1.0"
-dependencies = [
- "glam",
- "opts-signals",
- "opts-sim-pedestrian",
-]
 
 [[package]]
 name = "opts-sim"
