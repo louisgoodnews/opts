@@ -11,4 +11,5 @@
 #![warn(missing_docs)]
 
 pub mod crossing;
+pub mod lod;
 pub mod separation;
