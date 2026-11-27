@@ -26,6 +26,7 @@ use opts_gui::l10n::fluent::Arg;
 use opts_gui::l10n::Localization;
 use opts_gui::prelude::MaterialTheme;
 use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
+use opts_traffic::{CourseProgress, LaneId, LaneMatcher};
 
 pub use config::{
     step_zoom, MiniMapConfig, Orientation, ZoomMode, BUDGET_US, DEFAULT_ZOOM_M, SETTING_ENABLED,
@@ -69,6 +70,18 @@ pub struct MiniMapState {
     pub speed_kmh: f32,
     /// The zoom smoothing.
     pub filter: ZoomFilter,
+    /// The lane the vehicle is matched to, among the lanes of the course (`None` without a course
+    /// or without a match in reach). Set by the redraw; see `redraw::course`.
+    pub lane: Option<LaneId>,
+    /// Whether [`Self::lane`] is on the course (`false` while off it).
+    pub on_course: bool,
+    /// Position on the course in running order: the matched lane's index when it is on the course,
+    /// else the last index reached (`None` without a course).
+    pub course_index: Option<usize>,
+    /// The matcher's hysteresis state (kept between redraws).
+    matcher: LaneMatcher,
+    /// The course progress (the index only moves forward).
+    progress: CourseProgress,
     /// Seconds (real time) since the last redraw.
     pub(super) since: f32,
 }

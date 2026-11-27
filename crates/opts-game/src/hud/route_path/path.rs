@@ -21,6 +21,9 @@ pub struct PlayerRoutePath {
     /// The lanes of the selected timetable trip (the course, M-0105), as resolved on the lanes
     /// that are resident; empty without a trip or without timetables.
     pub course: Vec<MapRoad>,
+    /// The lane of each course piece, in the same order (`course_lanes[k]` is `course[k]`'s lane);
+    /// the matcher and the course progress are indexed by it.
+    pub course_lanes: Vec<LaneId>,
     /// Counted up when the route changes (so a map redraws).
     pub generation: u64,
     pub(super) known: HashMap<u64, (DVec2, f64)>,

@@ -22,9 +22,9 @@ pub(super) fn scheduled_stops(
 pub(super) fn course_roads(
     player: &Query<&VehicleRoute, With<PlayerVehicle>>,
     graph: Option<&opts_traffic::LaneGraph>,
-) -> Vec<MapRoad> {
+) -> (Vec<LaneId>, Vec<MapRoad>) {
     let Some(graph) = graph else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
     let draft = player.iter().find_map(|r| {
         r.handle.with(|s| {
@@ -35,18 +35,28 @@ pub(super) fn course_roads(
         })
     });
     let Some(draft) = draft else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
+    // Lane ids and road pieces are pushed together, so `course_lanes[k]` is the lane of
+    // `course[k]` (the mini map's flags and the matcher index the course by that order).
     graph
         .resolve_course(&draft.lanes)
         .resolved
         .iter()
-        .filter_map(|r| graph.lane(r.lane))
-        .map(|lane| MapRoad {
-            geometry: lane.geometry.clone(),
-            width: lane.width,
+        .filter_map(|r| {
+            graph.lane(r.lane).map(|lane| {
+                (
+                    r.lane,
+                    MapRoad {
+                        geometry: lane.geometry,
+                        width: lane.width,
+                        on_course: true,
+                        ahead: false,
+                    },
+                )
+            })
         })
-        .collect()
+        .unzip()
 }
 
 /// The stop markers in the world give the exact position and heading of their stops.
@@ -108,6 +118,7 @@ pub(super) fn update_route_path(
             path.roads.clear();
             path.stops.clear();
             path.course.clear();
+            path.course_lanes.clear();
             path.generation += 1;
         }
         return;
@@ -129,7 +140,7 @@ pub(super) fn update_route_path(
     let ahead: Vec<&u32> = ids.iter().skip(index).take(STOPS_AHEAD).collect();
     let stops = route_stops(&path, &ahead, graph);
     let roads = graph.map_or_else(Vec::new, |g| path_between(g, &stops));
-    let course = course_roads(&player, graph);
+    let (course_lanes, course) = course_roads(&player, graph);
     let first_known = ahead
         .first()
         .is_some_and(|i| path.known.contains_key(&u64::from(**i)));
@@ -143,6 +154,7 @@ pub(super) fn update_route_path(
         path.generation += 1;
     }
     path.course = course;
+    path.course_lanes = course_lanes;
     path.stops = drawn;
     path.roads = roads;
 }
