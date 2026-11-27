@@ -6,7 +6,7 @@
 | **Severity** | minor (code quality) |
 | **Milestone** | [M-0147](../../src/roadmap/phase-15/M-0147.md) Structure Audit v2 and the ratchet gates (the ratchet this extends); the file limit is [M-0151](../../src/roadmap/phase-15/M-0151.md) |
 | **Audit** | Project audit 2026-11-18, architecture 4 (PRJ-14) |
-| **Status** | done 2026-11-22 on `agent/test-fixtures-2`: a total code-line budget per crate in `docs/dev/crate-budget.txt`, checked by `structure_audit.py check`, with a test. Commit hash in the board line. |
+| **Status** | superseded 2026-11-27 by the owner: the per-crate total budget is dropped (`docs/dev/crate-budget.txt` removed, `check_crate_budget` removed from `scripts/structure_audit.py`). The owner's rule: no crate size gate; splitting into many crates waits until v1.0.0. The per-file and per-function ratchets stay. |
 
 ## Problem
 
