@@ -111,6 +111,21 @@ impl CourseProgress {
             None => CourseState::OffCourse,
         }
     }
+
+    /// Places the matched lane (`None` when there is no match) on `course` and returns whether it
+    /// is on the course. Off the course the index stays where it was: the last lane reached.
+    pub fn place(&mut self, course: &[LaneId], matched: Option<LaneId>) -> bool {
+        matched.is_some_and(|lane| matches!(self.advance(course, lane), CourseState::OnCourse(_)))
+    }
+
+    /// Whether the course entry at `index` is ahead of the vehicle: at or after the progress index.
+    /// The matched lane itself is ahead; so is every later course lane. At a junction the course
+    /// decides the branch: only the lanes of the course are asked, so the other branch is never
+    /// ahead (design choice, recorded in the mini map's `redraw::course`).
+    #[must_use]
+    pub fn is_ahead(&self, index: usize) -> bool {
+        index >= self.index
+    }
 }
 
 mod matcher;
