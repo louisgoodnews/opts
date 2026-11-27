@@ -49,6 +49,17 @@ impl CrossingGates {
         }
     }
 
+    /// Removes the stop lines that `add_crossing` registered for `lane` and `key` (a tile was
+    /// unloaded). Stop lines of other lights at the same points are kept.
+    pub fn remove_crossing(&mut self, lane: &FootLane, key: SignalKey) {
+        for at_end in [false, true] {
+            let stop = entry_key(lane, at_end);
+            if self.stop_lines.get(&stop) == Some(&key) {
+                self.stop_lines.remove(&stop);
+            }
+        }
+    }
+
     /// Sets the aspect of the light `key` for the frame: [`Aspect::Stop`] closes its crossings,
     /// any other aspect opens them.
     pub fn set_aspect(&mut self, key: SignalKey, aspect: Aspect) {
