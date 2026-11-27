@@ -92,6 +92,13 @@ impl TrafficState {
     pub fn has_tile(&self, key: (i32, i32)) -> bool {
         self.segments.contains_key(&key)
     }
+
+    /// The aspect of the traffic light `key` at the session's clock; `None` when its program is
+    /// not loaded.
+    #[must_use]
+    pub fn aspect(&self, key: opts_traffic::SignalKey) -> Option<opts_traffic::Aspect> {
+        self.world.aspect(key)
+    }
 }
 
 impl Default for TrafficState {

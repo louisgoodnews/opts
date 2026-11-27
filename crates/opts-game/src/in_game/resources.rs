@@ -20,6 +20,7 @@ pub(super) fn add_resources(app: &mut App) {
         .init_resource::<omsi_world::PedestrianNetwork>()
         .init_resource::<omsi_world::PedestrianSettings>()
         .init_resource::<omsi_world::PedestrianPool>()
+        .init_resource::<omsi_world::PedestrianCrossings>()
         .init_resource::<omsi_world::TrafficState>()
         .init_resource::<omsi_world::TrafficSettings>()
         .init_resource::<omsi_world::TrafficPool>()

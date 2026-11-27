@@ -77,8 +77,8 @@ pub use ground_height::GroundIndex;
 pub use job::{begin_world_load, begin_world_load_at, resolve_session_config};
 pub use pedestrians::{advance_phase, apply_gait, apply_rest_pose, apply_seated_pose};
 pub use pedestrians::{
-    configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,
-    PedestrianNetwork, PedestrianPool, PedestrianSettings,
+    configure_pedestrians, load_variants, move_pedestrians, set_crossing_aspects, spawn_pedestrians,
+    Pedestrian, PedestrianCrossings, PedestrianNetwork, PedestrianPool, PedestrianSettings,
 };
 pub use rail::{
     click_points_system, configure_rail, is_rail, load_rail_variants, move_ai_trains, points_ahead,

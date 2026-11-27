@@ -17,6 +17,7 @@ use opts_sim::pedestrian::{
 };
 
 use opts_game_state::in_game::types::InGameEntity;
+use opts_traffic::SignalKey;
 
 use super::vehicle::load_human_parts;
 use super::WorldLoadJob;
@@ -83,6 +84,8 @@ pub struct Pedestrian {
     pub(super) leg_m: f32,
 }
 
+mod crossings;
+pub use crossings::{set_crossing_aspects, PedestrianCrossings};
 mod lanes;
 pub(super) use lanes::{register_tile, tile_lanes, unregister_tile};
 mod load;

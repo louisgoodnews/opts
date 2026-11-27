@@ -87,9 +87,9 @@ pub(in super::super) fn registries_step(
 ) {
     let _t = opts_logging::stream_trace::span("tile.registries");
     let (key, origin, terrain) = (b.key, b.origin, b.terrain.as_ref());
-    let lanes =
+    let foot =
         super::super::super::pedestrians::tile_lanes(job, &b.tile, &b.attached, terrain, origin);
-    super::super::super::pedestrians::register_tile(commands, key, lanes);
+    super::super::super::pedestrians::register_tile(commands, key, foot);
     let rail =
         super::super::super::rail::tile_rail_lanes(job, &b.tile, &b.attached, terrain, origin);
     super::super::super::rail::register_tile(commands, key, rail);

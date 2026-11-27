@@ -18,8 +18,10 @@ pub fn configure_pedestrians(
     mut net: ResMut<PedestrianNetwork>,
     mut pool: ResMut<PedestrianPool>,
     mut ground: ResMut<super::super::GroundIndex>,
+    mut crossings: ResMut<super::PedestrianCrossings>,
 ) {
     *ground = super::super::GroundIndex::default();
+    *crossings = super::PedestrianCrossings::default();
     // The command line wins for this run; then the setting *Pedestrians*; then the default.
     settings.baseline = args
         .and_then(|a| a.0.pedestrians)
