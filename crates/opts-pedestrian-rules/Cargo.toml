@@ -1,0 +1,20 @@
+[package]
+name = "opts-pedestrian-rules"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Pedestrian rules on top of the footpath network (ISS-076): waiting at signal-controlled crossings, walkers following each other, and the detail level by distance. Pure Rust."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Internal
+opts-signals = { workspace = true }
+opts-sim-pedestrian = { workspace = true }
+
+# Math
+glam = { workspace = true }
