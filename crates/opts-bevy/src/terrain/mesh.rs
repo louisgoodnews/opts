@@ -68,7 +68,7 @@ pub fn terrain_height(terrain: &MapTerrain, cell: f32, x: f32, y: f32) -> f32 {
     }
 }
 
-/// Builds the terrain mesh of one tile in absolute Bevy world coordinates.
+/// Builds the terrain mesh of one tile in absolute Bevy world coordinates, without neighbours.
 ///
 /// `origin` is the tile's south-west corner in OMSI world metres `(east, north)`, `cell` its
 /// terrain cell. With `uv_per_tile` the UVs span 0..1 over the tile (painted ground texture),
@@ -79,6 +79,18 @@ pub fn build_terrain_mesh(
     origin: (f32, f32),
     cell: f32,
     uv_per_tile: bool,
+) -> Mesh {
+    build_terrain_mesh_with(terrain, origin, cell, uv_per_tile, &TileBeyond::default())
+}
+
+/// [`build_terrain_mesh`] with the normals stitched to the held neighbours (see [`field_normals`]).
+#[must_use]
+pub fn build_terrain_mesh_with(
+    terrain: &MapTerrain,
+    origin: (f32, f32),
+    cell: f32,
+    uv_per_tile: bool,
+    beyond: &TileBeyond,
 ) -> Mesh {
     let dim = terrain.grid_cells as usize + 1;
     let mut positions = Vec::with_capacity(dim * dim);
@@ -106,5 +118,7 @@ pub fn build_terrain_mesh(
             indices.extend_from_slice(&[a, b, c, b, d, c]);
         }
     }
-    smooth_normal_mesh(positions, uvs, indices)
+    let mut mesh = smooth_normal_mesh(positions, uvs, indices);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, field_normals(terrain, cell, beyond));
+    mesh
 }

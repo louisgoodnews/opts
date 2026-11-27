@@ -37,6 +37,9 @@ pub use cut::{build_cut_terrain_mesh, spline_cut_triangles, TerrainCut};
 mod mesh;
 pub use mesh::*;
 
+mod normals;
+pub use normals::*;
+
 mod spline;
 pub use spline::*;
 
