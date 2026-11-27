@@ -46,11 +46,7 @@ impl GroundIndex {
     /// Terrain height at a session-frame position.
     #[must_use]
     pub fn terrain_at(&self, x: f32, y: f32) -> Option<f32> {
-        let (key, local) = self
-            .grid
-            .tile_at(Vec2::new(x, y).as_dvec2(), self.start_tile);
-        let t = self.terrain.get(&key)?;
-        Some(t.height(local.x as f32, local.y as f32))
+        self.terrain.height_at(x, y)
     }
 
     /// Height of the road at `(x, y)` when the point lies on one (`near_z` picks among overlapping
