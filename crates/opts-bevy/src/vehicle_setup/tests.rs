@@ -6,6 +6,7 @@ mod degrees;
 mod families;
 mod mouse;
 mod presses;
+mod recognition;
 mod stepping;
 
 use super::*;
