@@ -6,14 +6,15 @@ use opts_bevy::scenery_runtime::{HostValues, SceneryClock};
 use opts_bevy::SceneryScripts;
 
 use crate::audio_content::{ClipLoader, ClipState};
-use crate::sound_logic::{conditions_hold, Playback};
+use crate::sound_logic::{conditions_hold, viewpoint_allows, Playback};
 
-use super::values::host_variable;
+use super::values::{camera_in_cabin, host_variable};
 use super::{SceneryAudioStats, SceneryVoice};
 
 /// Plays the one-shots whose `[trigger]` the objects' scripts raised this frame.
 pub fn fire_scenery_triggers(
     clock: Res<SceneryClock>,
+    camera: Option<Res<opts_bevy::CameraState>>,
     mut objects: Query<(&mut SceneryScripts, &Children)>,
     voices: Query<(&SceneryVoice, &GlobalTransform)>,
     mut loader: ResMut<ClipLoader>,
@@ -21,6 +22,7 @@ pub fn fire_scenery_triggers(
     mut commands: Commands,
 ) {
     let host = HostValues::of(&clock);
+    let inside = camera_in_cabin(camera.as_ref().map(|c| c.mode));
     for (mut scripts, children) in &mut objects {
         // No change flag for the thousands of objects that raised nothing.
         let raised = {
@@ -31,6 +33,7 @@ pub fn fire_scenery_triggers(
             s.take_raised()
         };
         for name in raised {
+            let mut matched = 0;
             for child in children.iter() {
                 let Ok((voice, tf)) = voices.get(child) else {
                     continue;
@@ -44,9 +47,11 @@ pub fn fire_scenery_triggers(
                     || conditions_hold(&voice.def.conditions, |n| {
                         host_variable(n, &host).unwrap_or(0.0)
                     }) != Some(true)
+                    || !viewpoint_allows(voice.def.viewpoint, inside)
                 {
                     continue;
                 }
+                matched += 1;
                 let Some(path) = voice.file.as_deref() else {
                     continue;
                 };
@@ -66,6 +71,16 @@ pub fn fire_scenery_triggers(
                     ClipState::Failed => {}
                 }
             }
+            record_event(&mut stats, name, matched);
         }
     }
+}
+
+/// Lists a raised event with the number of voices that took it, so an event no sound maps to is
+/// visible rather than dropped (the last 64 are kept).
+pub(super) fn record_event(stats: &mut SceneryAudioStats, name: String, matched: usize) {
+    if stats.events.len() >= 64 {
+        stats.events.pop_front();
+    }
+    stats.events.push_back((name, matched));
 }

@@ -23,6 +23,17 @@ pub fn host_variable(name: &str, host: &HostValues) -> Option<f32> {
     })
 }
 
+/// Whether the camera is in a vehicle's cabin (the driver's and the passengers' views): the
+/// `[viewpoint]` 2 and 6 scenery sounds are interior sounds then, 5 and 1 exterior ones otherwise.
+/// The walking and the free camera count as outside (❓ Q-SND-004; no vehicle is known here).
+#[must_use]
+pub fn camera_in_cabin(mode: Option<opts_bevy::CameraMode>) -> bool {
+    matches!(
+        mode,
+        Some(opts_bevy::CameraMode::Cockpit | opts_bevy::CameraMode::Passenger)
+    )
+}
+
 /// The level of a definition: the product of its volume curves over the clock.
 #[must_use]
 pub fn level_of(def: &SoundDef, host: &HostValues) -> f32 {

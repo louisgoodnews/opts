@@ -62,3 +62,32 @@ fn unknown_variables_read_nothing_and_known_ones_the_clock() {
     assert_eq!(host_variable("SunAlt", &h), Some(7.0));
     assert_eq!(host_variable("mystery", &h), None);
 }
+
+#[test]
+fn raised_events_keep_the_last_64_with_their_voice_count() {
+    let mut stats = SceneryAudioStats::default();
+    for i in 0..70 {
+        super::triggers::record_event(&mut stats, format!("e{i}"), i % 3);
+    }
+    assert_eq!(stats.events.len(), 64);
+    // e0 to e5 were dropped; e6 (6 % 3 = 0) is the oldest kept, e69 (69 % 3 = 0) the newest.
+    assert_eq!(stats.events.front(), Some(&("e6".to_owned(), 0)));
+    assert_eq!(stats.events.back(), Some(&("e69".to_owned(), 0)));
+    // Of e6 to e69 (64 events) 22 are multiples of three (no voice); 42 took a voice.
+    assert_eq!(stats.events.iter().filter(|(_, n)| *n > 0).count(), 42);
+}
+
+#[test]
+fn a_scenery_viewpoint_follows_the_camera_mode() {
+    use opts_bevy::CameraMode;
+    // The cockpit and the passenger views are inside; the external view and no camera are not.
+    assert!(camera_in_cabin(Some(CameraMode::Cockpit)));
+    assert!(camera_in_cabin(Some(CameraMode::Passenger)));
+    assert!(!camera_in_cabin(Some(CameraMode::External)));
+    assert!(!camera_in_cabin(None));
+    // Viewpoint 2 (interior) plays inside only, 5 (exterior) outside only.
+    let inside = camera_in_cabin(Some(CameraMode::Cockpit));
+    assert!(viewpoint_allows(Some(2), inside) && !viewpoint_allows(Some(5), inside));
+    let outside = camera_in_cabin(Some(CameraMode::External));
+    assert!(!viewpoint_allows(Some(2), outside) && viewpoint_allows(Some(5), outside));
+}

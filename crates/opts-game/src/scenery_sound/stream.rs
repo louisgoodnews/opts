@@ -6,10 +6,10 @@ use opts_bevy::scenery_runtime::{HostValues, SceneryClock};
 use opts_bevy::MainCamera;
 
 use crate::audio_content::ClipLoader;
-use crate::sound_logic::{conditions_hold, Playback};
+use crate::sound_logic::{conditions_hold, viewpoint_allows, Playback};
 
 use super::loops::{edge_step, loop_step, VoiceQuery};
-use super::values::host_variable;
+use super::values::{camera_in_cabin, host_variable};
 use super::SceneryAudioStats;
 
 /// The clip loader and the counters of the scenery voices.
@@ -26,6 +26,7 @@ pub fn stream_scenery_voices(
     time: Res<Time>,
     clock: Res<SceneryClock>,
     listener: Query<&GlobalTransform, With<MainCamera>>,
+    camera: Option<Res<opts_bevy::CameraState>>,
     mut voices: VoiceQuery,
     state: SceneryVoiceState,
     mut since: Local<f32>,
@@ -45,6 +46,7 @@ pub fn stream_scenery_voices(
     };
     let host = HostValues::of(&clock);
     let read = |n: &str| host_variable(n, &host).unwrap_or(0.0);
+    let inside = camera_in_cabin(camera.as_ref().map(|c| c.mode));
     let (mut total, mut playing, mut unsupported, mut unresolved) = (0, 0, 0, 0);
     for (entity, mut voice, tf, emitter) in &mut voices {
         total += 1;
@@ -56,7 +58,9 @@ pub fn stream_scenery_voices(
             unresolved += 1;
             continue;
         };
-        let active = conditions_hold(&voice.def.conditions, read).unwrap_or(false);
+        // A voice the camera's viewpoint excludes is silent, as if its conditions did not hold.
+        let active = conditions_hold(&voice.def.conditions, read).unwrap_or(false)
+            && viewpoint_allows(voice.def.viewpoint, inside);
         let d = listener.distance(tf.translation());
         match voice.playback {
             Playback::Loop => {

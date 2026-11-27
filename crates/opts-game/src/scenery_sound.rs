@@ -9,8 +9,11 @@
 //!   event (`(T.L.name)`), at the voice's place;
 //! * clips are decoded on worker threads ([`ClipLoader`]) the first time a voice comes near.
 //!
-//! Not yet: `[conditionSingle]` (counted in [`SceneryAudioStats::unsupported`]), `[viewpoint]`,
-//! `[onlyone]`, `[checkloading]`, and the objects' own script variables in `[volcurve]`.
+//! `[viewpoint]` gates a voice by the camera mode (cabin views for 2 and 6, outside for 5 and 1;
+//! ❓ Q-SND-004, see `values::camera_in_cabin`).
+//!
+//! Not yet: `[conditionSingle]` (counted in [`SceneryAudioStats::unsupported`]), `[onlyone]`,
+//! `[checkloading]`, and the objects' own script variables in `[volcurve]`.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -71,6 +74,9 @@ pub struct SceneryAudioStats {
     pub unsupported: usize,
     /// Definitions whose sound file was not found.
     pub unresolved: usize,
+    /// The events the objects raised, oldest first, each with how many voices took it (0: no
+    /// sound is mapped to it). The last 64 are kept.
+    pub events: std::collections::VecDeque<(String, usize)>,
 }
 
 /// Registers the scenery sound systems.
