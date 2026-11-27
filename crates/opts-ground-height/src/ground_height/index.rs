@@ -2,16 +2,6 @@
 
 use super::*;
 
-impl GroundIndex {
-    /// Sets the session frame: the start tile and the grid its positions are measured with. The
-    /// terrain service follows, so it is set before the first tile is inserted.
-    pub fn set_frame(&mut self, start_tile: (i32, i32), grid: TileGrid) {
-        self.start_tile = start_tile;
-        self.grid = grid;
-        self.terrain.set_frame(grid, start_tile);
-    }
-}
-
 /// A surface plate's triangle with the tile it came from.
 pub(super) type TilePlateTri = (
     (i32, i32),

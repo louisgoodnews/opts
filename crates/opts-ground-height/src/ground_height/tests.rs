@@ -117,21 +117,11 @@ fn a_surface_plate_is_the_ground_and_a_high_deck_is_not() {
     use opts_bevy::TileTerrain;
     use opts_core::formats::map::MapTerrain;
     let flat = || {
+        let heights = vec![0.0; 61 * 61];
+        let tile = TileTerrain::new(MapTerrain { grid_cells: 60, heights }, 5.0);
         let mut terrain = GroundElevationQuery::default();
-        terrain.insert(
-            (0, 0),
-            TileTerrain::new(
-                MapTerrain {
-                    grid_cells: 60,
-                    heights: vec![0.0; 61 * 61],
-                },
-                5.0,
-            ),
-        );
-        GroundIndex {
-            terrain,
-            ..GroundIndex::default()
-        }
+        terrain.insert((0, 0), tile);
+        GroundIndex { terrain, ..GroundIndex::default() }
     };
     let mut index = flat();
     let plate =
