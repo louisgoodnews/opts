@@ -1,0 +1,14 @@
+[package]
+name = "opts-holidays"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "The holiday calendar of a map (Holidays.txt: public holidays and school holiday periods) and the day kind it selects for the density schedules (ISS-076). Pure Rust."
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

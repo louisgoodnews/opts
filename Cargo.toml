@@ -122,6 +122,7 @@ members = [
     "crates/opts-traffic-schedule",
     "crates/opts-sim-pedestrian",
     "crates/opts-pedestrian-rules",
+    "crates/opts-holidays",
     "crates/opts-sim-rail",
     "crates/opts-tools",
     "crates/opts-debugger",
@@ -243,6 +244,7 @@ opts-catalogue-service = { path = "crates/opts-catalogue-service" }
 opts-traffic-schedule = { path = "crates/opts-traffic-schedule" }
 opts-sim-pedestrian = { path = "crates/opts-sim-pedestrian" }
 opts-pedestrian-rules = { path = "crates/opts-pedestrian-rules" }
+opts-holidays = { path = "crates/opts-holidays" }
 opts-sim-rail = { path = "crates/opts-sim-rail" }
 opts-tools = { path = "crates/opts-tools" }
 opts-debugger = { path = "crates/opts-debugger" }
