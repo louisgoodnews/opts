@@ -5,7 +5,7 @@
 | **Issue** | ISS-093 (local register: [issues-2026-11-18](../../audit/issues-2026-11-18.md)) |
 | **Severity** | major (structure gate, coding rules) |
 | **Milestone** | none; epic (follows [ISS-083](ISS-083-audit-against-coding-rules.md) and [M-0151](../../src/roadmap/phase-15/M-0151.md)) |
-| **Status** | open, reported 2026-11-26 (owner: split up the crates) |
+| **Status** | done: won't do (owner decision 2026-11-27). The per-crate budget monitoring is dropped with the per-crate budget (ISS-034 superseded); the remaining scope is closed as won't do. The file and function overruns cleared earlier stay cleared. |
 
 ## Problem
 
