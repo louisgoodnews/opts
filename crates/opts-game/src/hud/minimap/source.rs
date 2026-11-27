@@ -42,10 +42,14 @@ impl FixtureRoads {
                     600.0,
                 ),
                 width: if i == 0 { 7.0 } else { 5.0 },
+                on_course: false,
+                ahead: false,
             });
             roads.push(MapRoad {
                 geometry: PathGeometry::straight(DVec2::new(o, -300.0), 0.0, 600.0),
                 width: if i == 0 { 7.0 } else { 5.0 },
+                on_course: false,
+                ahead: false,
             });
         }
         roads.push(MapRoad {
@@ -56,6 +60,8 @@ impl FixtureRoads {
                 length: 420.0,
             },
             width: 6.0,
+            on_course: false,
+            ahead: false,
         });
         Self(roads)
     }

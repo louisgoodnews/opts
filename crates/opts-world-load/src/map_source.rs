@@ -14,6 +14,13 @@ pub struct MapRoad {
     pub geometry: PathGeometry,
     /// Width in metres.
     pub width: f64,
+    /// The path is one of the lanes of the player's timetable course (set by the route path;
+    /// `false` for every other road).
+    pub on_course: bool,
+    /// On the course, at or after the lane the vehicle is matched to (or at or after the course's
+    /// progress index while it is off the course). The mini map strokes only roads that are both
+    /// `on_course` and `ahead`; see `hud::minimap::redraw::course` for the rule.
+    pub ahead: bool,
 }
 
 /// A read-only supplier of road paths.

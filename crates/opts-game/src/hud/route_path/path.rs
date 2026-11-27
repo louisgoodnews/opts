@@ -55,6 +55,8 @@ pub fn path_between(graph: &LaneGraph, stops: &[RouteStop]) -> Vec<MapRoad> {
                         .map(|l| MapRoad {
                             geometry: l.geometry,
                             width: PATH_WIDTH_M,
+                            on_course: false,
+                            ahead: false,
                         }),
                 )
             }
@@ -63,6 +65,8 @@ pub fn path_between(graph: &LaneGraph, stops: &[RouteStop]) -> Vec<MapRoad> {
                 out.push(MapRoad {
                     geometry: PathGeometry::straight(pair[0].pos, d.x.atan2(d.y), d.length()),
                     width: PATH_WIDTH_M,
+                    on_course: false,
+                    ahead: false,
                 });
             }
         }

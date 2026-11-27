@@ -75,6 +75,8 @@ pub(super) fn read_tiles(
                     .map(|s| MapRoad {
                         geometry: s.geometry,
                         width: s.width,
+                        on_course: false,
+                        ahead: false,
                     })
                     .collect::<Vec<_>>();
                 let stops = tile
