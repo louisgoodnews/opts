@@ -123,17 +123,22 @@ pub(super) fn handle_couplings(block: &OmsiBlock, m: &mut BusManifest) {
                 });
             }
         }
-        "couple_back" => {
-            m.couple_back = block
-                .parameters
-                .first()
-                .map(|f| f.trim().to_string())
-                .filter(|f| !f.is_empty());
-            m.couple_back_reversed = block
-                .parameters
-                .get(1)
-                .is_some_and(|f| f.trim().eq_ignore_ascii_case("true"));
-        }
+        "couple_back" => (m.couple_back, m.couple_back_reversed) = couple_link(block),
+        "couple_front" => (m.couple_front, m.couple_front_reversed) = couple_link(block),
         _ => {}
     }
+}
+
+/// The unit file and the reversed flag of a `[couple_back]` or `[couple_front]` block.
+fn couple_link(block: &OmsiBlock) -> (Option<String>, bool) {
+    let file = block
+        .parameters
+        .first()
+        .map(|f| f.trim().to_string())
+        .filter(|f| !f.is_empty());
+    let reversed = block
+        .parameters
+        .get(1)
+        .is_some_and(|f| f.trim().eq_ignore_ascii_case("true"));
+    (file, reversed)
 }

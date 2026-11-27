@@ -42,6 +42,8 @@ impl BusManifest {
             coupling_back: None,
             couple_back: None,
             couple_back_reversed: false,
+            couple_front: None,
+            couple_front_reversed: false,
             coupling_front_limits: None,
             driver_cameras: Vec::new(),
             pax_cameras: Vec::new(),
