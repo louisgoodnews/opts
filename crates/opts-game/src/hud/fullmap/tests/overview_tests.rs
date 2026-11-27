@@ -9,6 +9,8 @@ fn road(x: f64, y: f64) -> MapRoad {
     MapRoad {
         geometry: PathGeometry::straight(DVec2::new(x, y), 0.0, 100.0),
         width: 5.0,
+        on_course: false,
+        ahead: false,
     }
 }
 

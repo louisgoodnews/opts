@@ -7,6 +7,8 @@ fn straight_paths_are_one_chord_and_arcs_follow_the_pixels() {
     let straight = MapRoad {
         geometry: PathGeometry::straight(bevy::math::DVec2::ZERO, 0.0, 500.0),
         width: 5.0,
+        on_course: false,
+        ahead: false,
     };
     let arc = MapRoad {
         geometry: PathGeometry {
@@ -16,6 +18,8 @@ fn straight_paths_are_one_chord_and_arcs_follow_the_pixels() {
             length: 300.0,
         },
         width: 5.0,
+        on_course: false,
+        ahead: false,
     };
     let count = |road: &MapRoad, min_chord: f64| {
         let mut out = Vec::new();

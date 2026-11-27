@@ -120,6 +120,8 @@ impl crate::map_source::MapSource for TrafficState {
                 out.push(crate::map_source::MapRoad {
                     geometry: segment.geometry,
                     width: segment.width,
+                    on_course: false,
+                    ahead: false,
                 });
             }
         }
