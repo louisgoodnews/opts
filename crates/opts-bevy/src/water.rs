@@ -39,6 +39,9 @@ pub fn depth_tint(depth: f32) -> [f32; 4] {
     [rgb(0), rgb(1), rgb(2), alpha]
 }
 
+mod waves;
+pub use waves::*;
+
 use opts_core::formats::map::{MapTerrain, MapWater};
 
 use crate::mesh::smooth_normal_mesh;
