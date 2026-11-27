@@ -3,6 +3,13 @@
 use super::*;
 
 impl GroundIndex {
+    /// Sets the session frame (the start tile and the grid positions are measured with); the
+    /// terrain service follows, so it is set before the first tile is inserted.
+    pub fn set_frame(&mut self, start_tile: (i32, i32), grid: TileGrid) {
+        (self.start_tile, self.grid) = (start_tile, grid);
+        self.terrain.set_frame(grid, start_tile);
+    }
+
     /// An index of one tile alone (what an object placed on that tile needs).
     #[must_use]
     pub fn for_tile(
