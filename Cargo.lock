@@ -6308,6 +6308,7 @@ dependencies = [
  "opts-mesh-dir",
  "opts-new-game-types",
  "opts-passenger-spec",
+ "opts-pedestrian-rules",
  "opts-repaints",
  "opts-road-surf",
  "opts-scripted-drive",
