@@ -114,6 +114,7 @@ impl CourseProgress {
 
     /// Places the matched lane (`None` when there is no match) on `course` and returns whether it
     /// is on the course. Off the course the index stays where it was: the last lane reached.
+    #[must_use]
     pub fn place(&mut self, course: &[LaneId], matched: Option<LaneId>) -> bool {
         matched.is_some_and(|lane| matches!(self.advance(course, lane), CourseState::OnCourse(_)))
     }
