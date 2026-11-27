@@ -33,6 +33,7 @@ opts-sim-passengers 800  # lowered 2026-11-26 to the measured total after the in
 opts-sim-passenger-model 392  # new 2026-11-26 (ISS-086 stage 1): the pure passenger model (spec, graph, rng) split out of opts-sim-passengers; measured
 opts-sim-pedestrian 1152  # new 2026-11-25: ESTIMATE from the stage-2 move (ISS-066): the crate src code lines counted by grep (module 1149 + lib.rs), not by the audit; re-measure with the audit before the next gate
 opts-pedestrian-rules 123  # new 2026-11-27 (ISS-076): the pedestrian rules on the footpath network (crossings, separation and the distance LOD), measured by structure_audit.py json, measured by structure_audit.py json
+opts-holidays 142  # new 2026-11-27 (ISS-076): the holiday calendar (Holidays.txt records), the weekday and the day kind it selects; measured by structure_audit.py json
 opts-sim-rail 840  # new 2026-11-26 (ISS-093): the rail module (trains, dynamics, track switches) split out of opts-sim; measured by the audit
 opts-tools 1245  # set 2026-11-22 to the current total
 opts-debugger 356  # new 2026-11-26 (ISS-096 skeleton, was 23); re-measured 2026-11-27 at the frames tool (ISS-096 stage 4): the src/ code total by structure_audit.py json
