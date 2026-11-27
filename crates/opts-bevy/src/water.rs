@@ -46,6 +46,16 @@ use opts_core::formats::map::{MapTerrain, MapWater};
 
 use crate::mesh::smooth_normal_mesh;
 
+/// A water surface with what its waves need: the mesh, its vertices at rest and their depths.
+pub struct WaterSurface {
+    /// The surface mesh.
+    pub mesh: Mesh,
+    /// The vertices at rest, in the mesh's order (their `y` is the water level).
+    pub rest: Vec<[f32; 3]>,
+    /// The depth (m) of each vertex above the ground, in the mesh's order.
+    pub depths: Vec<f32>,
+}
+
 /// Water surface of one tile in absolute Bevy world coordinates, or `None` when the water is
 /// nowhere above the terrain.
 ///
@@ -58,6 +68,17 @@ pub fn build_water_mesh(
     origin: (f32, f32),
     cell: f32,
 ) -> Option<Mesh> {
+    build_water_surface(terrain, water, origin, cell).map(|s| s.mesh)
+}
+
+/// [`build_water_mesh`] with the rest positions and depths of its vertices (see [`WaterSurface`]).
+#[must_use]
+pub fn build_water_surface(
+    terrain: &MapTerrain,
+    water: &MapWater,
+    origin: (f32, f32),
+    cell: f32,
+) -> Option<WaterSurface> {
     let cells = terrain.grid_cells as usize;
     let dim = cells + 1;
     if cells == 0 || terrain.heights.len() < dim * dim {
@@ -73,6 +94,7 @@ pub fn build_water_mesh(
     let mut positions: Vec<[f32; 3]> = Vec::new();
     let mut uvs: Vec<[f32; 2]> = Vec::new();
     let mut colors: Vec<[f32; 4]> = Vec::new();
+    let mut depths: Vec<f32> = Vec::new();
     let mut indices: Vec<u32> = Vec::new();
     let mut vertex =
         |i: usize, j: usize, positions: &mut Vec<[f32; 3]>, uvs: &mut Vec<[f32; 2]>| {
@@ -85,7 +107,9 @@ pub fn build_water_mesh(
                     -(origin.1 + j as f32 * cell),
                 ]);
                 uvs.push([i as f32, j as f32]);
-                colors.push(depth_tint(level(i, j) - ground(i, j)));
+                let depth = level(i, j) - ground(i, j);
+                colors.push(depth_tint(depth));
+                depths.push(depth);
             }
             *slot
         };
@@ -103,9 +127,10 @@ pub fn build_water_mesh(
         }
     }
     (!indices.is_empty()).then(|| {
+        let rest = positions.clone();
         let mut mesh = smooth_normal_mesh(positions, uvs, indices);
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-        mesh
+        WaterSurface { mesh, rest, depths }
     })
 }
 

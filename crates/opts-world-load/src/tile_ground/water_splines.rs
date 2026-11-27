@@ -1,6 +1,6 @@
 //! Water and spline mesh stages of a tile build.
 
-use opts_bevy::{build_water_mesh, water_material};
+use opts_bevy::{build_water_surface, water_material, WaterWaves};
 use opts_core::formats::map::{MapTile, MapWater};
 
 use super::*;
@@ -44,7 +44,7 @@ pub(in super::super) fn spawn_water(
         tracing::warn!(tile = ?key, "water without a terrain grid is not drawn");
         return;
     };
-    let Some(mesh) = build_water_mesh(&terrain.grid, &water, origin, terrain.cell) else {
+    let Some(surface) = build_water_surface(&terrain.grid, &water, origin, terrain.cell) else {
         tracing::debug!(tile = ?key, levels = ?water.levels, "water lies below the terrain everywhere");
         return;
     };
@@ -52,14 +52,21 @@ pub(in super::super) fn spawn_water(
         .water_material
         .get_or_insert_with(|| materials.add(water_material()))
         .clone();
-    stats.scene_vertices += mesh.count_vertices();
+    stats.scene_vertices += surface.mesh.count_vertices();
     stats.water_tiles += 1;
     job.tile_water.insert(key, water);
+    let mesh = meshes.add(surface.mesh);
+    let waves = WaterWaves {
+        mesh: mesh.clone(),
+        rest: surface.rest,
+        depths: surface.depths,
+    };
     children.push(
         commands
             .spawn((
-                Mesh3d(meshes.add(mesh)),
+                Mesh3d(mesh),
                 MeshMaterial3d(material),
+                waves,
                 Name::new(format!("Water_{}_{}", key.0, key.1)),
             ))
             .id(),

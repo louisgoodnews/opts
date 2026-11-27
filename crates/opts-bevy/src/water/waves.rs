@@ -4,8 +4,11 @@
 //!
 //! The parameters are not in the design (`docs/src/architecture/terrain-rendering.md` section 7
 //! says the surface has none); these are a gentle first choice, to be checked in the game.
-//! Nothing calls [`displaced`] yet: wiring it needs a per-frame update of the water meshes (or a
-//! shader), and a look in the game.
+//! [`animate_water_waves`] moves every water surface each frame ([`WaterWavesPlugin`]). The normals
+//! stay those of the flat surface: the waves are a few centimetres, and their look is to be
+//! checked in the game.
+
+use bevy::prelude::*;
 
 /// Amplitude (m) and wavelength (m) of the train that runs along east.
 const WAVE_X_M: f32 = 0.06;
@@ -47,4 +50,40 @@ pub fn displaced(rest: &[[f32; 3]], depths: &[f32], t: f32) -> Vec<[f32; 3]> {
             [p[0], displaced_height(p[1], depth, p[0], p[2], t), p[2]]
         })
         .collect()
+}
+
+/// The water surface of a tile, to be moved by [`animate_water_waves`]: its mesh, the vertices at
+/// rest and the depth of each.
+#[derive(Component, Debug, Clone)]
+pub struct WaterWaves {
+    /// The surface's mesh.
+    pub mesh: Handle<Mesh>,
+    /// The vertices at rest, in the mesh's order.
+    pub rest: Vec<[f32; 3]>,
+    /// The depth (m) of each vertex, in the mesh's order.
+    pub depths: Vec<f32>,
+}
+
+/// Moves every water surface to the wave pattern of the current time.
+pub fn animate_water_waves(
+    time: Res<Time>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    waves: Query<&WaterWaves>,
+) {
+    let t = time.elapsed_secs();
+    for w in &waves {
+        if let Some(mesh) = meshes.get_mut(&w.mesh) {
+            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, displaced(&w.rest, &w.depths, t));
+        }
+    }
+}
+
+/// Runs [`animate_water_waves`] every frame.
+#[derive(Default)]
+pub struct WaterWavesPlugin;
+
+impl Plugin for WaterWavesPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, animate_water_waves);
+    }
 }

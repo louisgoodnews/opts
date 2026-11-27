@@ -116,5 +116,8 @@ pub use crate::vehicle_triggers::{
     VehicleTriggerPlugin, CABIN_LIGHT_TOGGLE, DOOR_SIDE_TOGGLE, OPTS_RESERVED_KEYS,
 };
 pub use crate::view_scope::{apply_view_scope, camera_is_inside, ViewScope, ViewScopePlugin};
-pub use crate::water::{build_water_mesh, water_material};
+pub use crate::water::{
+    build_water_mesh, build_water_surface, water_material, WaterSurface, WaterWaves,
+    WaterWavesPlugin,
+};
 pub use crate::weather::{WeatherCatalogue, WeatherConditions, WeatherEffects, WeatherVars};
