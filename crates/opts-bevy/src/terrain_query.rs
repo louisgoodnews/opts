@@ -12,25 +12,39 @@ use opts_core::formats::map::TileGrid;
 
 use crate::terrain::TileTerrain;
 
-/// Terrain of the resident tiles, queried by absolute position.
+/// Terrain of the resident tiles, queried by position.
 ///
-/// Positions are measured from the south-west corner of tile `(0, 0)` (`x` east, `y` north) on the
-/// map's [`TileGrid`] (`TileGrid::absolute`); a caller that uses a floating origin adds the
-/// origin of its start tile first.
+/// Positions are measured from the south-west corner of the session's start tile (`x` east, `y`
+/// north), as `TileGrid::tile_at` takes them: the game's session frame. [`Self::new`] anchors the
+/// frame at tile `(0, 0)`, which is the absolute frame of the map.
 #[derive(Debug, Clone, Default)]
 pub struct GroundElevationQuery {
     grid: TileGrid,
+    start: (i32, i32),
     tiles: HashMap<(i32, i32), TileTerrain>,
 }
 
 impl GroundElevationQuery {
-    /// An empty query over `grid`.
+    /// An empty query over `grid`, anchored at tile `(0, 0)`.
     #[must_use]
     pub fn new(grid: TileGrid) -> Self {
+        Self::with_start(grid, (0, 0))
+    }
+
+    /// An empty query over `grid` whose positions are measured from the corner of `start`.
+    #[must_use]
+    pub fn with_start(grid: TileGrid, start: (i32, i32)) -> Self {
         Self {
             grid,
+            start,
             tiles: HashMap::new(),
         }
+    }
+
+    /// Moves the frame to another grid and start tile; the held tiles stay as they are.
+    pub fn set_frame(&mut self, grid: TileGrid, start: (i32, i32)) {
+        self.grid = grid;
+        self.start = start;
     }
 
     /// Adds or replaces the terrain of tile `key`.
@@ -58,7 +72,7 @@ impl GroundElevationQuery {
     fn locate(&self, x: f32, y: f32) -> Option<(&TileTerrain, f32, f32)> {
         let (key, local) = self
             .grid
-            .tile_at(DVec2::new(f64::from(x), f64::from(y)), (0, 0));
+            .tile_at(DVec2::new(f64::from(x), f64::from(y)), self.start);
         let t = self.tiles.get(&key)?;
         Some((t, local.x as f32, local.y as f32))
     }
