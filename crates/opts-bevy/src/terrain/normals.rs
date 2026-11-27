@@ -7,6 +7,7 @@
 //! slope. A side that is not held falls back to a one-sided difference.
 
 use super::*;
+use bevy::mesh::VertexAttributeValues;
 
 /// The heights one cell beyond each edge of a tile, for each neighbour that is held: the
 /// neighbour's grid column (or row) next to the shared border, one value per grid point along it.
@@ -88,6 +89,19 @@ pub fn field_normals(terrain: &MapTerrain, cell: f32, beyond: &TileBeyond) -> Ve
         }
     }
     out
+}
+
+/// Writes the field normals of a tile's grid over the first normals of `mesh`. The grid's vertices
+/// come first in the terrain meshes (plain and cut), so the vertices after them keep theirs.
+pub fn apply_field_normals(mesh: &mut Mesh, terrain: &MapTerrain, cell: f32, beyond: &TileBeyond) {
+    let normals = field_normals(terrain, cell, beyond);
+    if let Ok(Some(VertexAttributeValues::Float32x3(values))) =
+        mesh.try_attribute_mut_option(Mesh::ATTRIBUTE_NORMAL)
+    {
+        for (value, normal) in values.iter_mut().zip(normals) {
+            *value = normal;
+        }
+    }
 }
 
 /// Slope along one axis from the heights before and after a point.

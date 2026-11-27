@@ -18,6 +18,8 @@ impl WorldLoadJob {
     ) -> Option<TileUnload> {
         let root = self.resident.remove(&key)?;
         self.tile_deps.remove(&key);
+        // Its mesh is despawned below; the neighbours keep the border normals they stitched.
+        self.terrain_records.remove(&key);
         // A tile that is still being built stops here; its root and the children added so far
         // are despawned with the unload.
         if self.building.as_ref().is_some_and(|b| b.key == key) {

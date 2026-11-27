@@ -72,6 +72,27 @@ pub fn build_cut_terrain_mesh(
     uv_per_tile: bool,
     cut: &TerrainCut,
 ) -> Mesh {
+    build_cut_terrain_mesh_with(
+        terrain,
+        origin,
+        cell,
+        uv_per_tile,
+        cut,
+        &TileBeyond::default(),
+    )
+}
+
+/// [`build_cut_terrain_mesh`] with the grid's normals stitched to the held neighbours (see
+/// [`apply_field_normals`]).
+#[must_use]
+pub fn build_cut_terrain_mesh_with(
+    terrain: &MapTerrain,
+    origin: (f32, f32),
+    cell: f32,
+    uv_per_tile: bool,
+    cut: &TerrainCut,
+    beyond: &TileBeyond,
+) -> Mesh {
     let n = terrain.grid_cells as usize;
     let dim = n + 1;
     let span = n as f32 * cell;
@@ -126,5 +147,7 @@ pub fn build_cut_terrain_mesh(
         indices,
         ..
     } = b;
-    smooth_normal_mesh(positions, uvs, indices)
+    let mut mesh = smooth_normal_mesh(positions, uvs, indices);
+    apply_field_normals(&mut mesh, terrain, cell, beyond);
+    mesh
 }

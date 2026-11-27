@@ -1,16 +1,17 @@
 //! The terrain stage of a tile: reads its height grid and ground material, then carves the grid
 //! under the drawn ground and meshes it.
 
+use std::sync::Arc;
+
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
-use opts_bevy::{
-    build_cut_terrain_mesh, build_terrain_mesh, carve_terrain, terrain_material, ContentLoader,
-    TerrainCut, TileTerrain,
-};
+use opts_bevy::terrain::{build_cut_terrain_mesh_with, build_terrain_mesh_with};
+use opts_bevy::{carve_terrain, terrain_material, ContentLoader, TerrainCut, TileTerrain};
 use opts_core::formats::map::MapTerrain;
 
 use super::super::ground::compose_tile_material;
 use super::super::{WorldLoadJob, WorldStats};
+use super::border_normals::{beyond_of, stitch_built_tile, TerrainRecord};
 use super::surfaces::neighbourhood_ground;
 
 /// What the first part of the terrain stage reads: the height grid and the tile's ground
@@ -122,23 +123,32 @@ pub(in super::super) fn spawn_terrain(
     );
     let t_mesh = opts_logging::stream_trace::span("terrain.mesh");
     let uv_per_tile = tile_material.is_some();
+    let beyond = beyond_of(job, key, carved.grid.grid_cells as usize);
     let mesh = if strips.is_empty() {
-        build_terrain_mesh(&carved.grid, origin, cell, uv_per_tile)
+        build_terrain_mesh_with(&carved.grid, origin, cell, uv_per_tile, &beyond)
     } else {
-        build_cut_terrain_mesh(&carved.grid, origin, cell, uv_per_tile, &strips)
+        build_cut_terrain_mesh_with(&carved.grid, origin, cell, uv_per_tile, &strips, &beyond)
     };
+    let vertices = mesh.count_vertices();
+    let handle = meshes.add(mesh);
+    let record = TerrainRecord {
+        mesh: handle.clone(),
+        grid: Arc::new(carved.grid.clone()),
+        cell,
+    };
+    stitch_built_tile(job, meshes, key, record);
     let carved = carved.with_cut(strips);
     drop(t_mesh);
-    stats.scene_vertices += mesh.count_vertices();
+    stats.scene_vertices += vertices;
     let name = Name::new(format!("Terrain_{}_{}", key.0, key.1));
     children.push(match tile_material {
         Some(material) => commands
-            .spawn(((Mesh3d(meshes.add(mesh)), MeshMaterial3d(material)), name))
+            .spawn(((Mesh3d(handle), MeshMaterial3d(material)), name))
             .id(),
         None => commands
             .spawn((
                 (
-                    Mesh3d(meshes.add(mesh)),
+                    Mesh3d(handle),
                     MeshMaterial3d(job.ground_material.clone().unwrap_or_default()),
                 ),
                 name,

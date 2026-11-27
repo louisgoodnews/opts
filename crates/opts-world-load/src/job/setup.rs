@@ -17,6 +17,7 @@ pub(super) fn new_job(
         tile_files,
         queue: VecDeque::new(),
         tile_water: HashMap::new(),
+        terrain_records: HashMap::new(),
         water_material: None,
         water_enabled: true,
         resident: HashMap::new(),

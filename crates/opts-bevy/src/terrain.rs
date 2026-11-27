@@ -32,7 +32,9 @@ pub const CARVE_COVER_M: f32 = 1.0;
 mod align;
 pub use align::{align_band, boundary_edges, boundary_edges_out, ALIGN_MAX_M};
 pub mod cut;
-pub use cut::{build_cut_terrain_mesh, spline_cut_triangles, TerrainCut};
+pub use cut::{
+    build_cut_terrain_mesh, build_cut_terrain_mesh_with, spline_cut_triangles, TerrainCut,
+};
 
 mod mesh;
 pub use mesh::*;

@@ -125,6 +125,8 @@ pub struct WorldLoadJob {
     pub(super) ground_material: Option<Handle<StandardMaterial>>,
     /// Water of the tiles built so far, by tile key (for [`WorldLoadJob::water_level_at`]).
     pub(super) tile_water: HashMap<(i32, i32), opts_core::formats::map::MapWater>,
+    /// The terrain meshes of the tiles built so far, for the border normals of their neighbours.
+    pub(super) terrain_records: HashMap<(i32, i32), tile_ground::TerrainRecord>,
     /// Shared material of the water surfaces.
     pub(super) water_material: Option<Handle<StandardMaterial>>,
     /// Whether `.map.water` surfaces are drawn.
