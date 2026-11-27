@@ -3,6 +3,9 @@
 
 use super::super::*;
 
+use opts_core::formats::map::lists::day;
+use opts_holidays::DayKind;
+
 use super::walker::spawn_walker;
 
 /// Factor of `global.cfg` `[trafficdensity_passenger]` (hour/value pairs, linear between them,
@@ -13,6 +16,29 @@ pub fn passenger_factor(curve: &[(f32, f32)], hour: f32) -> f32 {
         points: curve.to_vec(),
     };
     profile.at(hour).max(0.0)
+}
+
+/// Factor of the map's pedestrian curve at `hour` on a day of `day_bit` (a [`day`] bit). The curve
+/// applies to the days its profile names (`0`: all); the map's `[trafficdensity_passenger]` names
+/// none, so today the factor is the same on every day (❓ which days pedestrians follow).
+pub fn pedestrian_factor(curve: &[(f32, f32)], day_bit: u8, hour: f32) -> f32 {
+    let profile = opts_core::formats::map::DensityProfile {
+        days: 0,
+        points: curve.to_vec(),
+    };
+    if !profile.covers(day_bit) {
+        return 1.0;
+    }
+    profile.at(hour).max(0.0)
+}
+
+/// The [`day`] bit of a day kind.
+fn day_bit(kind: DayKind) -> u8 {
+    match kind {
+        DayKind::Weekday => day::WEEKDAY,
+        DayKind::Saturday => day::SATURDAY,
+        DayKind::Sunday => day::SUNDAY,
+    }
 }
 
 /// Draws one of the loaded characters, weighted by its share of the `humans.txt` lines.
@@ -88,7 +114,14 @@ pub fn spawn_pedestrians(
     // The map's `[trafficdensity_passenger]` curve scales the walkers by the time of day.
     let factor = match (&job, &env) {
         (Some(job), Some(env)) => {
-            passenger_factor(&job.manifest.traffic_density_passenger, env.hour())
+            let date = env.date();
+            let number = date.year.max(0) as u32 * 10_000 + date.month * 100 + date.day;
+            let kind = pool.holidays.day_kind(number);
+            pedestrian_factor(
+                &job.manifest.traffic_density_passenger,
+                day_bit(kind),
+                env.hour(),
+            )
         }
         _ => 1.0,
     };

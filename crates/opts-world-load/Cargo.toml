@@ -24,6 +24,7 @@ opts-fleet-number = { workspace = true }
 opts-game-state = { workspace = true }
 opts-gui = { workspace = true, features = ["serde"] }
 opts-hud-keys = { workspace = true }
+opts-holidays = { workspace = true }
 opts-logging = { workspace = true }
 opts-mesh-dir = { workspace = true }
 opts-new-game-types = { workspace = true }
