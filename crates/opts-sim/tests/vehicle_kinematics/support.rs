@@ -27,6 +27,8 @@ pub(super) fn make_test_manifest(
         vehicle_type: None,
         bogie_half_span: None,
         couple_back_reversed: false,
+        couple_front: None,
+        couple_front_reversed: false,
         axles: vec![
             BusAxle {
                 longitudinal_m: 3.25,

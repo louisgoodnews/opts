@@ -17,6 +17,22 @@ fn coupling_front_character_is_parsed() {
 }
 
 #[test]
+fn couple_front_is_read_like_couple_back() {
+    let m = BusManifest::parse("[couple_front]\nFront.bus\ntrue\n\n[couple_back]\nRear.bus\nfalse\n")
+        .unwrap();
+    assert_eq!(m.couple_front.as_deref(), Some("Front.bus"));
+    assert!(m.couple_front_reversed);
+    assert_eq!(m.couple_back.as_deref(), Some("Rear.bus"));
+    assert!(!m.couple_back_reversed);
+}
+
+#[test]
+fn an_absent_couple_front_is_none() {
+    let m = BusManifest::parse("[couple_back]\nRear.bus\nfalse\n").unwrap();
+    assert!(m.couple_front.is_none() && !m.couple_front_reversed);
+}
+
+#[test]
 fn test_parse_sample_bus() {
     let sample = r#"
 [friendlyname]

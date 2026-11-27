@@ -175,6 +175,11 @@ pub struct BusManifest {
     /// The trailer is coupled facing backwards (second line of `[couple_back]` is `true`): its
     /// *rear* coupling meets this vehicle's rear coupling, as the B head of the NF6D.
     pub couple_back_reversed: bool,
+    /// File name of the unit coupled in front of this vehicle (`[couple_front]`, reversed units).
+    /// Read only: the consist planner still walks `[couple_back]` alone (ISS-075).
+    pub couple_front: Option<String>,
+    /// The front unit is coupled facing backwards (second line of `[couple_front]` is `true`).
+    pub couple_front_reversed: bool,
     /// Limits of the front coupling of a trailing segment (`[coupling_front_character]`).
     pub coupling_front_limits: Option<CouplingLimits>,
     /// Driver view camera presets.
