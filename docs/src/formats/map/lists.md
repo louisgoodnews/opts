@@ -5,7 +5,7 @@
 | **Format Family** | Text (keyword-based / plain line lists) |
 | **File Names** | see table below (name-based, no distinguishing extension) |
 | **Parser Crate** | `opts-core` |
-| **Parser Module** | `opts_core::formats::map::lists` (`AiLists`, `parse_unsched_vehgroups`, `parse_unsched_trafficdens`; depot groups and the legacy `[ailist]` syntax are skipped) |
+| **Parser Module** | `opts_core::formats::map::lists` (`AiLists`, `parse_unsched_vehgroups`, `parse_unsched_trafficdens`; depot groups are read; the legacy `[ailist]`/`[aigroup]` syntax is read into `groups` without weights, ISS-072) |
 | **Encoding** | UTF-8/ASCII, CP1252, UTF-8+BOM, a few UTF-16LE (`Holidays*.txt`) — detect per file |
 | **Status** | 🟢 Specified |
 | **Last Updated** | 2026-10-17 |

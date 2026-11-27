@@ -4,11 +4,12 @@
 //! These files say *which* vehicles may appear as AI traffic and *how dense* that traffic is over
 //! the day. They do not say where vehicles drive: that comes from the `[path]` lanes of splines and
 //! junction objects (`opts-traffic`). The depot groups' vehicle files are kept in
-//! [`AiLists::depot_vehicles`]; the legacy `[ailist]` syntax is skipped for now.
+//! [`AiLists::depot_vehicles`]; the legacy `[ailist]`/`[aigroup]` syntax is read into `groups`.
 
 use crate::formats::text::{decode_bytes, scan_blocks};
 
 mod depot;
+mod legacy;
 pub use depot::{DepotGroup, FleetEntry};
 
 /// One vehicle of an AI group.
@@ -74,10 +75,12 @@ impl AiLists {
         });
     }
 
-    /// Parses `ailists.cfg`. Lines that do not look like `<file>[<TAB><weight>]` are skipped.
+    /// Parses `ailists.cfg`: the `_2` groups and the legacy `[ailist]`/`[aigroup]` pair. Lines that
+    /// do not look like `<file>[<TAB><weight>]` are skipped.
     #[must_use]
     pub fn parse(bytes: &[u8]) -> Self {
         let mut out = Self::default();
+        let mut legacy_table = Vec::new();
         for block in scan_blocks(&decode_bytes(bytes)) {
             match block.keyword.as_str() {
                 "aigroup_depot" => Self::handle_depot(&block.parameters, &mut out),
@@ -85,6 +88,10 @@ impl AiLists {
                     Self::handle_depot_typgroup(&block.parameters, &mut out);
                 }
                 "aigroup_2" => Self::handle_aigroup(&block.parameters, &mut out),
+                "ailist" => legacy_table = legacy::vehicle_table(&block.parameters),
+                "aigroup" => out
+                    .groups
+                    .extend(legacy::group(&block.parameters, &legacy_table)),
                 _ => {}
             }
         }

@@ -254,7 +254,7 @@ The player's bus (head and every following part) is a vehicle the traffic did no
 | **Spline arms of objects** (`[splinehelper]`) have no known length/radius (the last two values are `0 0`, Q-SCO-007), so their paths are not lanes yet — a likely contributor to unconnected lane ends at crossings | complete junction lanes; rule indices already continue into them | spec + OMSI test |
 | Traffic-light phase **state codes** are only partly decoded | red/yellow/green decision for AI | `docs/src/formats/text/sco.md` Q-SCO-005 + an observation test in OMSI |
 | ~~`[ai_brakeperformance]`, `[ai_veh_type]` kept as unknown fields~~ — closed 2026-10-14 (M-0095): `VehicleExtras`; the vehicle files themselves give the `[ai_veh_type]` legend (0 car, 1 cab, 2 bus, 3 truck) | — | `formats/vehicles/bus.rs` |
-| `[aigroup_depot*]` blocks and legacy `[ailist]`/`[aigroup]` are skipped | scheduled AI, old maps | `formats/map/lists.rs` |
+| Legacy `[ailist]`/`[aigroup]` are read (no weights; the trailing name of `[aigroup]` is unused, ❓) | old maps (template only) | `formats/map/lists/legacy.rs` |
 | Splines with non-positive length | semantics unknown | spec + OMSI test |
 | `Neuendorf`: no road lanes | missing coverage | investigate tile/profile variant |
 
